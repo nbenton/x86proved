@@ -84,12 +84,12 @@ x86\testrun.vo \
 x86\matcher.vo \
 x86\cstringimp.vo \
 x86\cfunc.vo \
-x86\lib\regexp\stringbuff.vo \
-x86\lib\regexp\compiler.vo \
-x86\lib\regexp\interfaceATBR.vo \
-x86\lib\regexp\regexpsyntax.vo \
-x86\lib\regexp\exampleregexp.vo \
-x86\lib\regexp\regexpexe.vo \
+# x86\lib\regexp\stringbuff.vo \
+# x86\lib\regexp\compiler.vo \
+# x86\lib\regexp\interfaceATBR.vo \
+# x86\lib\regexp\regexpsyntax.vo \
+# x86\lib\regexp\exampleregexp.vo \
+# x86\lib\regexp\regexpexe.vo \
 x86\win\pecoff.vo \
 x86\cfuncspec.vo \
 x86\globals.vo \
@@ -99,8 +99,7 @@ cast.vo \
 regex.vo \
 codec.vo \
 bitscodec.vo \
-codecregex.vo \
-PPDPGUIDE.vo
+codecregex.vo 
 
 EXETARGETS = \
 x86\win\winfact.exe \

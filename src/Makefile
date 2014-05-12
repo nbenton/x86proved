@@ -7,7 +7,7 @@ COQC=coqc $(COQFLAGS)
 COQTOP=coqtop $(COQFLAGS)
 HEXBIN=tools\hexbin
 
-ALLINCLUDES = $(INCLUDES);contribs;contribs/ATBR
+ALLINCLUDES = $(INCLUDES) # ;contribs;contribs/ATBR
 
 # Turn ";"-separated sequence into appropriate syntax for coq command-line
 COQINCLUDES=-I $(ALLINCLUDES:;= -I )
