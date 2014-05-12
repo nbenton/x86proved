@@ -1,6 +1,6 @@
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple.
 Require Import bitsrep bitsops bitsopsprops monad writer reg instr instrsyntax program programassem cursor.
-Require Import pecoff cfunc.
+Require Import pecoff cfunc macros.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

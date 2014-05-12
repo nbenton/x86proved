@@ -980,5 +980,4 @@ Proof.
     reflexivity.
 Qed.
 
-Eval showprog in compileNaryModule parityModule.
 Compute assembleToString #0 (compileNaryModule parityModule).
