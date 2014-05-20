@@ -303,28 +303,25 @@ Module Solving.
   (* The programming pattern here with match/first/fail is an attempt to
      emulate if/then/else in Ltac. The first/fail pattern serves to prevent
      automatic back-tracking, analogous to "cut" in Prolog. *)
-  Ltac cheap_unify a b :=
-    match a with
-    | _ => is_evar a; first [unify a b | fail 1]
-    | _ => is_evar b; first [unify a b | fail 1]
-    | _ => not (has_evar a); not (has_evar b); first [constr_eq a b | fail 1]
-    | ?fa ?xa =>
-        match b with
-        | ?fb ?xb => cheap_unify fa fb; cheap_unify xa xb
-        end
+  Ltac cheap_unify p :=
+    match p with
+    | (?a,?b) => is_evar a; first [unify a b | fail 1]
+    | (?a,?b) => is_evar b; first [unify a b | fail 1]
+    | (?a,?b) => not (has_evar a); not (has_evar b); first [constr_eq a b | fail 1]
+    | (?fa ?xa,?fb ?xb) => cheap_unify (fa, fb); cheap_unify (xa, xb)
     end.
 
   (* This looks up P in the range of the association list a and calls the
      appropriate continuation. It will look for P modulo instantiation of evars
      inside P and a. *)
-  Ltac lookup_tac a(*:alist*) P(*:SPred*)
+  Ltac lookup_tac doUnify a(*:alist*) P(*:SPred*)
       found(*: idx -> tactic*) notfound(*: unit -> tactic*) :=
     match a with
     | (?i, ?P') :: _ =>
       (* We don't unify with something that's entirely an evar. This would lead
          to very random behaviour. *)
-      not (is_evar P'); cheap_unify P P'; found i
-    | _ :: ?a' => lookup_tac a' P found notfound
+      not (is_evar P'); doUnify (P, P'); found i
+    | _ :: ?a' => lookup_tac doUnify a' P found notfound
     | _ => notfound tt
     end.
 
@@ -334,11 +331,11 @@ Module Solving.
   (* This tactic has to be in CPS because it refers to lookup_tac, which calls
      the [unify] tactic (https://github.com/coq/coq/commit/18e6108339aaf18499).
    *)
-  Ltac rquote e(*:env*) P(*:SPred*) cont(*: env -> term -> tactic *) :=
+  Ltac rquote doUnify e(*:env*) P(*:SPred*) cont(*: env -> term -> tactic *) :=
     match P with
     | ?P1 ** ?P2 =>
-        rquote e P1 ltac:(fun e t1 =>
-        rquote e P2 ltac:(fun e t2 =>
+        rquote doUnify e P1 ltac:(fun e t1 =>
+        rquote doUnify e P2 ltac:(fun e t2 =>
         cont e (t_star t1 t2)))
     | empSP => cont e t_emp
     | lfalse => cont e t_false
@@ -354,7 +351,7 @@ Module Solving.
     | _ =>
         match e with
         | (_, ?a) =>
-          lookup_tac a P
+          lookup_tac doUnify a P
             ltac:(fun j => cont e (t_atom j))
             ltac:(fun _ => insert_tac e P ltac:(fun e i => cont e (t_atom i)))
         end
@@ -511,11 +508,11 @@ Module Solving.
      environments: one to insert into and one to lookup in. Our decision
      procedures never care about duplicated atoms on either side -- only atoms
      in common between left and right. *)
-  Ltac ssimpl :=
+  Ltac ssimpl_with doUnify :=
     match goal with
     |- ?P |-- ?Q =>
         lquote ((0, [::]) : env) P ltac:(fun e tP =>
-          rquote e Q ltac:(fun e tQ =>
+          rquote doUnify e Q ltac:(fun e tQ =>
             eapply (@do_simplify e tP tQ);
             [ cbv; reflexivity
             | cbv [eval lookup eqn' clean]
@@ -523,6 +520,8 @@ Module Solving.
           )
         )
     end.
+
+  Ltac ssimpl := ssimpl_with cheap_unify.
 
   Example ex0: forall P Q: SPred, exists n,
         ltrue ** (1 = 1 /\\ empSP) ** P ** Q |-- (Q ** (n = 1 /\\ empSP)) ** ltrue.
@@ -544,7 +543,7 @@ Module Solving.
     match goal with
     |- ?P |-- ?Q ** ltrue =>
         lquote ((0, [::]) : env) P ltac:(fun e tP =>
-          rquote e Q ltac:(fun e tQ =>
+          rquote cheap_unify e Q ltac:(fun e tQ =>
             apply (@solve_uc e tP tQ)
           )
         )
@@ -556,27 +555,30 @@ Module Solving.
 End Solving.
 
 Ltac ssimpl := Solving.ssimpl.
+Ltac ssimpl_with := Solving.ssimpl_with.
 
 
-Ltac sbazookaone :=
+Ltac sbazookaone_with PT :=
   (try sdestructs => * //; (* leaves 0 or 1 subgoal *)
   try ssplits; (* last subgoal is the entailment *)
-  [..| done || (try ssimpl)] => //).
+  [..| done || (try (ssimpl_with PT))] => //).
 
-Ltac sbazookaonealt :=
+Ltac sbazookaonealt_with PT :=
   (* First try and prove from lfalseL *)
-  try ssimpl;
+  try (ssimpl_with PT);
   match goal with
   | |- lfalse |-- ?Q => apply lfalseL
   | |- ?P /\\ lfalse |-- ?Q => (apply lpropandL => _; apply lfalseL)
-  | _ => sbazookaone
+  | _ => sbazookaone_with PT
   end.
   
 (** Overpowered super-tactic *)
-Ltac sbazooka :=
+Ltac sbazooka_with PT :=
     match goal with
-    | |- ?P -|- ?Q => (split; sbazookaonealt)
-    | |- _ => sbazookaonealt
+    | |- ?P -|- ?Q => (split; sbazookaonealt_with PT)
+    | |- _ => sbazookaonealt_with PT
     end.
+
+Ltac sbazooka := sbazooka_with Solving.cheap_unify.
 
 

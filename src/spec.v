@@ -93,9 +93,9 @@ Local Existing Instance ILLaterPreOps.
 Local Existing Instance ILLaterPre.
 
 Definition spec := ILPreFrm ge (ILPreFrm extSP Prop).
-Global Instance ILSpecOps: ILLOperators spec := _.
-Global Instance ILOps: ILogicOps spec := _.
-Global Instance ILSpec: ILLater spec := _.
+Global Instance ILSpecOps: ILLOperators spec | 2 := _.
+Global Instance ILOps: ILogicOps spec | 2 := _.
+Global Instance ILSpec: ILLater spec | 2 := _.
 
 End ILSpecSect.
 
@@ -617,12 +617,12 @@ Corollary spec_reads_byteIs S p b:
   S <@ byteIs p b -|- S @ byteIs p b. 
 Proof. apply spec_reads_eq_at. Qed. 
 
-Corollary spec_reads_flagIs S p b:
-  S <@ flagIs p b -|- S @ flagIs p b. 
+Corollary spec_reads_flagIs S (p:Flag) b:
+  S <@ (p~=b) -|- S @ (p~=b). 
 Proof. apply spec_reads_eq_at. Qed. 
 
-Corollary spec_reads_regIs S p b:
-  S <@ regIs p b -|- S @ regIs p b. 
+Corollary spec_reads_regIs S (p:AnyReg) b:
+  S <@ (p~=b) -|- S @ (p~=b). 
 Proof. apply spec_reads_eq_at. Qed. 
 
 Lemma spec_reads_merge S R1 R2:

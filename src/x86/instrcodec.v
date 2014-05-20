@@ -529,8 +529,8 @@ Definition InstrCodec : Codec Instr :=
 ||| droplsb #x"80" .$ BOPCodecMRI
 ||| #x"83" .$ RegMemCodec opCodec true $ shortDWORDCodec ~~> unBOPMRId
 (* MOV operationsl *)
-||| droplsb #x"88" .$ BOPCodecMRR ~~> unMOV
 ||| droplsb #x"8A" .$ BOPCodecRMR ~~> unMOV
+||| droplsb #x"88" .$ BOPCodecMRR ~~> unMOV
 ||| MOVIMMPREF .$ regCodec $ DWORDCodec ~~> unMOVRI
 ||| droplsb #x"C6" .$ MOVCodecMRI ~~> unMOV
 (* IMUL and MUL *)
@@ -548,7 +548,7 @@ Definition InstrCodec : Codec Instr :=
 (* PUSH *)
 ||| #x"68" .$ DWORDCodec ~~> unSrcI ~~> unPUSH
 ||| #x"6A" .$ shortDWORDCodec ~~> unSrcI ~~> unPUSH
-||| PUSHPREF .$ regCodec ~~> unSrcR ~~> unPUSH
+||| #b"01010" .$ regCodec ~~> unSrcR ~~> unPUSH
 ||| #x"FF" .$ RegMemOpCodec #6 _ ~~> unSrcRM ~~> unPUSH
 (* POP *)
 ||| #x"8F" .$ RegMemOpCodec #0 _ ~~> unPOP
@@ -600,6 +600,9 @@ Require Import codecregex div.
    - hence, it's finite
    - the number of bits is always divisible by 8 
 *)
+
+
+
 Lemma InstrCodecIsNonAmbiguous : NonAmbiguous InstrCodec.
 Proof. by vm_compute. Qed. 
 
@@ -613,8 +616,9 @@ Proof.  by rewrite /finiteCodec InstrCodecMaxBits. Qed.
 
 Lemma InstrCodecAlignment : forall l x, interp InstrCodec l x -> 8 %| size l. 
 Proof. move => l x I. 
-have ALL : all (fun x => 8 %| x) (sizes InstrCodec) by vm_compute. 
-apply: sizesProp I. apply: InstrCodecFinite. apply ALL. Qed. 
+have byteAligned: all (fun x => 8 %| x) (sizes InstrCodec) 
+  by vm_compute. 
+apply: sizesProp I. apply: InstrCodecFinite. apply byteAligned. Qed. 
 
 Corollary encInstrAligned : forall l x, enc InstrCodec x = Some l -> 8 %| size l.
 Proof. move => l x ENC. apply encSound in ENC. by apply: InstrCodecAlignment ENC. Qed.
@@ -698,3 +702,7 @@ Instance encodeInstr : Writer Instr := fun instr =>
 
 Lemma writeBytesSkipFree xs : writerTmSkipFree (writeBytes xs). 
 Proof. induction xs => //. Qed. 
+
+Require Import instrsyntax. Open Scope instr_scope. 
+Compute bytesToHex (snd (fromBin (if enc InstrCodec 
+  (BOP _ OP_ADD (DstSrcMI true (mkMemSpec (Some (nonSPReg EBX, Some(EDX,S4))) (#x"12345678")) (#x"87654321":DWORD))) is Some bs then bs else nil))).

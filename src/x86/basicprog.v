@@ -34,10 +34,8 @@ Proof.
   rewrite /basic. move=> Hc1 Hc2. specintros => i j.
   unfold_program. 
   specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst. 
-  specapply Hc1.
-  - by ssimpl. 
-  specapply Hc2.   
-  - by ssimpl. 
+  specapply Hc1. by ssimpl.
+  specapply Hc2. by ssimpl. 
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
   by rewrite spec_at_emp.
 Qed.
@@ -69,9 +67,9 @@ Qed.
   Ltac  basicapp R :=
   match goal with
     | |- |-- basic ?P (prog_seq ?p1 ?p2) ?Q =>  
-             (eapply basic_seq; first (eapply basic_basic; first exact R; ptsimpl; sbazooka))
+             (eapply basic_seq; first (eapply basic_basic; first exact R; autounfold with spred; sbazooka))
 
-    | _ => eapply basic_basic; first exact R; ptsimpl; sbazooka
+    | _ => eapply basic_basic; first exact R; autounfold with spred; sbazooka
     end.
 
   Ltac basicapply R :=

@@ -38,12 +38,12 @@ Example basic_inc3 x:
             (INC EAX;; INC EAX;; INC EAX)
             (EAX ~= x +# 3) @ OSZCP_Any.
 Proof.
-  autorewrite with push_at. rewrite /OSZCP_Any /flagAny.
-  specintros => o s z c p.
-  eapply basic_seq; [apply INC_R_rule|].
-  eapply basic_seq; [apply INC_R_rule|].
-  eapply basic_roc_post; [|apply INC_R_rule].
-  rewrite addIsIterInc /OSZCP /iter. by sbazooka.
+  autorewrite with push_at. rewrite /OSZCP_Any/stateIsAny.
+  specintros => o s z c p. 
+  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
+  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
+  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
+  rewrite addIsIterInc /iter. by sbazooka.
 Qed.
 
 Example incdec_while c a:
@@ -62,28 +62,27 @@ Proof.
   set (I := fun b => Exists c', Exists a',
     (c' == #0) = b /\\ addB c' a' = addB c a /\\
     ECX ~= c' ** EAX ~= a' **
-    flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF).
+    OF? ** SF? ** CF? ** PF?).
   eapply basic_basic_context; first apply (while_rule_ro (I:=I));
       first 2 last.
   - reflexivity.
-  - subst I. rewrite /OSZCP_Any /flagAny/ConditionIs. sbazooka.
-  - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.
+  - subst I. rewrite /OSZCP_Any/stateIsAny/ConditionIs. sbazooka.
+  - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.  
     rewrite ->(eqP Hzero) in *. rewrite add0B in Hadd.
-    subst a'. rewrite /OSZCP_Any/ConditionIs/flagAny. by sbazooka.
+    subst a'. rewrite /OSZCP_Any/ConditionIs/stateIsAny. by sbazooka.
   - specintros => b1 b2. subst I; cbv beta. specintros => c' a' Hzero Hadd.
     eapply basic_basic; first eapply TEST_self_rule.
-    + rewrite /OSZCP_Any/ConditionIs/flagAny. by sbazooka.
-    rewrite /OSZCP/ConditionIs/flagAny. by sbazooka.
+    + rewrite /OSZCP_Any/ConditionIs/stateIsAny. by sbazooka.
+    rewrite /OSZCP/ConditionIs/stateIsAny. by sbazooka.
   - subst I; cbv beta. specintros => c' a' Hzero Hadd.
-    rewrite /flagAny. specintros => fo fs fc fp. eapply basic_seq.
+    rewrite /stateIsAny. specintros => fo fs fc fp. eapply basic_seq. 
     + eapply basic_basic; first eapply DEC_R_rule.
-      * rewrite /OSZCP /ConditionIs. by ssimpl.
+      * rewrite /OSZCP/ConditionIs. by ssimpl. 
       done.
     eapply basic_basic; first eapply INC_R_rule.
     + by ssimpl.
     ssplits; first last.
-    + rewrite /OSZCP/ConditionIs/OSZCP_Any /flagAny. by sbazooka.
+    + rewrite /OSZCP/ConditionIs/OSZCP_Any. by sbazooka.
     + rewrite <-Hadd. exact: addB_decB_incB.
     + done.
 Qed.
-

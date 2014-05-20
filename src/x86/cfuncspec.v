@@ -171,7 +171,8 @@ Qed.
 Corollary POP_R_ruleAux (r:Reg) (sp:BITS 32) (w:DWORD):
   |-- basic (r? ** ESP ~= sp    ** sp:->w) (POP (RegMemR true r))
             (r ~= w ** ESP ~= sp+#4 ** sp:->w).
-Proof. rewrite /regAny. specintros => old. basicapply (POP_rule (RegMemR true r)); sbazooka. Qed. 
+Proof. rewrite /stateIsAny. specintros => old. 
+basicapply (POP_rule (RegMemR true r)); sbazooka. Qed. 
 
 Lemma stackframe_rule c P Q ebp esp :
   |-- basic (P ** EBP ~= esp-#4) c (Q ** EBP?) ->
@@ -181,7 +182,7 @@ move => H.
 
 autorewrite with push_at. specintro => old.
 basicapply PUSH_R_rule.
-basicapply MOV_RR_rule. rewrite /regAny. sbazooka. 
+basicapply MOV_RR_rule. rewrite /stateIsAny. sbazooka. 
 basicapply H. 
 basicapply POP_R_ruleAux. 
 autorewrite with bitsHints. reflexivity. 
@@ -240,11 +241,11 @@ rewrite /incSpec/incBody/stacked_nonvoid1_impMeetsSpec/pre/post/fst/snd.
 specintros => arg ebp. 
 autorewrite with push_at.
 basicapply MOV_RM_rule.
-rewrite {1}/OSZCP_Any/OSZCP/flagAny.
+rewrite {1}/OSZCP_Any/OSZCP{3 4 5 6 7}/stateIsAny.
 specintros => f1 f2 f3 f4 f5.
 eapply basic_basic.  apply INC_R_rule. 
 rewrite /OSZCP. sbazooka. 
-rewrite /OSZCP_Any/OSZCP/flagAny/regAny. 
+rewrite /OSZCP_Any/OSZCP/stateIsAny. 
 sbazooka. 
 Qed. 
 
@@ -312,7 +313,7 @@ autorewrite with push_at.
 rewrite ->spec_later_impl.  
 rewrite <-spec_later_weaken.
 
-rewrite /regAny. eapply SAFEY; sbazooka. 
+rewrite /stateIsAny. eapply SAFEY; sbazooka. 
 Qed. 
 
 Definition scratch := EAX? ** ECX? ** EDX? ** OSZCP_Any.
@@ -370,17 +371,17 @@ rewrite <-spec_later_weaken.
 autorewrite with push_at. rewrite /scratch.
 case: r.
 (* EAX  *)
-eapply SAFEY; simpl (regIsIn _ _); simpl (scratchedExcept _ _); rewrite /regAny; ssimpl => //. 
+eapply SAFEY; simpl (regIsIn _ _); simpl (scratchedExcept _ _); rewrite /stateIsAny; ssimpl => //. 
 rewrite -subB_addn. replace (4+4) with 8 by done. sbazooka.  
 (* EBX *)
 rewrite -> (spec_frame (EBX~=v)). autorewrite with push_at. 
 eapply SAFEY; simpl (regIsIn _ _); simpl (scratchedExcept _ _). sbazooka. 
 ssimpl. rewrite -subB_addn. replace (4+4) with 8 by done. sbazooka. 
 (* ECX *)
-eapply SAFEY; simpl (regIsIn _ _); simpl (scratchedExcept _ _); rewrite /regAny; ssimpl => //. 
+eapply SAFEY; simpl (regIsIn _ _); simpl (scratchedExcept _ _); rewrite /stateIsAny; ssimpl => //. 
 rewrite -subB_addn. replace (4+4) with 8 by done. sbazooka.  
 (* EDX *)
-eapply SAFEY; simpl (regIsIn _ _); simpl (scratchedExcept _ _); rewrite /regAny; ssimpl => //. 
+eapply SAFEY; simpl (regIsIn _ _); simpl (scratchedExcept _ _); rewrite /stateIsAny; ssimpl => //. 
 rewrite -subB_addn. replace (4+4) with 8 by done. sbazooka.  
 (* ESI *)
 rewrite -> (spec_frame (ESI~=v)). autorewrite with push_at. 

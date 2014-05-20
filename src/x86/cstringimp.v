@@ -79,10 +79,10 @@ Proof.
   move => ISZF. rewrite /strlen.
   autorewrite with push_at. 
 
-  rewrite /regAny. specintros => oldecx.
+  rewrite /stateIsAny. specintros => oldecx.
 
   (* MOV ECX, 0 *)
-  basicapply MOV_RI_rule. rewrite /regAny. sbazooka. 
+  basicapply MOV_RI_rule. rewrite /stateIsAny. sbazooka. 
 
   (* WHILE *)
   (* Loop invariant is most easily expressed by splitting the string into 
@@ -91,7 +91,7 @@ Proof.
     Exists prefix, Exists suffix, 
     s = (prefix ++ suffix)%string /\\ (if suffix is ""%string then true else false) == b /\\
     EDI ~= p ** ECX ~= #(length prefix) ** 
-    pointsToCString p s ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF).
+    pointsToCString p s ** OF? ** SF? ** CF? ** PF?).
   eapply basic_basic; first apply (while_rule_ro (I:=I)). (*first 2 last. *)
 
   (* Condition code: CMP [EDX+ECX], 0 *)
@@ -104,7 +104,7 @@ Proof.
   (* Empty string *)
   + rewrite /OSZCP_Any/ConditionIs. 
   eapply basic_basic; first eapply CMP_MbxI_eq_rule.
-  rewrite /OSZCP_Any/ConditionIs/flagAny.
+  rewrite /OSZCP_Any/stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString. 
   sbazooka. subst. sbazooka. rewrite <-pointsToCString_append_op.
   rewrite /pointsToCString. sbazooka. 
@@ -112,7 +112,7 @@ Proof.
   (* Non-empty string *)
   + subst. rewrite /OSZCP_Any/ConditionIs. 
   eapply basic_basic; first eapply CMP_MbxI_eq_rule.
-  rewrite /OSZCP_Any/ConditionIs/flagAny.
+  rewrite /OSZCP_Any/stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString. 
   sbazooka.
   sbazooka.     
@@ -122,10 +122,10 @@ Proof.
 
   (* Body of loop: INC ECX *)
   rewrite /ConditionIs/I. 
-  specintros => prefix suffix APPEND END. rewrite /flagAny. specintros => ofl sfl cfl pfl. 
+  specintros => prefix suffix APPEND END. rewrite /stateIsAny. specintros => ofl sfl cfl pfl. 
   subst. 
   eapply basic_basic. eapply INC_R_rule.
-  rewrite /flagAny/OSZCP. sbazooka.    
+  rewrite /OSZCP. sbazooka.    
 
   case E: suffix => [| a s'].
 
@@ -139,14 +139,15 @@ Proof.
 
   (**)
   subst I. 
-    rewrite /OSZCP_Any/flagAny/ConditionIs.
+    rewrite /OSZCP_Any/ConditionIs.
+    rewrite /stateIsAny. 
     sdestructs => o sf z c pf. sbazooka. instantiate (1:=s). by instantiate (1:=EmptyString). 
     simpl (length _). by ssimpl.
   subst I; cbv beta. 
     sdestructs => prefix suffix -> END.
     rewrite /ConditionIs. 
     destruct suffix => //.
-    rewrite /OSZCP_Any/flagAny. rewrite length_append addn0. 
+    rewrite /OSZCP_Any/stateIsAny. rewrite length_append addn0. 
     sbazooka. 
 Qed.   
 

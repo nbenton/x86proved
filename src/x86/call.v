@@ -36,16 +36,17 @@ Proof.
 Qed.
 Hint Rewrite spec_at_toyfun : push_at.
 
-Lemma toyfun_call f P Q:
+Lemma toyfun_call (f:DWORD) P Q:
   |> toyfun f P Q |-- basic P (call_toyfun f) Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
-  apply basic_local => iret. eapply basic_seq.
-  - basicapply MOV_RI_rule. 
+  apply basic_local => iret. 
+  eapply basic_seq.
+  - basicapply MOV_RI_rule.
+  
   rewrite /basic. specintros => i j. unfold_program. specintros => _ <- -> {j}.
-  specapply JMP_I_rule.
-  - by ssimpl.
-  rewrite <-spec_reads_frame. autorewrite with push_at.
+  specapply JMP_I_rule. by ssimpl.
+  rewrite <-spec_reads_frame. autorewrite with push_at. 
   rewrite /toyfun. autorewrite with push_later. apply lforallL with iret.
   autorewrite with push_later. cancel2. rewrite <-spec_later_weaken.
   cancel1. by ssimpl.
@@ -62,12 +63,11 @@ Proof.
   apply lforallL with iret. autorewrite with push_at.
   eapply safe_safe_ro; first reflexivity.
   - apply lforallL with f. apply lforallL with i1. reflexivity.
-  - solve_code. by ssimpl.
-  specapply JMP_R_rule.
-  - by ssimpl.
+  - split; sbazooka.
+  specapply JMP_R_rule. by ssimpl. 
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
-  rewrite <-spec_later_weaken. autorewrite with push_at.
-  cancel1. rewrite /regAny. by sbazooka.
+  rewrite <-spec_later_weaken. rewrite /stateIsAny. autorewrite with push_at.
+  cancel1. by sbazooka.
 Qed.
 
 
@@ -99,10 +99,10 @@ Example toyfun_example_callee_correct (f f': DWORD):
 Proof.
   specintro => a. autorewrite with push_at.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
-  autorewrite with push_at. rewrite /OSZCP_Any /flagAny.
+  autorewrite with push_at. rewrite /OSZCP_Any/stateIsAny.
   specintros => o s z c p.
   basicapply INC_R_rule. 
-    - rewrite /OSZCP. by ssimpl.
+    - rewrite /OSZCP. sbazooka.  
   basicapply INC_R_rule.
   - rewrite /OSZCP.
   rewrite addIsIterInc /OSZCP /iter. by sbazooka.
@@ -112,24 +112,25 @@ Qed.
    toyfun_example_callee_correct guarantees: we ask for a function that does
    not have OSZCP_Any in its footprint. But thanks to the higher-order frame
    rule, it will still be possible to compose the caller and the callee. *)
-Example toyfun_example_caller_correct a f:
+Example toyfun_example_caller_correct a (f:DWORD):
   Forall a', toyfun f (EAX ~= a') (EAX ~= a' +# 2)
   |-- basic (EAX ~= a) (toyfun_example_caller f) (EAX ~= a +# 4) @ retreg?.
 Proof.
-  rewrite /toyfun_example_caller. autorewrite with push_at.
-  eapply basic_seq.
+  rewrite /toyfun_example_caller. rewrite /RegOrFlag_target. 
+  autorewrite with push_at. 
+  eapply basic_seq. 
   - apply lforallL with a.
     eapply basic_basic_context.
     - have H := toyfun_call. setoid_rewrite spec_at_basic in H. apply H.
     - by apply spec_later_weaken.
-    - by ssimpl.
+    - by sbazooka. 
     done.
   apply lforallL with (a +# 2).
   eapply basic_basic_context.
   - have H := toyfun_call. setoid_rewrite spec_at_basic in H. apply H.
   - by apply spec_later_weaken.
   - by ssimpl.
-  rewrite -addB_addn. rewrite -[2+2]/4. by ssimpl.
+  rewrite -addB_addn. sbazooka. reflexivity. 
 Qed.
 
 Example toyfun_example_correct entry (i j: DWORD) a:
@@ -148,9 +149,9 @@ Proof.
   cancel2; last reflexivity. autorewrite with push_at.
   eapply safe_safe_ro; first reflexivity.
   - eapply lforallL. eapply lforallL. reflexivity.
-  - solve_code. by ssimpl.
+  - split; sbazooka. 
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
-  rewrite spec_at_emp. cancel1. by ssimpl.
+  rewrite spec_at_emp. cancel1. sbazooka. 
 Qed.
 
 (*
@@ -183,11 +184,10 @@ Example toyfun_apply_correct (f f' g: DWORD) P Q:
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
   specintro => iret. rewrite limpland.
-  specapply JMP_R_rule.
-  - by ssimpl.
+  specapply JMP_R_rule. by ssimpl. 
   autorewrite with push_at.
   rewrite <-spec_reads_frame. rewrite -limpland. apply limplValid.
   rewrite /toyfun. eapply lforallL. rewrite <-spec_later_weaken.
-  rewrite /regAny. cancel2; cancel1; by sbazooka.
+  rewrite /stateIsAny. cancel2; cancel1; by sbazooka.
 Qed.
 

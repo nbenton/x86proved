@@ -35,7 +35,7 @@ Proof.
   (* nbits = 0 *) 
   destruct m => //. autorewrite with bitsHints push_at. 
   apply: basic_roc_post; last apply basic_skip.
-  rewrite /regAny. sbazooka. 
+  rewrite /stateIsAny. sbazooka. 
 
   (* nbits != 0 *)
   have H: m./2 < 2 ^nbits.
@@ -92,7 +92,7 @@ Proof.
   (* nbits = 0 *) 
   destruct m => //. autorewrite with bitsHints push_at.
   apply: basic_roc_post; last apply basic_skip.
-  rewrite /regAny. sbazooka. 
+  rewrite /stateIsAny. sbazooka. 
 
   (* nbits != 0 *)
   have H: m./2 < 2 ^nbits.
@@ -180,18 +180,18 @@ autorewrite with push_at.
 case EQ2: (m == 2). 
 
 basicapply LEA_ruleSameBase => //. 
-rewrite /eval.scaleBy shlB_asMul addB0 /regAny (eqP EQ2).
+rewrite /eval.scaleBy shlB_asMul addB0 /stateIsAny (eqP EQ2).
 sbazooka. 
 
 case EQ4: (m == 4). 
 
 basicapply LEA_ruleSameBase => //.
-rewrite /eval.scaleBy !shlB_asMul addB0 /regAny (eqP EQ4) -mulB_muln.
+rewrite /eval.scaleBy !shlB_asMul addB0 /stateIsAny (eqP EQ4) -mulB_muln.
 replace (2*2) with 4 by done. sbazooka. 
 
 case EQ8: (m == 8). 
 basicapply LEA_ruleSameBase => //. 
-rewrite /eval.scaleBy !shlB_asMul addB0 /regAny (eqP EQ8) -!mulB_muln.
+rewrite /eval.scaleBy !shlB_asMul addB0 /stateIsAny (eqP EQ8) -!mulB_muln.
 replace (2*_) with 8 by done. sbazooka. 
 
 basicapply add_mulcAuxCorrect => //. 
@@ -233,7 +233,7 @@ Proof.
   (* nbits = 0 *) 
   destruct m => //. autorewrite with bitsHints.
   apply: basic_roc_post; last apply basic_skip.
-  rewrite /regAny. sbazooka. 
+  rewrite /stateIsAny. sbazooka. 
 
   (* nbits != 0 *)
   have H: m./2 < 2 ^nbits.

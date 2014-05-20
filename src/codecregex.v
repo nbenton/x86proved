@@ -215,7 +215,7 @@ Qed.
 
 Lemma decSoundNo t (c: Codec t) : 
   NonAmbiguous c -> 
-  forall l e x, dec c (l++e) = DecNo _ -> 
+  forall l e x, dec c (l++e) = DecNo -> 
   ~interp c l x. 
 Proof. induction c => NA l e x /=; autorewrite with interp => EQ I. 
 (* Any *)

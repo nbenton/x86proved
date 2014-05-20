@@ -36,8 +36,8 @@ Definition allocImp infoBlock (n: nat) (failed: DWORD) : program :=
   JC  failed;;  (* A carry indicates unsigned underflow *)
   MOV [ESI], EDI.
 
-Definition allocSpec n fail inv code :=
-  Forall i, Forall j, (
+Definition allocSpec n (fail:DWORD) inv code :=
+  Forall i j : DWORD, (
       safe @ (EIP ~= fail ** EDI?) //\\
       safe @ (EIP ~= j ** Exists p, EDI ~= p +# n ** memAny p (p +# n))
     -->>
@@ -52,54 +52,51 @@ Hint Unfold allocSpec : specapply.
 
 Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).  
 Proof.  
-  rewrite /allocImp/allocSpec. specintros => i j. unfold_program.
+  rewrite /allocImp/allocSpec. specintros => i j. unfold_program. 
   specintros => i1 i2 i3 i4 i5 i6.
 
   (* MOV ESI, infoBlock *)
-  specapply MOV_RI_rule.
-  by ssimpl.
+  specapply MOV_RI_rule. by ssimpl.
 
   (* MOV EDI, [ESI] *)
   rewrite {2}/allocInv. specintros => base limit.
-  specapply MOV_RM0_rule.
-  by ssimpl.
+  specapply MOV_RM0_rule. by ssimpl.
 
   (* ADD EDI, bytes *)
   elim E:(splitmsb (adcB false base (fromNat n))) => [carry res].
-  rewrite /ConstImm. specapply ADD_RI_rule.
-  by ssimpl.
+  rewrite /ConstImm. specapply (ADD_RI_rule (r:=EDI)). by ssimpl.
 
   (* JC failed *)
   rewrite E. specapply JC_rule.
-  rewrite /OSZCP. ssimpl. by ssimpl.
+  rewrite /OSZCP. sbazooka. 
 
   specsplit.
     rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
-    rewrite /OSZCP_Any /flagAny /regAny /allocInv. by sbazooka.
+    rewrite /OSZCP_Any/stateIsAny /allocInv. by sbazooka.
 
   (* CMP [ESI+4], EDI *)
   specintro. move/eqP => Hcarry. subst carry.
   elim E0:(sbbB false limit res) => [carry0 res0].
   specapply CMP_MR_rule; last eassumption.
-  - rewrite /OSZCP_Any /flagAny. by sbazooka.
+  - rewrite /OSZCP_Any/stateIsAny. by sbazooka.
 
   (* JC failed *)
   specapply JC_rule.
-  - rewrite /OSZCP. by ssimpl.
+  - rewrite /OSZCP. sbazooka. 
 
   specsplit.
   - rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
-    rewrite /OSZCP_Any /flagAny /regAny /allocInv. by sbazooka.
+    rewrite /OSZCP_Any/stateIsAny /allocInv. by sbazooka.
 
   (* MOV [ESI], EDI *)
   specintro. move/eqP => Hcarry0. subst carry0.
-  specapply MOV_M0R_rule.
-  - by ssimpl.
+  specapply (MOV_M0R_rule (pd:=infoBlock) (r1:=ESI)).  
+  - sbazooka. 
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
   apply: landL2. cancel1.
-  rewrite /OSZCP_Any /flagAny /regAny /allocInv. ssplits.
+  rewrite /OSZCP_Any/stateIsAny/allocInv. ssplits.
 
   ssimpl.
   have Hres: base +# n = res by rewrite /addB /dropmsb E.

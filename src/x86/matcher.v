@@ -36,7 +36,7 @@ Variable valuepred : paramtype -> valuetype -> SPred.
    paramtype, which in general could be any type
 *)
 Definition condbrspec (b:valuetype) dest := 
-    Forall p, Forall v, Forall i, Forall j, 
+    Forall p, Forall v, Forall i j:DWORD, 
      (safe @ ( (v:valuetype) == b /\\ EIP ~= dest) //\\
       safe @ (((v != b)) /\\ EIP ~= j)
       -->>
@@ -66,7 +66,7 @@ else ltrue.
    requirement that it be safe to fall through if the value is not in the list
 *)
 Definition table_precond_all (vsbrs : seq (valuetype*DWORD)) (x:valuetype) :=
-Forall p, Forall x, Forall i, Forall j, 
+Forall p, Forall x, Forall i j: DWORD, 
  (table_precond vsbrs x //\\ safe @ (x \notin [seq fst i | i<-vsbrs] /\\ EIP ~=j)
   -->>
  safe @ (EIP ~= i))
@@ -173,7 +173,7 @@ Definition ifEqDwordStarEAX (b:DWORD) (dest:DWORD) : program :=
   JE dest.
 
 Lemma condbrDwordStarEAX (b:DWORD) dest : 
-    |-- condbrspec ifEqDwordStarEAX (fun p => fun (v:DWORD) => (EAX ~= p ** EDI? ** p :-> v ** OSZCP_Any)) b dest.
+    |-- condbrspec ifEqDwordStarEAX (fun p v:DWORD => (EAX ~= p ** EDI? ** p :-> v ** OSZCP_Any)) b dest.
 Proof.
 rewrite /ifEqDwordStarEAX /condbrspec.
 specintros => p v i j.
@@ -202,7 +202,7 @@ apply landL1.
 cancel1.
 
 sdestructs =>/eqP ->.
-rewrite /OSZCP_Any /flagAny /regAny.
+rewrite /OSZCP_Any/stateIsAny.
 by sbazooka.
 
 rewrite <- spec_reads_frame.
@@ -211,7 +211,7 @@ apply limplValid.
 apply landL2.
 cancel1.
 sdestructs =>/eqP ->.
-rewrite /OSZCP_Any /flagAny /regAny.
+rewrite /OSZCP_Any/stateIsAny.
 by sbazooka.
 Qed.
 
@@ -243,14 +243,12 @@ apply limplValid.
 apply landL1.
 cancel1.
 sdestructs =>/eqP ->.
-rewrite /flagAny. 
-by sbazooka.
-
+rewrite {3}/stateIsAny. sbazooka.
+rewrite /stateIsAny. sbazooka. 
 apply limplValid; apply landL2.
 cancel1.
 sdestructs =>/eqP ->.
-rewrite /flagAny.
-by sbazooka.
+rewrite /stateIsAny. by sbazooka.
 Qed.
 End ByteEq.
 
@@ -280,7 +278,7 @@ Definition NZBYTE := {x : BYTE | x != #0}.
 Variable start : DWORD.
 
 Definition byteseqsplit (s1 s2 : seq NZBYTE) := 
- Exists q, Exists r, EAX ~= q ** start -- q :-> s1 ** q -- r :-> s2 ** r :-> (#0 : BYTE).
+ Exists q:DWORD, Exists r, EAX ~= q ** start -- q :-> s1 ** q -- r :-> s2 ** r :-> (#0 : BYTE).
 
 Variable r : BYTEReg.
 Definition bytecurrent : program := (MOV r, [EAX + 0]).

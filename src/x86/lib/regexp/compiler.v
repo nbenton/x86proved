@@ -164,14 +164,14 @@ Proof.
     apply landL1.
     do 2 cancel1.
     sdestruct=> /eqP ->.
-    rewrite /OSZCP_Any/flagAny.
+    rewrite /OSZCP_Any/stateIsAny.
     by sbazooka.
 
     * (* FLOW: run [j] *)
     apply landL2.
     cancel1. 
     sdestruct=> /eqP ->.
-    rewrite /OSZCP_Any/flagAny.
+    rewrite /OSZCP_Any/stateIsAny.
     by sbazooka.
 Qed.
 
@@ -360,7 +360,7 @@ Proof.
     
     (* jumpNext #0 exit *)
     specapply jumpNext_logic; 
-      first by rewrite /regAny; 
+      first by rewrite /stateIsAny; 
                sbazooka.
  
     specsplit;
@@ -372,7 +372,7 @@ Proof.
     - (* CASE: end of string: run exit *)    
       apply landL1; rewrite <-spec_later_weaken; 
         cancel1; sdestruct=> _;
-        rewrite addB0; rewrite /regAny; 
+        rewrite addB0; rewrite /stateIsAny; 
         move/eqP: eq_pd=> ->;
         sbazooka.
       rewrite ->(emptyString l1_string).
@@ -412,7 +412,7 @@ Proof.
 
     - (* CASE: run [j] *)
       apply landL2; cancel1; 
-      rewrite /regAny  [pd +# 0] addB0;
+      rewrite /stateIsAny  [pd +# 0] addB0;
         ssimpl;
         sdestruct=> _.
       sbazooka;
@@ -498,7 +498,7 @@ Proof.
 
       + (* CASE: accepting state *)
         apply landL1.
-        rewrite /runAcc/run/regAny/pointsToS;
+        rewrite /runAcc/run/stateIsAny/pointsToS;
           autorewrite with push_at; 
           cancel1;
           sbazooka.
@@ -508,7 +508,7 @@ Proof.
 
       + (* CASE: rejecting state *)
         apply landL2.
-        rewrite /runRej/run/regAny/pointsToS;
+        rewrite /runRej/run/stateIsAny/pointsToS;
           autorewrite with push_at; 
           cancel1; sbazooka.
         rewrite eq_l2_nil in eq_str_l1_l2.
@@ -534,7 +534,7 @@ Proof.
       specintros=> k; cancel1; 
         autorewrite with push_at;
         apply lforallL with (x := k).
-      rewrite /runState/run/regAny.
+      rewrite /runState/run/stateIsAny.
       autorewrite with push_at;
         do 2 cancel1.
       sdestruct=> /andP [c_in_alphabet trans_s_c].
@@ -579,7 +579,7 @@ Proof.
       rewrite /runRej/run.
       rewrite <-spec_reads_frame; autorewrite with push_at.
       apply limplValid; do 2 apply landL2.
-      rewrite <-spec_later_weaken; cancel1; rewrite /regAny.
+      rewrite <-spec_later_weaken; cancel1; rewrite /stateIsAny.
 
       have eq_l1_c_l2': str == ((l1 ++ [:: c]) ++ l2')%SEQ
           by move/eqP: eq_str_l1_l2 ->;
@@ -916,7 +916,7 @@ Proof.
 
   apply limplAdj; apply limplL.
     * (* CASE: post-conditions --> runAcc /\ runRej *)
-      rewrite /runAcc/runRej/regAny/run/pointsToS.
+      rewrite /runAcc/runRej/stateIsAny/run/pointsToS.
       specsplit.
 
       - (* CASE: Accepting is implied *)
@@ -931,7 +931,7 @@ Proof.
         by sbazooka.
 
     * (* CASE: pre-conditions --> can run dfa_init label *)
-      rewrite /runStates/runState/run/regAny/pointsToS.
+      rewrite /runStates/runState/run/stateIsAny/pointsToS.
       autorewrite with push_at.
       apply landL1.
       apply lforallL with (x := dfa_init).

@@ -37,18 +37,17 @@ Proof.
   basicapply XOR_RR_rule. 
 
   (* XOR r2, r1 *)
-  basicapply XOR_RR_rule; rewrite /OSZCP_Any/OSZCP/flagAny; sbazooka.
+  basicapply XOR_RR_rule; rewrite /OSZCP_Any/stateIsAny/OSZCP; sbazooka.
 
   (* XOR r1, r2 *)
-  basicapply XOR_RR_rule; rewrite /OSZCP_Any/OSZCP/flagAny; sbazooka.
+  basicapply XOR_RR_rule; rewrite /OSZCP_Any/stateIsAny/OSZCP; sbazooka.
 
   (* Now we're left reasoning about XOR *)  
   rewrite {2}[X in xorB w X]xorBC. 
   rewrite [X in r2~=X]xorBA.
   autorewrite with bitsHints.  
   rewrite [X in xorB _ X]xorBC xorBA. 
-  autorewrite with bitsHints. 
-  by ssimpl. 
+  by autorewrite with bitsHints. 
 Qed. 
 
 Lemma tmpSwapCorrect (r1 r2 rt: Reg) : 
@@ -60,9 +59,9 @@ Proof.
   basicapply MOV_RR_rule.
 
   (* MOV r1, r2 *)
-  basicapply MOV_RR_rule; rewrite /regAny; sbazooka.
+  basicapply MOV_RR_rule; rewrite /stateIsAny; sbazooka.
  
   (* MOV r2, r1 *)
-  basicapply MOV_RR_rule; rewrite /regAny; sbazooka.
+  basicapply MOV_RR_rule; rewrite /stateIsAny; sbazooka.
 Qed. 
 

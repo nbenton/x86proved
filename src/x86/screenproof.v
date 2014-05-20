@@ -41,7 +41,7 @@ Proof.
   basicapply SHL_RI_rule => //.
 
   (* ADD EDI, ECX *)
-  basicapply ADD_RR_ruleNoFlags; rewrite /regAny; sbazooka. 
+  basicapply ADD_RR_ruleNoFlags; rewrite /stateIsAny; sbazooka. 
 
   rewrite /charPos/iter !shlB_asMul. 
 
@@ -54,7 +54,7 @@ Proof.
   reflexivity. 
 Qed. 
 
-(* Correct placement of unfolding of regAny and flagAny is tricky. *)
+(* Correct placement of unfolding of stateIsAny is tricky. *)
 Lemma inlineOutputChar_correct col row char :
   col < numCols -> 
   row < numRows -> 
@@ -63,14 +63,14 @@ Proof.
   move => NC NR. 
   rewrite /inlineOutputChar_spec/inlineOutputChar/charIs.
   
-  autorewrite with push_at. rewrite {1}/regAny.
+  autorewrite with push_at. rewrite {1}/stateIsAny.
   specintros => olddi oldchar. 
 
   have ICCP := inlineComputeCharPos_correct NC NR.     
   rewrite /inlineComputeCharPos_spec in ICCP. 
   basicapply ICCP.
 
-  rewrite /regAny.
+  rewrite /stateIsAny.
   sbazooka. 
 
   (* MOV BYTE [EDI + 0], EAX *)
@@ -78,7 +78,7 @@ Proof.
   rewrite -> addB0.
   sbazooka.
 
-  rewrite /regAny.
+  rewrite /stateIsAny.
   rewrite -> addB0.
   sbazooka. 
 Qed. 
@@ -91,7 +91,7 @@ Proof.
   move => NC NR. 
   rewrite /inlineReadChar_spec/inlineReadChar/memIs/interpProgram/charIs.
   
-  autorewrite with push_at. rewrite {1}/regAny.
+  autorewrite with push_at. rewrite {1}/stateIsAny.
   specintros => oldeax. 
 
   have ICCP := inlineComputeCharPos_correct NC NR.     
@@ -102,6 +102,6 @@ Proof.
   basicapply MOV_RMb_rule. 
   rewrite -> addB0. rewrite /BYTEregIs/BYTEregIsAux. sbazooka. 
 
-  rewrite /regAny addB0.   
+  rewrite /stateIsAny addB0.   
   sbazooka. 
 Qed. 

@@ -102,7 +102,7 @@ Proof.
   apply: basic_roc_pre;
   last apply (if_rule 
     (P:= fun b => 
-    (m == 0) = b /\\ r ~= #m ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF)). 
+    (m == 0) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?)). 
 
   rewrite /ConditionIs. sbazooka.
  
@@ -110,14 +110,14 @@ Proof.
   by apply (ltn_trans LT2). 
 
   specintros => /eqP->. 
-  basicapply MOV_RI_rule. rewrite /regAny; sbazooka.
-  rewrite /OSZCP_Any. rewrite /ConditionIs/flagAny. rewrite add0n modn_small. 
+  basicapply MOV_RI_rule. rewrite {5}/stateIsAny; sbazooka.
+  rewrite /OSZCP_Any/stateIsAny. rewrite /ConditionIs. rewrite add0n modn_small. 
   sbazooka.
   destruct n => //. 
 
   simpl (~~ _). specintros => H. 
   basicapply DEC_R_ruleNoFlags. 
-  rewrite /OSZCP_Any/ConditionIs/flagAny. sbazooka.
+  rewrite /OSZCP_Any/stateIsAny/ConditionIs. sbazooka.
   destruct m => //. 
   rewrite decB_fromSuccNat. 
   destruct n => //. rewrite succnK. rewrite addSnnS. rewrite modnDr. 
@@ -140,7 +140,7 @@ move => LT1 LT2.
   apply: basic_roc_pre;
   last apply (if_rule 
     (P:= fun b => 
-    (m == n.-1) = b /\\ r ~= #m ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF)). 
+    (m == n.-1) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?)). 
 
   rewrite /ConditionIs. sbazooka.
   have B2: m < 2^32. 
@@ -150,13 +150,13 @@ move => LT1 LT2.
   by apply (leq_ltn_trans (leq_pred _)). 
 
   specintros => /eqP->. 
-  basicapply MOV_RI_rule. rewrite /regAny. sbazooka.
-  rewrite /OSZCP_Any. rewrite /ConditionIs. rewrite /flagAny. 
+  basicapply MOV_RI_rule. rewrite {5}/stateIsAny. sbazooka.
+  rewrite /OSZCP_Any/stateIsAny. rewrite /ConditionIs. 
   rewrite (ltn_predK LT2). sbazooka. by rewrite modnn. 
 
   simpl (~~ _). specintros => H. 
   basicapply  INC_R_ruleNoFlags. 
-  rewrite /OSZCP_Any/ConditionIs/flagAny. sbazooka.
+  rewrite /OSZCP_Any/stateIsAny/ConditionIs. sbazooka.
   sbazooka. 
   rewrite incB_fromNat. rewrite modn_small => //.
   rewrite ltn_neqAle. rewrite LT2 andbT. 

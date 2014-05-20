@@ -122,15 +122,15 @@ Proof.
   move=> TR. eapply triple_roc_post; [|eassumption]. ssplit; reflexivity.
 Qed. 
 
-Lemma triple_pre_hideFlag f v P c Q : 
-  TRIPLE (flagAny f ** P) c Q ->
-  TRIPLE (flagIs f v ** P) c Q.
+Lemma triple_pre_hideFlag (f:Flag) v P c Q : 
+  TRIPLE (f? ** P) c Q ->
+  TRIPLE (f ~= v ** P) c Q.
 Proof. move => H. by apply (triple_pre_existsSepOp). Qed. 
 
 
-Lemma triple_pre_instFlag f P c Q :
-  (forall v, TRIPLE (flagIs f v ** P) c Q) -> 
-  TRIPLE (flagAny f ** P) c Q.
+Lemma triple_pre_instFlag (f:Flag) P c Q :
+  (forall v, TRIPLE (f ~= v ** P) c Q) -> 
+  TRIPLE (f? ** P) c Q.
 Proof. move => TR. apply triple_pre_existsSep => v. apply TR. Qed. 
 
 Lemma triple_seq P P' P'' c1 c2 :
@@ -157,24 +157,22 @@ Proof.
 Qed.
 
 (* Set and get registers *)
-Lemma triple_letGetReg r v (P Q:SPred) c: 
-  (P |-- r~=v ** ltrue) ->
+Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) c: 
+  (P |-- r ~= v ** ltrue) ->
   TRIPLE P (c v) Q -> 
   TRIPLE P (bind (getRegFromProcState r) c) Q.
 Proof.
   move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f. exists o. 
   rewrite /=. rewrite <-eq. split; last done.
   move/(_ (toPState s) pre): H => [s1 [s2 [Hs [Hs1 _]]]].
-  rewrite /regIs in Hs1. rewrite /getRegFromProcState/=. 
   case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
   specialize (Hs Registers r v). rewrite /= in Hs. 
   injection Hs. move => ->. by destruct (c v s).  
-  rewrite -Hs1 /=. case H: (r == r); first done.
-  by rewrite eqxx in H.
+  rewrite -Hs1 /=. by rewrite (eq_refl). 
 Qed.
 
-Lemma triple_letGetFlag fl (v:bool) (P Q: SPred) c: 
-  (P |-- flagIs fl v ** ltrue) ->
+Lemma triple_letGetFlag (fl:Flag) (v:bool) (P Q: SPred) c: 
+  (P |-- fl ~= v ** ltrue) ->
   TRIPLE P (c v) Q -> 
   TRIPLE P (bind (getFlagFromProcState fl) c) Q.
 Proof.
@@ -186,19 +184,18 @@ Proof.
   case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
   specialize (Hs Flags fl v). rewrite /= in Hs.
   injection Hs. move => ->. simpl. by destruct (c v s). 
-  rewrite -Hs1 /=. case H: (fl == fl); first done.
-  by rewrite eqxx in H.
+  rewrite -Hs1 /=. by rewrite eq_refl. 
 Qed.
 
 Local Transparent PStateSepAlgOps.
 
-Lemma separateSetReg r v w Q s :
+Lemma separateSetReg (r:AnyReg) (v w:DWORD) Q s :
   (r~=v ** Q) (toPState s) -> (r~=w ** Q) (toPState (s!r:=w)).
 Proof.
 simpl.
 move => [s1 [s2 [H1 [H2 H3]]]].
 
-rewrite /regIs/= in H2. 
+rewrite /= in H2. 
 
 exists (addRegToPState s1 r w), s2.
 
@@ -218,7 +215,7 @@ case E: (r == r').
 - rewrite setThenGetDistinct => //. by apply negbT in E.
 simpl.
 split; [|assumption].
-rewrite -H2 /regIs /addRegToPState.
+rewrite -H2 /addRegToPState.
 apply: state_extensional => [[]] //. move=> r' /=.
 by case E: (r == r').
 Qed. 
@@ -319,8 +316,8 @@ by case E: (p == p').
 
 Qed. 
 
-Lemma separateSetFlag f v w Q s : 
-  (flagIs f v ** Q) (toPState s) -> (flagIs f w ** Q) (toPState (s!f:=w)).
+Lemma separateSetFlag (f:Flag) v w Q s : 
+  (f ~= v ** Q) (toPState s) -> (f ~= w ** Q) (toPState (s!f:=w)).
 Proof. 
 move => [s1 [s2 [H1 [H2 H3]]]].
 rewrite /flagIs/= in H2. 
@@ -349,12 +346,11 @@ apply: state_extensional => [[]] //. move=> f' /=.
 by case E: (f == f').
 Qed.       
 
-Lemma separateForgetFlag f v Q s : 
-  (flagIs f v ** Q) (toPState s) -> (flagAny f ** Q) (toPState (s!f:=FlagUnspecified)).
+Lemma separateForgetFlag (f:Flag) v Q s : 
+  (f ~= v ** Q) (toPState s) -> (f? ** Q) (toPState (s!f:=FlagUnspecified)).
 Proof. 
  move=> H. apply lentails_eq.
- assert (Hany: flagIs f FlagUnspecified |-- flagAny f).
- - rewrite /flagAny. ssplit. reflexivity.
+ assert (Hany: f ~= FlagUnspecified |-- f?). unfold stateIsAny. sbazooka.
  rewrite <-Hany => {Hany}. apply-> lentails_eq.
  eapply separateSetFlag. apply H.
 Qed.       
@@ -377,8 +373,8 @@ apply ltNext.
 Qed. 
 *)
 
-Lemma triple_setRegSep r v w :
-  forall S, TRIPLE (regIs r v ** S) (setRegInProcState r w) (regIs r w ** S).
+Lemma triple_setRegSep (r:AnyReg) v w :
+  forall S, TRIPLE (r~=v ** S) (setRegInProcState r w) (r~=w ** S).
 Proof. 
 move => S s pre. eexists _. eexists _. 
 split. by rewrite /=/setRegInProcState/=/setProcState/=.  
@@ -403,12 +399,12 @@ by congruence.
 Qed. 
 *)
 
-Lemma triple_setRegSepGen r v w P R:
+Lemma triple_setRegSepGen (r:AnyReg) v w P R:
   P |-- r~=v ** R ->
   TRIPLE P (setRegInProcState r w) (r~=w ** R).
 Proof. move=> HP. rewrite ->HP. apply: triple_setRegSep. Qed. 
 
-Lemma triple_doSetRegSep r v w c Q :
+Lemma triple_doSetRegSep (r:AnyReg) (v w:DWORD) c Q :
   forall S, 
   TRIPLE (r~=w ** S) c Q ->  
   TRIPLE (r~=v ** S) (do! setRegInProcState r w; c) Q.
@@ -418,19 +414,19 @@ destruct T as [f [o [T]]]. exists f, o.
 by destruct (c _).  
 Qed. 
 
-Lemma triple_doSetFlagSep f v (w:bool) c Q :
+Lemma triple_doSetFlagSep (f:Flag) v (w:bool) c Q :
   forall S, 
-  TRIPLE (flagIs f w ** S) c Q ->  
-  TRIPLE (flagIs f v ** S) (do! updateFlagInProcState f w; c) Q.
+  TRIPLE (f~=w ** S) c Q ->  
+  TRIPLE (f~=v ** S) (do! updateFlagInProcState f w; c) Q.
 Proof. move => S T s pre. rewrite /TRIPLE in T. 
 simpl. have H:= separateSetFlag w pre. specialize (T _ H). 
 destruct T as [fs [o T]]. exists fs, o. 
 by destruct (c _). Qed. 
 
-Lemma triple_doForgetFlagSep f v c Q :
+Lemma triple_doForgetFlagSep (f:Flag) v c Q :
   forall S, 
-  TRIPLE (flagAny f ** S) c Q ->  
-  TRIPLE (flagIs f v ** S) (do! forgetFlagInProcState f; c) Q.
+  TRIPLE (f? ** S) c Q ->  
+  TRIPLE (f~=v ** S) (do! forgetFlagInProcState f; c) Q.
 Proof. move => S T s pre. rewrite /TRIPLE in T. 
 simpl. have H:=separateForgetFlag pre. specialize (T _ H).  
 destruct T as [fs [o T]]. exists fs, o. 
@@ -447,28 +443,28 @@ apply: separateDrop. apply H.
 Qed. 
 *)
 
-Lemma triple_letGetRegSep r v c Q : 
+Lemma triple_letGetRegSep (r:AnyReg) v c Q : 
   forall S,
   TRIPLE (r~=v ** S) (c v) Q -> 
   TRIPLE (r~=v ** S) (bind (getRegFromProcState r) c) Q.
 Proof. move => S T. apply: triple_letGetReg. cancel2. reflexivity. done. Qed. 
 
-Lemma triple_letGetFlagSep fl (v:bool) c Q : 
+Lemma triple_letGetFlagSep (fl:Flag) (v:bool) c Q : 
   forall S,
-  TRIPLE (flagIs fl v ** S) (c v) Q -> 
-  TRIPLE (flagIs fl v ** S) (bind (getFlagFromProcState fl) c) Q.
+  TRIPLE (fl~=v ** S) (c v) Q -> 
+  TRIPLE (fl~=v ** S) (bind (getFlagFromProcState fl) c) Q.
 Proof. move => S T. apply: triple_letGetFlag. cancel2. reflexivity. done. Qed. 
 
-Lemma triple_doGetReg r (P Q: SPred) c : 
+Lemma triple_doGetReg (r:AnyReg) (P Q: SPred) c : 
   TRIPLE P c Q -> 
   TRIPLE P (do! getRegFromProcState r; c) Q.
 Proof. move => T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f. eexists o. 
 simpl. by destruct (c s). Qed.
 
-Lemma triple_doGetFlag f (v:bool) (Q: SPred) c : 
+Lemma triple_doGetFlag (f:Flag) (v:bool) (Q: SPred) c : 
   forall S, 
-  TRIPLE (flagIs f v ** S) c Q -> 
-  TRIPLE (flagIs f v ** S) (do! getFlagFromProcState f; c) Q.
+  TRIPLE (f~=v ** S) c Q -> 
+  TRIPLE (f~=v ** S) (do! getFlagFromProcState f; c) Q.
 Proof. apply (triple_letGetFlagSep (c:=fun _ => c)). Qed.
 
 (* Set and get readables from memory *)
@@ -638,10 +634,12 @@ eexists _.
 destruct (c f). destruct H3.  split; last done. by injection H => -> ->. 
 Qed. 
 
+Hint Rewrite -> (@assoc ST _ _) (@id_l ST _ _) : triple. 
+
 Ltac triple_apply lemma :=
- ptsimpl;
- repeat do [try rewrite -> assoc | try rewrite -> id_l];
-  eapply triple_roc; [| |eapply lemma];
+ autounfold with spred;
+ autorewrite with triple;
+ eapply triple_roc; [| |eapply lemma];
     instantiate; [ssimpl; try reflexivity|..];
     instantiate; [try reflexivity; ssimpl; try reflexivity|..].
 

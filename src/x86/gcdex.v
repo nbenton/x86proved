@@ -75,12 +75,12 @@ Proof.
   rewrite /gcd_program.
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
   specapply H.
-  - ssimpl. rewrite /asn_denot /stack_denot. rewrite /regAny.
+  - ssimpl. rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
     sdestructs => a b c.
     pose s x := match x with | xa => a | xb => b | xc => c end.
     ssplit. instantiate (2:=s). ssplit; first done. rewrite /s. by ssimpl.
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
-  cancel1. rewrite /asn_denot /stack_denot /regAny. by sbazooka.
+  cancel1. rewrite /asn_denot /stack_denot /stateIsAny. by sbazooka.
 Qed.
 
 (* This is the plain version of the theorem, not obscured by fancy spec logic

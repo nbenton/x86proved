@@ -4,7 +4,7 @@ Ltac type_of t := type of t (* ssreflect bug workaround *).
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec safe triple basic basicprog spectac.
+Require Import spec SPred septac spec safe triple basic basicprog spectac.
 Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
 Require Import Setoid RelationClasses Morphisms.
 
@@ -30,14 +30,14 @@ Qed.
 Section UnfoldSpec.
   Transparent ILPre_Ops.
 
-  Lemma TRIPLE_safe_gen instr P Q (i j: DWORD) sij:
+  Lemma TRIPLE_safe_gen (instr:Instr) P Q (i j: DWORD) sij:
     eq_pred sij |-- i -- j :-> instr ->
     (forall (R: SPred),
      TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr)
             (Q ** R)) ->
     |> safe @ Q |-- safe @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
-    move => Hsij HTRIPLE k R /= HQ. rewrite /spec_fun /= in HQ. move=> s Hs.
+    move => Hsij HTRIPLE k R HQ. rewrite /spec_fun /= in HQ. move=> s Hs.
     destruct k. (* everything's safe in 0 steps *)
     - exists s. exists nil. reflexivity.
     rewrite /doMany -/doMany.
@@ -90,14 +90,15 @@ Definition interpMemSpecSrc ms (f: SPred -> DWORD -> spec) :=
     then 
       if optix is Some(rix,sc) 
       then 
-        Forall pbase, Forall ixval, Forall addr:DWORD, 
-        f (r ~= pbase ** rix ~= ixval ** addB (addB pbase offset) (scaleBy sc ixval) :-> addr) 
-          addr     
+        Forall pbase ixval addr, 
+        (f (regToAnyReg r ~= pbase ** regToAnyReg rix ~= ixval 
+                                   ** addB (addB pbase offset) (scaleBy sc ixval) :-> addr) 
+          addr)
       else 
-        Forall pbase, Forall addr:DWORD, 
-        f (r ~= pbase ** addB pbase offset :-> addr) 
+        Forall pbase addr, 
+        f (regToAnyReg r ~= pbase ** addB pbase offset :-> addr) 
           addr
-   else Forall addr: DWORD, f (offset :-> addr) addr.
+   else Forall addr, f (offset :-> addr) addr.
 
 Definition interpJmpTgt (tgt: JmpTgt) (nextInstr: DWORD) (f: SPred -> DWORD -> spec) :=
   match tgt with
@@ -107,7 +108,7 @@ Definition interpJmpTgt (tgt: JmpTgt) (nextInstr: DWORD) (f: SPred -> DWORD -> s
 
   | JmpTgtR r =>
     Forall addr, 
-    f (r ~= addr) addr
+    f (regToAnyReg r ~= addr) addr
 
   | JmpTgtM ms =>
     interpMemSpecSrc ms f
@@ -119,14 +120,14 @@ Definition specAtMemSpecDst dword ms (f: (DWORDorBYTE dword -> SPred) -> spec) :
     then
       if ixspec is Some(rix,sc) 
       then 
-        Forall pbase, Forall ixval, 
+        Forall pbase ixval, 
         f (fun v => addB (addB pbase offset) (scaleBy sc ixval) :-> v) 
-          @ (r ~= pbase ** rix ~= ixval)
+          @ (regToAnyReg r ~= pbase ** regToAnyReg rix ~= ixval)
         
       else 
         Forall pbase, 
         f (fun v => addB pbase offset :-> v) 
-          @ (r ~= pbase)
+          @ (regToAnyReg r ~= pbase)
     else f (fun v => offset :-> v) @ empSP.
 
 Definition specAtMemSpec dword ms (f: DWORDorBYTE dword -> spec) :=
@@ -135,17 +136,18 @@ Definition specAtMemSpec dword ms (f: DWORDorBYTE dword -> spec) :=
     then
       if ixspec is Some(rix,sc) 
       then 
-        Forall v:DWORDorBYTE dword, Forall pbase, Forall ixval, 
-        f v @ (r ~= pbase ** rix ~= ixval ** addB (addB pbase offset) (scaleBy sc ixval) :-> v)        
+        Forall v pbase ixval,
+        f v @ (regToAnyReg r ~= pbase ** regToAnyReg rix ~= ixval 
+               ** addB (addB pbase offset) (scaleBy sc ixval) :-> v)        
       else 
-        Forall v:DWORDorBYTE dword, Forall pbase, 
-        f v @ (r ~= pbase ** addB pbase offset :-> v)
-    else Forall v:DWORDorBYTE dword, f v @ (offset :-> v).
+        Forall v pbase, 
+        f v @ (regToAnyReg r ~= pbase ** addB pbase offset :-> v)
+    else Forall v, f v @ (offset :-> v).
 
 Definition specAtRegMemDst (src: RegMem true) (f: (DWORD -> SPred) -> spec) :spec  :=
   match src with
   | RegMemR r =>
-    f (fun v => r ~= v) 
+    f (fun v => regToAnyReg r ~= v) 
 
   | RegMemM ms =>
     specAtMemSpecDst (dword:=true) ms f
@@ -158,14 +160,14 @@ Definition specAtSrc src (f: DWORD -> spec) : spec :=
 
   | SrcR r =>
     Forall v, 
-    (f v @ (r ~= v))
+    (f v @ (regToAnyReg r ~= v))
 
   | SrcM ms =>
     @specAtMemSpec true ms f
   end.
 
-Definition BYTEregIsAux (r: BYTEReg) d (b: BYTE) := 
-  match r with
+Definition BYTEregIsAux (r: BYTEReg) (d:DWORD) (b: BYTE) : SPred := 
+  match r in BYTEReg return SPred with
   | AL => low 8 d == b /\\ EAX ~= d
   | BL => low 8 d == b /\\ EBX ~= d
   | CL => low 8 d == b /\\ ECX ~= d
@@ -178,14 +180,23 @@ Definition BYTEregIsAux (r: BYTEReg) d (b: BYTE) :=
 
 Definition BYTEregIs r b := Exists d, BYTEregIsAux r d b.
 
-Definition DWORDorBYTEregIs dword :=
-  if dword as dword return DWORDorBYTEReg dword -> DWORDorBYTE dword -> SPred 
+(*Canonical Structure BYTEReg_PStateOps : PStateOps := 
+  @Build_StateIs BYTEReg BYTE (fun r b => Exists d, BYTEregIsAux r d b).
+
+Canonical Structure DWORDorBYTE_StateIs d : StateIs :=
+  @Build_StateIs (DWORDorBYTEReg d) (DWORDorBYTE d)
+      (if d as d return DWORDorBYTEReg d -> DWORDorBYTE d -> SPred 
+      then fun r v => r ~= v else fun r v => r ~= v).
+*)
+
+Definition DWORDorBYTEregIs d : DWORDorBYTEReg d -> DWORDorBYTE d -> SPred :=
+  if d as d return DWORDorBYTEReg d -> DWORDorBYTE d -> SPred
   then fun r v => r ~= v else fun r v => BYTEregIs r v.
 
 Definition specAtDstSrc dword (ds: DstSrc dword) (f: (DWORDorBYTE dword -> SPred) -> DWORDorBYTE dword -> spec) : spec :=
   match ds with
   | DstSrcRR dst src =>
-    Forall v:DWORDorBYTE dword, 
+    Forall v, 
     f (fun w => DWORDorBYTEregIs dst w) v @ (DWORDorBYTEregIs src v) 
 
   | DstSrcRI dst src =>
@@ -195,7 +206,7 @@ Definition specAtDstSrc dword (ds: DstSrc dword) (f: (DWORDorBYTE dword -> SPred
     specAtMemSpecDst dst (fun V => f V src)
 
   | DstSrcMR dst src =>  
-    Forall v:DWORDorBYTE dword, 
+    Forall v, 
     specAtMemSpecDst dst (fun V => f V v) @ (DWORDorBYTEregIs src v)
 
   | DstSrcRM dst src =>
@@ -206,8 +217,8 @@ Definition specAtDstSrc dword (ds: DstSrc dword) (f: (DWORDorBYTE dword -> SPred
 Section InstrRules.
 
 Hint Unfold 
-  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst 
-  DWORDorBYTEregIs mkRegMemR
+  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst mkRegMemR
+  DWORDorBYTEregIs
   : basicapply.
 Hint Rewrite
   addB0 : basicapply.
@@ -223,11 +234,9 @@ Hint Unfold
   evalLogicalOp evalBinOp evalShiftOp evalUnaryOp evalCondition 
   evalMOV evalDst evalSrc : eval.
 
-Definition OSZCP o s z c p := 
-  (flagIs OF o ** flagIs SF s ** flagIs ZF z ** flagIs CF c ** flagIs PF p).
+Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= p.
 
-Definition OSZCP_Any :=
-  (flagAny OF ** flagAny SF ** flagAny ZF ** flagAny CF ** flagAny PF).
+Definition OSZCP_Any := OF? ** SF? ** ZF? ** CF? ** PF?.
 
 Lemma evalReg_rule (r: Reg) v c Q : 
   forall S,
@@ -239,7 +248,7 @@ Proof. by apply triple_letGetRegSep. Qed.
 Lemma triple_preEq (T: eqType) (v w:T) P c Q :
   TRIPLE (v == w /\\ P) (c w) Q ->
   TRIPLE (v == w /\\ P) (c v) Q.
-Proof. move => S. apply triple_pre_exists => EQ. rewrite <-(eqP EQ) in S. rewrite eq_refl in S. 
+Proof. move => S. apply triple_pre_exists => EQ. rewrite -(eqP EQ) eq_refl in S. 
 triple_apply S; sbazooka. Qed. 
 
 Lemma evalBYTERegAux_rule (r: BYTEReg) d v c Q : 
@@ -249,39 +258,23 @@ Lemma evalBYTERegAux_rule (r: BYTEReg) d v c Q :
 Proof.
 rewrite /evalBYTEReg/BYTEregIsAux.
 move => S T. 
-destruct r. 
-+ rewrite -> assoc. triple_apply triple_letGetReg. sbazooka.
-rewrite -> id_l. 
-triple_apply (@triple_preEq _ (low 8 d) v (EAX~=d ** S)); sbazooka.
-triple_apply T; sbazooka. 
-+ rewrite -> assoc. triple_apply triple_letGetReg. sbazooka. 
-rewrite -> id_l. 
-triple_apply (@triple_preEq _ (low 8 d) v (EBX~=d ** S)); sbazooka. 
-triple_apply T; sbazooka. 
-+ rewrite -> assoc. triple_apply triple_letGetReg. sbazooka.
-rewrite -> id_l. 
-triple_apply (@triple_preEq _ (low 8 d) v (ECX~=d ** S)); sbazooka. 
-triple_apply T; sbazooka. 
-+ rewrite -> assoc. triple_apply triple_letGetReg. sbazooka.
-rewrite -> id_l. 
-triple_apply (@triple_preEq _ (low 8 d) v (EDX~=d ** S)); sbazooka. 
-triple_apply T; sbazooka. 
-+ rewrite -> assoc. triple_apply triple_letGetReg. sbazooka.
-rewrite -> id_l.
-triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EAX~=d ** S)); sbazooka. 
-triple_apply T; sbazooka. 
-+ rewrite -> assoc. triple_apply triple_letGetReg. sbazooka.
-rewrite -> id_l. 
-triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EBX~=d ** S)); sbazooka. 
-triple_apply T; sbazooka. 
-+ rewrite -> assoc. triple_apply triple_letGetReg. sbazooka.
-rewrite -> id_l.
-triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (ECX~=d ** S)); sbazooka. 
-triple_apply T; sbazooka. 
-+ rewrite -> assoc. triple_apply triple_letGetReg. sbazooka.
-rewrite -> id_l. 
-triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EDX~=d ** S)); sbazooka. 
-triple_apply T; sbazooka. 
+destruct r; triple_apply triple_letGetReg; sbazooka.
++ triple_apply (@triple_preEq _ (low 8 d) v (EAX~=d ** S)); sbazooka. 
+  triple_apply T; sbazooka. 
++ triple_apply (@triple_preEq _ (low 8 d) v (EBX~=d ** S)); sbazooka. 
+  triple_apply T; sbazooka. 
++ triple_apply (@triple_preEq _ (low 8 d) v (ECX~=d ** S)); sbazooka. 
+  triple_apply T; sbazooka. 
++ triple_apply (@triple_preEq _ (low 8 d) v (EDX~=d ** S)); sbazooka. 
+  triple_apply T; sbazooka. 
++ triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EAX~=d ** S)); sbazooka. 
+  triple_apply T; sbazooka. 
++ triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EBX~=d ** S)); sbazooka. 
+  triple_apply T; sbazooka. 
++ triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (ECX~=d ** S)); sbazooka. 
+  triple_apply T; sbazooka. 
++ triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EDX~=d ** S)); sbazooka. 
+  triple_apply T; sbazooka. 
 Qed. 
 
 Lemma evalBYTEReg_rule (r: BYTEReg) v c Q : 
@@ -290,10 +283,8 @@ Lemma evalBYTEReg_rule (r: BYTEReg) v c Q :
   TRIPLE (BYTEregIs r v ** S) (bind (evalBYTEReg r) c) Q.
 Proof.
 move => S T.
-rewrite /BYTEregIs.  
 apply triple_pre_existsSep => d. 
-triple_apply evalBYTERegAux_rule. 
-rewrite /BYTEregIs in T. 
+triple_apply evalBYTERegAux_rule. rewrite /BYTEregIs in T. 
 triple_apply T; sbazooka. 
 Qed. 
 
@@ -307,65 +298,36 @@ Lemma triple_setBYTERegSep r v w :
   forall S, TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) (BYTEregIs r w ** S).
 Proof. 
 move => S.
-rewrite /BYTEregIs/BYTEregIsAux/setBYTERegInProcState. 
-apply triple_pre_existsSep => d. 
-destruct r. 
-+ apply triple_pre_existsSep => _. 
- triple_apply triple_letGetRegSep. 
-  triple_apply triple_setRegSep. ssplits; last reflexivity. 
-  by rewrite low_catB. 
-+ apply triple_pre_existsSep => _. 
- triple_apply triple_letGetRegSep. 
-  triple_apply triple_setRegSep. ssplits; last reflexivity. 
-  by rewrite low_catB. 
-+ apply triple_pre_existsSep => _. 
- triple_apply triple_letGetRegSep. 
-  triple_apply triple_setRegSep. ssplits; last reflexivity. 
-  by rewrite low_catB. 
-+ apply triple_pre_existsSep => _. 
- triple_apply triple_letGetRegSep. 
-  triple_apply triple_setRegSep. ssplits; last reflexivity. 
-  by rewrite low_catB. 
-
-+ apply triple_pre_existsSep => _. 
- triple_apply triple_letGetRegSep. 
-  triple_apply triple_setRegSep. ssplits; last reflexivity.   
-  by rewrite LOWLEMMA.  
-   
-+ apply triple_pre_existsSep => _. 
- triple_apply triple_letGetRegSep. 
-  triple_apply triple_setRegSep. ssplits; last reflexivity.   
-  by rewrite LOWLEMMA.  
-   
-+ apply triple_pre_existsSep => _. 
- triple_apply triple_letGetRegSep. 
-  triple_apply triple_setRegSep. ssplits; last reflexivity.   
-  by rewrite LOWLEMMA.  
-   
-+ apply triple_pre_existsSep => _. 
- triple_apply triple_letGetRegSep. 
-  triple_apply triple_setRegSep. ssplits; last reflexivity.   
-  by rewrite LOWLEMMA.  
+rewrite /BYTEregIsAux/setBYTERegInProcState. 
+destruct r; apply triple_pre_existsSep => d; apply triple_pre_existsSep => _;
+  triple_apply triple_letGetRegSep; triple_apply triple_setRegSep.
++ rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite low_catB. 
++ rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite low_catB. 
++ rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite low_catB. 
++ rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite low_catB. 
++ rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite LOWLEMMA.  
++ rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite LOWLEMMA.  
++ rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite LOWLEMMA.  
++ rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite LOWLEMMA.  
 Qed.
-   
 
 Lemma evalMemSpecNone_rule (r:Reg) p offset c Q :
   forall S,
   TRIPLE (r ~= p ** S) (c (addB p offset)) Q ->
   TRIPLE (r ~= p ** S) (bind (evalMemSpec (mkMemSpec (Some (r, None)) offset)) c) Q.
 Proof. move => S T. rewrite /evalMemSpec.
-triple_apply triple_letGetRegSep. 
-by rewrite id_l. 
+triple_apply triple_letGetRegSep.
+triple_apply T. 
 Qed. 
 
 Lemma evalMemSpec_rule (r:Reg) (ix:NonSPReg) sc p indexval offset c Q :
   forall S,
   TRIPLE (r ~= p ** ix ~= indexval ** S) (c (addB (addB p offset) (scaleBy sc indexval))) Q ->
   TRIPLE (r ~= p ** ix ~= indexval ** S) (bind (evalMemSpec (mkMemSpec (Some(r, Some (ix,sc))) offset)) c) Q.
-Proof. move => S T. rewrite /evalMemSpec.
-triple_apply triple_letGetRegSep.  
-triple_apply triple_letGetRegSep.  
-rewrite id_l. triple_apply T. 
+Proof. move => S T. rewrite /evalMemSpec. 
+triple_apply triple_letGetRegSep. 
+triple_apply triple_letGetRegSep; sbazooka. 
+triple_apply T. 
 Qed. 
 
 Lemma evalPush_rule sp (v w:DWORD) (S:SPred) :
@@ -378,7 +340,7 @@ triple_apply triple_doSetRegSep.
 triple_apply triple_setDWORDSep.
 Qed. 
 
-Lemma getReg_rule r v c Q : 
+Lemma getReg_rule (r:AnyReg) v c Q : 
   forall S,
   TRIPLE (r~=v ** S) (c v) Q -> 
   TRIPLE (r~=v ** S) (bind (getRegFromProcState r) c) Q.
@@ -388,7 +350,7 @@ Lemma triple_pre_introFlags P comp Q :
   (forall o s z c p, TRIPLE (OSZCP o s z c p ** P) comp Q) ->
   TRIPLE (OSZCP_Any ** P) comp Q.
 Proof.
-  rewrite /OSZCP_Any /OSZCP /flagAny.
+  rewrite /OSZCP_Any /OSZCP /stateIsAny.
   (* TODO: could use an sdestruct tactic for TRIPLE. *)
   move=> H s Hs.
   sdestruct: Hs => fo Hs.
@@ -400,10 +362,10 @@ Proof.
 Qed.
 
 Lemma triple_doUpdateZPS S Q n (v: BITS n) c z p s:
-  TRIPLE (flagIs ZF (v == #0) **
-          flagIs PF (lsb v) **
-          flagIs SF (msb v) ** S) c Q ->
-  TRIPLE (flagIs ZF z ** flagIs PF p ** flagIs SF s ** S) (do!updateZPS v; c) Q.
+  TRIPLE (ZF ~= (v == #0) **
+          PF ~= (lsb v) **
+          SF ~= (msb v) ** S) c Q ->
+  TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** S) (do!updateZPS v; c) Q.
 Proof.
   move=> H. rewrite /updateZPS. 
   triple_apply triple_doSetFlagSep.
@@ -424,7 +386,6 @@ Proof.
 rewrite /specAtSrc. destruct src.
 - apply TRIPLE_basic => R.
   rewrite /evalInstr/evalSrc. 
-  rewrite -> id_l.
   triple_apply evalPush_rule. 
 - elim: ms => [optSIB offset]. 
   case: optSIB => [[base indexAndScale] |]. 
@@ -433,7 +394,7 @@ rewrite /specAtSrc. destruct src.
   + specintros => oldv pbase indexval. 
     autorewrite with push_at. apply TRIPLE_basic => R.
     autounfold with eval. rewrite /evalSrc.
-    triple_apply evalMemSpec_rule. 
+    triple_apply evalMemSpec_rule.
     triple_apply triple_letGetDWORDSep. 
     triple_apply evalPush_rule. 
   + rewrite /specAtMemSpec. specintros => oldv pbase.
@@ -444,8 +405,7 @@ rewrite /specAtSrc. destruct src.
     triple_apply evalPush_rule.
   + rewrite /specAtMemSpec. specintros => oldv. 
     autorewrite with push_at. apply TRIPLE_basic => R.
-    autounfold with eval. rewrite /evalSrc. rewrite -> assoc.
-    rewrite /evalMemSpec. rewrite id_l. 
+    autounfold with eval. rewrite /evalSrc/evalMemSpec. 
     triple_apply triple_letGetDWORDSep. 
     triple_apply evalPush_rule. 
 
@@ -476,14 +436,14 @@ Corollary PUSH_M_rule (r: Reg) (offset:nat) (sp v w pbase:DWORD) :
   |-- basic (r ~= pbase ** pbase +# offset :-> v ** ESP ~= sp    ** sp-#4 :-> w) 
             (PUSH [r + offset])
             (r ~= pbase ** pbase +# offset :-> v ** ESP ~= sp-#4 ** sp-#4 :-> v).
-Proof. basicapply (PUSH_rule [r + offset]); ptsimpl; sbazooka. Qed.
+Proof. basicapply (PUSH_rule [r + offset]). Qed.
 
 (* PUSH [r] *)
 Corollary PUSH_M0_rule (r: Reg) (sp v w pbase:DWORD) :
   |-- basic (r ~= pbase ** pbase :-> v ** ESP ~= sp    ** sp-#4 :-> w) 
             (PUSH [r])
             (r ~= pbase ** pbase :-> v ** ESP ~= sp-#4 ** sp-#4 :-> v).
-Proof. basicapply (PUSH_rule [r]); ptsimpl; sbazooka. Qed. 
+Proof. basicapply (PUSH_rule [r]). Qed. 
 
 (*---------------------------------------------------------------------------
     POP instruction
@@ -529,7 +489,7 @@ Proof.
       apply TRIPLE_basic => R.
       rewrite /evalInstr/evalDst/evalDstM.  
       triple_apply evalReg_rule. 
-      rewrite -> assoc. rewrite /evalMemSpec id_l assoc. 
+      rewrite /evalMemSpec.  
       triple_apply triple_letGetDWORDSep.
       triple_apply triple_letGetDWORDSep.
       triple_apply triple_doSetDWORDSep. 
@@ -547,9 +507,7 @@ Corollary POP_M_rule (r: Reg) (offset:nat) (sp v w pbase:DWORD) :
   |-- basic (r ~= pbase ** pbase +# offset :-> v ** ESP ~= sp    ** sp :-> w) 
             (POP (RegMemM _ [r + offset]))
             (r ~= pbase ** pbase +# offset :-> w ** ESP ~= sp+#4 ** sp :-> w).
-Proof. basicapply (POP_rule (RegMemM _ [r + offset]));
-(* Why do we need to do this? *)
-by ptsimpl; ssimpl. Qed.
+Proof. basicapply (POP_rule (RegMemM _ [r + offset])). Qed. 
 
 (* POP [r] *)
 Corollary POP_M0_rule (r: Reg) (sp v w pbase:DWORD) :
@@ -590,7 +548,7 @@ destruct ds.
     triple_apply triple_letGetDWORDSep.
     triple_apply triple_setRegSep.
   - specintros => v. autorewrite with push_at. apply TRIPLE_basic => R. 
-    rewrite /evalInstr/evalMOV/evalMemSpec id_l.     
+    rewrite /evalInstr/evalMOV/evalMemSpec.     
     triple_apply triple_letGetDWORDSep.
     triple_apply triple_setRegSep.
 
@@ -613,7 +571,6 @@ destruct ds.
   - autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV/evalMemSpec/evalDWORDorBYTEReg. 
     triple_apply evalReg_rule. 
-    rewrite id_l. 
     triple_apply triple_setDWORDSep.
    
 + apply TRIPLE_basic => R. 
@@ -634,29 +591,26 @@ destruct ds.
     triple_apply evalMemSpecNone_rule. 
     triple_apply triple_setDWORDSep.
   - autorewrite with push_at. apply TRIPLE_basic => R. 
-    rewrite /evalInstr/evalMOV/evalMemSpec id_l.     
+    rewrite /evalInstr/evalMOV/evalMemSpec.     
     triple_apply triple_setDWORDSep.
 Qed. 
 
 (* Register to register *)
 Lemma MOV_RR_rule (r1 r2:Reg) v:
   |-- basic (r1? ** r2 ~= v) (MOV r1, r2) (r1 ~= v ** r2 ~= v).
-Proof. rewrite /regAny. specintro => oldv.
-basicapply (MOV_rule (DstSrcRR true r1 r2)). 
-Qed. 
+Proof. rewrite /stateIsAny. specintro => oldv. basicapply (MOV_rule (DstSrcRR true r1 r2)). Qed.
 
 (* Immediate to register *)
 Lemma MOV_RI_rule (r:Reg) (v:DWORD) :
   |-- basic (r?) (MOV r, v) (r ~= v).
-Proof. rewrite /regAny. specintro => oldv. basicapply (MOV_rule (DstSrcRI true r v)). Qed. 
+Proof. rewrite /stateIsAny. specintro => oldv. basicapply (MOV_rule (DstSrcRI true r v)). Qed. 
 
 (* Register to memory *)
 Lemma MOV_MR_rule (p: DWORD) (r1 r2: Reg) offset (v1 v2:DWORD) :
   |-- basic (r1~=p ** p +# offset :-> v1 ** r2~=v2)
             (MOV [r1 + offset], r2)
             (r1~=p ** p +# offset :-> v2 ** r2~=v2).
-Proof. basicapply (MOV_rule (DstSrcMR true (mkMemSpec (Some (r1, None)) #offset) r2) v1);
-ptsimpl; by ssimpl. Qed.
+Proof. basicapply (MOV_rule (DstSrcMR true (mkMemSpec (Some (r1, None)) #offset) r2) v1). Qed.
 
 Lemma MOV_MbR_rule (p: DWORD) (r1:Reg) (r2: BYTEReg) offset (v1:BYTE) (v2:BYTE) :
   |-- basic (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v2)
@@ -665,11 +619,22 @@ Lemma MOV_MbR_rule (p: DWORD) (r1:Reg) (r2: BYTEReg) offset (v1:BYTE) (v2:BYTE) 
 Proof.
   apply TRIPLE_basic => R.
   repeat autounfold with eval. 
-  rewrite /evalDWORDorBYTEReg. 
-  triple_apply evalBYTEReg_rule. rewrite assoc.
-  triple_apply evalReg_rule. rewrite id_l.
+  rewrite /evalDWORDorBYTEReg/evalMemSpec. 
+  triple_apply evalBYTEReg_rule. 
+  triple_apply evalReg_rule. 
   triple_apply triple_setBYTESep.  
 Qed.
+
+
+Lemma MOV_MbR_ruleGen d (p: DWORD) (r1:Reg) (r2: DWORDorBYTEReg d) offset (v1 v2:DWORDorBYTE d):
+  |-- basic (r1 ~= p ** p +# offset :-> v1 ** DWORDorBYTEregIs r2 v2)
+            (MOVOP d (DstSrcMR d (mkMemSpec (Some(r1,None)) #offset) r2))
+            (r1 ~= p ** p +# offset :-> v2 ** DWORDorBYTEregIs r2 v2).
+Proof.
+  destruct d. 
+  apply MOV_MR_rule.
+  apply MOV_MbR_rule.  
+Qed. 
 
 Lemma MOV_RMb_rule (p: DWORD) (r1:Reg) (r2:BYTEReg) offset (v1:BYTE) (v2:BYTE) :
   |-- basic (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v2)
@@ -689,9 +654,8 @@ Lemma MOV_MbI_rule (pd:BITS 32) (r1:Reg) offset (v1 v2:BYTE) :
             (r1 ~= pd ** pd +# offset :-> v2).
 Proof.
   apply TRIPLE_basic => R.
-  repeat autounfold with eval. 
-  rewrite assoc.
-  triple_apply evalReg_rule. rewrite id_l.
+  repeat autounfold with eval. rewrite /evalMemSpec.
+  triple_apply evalReg_rule. 
   triple_apply triple_setBYTESep.
 Qed.
 
@@ -702,8 +666,8 @@ Lemma MOV_MI_rule dword (pd:BITS 32) (r:Reg) offset (v w:DWORDorBYTE dword) :
             (r ~= pd ** pd +# offset :-> w).
 Proof.
   apply TRIPLE_basic => R.
-  repeat autounfold with eval. rewrite assoc.
-  triple_apply evalReg_rule. rewrite id_l.
+  repeat autounfold with eval. rewrite /evalMemSpec. 
+  triple_apply evalReg_rule. 
   triple_apply triple_setDWORDorBYTESep.  
 Qed.
 
@@ -713,8 +677,8 @@ Lemma MOV_RM_rule (pd:BITS 32) (r1 r2:Reg) offset (v: DWORD) :
             (MOV r1, [r2 + offset])
             (r1 ~= v ** r2 ~= pd ** pd +# offset :-> v).
 Proof.
-  rewrite /regAny. specintro => v0.
-  basicapply (MOV_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))); ptsimpl; by ssimpl.
+  rewrite /stateIsAny. specintro => v0.
+  basicapply (MOV_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). 
 Qed. 
 
 Lemma MOV_RM0_rule (pd:BITS 32) (r1 r2:Reg) (v: DWORD) :
@@ -791,7 +755,7 @@ destruct ms.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    rewrite -> id_l. triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDSep.
   - triple_apply evalMemSpec_rule.
     triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
     rewrite /evalArithUnaryOpNoCarry. 
@@ -799,7 +763,6 @@ destruct ms.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    rewrite -> id_l. 
     triple_apply triple_setDWORDSep.
 
 rewrite /specAtMemSpecDst. 
@@ -815,7 +778,6 @@ autorewrite with push_at.  apply TRIPLE_basic => R.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    rewrite -> id_l. 
     triple_apply triple_setDWORDSep.
   - triple_apply evalMemSpecNone_rule.
     triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
@@ -824,7 +786,6 @@ autorewrite with push_at.  apply TRIPLE_basic => R.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    rewrite -> id_l. 
     triple_apply triple_setDWORDSep.
 
 rewrite /specAtMemSpecDst. 
@@ -832,23 +793,19 @@ autorewrite with push_at.  apply TRIPLE_basic => R.
   rewrite /evalInstr/evalDst/evalDstM/evalMemSpec.
     rewrite /evalSrc.
   destruct dir. 
-  - rewrite id_l. 
-    triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
+  - triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
     rewrite /evalArithUnaryOpNoCarry. 
     triple_apply triple_doSetFlagSep. rewrite /updateZPS.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    rewrite -> id_l. 
     triple_apply triple_setDWORDSep.
-  - rewrite id_l. 
-    triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
+  - triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
     rewrite /evalArithUnaryOpNoCarry. 
     triple_apply triple_doSetFlagSep. rewrite /updateZPS.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    rewrite -> id_l. 
     triple_apply triple_setDWORDSep.
 Qed. 
 
@@ -866,22 +823,20 @@ Corollary INC_M_rule (r:Reg) (offset:nat) (v pbase:DWORD) o s z c pf:
   let w := incB v in
   |-- basic (r ~= pbase ** pbase +# offset :-> v ** OSZCP o s z c pf) (INC [r + offset])
             (r ~= pbase ** pbase +# offset :-> w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. have IR := (INC_rule (RegMemM _ (mkMemSpec (Some(r, None)) #offset))).
-rewrite /specAtRegMemDst/specAtMemSpecDst in IR. 
-basicapply IR; ptsimpl; sbazooka. (* Why doesn't ssimpl do this? *) reflexivity. Qed. 
+Proof. basicapply (INC_rule (RegMemM _ (mkMemSpec (Some(r, None)) #offset))). Qed. 
 
 Lemma basicForgetFlags T (MI: MemIs T) P (x:T) Q o s z c p:
   |-- basic (P ** OSZCP_Any) x (Q ** OSZCP o s z c p) ->
   |-- basic P x Q @ OSZCP_Any.
 Proof. move => H. autorewrite with push_at. 
-basicapply H. rewrite /OSZCP/OSZCP_Any/flagAny. sbazooka. 
+basicapply H. rewrite /OSZCP/OSZCP_Any/stateIsAny. sbazooka. 
 Qed. 
 
 Lemma INC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (INC r) (r~=incB v) @ OSZCP_Any.
 Proof.
-autorewrite with push_at. rewrite {1}/OSZCP_Any/flagAny. specintros => o s z c p. 
-basicapply (INC_rule (RegMemR true r)); rewrite /OSZCP/OSZCP_Any/flagAny; sbazooka. 
+autorewrite with push_at. rewrite {1}/OSZCP_Any/stateIsAny. specintros => o s z c p. 
+basicapply (INC_rule (RegMemR true r)); rewrite /OSZCP/OSZCP_Any/stateIsAny; sbazooka. 
 Qed.
 
 (* Special case for decrement *)
@@ -894,8 +849,8 @@ Proof. basicapply (DEC_rule (RegMemR true r)). Qed.
 Lemma DEC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (DEC r) (r~=decB v) @ OSZCP_Any.
 Proof. 
-autorewrite with push_at. rewrite {1}/OSZCP_Any/flagAny. specintros => o s z c p. 
-basicapply (DEC_rule (RegMemR true r)); rewrite /OSZCP/OSZCP_Any/flagAny; sbazooka. 
+autorewrite with push_at. rewrite {1}/OSZCP_Any/stateIsAny. specintros => o s z c p. 
+basicapply (DEC_rule (RegMemR true r)); rewrite /OSZCP/OSZCP_Any/stateIsAny; sbazooka. 
 Qed. 
 
 
@@ -920,7 +875,7 @@ autorewrite with push_at. apply TRIPLE_basic => R.
   rewrite /evalDst/evalDstM/evalInstr/evalUnaryOp.
   triple_apply evalMemSpec_rule.
   triple_apply triple_letGetDWORDSep. 
-  rewrite -> id_l. triple_apply triple_setDWORDSep.
+  triple_apply triple_setDWORDSep.
 
 specintros => pbase.
 autorewrite with push_at. apply TRIPLE_basic => R.
@@ -928,15 +883,13 @@ autorewrite with push_at. apply TRIPLE_basic => R.
   rewrite /evalDst/evalDstM/evalSrc/evalUnaryOp.
   triple_apply evalMemSpecNone_rule.
   triple_apply triple_letGetDWORDSep. 
-  rewrite -> id_l. triple_apply triple_setDWORDSep.
+  triple_apply triple_setDWORDSep.
 
 autorewrite with push_at. apply TRIPLE_basic => R.
   autounfold with eval. 
-  rewrite /evalDst/evalDstM/evalSrc/evalUnaryOp. rewrite /evalMemSpec. rewrite id_l.
+  rewrite /evalDst/evalDstM/evalSrc/evalUnaryOp. rewrite /evalMemSpec. 
   triple_apply triple_letGetDWORDSep. 
-  rewrite -> id_l. triple_apply triple_setDWORDSep.
-
-
+  triple_apply triple_setDWORDSep.
 Qed.   
 
 (* Special case for not *)
@@ -947,9 +900,7 @@ Proof. basicapply (NOT_rule (RegMemR true r)). Qed.
 Corollary NOT_M_rule (r:Reg) (offset:nat) (v pbase:DWORD):
   |-- basic (r~=pbase ** pbase +# offset :-> v) (NOT [r + offset])
             (r~=pbase ** pbase +# offset :-> invB v).
-Proof. basicapply (NOT_rule (RegMemM true (mkMemSpec (Some(r, None)) #offset))); ptsimpl; sbazooka.
-reflexivity. 
-Qed. 
+Proof. basicapply (NOT_rule (RegMemM true (mkMemSpec (Some(r, None)) #offset))). Qed. 
 
 (* Special case for negation *)
 Lemma NEG_R_rule (r:Reg) (v:DWORD) :
@@ -1036,7 +987,7 @@ Proof.
     autorewrite with push_at. apply TRIPLE_basic => R.
     repeat (autounfold with eval). 
     rewrite /evalDstSrc/evalDstR/evalMemSpec. 
-    triple_apply evalReg_rule.  rewrite id_l. 
+    triple_apply evalReg_rule.  
     triple_apply triple_letGetDWORDSep. 
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
     elim: (splitmsb (adcB false v1 v2)) => [carry v].    
@@ -1061,7 +1012,6 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. 
     triple_apply triple_setDWORDSep. 
 (* Non-indexed *)
   + specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
@@ -1074,10 +1024,10 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 (* Offset only *)
   + autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec id_l.
+    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec.
     triple_apply triple_letGetDWORDSep. 
     triple_apply evalReg_rule. 
   elim: (splitmsb (adcB false v1 v2)) => [carry v]. 
@@ -1085,7 +1035,7 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
   (* RI *)
   apply TRIPLE_basic => R.
   repeat (autounfold with eval).  rewrite /evalDstSrc/evalDstR. 
@@ -1113,7 +1063,7 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 (* Non-indexed *)
   + specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
     repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM. 
@@ -1124,17 +1074,17 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 (* Offset only *)
   + autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec id_l. 
+    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec. 
     triple_apply triple_letGetDWORDSep. 
   elim: (splitmsb (adcB false v1 c)) => [carry v]. 
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 Qed.   
 
 (* ADD r, v2 *)
@@ -1165,7 +1115,7 @@ Proof.
 rewrite /addB/dropmsb. 
 basicapply (ADD_rule (DstSrcRR true r1 r2)). 
 elim: (splitmsb _) => [carry v]. 
-rewrite /OSZCP_Any/flagAny/OSZCP. simpl snd.  
+rewrite /OSZCP_Any/OSZCP/stateIsAny. simpl snd.  
 sbazooka. 
 Qed. 
 
@@ -1177,9 +1127,8 @@ Corollary ADD_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
 Proof.
   basicapply (ADD_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). 
-ptsimpl; by ssimpl.  
 elim: (splitmsb _) => [carry v].
-ptsimpl; sbazooka.
+sbazooka.
 Qed.   
 
 Lemma BINOP_RM_rule (pd:BITS 32) (r1 r2:Reg) (v1 v2:DWORD) (offset:nat):
@@ -1190,9 +1139,8 @@ Lemma BINOP_RM_rule (pd:BITS 32) (r1 r2:Reg) (v1 v2:DWORD) (offset:nat):
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
 Proof.
   basicapply (ADD_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). 
-ptsimpl; by ssimpl.  
 elim: (splitmsb _) => [carry v].
-ptsimpl; sbazooka.
+sbazooka.
 Qed.   
 
 
@@ -1256,10 +1204,9 @@ Corollary ADD_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat)
 Proof.
 autorewrite with push_at.
   basicapply (ADD_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). 
-ptsimpl; by ssimpl.  
-rewrite /OSZCP/OSZCP_Any/flagAny/addB/dropmsb/snd.
+rewrite /OSZCP/OSZCP_Any/stateIsAny/addB/dropmsb/snd.
 elim: (splitmsb _) => [carry v].
-ptsimpl; sbazooka.
+sbazooka.
 Qed.   
 
 Corollary SUB_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
@@ -1269,7 +1216,7 @@ Proof.
 autorewrite with push_at. rewrite /subB. 
 elim E: (sbbB _ _ _) => [carry v].
 basicapply (SUB_RM_rule (pd:=pd) (r1:=r1) (r2:=r2) (v1:=v1) (v2:=v2) (offset:=offset)). 
-rewrite /OSZCP/OSZCP_Any/flagAny/snd. sbazooka. by rewrite E /snd. 
+rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka. by rewrite E /snd. 
 Qed.   
 
 
@@ -1331,8 +1278,9 @@ Proof.
     autorewrite with push_at. apply TRIPLE_basic => R.
     repeat (autounfold with eval). 
     rewrite /evalDstSrc/evalDstR. 
-    triple_apply evalReg_rule. rewrite id_l assoc.
+    triple_apply evalReg_rule. 
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
+    rewrite /evalMemSpec.
     triple_apply triple_letGetDWORDSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
@@ -1353,7 +1301,7 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 (* Non-indexed *)
   + specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
     repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM.
@@ -1364,17 +1312,17 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 (* Offset only *)
   + autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec id_l.
+    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec.
     triple_apply triple_letGetDWORDSep. 
     triple_apply evalReg_rule. 
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
   (* RI *)
   apply TRIPLE_basic => R.
   repeat (autounfold with eval).  rewrite /evalDstSrc/evalDstR. 
@@ -1400,7 +1348,7 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 (* Non-indexed *)
   + specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
     repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM. 
@@ -1410,16 +1358,16 @@ Proof.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 (* Offset only *)
   + autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec id_l. 
+    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec. 
     triple_apply triple_letGetDWORDSep. 
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doUpdateZPS. 
-    rewrite id_l. triple_apply triple_setDWORDSep. 
+    triple_apply triple_setDWORDSep. 
 Qed.   
 
 (* AND r1, r2 *)
@@ -1438,8 +1386,7 @@ Corollary AND_RM_rule (pbase:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) :
       @ (r2 ~= pbase ** pbase +# offset :-> v2).
 Proof. 
   autorewrite with push_at. 
-  basicapply (AND_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset)));
-  ptsimpl;  sbazooka. 
+  basicapply (AND_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))).
 Qed. 
 
 Corollary AND_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
@@ -1448,7 +1395,7 @@ Corollary AND_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat)
 Proof.
 autorewrite with push_at. 
 basicapply (AND_RM_rule (pbase:=pd) (r1:=r1) (r2:=r2) (v1:=v1) (v2:=v2) (offset:=offset)). 
-rewrite /OSZCP/OSZCP_Any/flagAny/snd. sbazooka. 
+rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka. 
 Qed.   
 
 
@@ -1505,7 +1452,7 @@ Corollary OR_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
 Proof.
 autorewrite with push_at. 
 basicapply (@OR_RM_rule pd r1 r2 v1 v2 offset (orB v1 v2) (refl_equal _)).  
-rewrite /OSZCP/OSZCP_Any/flagAny/snd. sbazooka. 
+rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka. 
 Qed.   
 
 Corollary XOR_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
@@ -1514,7 +1461,7 @@ Corollary XOR_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat)
 Proof.
 autorewrite with push_at. 
 basicapply (@XOR_RM_rule pd r1 r2 v1 v2 offset (xorB v1 v2) (refl_equal _)).  
-rewrite /OSZCP/OSZCP_Any/flagAny/snd. sbazooka. 
+rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka. 
 Qed.   
 
 
@@ -1574,16 +1521,33 @@ Proof.
   triple_apply triple_skip. 
 Qed. 
 
+Lemma CMP_RbI_rule (r1:BYTEReg) (v1 v2:BYTE) carry res:
+  sbbB false v1 v2 = (carry, res) ->
+  |-- basic (BYTEregIs r1 v1 ** OSZCP_Any) (BOP false OP_CMP (DstSrcRI false r1 v2))
+            (BYTEregIs r1 v1 ** OSZCP (computeOverflow v1 v2 res) (msb res) (res == #0) carry (lsb res)).
+Proof.
+  move => E. apply TRIPLE_basic => R.
+  repeat autounfold with eval.  
+  rewrite /evalDstSrc/evalDstR.
+  triple_apply evalBYTEReg_rule.
+  rewrite E.
+  triple_apply triple_pre_introFlags => o s z c p. rewrite /OSZCP.
+  triple_apply triple_doSetFlagSep. 
+  triple_apply triple_doSetFlagSep. 
+  triple_apply triple_doUpdateZPS. 
+  triple_apply triple_skip. 
+Qed. 
+
 Lemma CMP_RI_eq_rule (r1:Reg) v1 (v2:DWORD):
   |-- basic (r1 ~= v1 ** OSZCP_Any) (CMP r1, v2)
-            (r1 ~= v1 ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF ** 
-                         flagIs ZF (v1==v2)).
+            (r1 ~= v1 ** OF? ** SF? ** CF? ** PF? ** 
+                         ZF ~= (v1==v2)).
 Proof.
 case E: (sbbB false v1 v2) => [carry res]. 
 eapply basic_basic.
 apply (CMP_RI_rule E).
 by ssimpl.  
-rewrite /OSZCP/flagAny. sbazooka. 
+rewrite /OSZCP/stateIsAny. sbazooka. 
 have: res = subB v1 v2. 
 rewrite /subB. by rewrite E.  
 move ->.
@@ -1592,8 +1556,8 @@ Qed.
 
 Lemma CMP_MbR_eq_rule (r1:Reg) (r2: BYTEReg) (p:DWORD) (v1 v2:BYTE):
   |-- basic (r1 ~= p ** BYTEregIs r2 v2 ** p :-> v1 ** OSZCP_Any) (CMP [r1], r2)
-            (r1 ~= p ** BYTEregIs r2 v2 ** p :-> v1 ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF ** 
-                         flagIs ZF (v1==v2)).
+            (r1 ~= p ** BYTEregIs r2 v2 ** p :-> v1 ** OF? ** SF? ** CF? ** PF? ** 
+                         ZF ~= (v1==v2)).
 Proof.
   apply TRIPLE_basic => R.
   repeat autounfold with eval.  
@@ -1607,17 +1571,16 @@ case E: (sbbB false v1 v2) => [carry res].
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doUpdateZPS. 
-  rewrite id_l. 
-  triple_apply triple_skip.
-  rewrite /flagAny.   sbazooka. 
+  triple_apply triple_skip. rewrite /stateIsAny.
+  sbazooka. 
   have H:= (subB_eq0 v1 v2). rewrite /subB in H.
-  rewrite E in H. rewrite H. by ssimpl. 
+  rewrite E in H. by rewrite H. 
 Qed. 
 
 Lemma CMP_MbI_eq_rule (r1:Reg) (p:DWORD) (v1 v2:BYTE):
   |-- basic (r1 ~= p ** p :-> v1 ** OSZCP_Any) (CMP BYTE [r1], v2)
-            (r1 ~= p ** p :-> v1 ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF ** 
-                         flagIs ZF (v1==v2)).
+            (r1 ~= p ** p :-> v1 ** OF? ** SF? ** CF? ** PF? ** 
+                         ZF ~= (v1==v2)).
 Proof.
   apply TRIPLE_basic => R.
   repeat autounfold with eval.  
@@ -1630,18 +1593,17 @@ case E: (sbbB false v1 v2) => [carry res].
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doUpdateZPS. 
-  rewrite id_l. 
-  triple_apply triple_skip.
-  rewrite /flagAny.   sbazooka. 
+  triple_apply triple_skip. rewrite /stateIsAny.
+  sbazooka. 
   have H:= (subB_eq0 v1 v2). rewrite /subB in H.
-  rewrite E in H. rewrite H. by ssimpl. 
+  rewrite E in H. by rewrite H.
 Qed. 
 
 
 Lemma CMP_MbxI_eq_rule (r1:Reg) (r2:NonSPReg) (p ix:DWORD) (v1 v2:BYTE):
   |-- basic (r1 ~= p ** r2 ~= ix ** addB p ix :-> v1 ** OSZCP_Any) (CMP BYTE [r1 + r2 + 0], v2)
-            (r1 ~= p ** r2 ~= ix ** addB p ix :-> v1 ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF ** 
-                         flagIs ZF (v1==v2)).
+            (r1 ~= p ** r2 ~= ix ** addB p ix :-> v1 ** OF? ** SF? ** CF? ** PF? ** 
+                         ZF ~= (v1==v2)).
 Proof.
   apply TRIPLE_basic => R.
   repeat autounfold with eval.  
@@ -1654,18 +1616,17 @@ case E: (sbbB false v1 v2) => [carry res].
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doUpdateZPS. 
-  rewrite id_l. 
   triple_apply triple_skip.
-  rewrite /flagAny.   sbazooka. 
+  rewrite /stateIsAny.  sbazooka. 
   have H:= (subB_eq0 v1 v2). rewrite /subB in H.
-  rewrite E in H. rewrite H. by ssimpl. 
+  rewrite E in H. by rewrite H. 
 Qed. 
 
 
 Lemma CMP_RbI_eq_rule (r1:BYTEReg) (v1 v2:BYTE):
   |-- basic (BYTEregIs r1 v1 ** OSZCP_Any) (BOP false OP_CMP (DstSrcRI false r1 v2))
-            (BYTEregIs r1 v1 ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF ** 
-                         flagIs ZF (v1==v2)).
+            (BYTEregIs r1 v1 ** OF? ** SF? ** CF? ** PF? ** 
+                         ZF ~= (v1==v2)).
 Proof.
   apply TRIPLE_basic => R.
   repeat autounfold with eval.  
@@ -1676,11 +1637,10 @@ case E: (sbbB false v1 v2) => [carry res].
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doUpdateZPS. 
-  rewrite id_l. 
   triple_apply triple_skip.
-  rewrite /flagAny.   sbazooka. 
+  rewrite /stateIsAny. sbazooka. 
   have H:= (subB_eq0 v1 v2). rewrite /subB in H. rewrite E in H. 
-  rewrite H. by ssimpl. 
+  by rewrite H. 
 Qed. 
 
 
@@ -1696,7 +1656,7 @@ Proof.
   autounfold with eval. rewrite  /evalDstSrc/evalDstR.
   triple_apply evalReg_rule.
   rewrite /evalMemSpec.
-  triple_apply evalReg_rule. rewrite id_l.
+  triple_apply evalReg_rule. 
   triple_apply triple_letGetDWORDSep. rewrite E. 
   triple_apply triple_pre_introFlags => o s z c p. rewrite /OSZCP.
   triple_apply triple_doSetFlagSep. 
@@ -1776,25 +1736,24 @@ Proof.
   apply TRIPLE_basic => R.
   repeat autounfold with eval. rewrite /evalDst/evalDstR.
   triple_apply evalReg_rule. 
-  rewrite /evalShiftCount/evalShiftOp id_l.
+  rewrite /evalShiftCount/evalShiftOp. rewrite id_l.
   rewrite (SmallCount BOUND). 
   case E: count => [| count'].   
-  + rewrite id_l. replace (iter _ _ v) with v by done. 
+  + replace (iter _ _ v) with v by done. 
     triple_apply triple_setRegSep. 
 
   + 
-  rewrite assoc.      
   triple_apply triple_pre_introFlags => o s z c p. 
-  rewrite /OSZCP_Any/OSZCP. rewrite id_l.
+  rewrite /OSZCP_Any/OSZCP/stateIsAny. 
   triple_apply triple_doSetFlagSep. 
   case E': count' => [| count''].     
   + triple_apply triple_doSetFlagSep. 
     triple_apply triple_setRegSep. rewrite dropmsb_iter_shlB.
-    rewrite /flagAny. sbazooka.  
+    sbazooka.  
   + triple_apply triple_doForgetFlagSep. 
     triple_apply triple_setRegSep.
     rewrite dropmsb_iter_shlB.     
-    rewrite /flagAny. sbazooka. 
+    rewrite /stateIsAny. sbazooka. 
 Qed. 
 
 Lemma SHR_RI_rule (r:Reg) (v:DWORD) (count:nat):
@@ -1809,22 +1768,21 @@ Proof.
   rewrite /evalShiftCount/evalShiftOp id_l.
   rewrite (SmallCount BOUND). 
   case E: count => [| count'].   
-  + rewrite id_l. replace (iter _ _ v) with v by done. 
+  + replace (iter _ _ v) with v by done. 
     triple_apply triple_setRegSep. 
 
   + 
-  rewrite assoc.      
   triple_apply triple_pre_introFlags => o s z c p. 
-  rewrite /OSZCP_Any/OSZCP id_l.
+  rewrite /OSZCP_Any/OSZCP/stateIsAny.
   triple_apply triple_doSetFlagSep. 
   case E': count' => [| count''].     
   + triple_apply triple_doSetFlagSep. 
     triple_apply triple_setRegSep. rewrite droplsb_iter_shrB.
-    rewrite /flagAny. sbazooka.  
+    sbazooka.  
   + triple_apply triple_doForgetFlagSep. 
     triple_apply triple_setRegSep.
     rewrite droplsb_iter_shrB.     
-    rewrite /flagAny. sbazooka. 
+    rewrite /stateIsAny. sbazooka. 
 Qed. 
 
 (*---------------------------------------------------------------------------
@@ -1833,15 +1791,14 @@ Qed.
 
 Definition ConditionIs cc cv : SPred :=
   match cc with
-  | CC_O => flagIs OF cv
-  | CC_B => flagIs CF cv
-  | CC_Z => flagIs ZF cv
-  | CC_S => flagIs SF cv
-  | CC_P => flagIs PF cv
-  | CC_BE => Exists cf, Exists zf, cv = cf || zf /\\ flagIs CF cf ** flagIs ZF zf
-  | CC_L => Exists sf, Exists f, cv = xorb sf f /\\ flagIs SF sf ** flagIs OF f
-  | CC_LE => Exists sf, Exists f, Exists zf, cv = (xorb sf f) || zf /\\
-               flagIs SF sf ** flagIs OF f ** flagIs ZF zf
+  | CC_O => OF ~= cv
+  | CC_B => CF ~= cv
+  | CC_Z => ZF ~= cv
+  | CC_S => SF ~= cv
+  | CC_P => PF ~= cv
+  | CC_BE => Exists cf zf, cv = cf || zf /\\ CF ~= cf ** ZF ~= zf
+  | CC_L => Exists sf f, cv = xorb sf f /\\ SF ~= sf ** OF ~= f
+  | CC_LE => Exists sf f zf, cv = (xorb sf f) || zf /\\ SF ~= sf ** OF ~= f ** ZF ~= zf
   end.
 
 Lemma triple_letGetCondition cc (v:bool) (P Q: SPred) c: 
@@ -1861,8 +1818,8 @@ Proof.
     apply triple_pre_existsSep => fz. triple_apply triple_letGetFlag.
     - by sbazooka.
     rewrite /lpropand. apply triple_pre_existsSep => Hv. inversion Hv. 
-    subst v. rewrite id_l. 
-    eapply triple_roc_pre; last apply H. by sbazooka.
+    subst v. 
+    triple_apply H; sbazooka. 
   - (* CC_S *)
     triple_apply triple_letGetFlag; by [ssimpl|].
   - (* CC_P *)
@@ -1873,8 +1830,7 @@ Proof.
     apply triple_pre_existsSep => fo. triple_apply triple_letGetFlag.
     - by sbazooka.
     rewrite /lpropand. apply triple_pre_existsSep => Hv. inversion Hv. subst v.   
-    rewrite id_l. 
-    eapply triple_roc_pre; last apply H. by sbazooka.
+    triple_apply H; sbazooka. 
   - (* CC_LE *)
     apply triple_pre_existsSep => fs. triple_apply triple_letGetFlag.
     - by sbazooka.
@@ -1883,7 +1839,7 @@ Proof.
     apply triple_pre_existsSep => fz. triple_apply triple_letGetFlag.
     - by sbazooka.
     rewrite /lpropand. apply triple_pre_existsSep => Hv. inversion Hv. subst v.
-    rewrite id_l. eapply triple_roc_pre; last apply H. by sbazooka.
+    triple_apply H; sbazooka. 
 Qed. 
 
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) :
@@ -1893,8 +1849,7 @@ Proof.
   rewrite /interpJmpTgt. destruct tgt.  
   (* JmpTgtI *)
   destruct t. apply TRIPLE_safe => R.
-  rewrite /evalInstr/evalSrc. 
-  rewrite /evalJmpTgt. 
+  rewrite /evalInstr/evalSrc/evalJmpTgt. 
   triple_apply triple_letGetRegSep.
   triple_apply triple_setRegSep. 
 
@@ -1909,19 +1864,19 @@ Proof.
     rewrite /evalInstr/evalJmpTgt/evalMemSpec/evalRegMem /evalReg. 
     triple_apply triple_letGetRegSep.
     triple_apply triple_letGetRegSep. 
-    rewrite id_l. triple_apply triple_letGetDWORDSep. 
+    triple_apply triple_letGetDWORDSep. 
     by triple_apply triple_setRegSep.
     rewrite /interpMemSpecSrc. 
     specintros => pbase addr.
     apply TRIPLE_safe => R.
     rewrite /evalInstr/evalJmpTgt/evalMemSpec/evalRegMem /evalReg. 
     triple_apply triple_letGetRegSep.
-    rewrite id_l. triple_apply triple_letGetDWORDSep. 
+    triple_apply triple_letGetDWORDSep. 
     by triple_apply triple_setRegSep.
     rewrite /interpMemSpecSrc. 
     specintros => addr.
     apply TRIPLE_safe => R.
-    rewrite /evalInstr/evalJmpTgt/evalMemSpec/evalRegMem /evalReg assoc id_l. 
+    rewrite /evalInstr/evalJmpTgt/evalMemSpec/evalRegMem /evalReg. 
     triple_apply triple_letGetDWORDSep. 
     by triple_apply triple_setRegSep.
 
@@ -1967,10 +1922,10 @@ Lemma RET_rule p' (sp:BITS 32) (offset:WORD) (p q: DWORD) :
 Proof.
   apply TRIPLE_safe => R.
   rewrite /evalInstr.
-  triple_apply triple_letGetRegSep. 
-  triple_apply triple_letGetDWORDSep.
-  triple_apply triple_doSetRegSep.
-  triple_apply triple_setRegSep.
+  triple_apply triple_letGetRegSep.  
+  triple_apply triple_letGetDWORDSep. 
+  triple_apply triple_doSetRegSep. 
+  triple_apply triple_setRegSep. 
 Qed.
 
 Lemma CALLrel_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) :
@@ -1989,7 +1944,7 @@ Proof.
   rewrite /evalInstr /evalRegMem /evalReg. 
   triple_apply triple_letGetRegSep. 
   rewrite /evalJmpTgt.
-  triple_apply triple_letGetRegSep. rewrite id_l.
+  triple_apply triple_letGetRegSep. 
   triple_apply triple_doSetRegSep.
   by triple_apply evalPush_rule. 
 
@@ -2003,9 +1958,9 @@ Proof.
     rewrite /evalInstr /evalRegMem /evalReg. 
     triple_apply triple_letGetRegSep. 
     rewrite /evalJmpTgt/evalMemSpec.
-    rewrite assoc. triple_apply triple_letGetRegSep. 
     triple_apply triple_letGetRegSep. 
-    rewrite id_l. triple_apply triple_letGetDWORDSep. 
+    triple_apply triple_letGetRegSep. 
+    triple_apply triple_letGetDWORDSep. 
     triple_apply triple_doSetRegSep.
     by triple_apply evalPush_rule.
     rewrite /interpMemSpecSrc. specintros => pbase addr.
@@ -2014,7 +1969,7 @@ Proof.
     triple_apply triple_letGetRegSep. 
     rewrite /evalJmpTgt/evalMemSpec.
     triple_apply triple_letGetRegSep. 
-    rewrite id_l. triple_apply triple_letGetDWORDSep. 
+    triple_apply triple_letGetDWORDSep. 
     triple_apply triple_doSetRegSep. 
     by triple_apply evalPush_rule.
     rewrite /interpMemSpecSrc. specintros => addr.
@@ -2022,7 +1977,7 @@ Proof.
     rewrite /evalInstr /evalRegMem /evalReg. 
     triple_apply triple_letGetRegSep. 
     rewrite /evalJmpTgt/evalMemSpec.
-    rewrite id_l. triple_apply triple_letGetDWORDSep. 
+    triple_apply triple_letGetDWORDSep. 
     triple_apply triple_doSetRegSep. 
     by triple_apply evalPush_rule.
 
@@ -2044,8 +1999,8 @@ Corollary CALLrel_R_rule (r:Reg) (p q: DWORD) :
 Proof. 
   specintros => w sp p'.
   Hint Unfold interpJmpTgt : specapply. 
-  specapply (CALLrel_rule p q (JmpTgtR r)).  
-  sbazooka. 
+  specapply (CALLrel_rule p q (JmpTgtR r)). sbazooka.
+
   (* Should be able to automate this! *)
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at. 
   cancel1. cancel1. sbazooka.   
@@ -2058,9 +2013,8 @@ Corollary CALLrel_I_rule (rel: DWORD) (p q: DWORD) :
     ) <@ (p -- q :-> CALLrel rel).
 Proof. 
   specintros => w sp. 
-  specapply (CALLrel_rule p q (JmpTgtI rel)). 
+  specapply (CALLrel_rule p q (JmpTgtI rel)). sbazooka. 
 
-  sbazooka. 
   (* Should be able to automate this! *)
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at. 
   cancel1. cancel1. sbazooka. 
@@ -2072,7 +2026,7 @@ Lemma JMPrel_I_rule rel (p q: DWORD) :
   |-- (|> safe @ (EIP ~= addB q rel) -->> safe @ (EIP ~= p)) <@
         (p -- q :-> JMPrel (mkTgt rel)).
 Proof.
-  specapply (JMPrel_rule (JmpTgtI (mkTgt rel))); sbazooka. 
+  specapply (JMPrel_rule (JmpTgtI (mkTgt rel))). by ssimpl.  
   
   autorewrite with push_at. rewrite <-spec_reads_frame. apply limplValid. 
   cancel1. cancel1. sbazooka. 
@@ -2082,7 +2036,7 @@ Lemma JMPrel_R_rule (r:Reg) addr (p q: DWORD) :
   |-- (|> safe @ (EIP ~= addr ** r ~= addr) -->> safe @ (EIP ~= p ** r ~= addr)) <@
         (p -- q :-> JMPrel (JmpTgtR r)).
 Proof.
-  specapply (JMPrel_rule (JmpTgtR r)); sbazooka. 
+  specapply (JMPrel_rule (JmpTgtR r)). by ssimpl. 
 
   rewrite <-spec_reads_frame. autorewrite with push_at. rewrite limplValid. 
   cancel1. cancel1. sbazooka. 

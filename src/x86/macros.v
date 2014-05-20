@@ -69,7 +69,7 @@ Lemma JCC_rule a cc cv (b:bool) (p q: DWORD) :
 Proof.
 rewrite /JCC/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.  
-rewrite -H2. rewrite H1. specapply JCCrel_rule. sbazooka.
+rewrite -H2. rewrite H1. specapply JCCrel_rule. by ssimpl. 
 rewrite addB_subBK.
 rewrite <-spec_reads_frame. apply: limplAdj.
 apply: landL2. autorewrite with push_at. 
@@ -78,35 +78,49 @@ specsplit.
 - apply: landL2. cancel1. sbazooka. 
 Qed. 
 
+Lemma JCC_ruleAlt a cc cv (b:bool):
+  |-- multiexit ltrue (JCC cc cv a) (b == ~~cv /\\ ltrue) [::(a, b == cv /\\ ltrue)] @ (ConditionIs cc b). 
+Proof.
+rewrite/multiexit/JCC/relToAbs. specintros => i j. autorewrite with push_at.
+rewrite /otherExits. unfold_program. specintros => i1 i2 H1 H2.
+rewrite -H2. rewrite H1. specapply JCCrel_rule. sbazooka. 
+rewrite addB_subBK. 
+rewrite <-spec_reads_frame. apply: limplAdj. 
+(* Conjuncts are other way round, with drop-through first *)
+apply: landL2. autorewrite with push_at. specsplit. 
+- apply: landL2. apply: landL1. cancel1. cancel1. sbazooka. 
+- apply: landL1. cancel1. sbazooka. 
+Qed. 
+
 Lemma JZ_rule a (b:bool) (p q: DWORD) :
   |-- (
-      |> safe @ (b == true  /\\ EIP ~= a ** flagIs ZF b) //\\
-         safe @ (b == false /\\ EIP ~= q ** flagIs ZF b) -->>
-      safe @ (EIP ~= p ** flagIs ZF b)
+      |> safe @ (b == true  /\\ EIP ~= a ** ZF ~= b) //\\
+         safe @ (b == false /\\ EIP ~= q ** ZF ~= b) -->>
+      safe @ (EIP ~= p ** ZF ~= b)
     ) <@ (p -- q :-> JZ a).
 Proof.
-  replace (flagIs ZF b) with (ConditionIs CC_Z b) by reflexivity.
+  replace (ZF ~= b) with (ConditionIs CC_Z b) by reflexivity.
   apply: JCC_rule.
 Qed.
 
 Lemma JC_rule a (b:bool) (p q: DWORD) :
   |-- (
-      |> safe @ (b == true  /\\ EIP ~= a ** flagIs CF b) //\\
-         safe @ (b == false /\\ EIP ~= q ** flagIs CF b) -->>
-      safe @ (EIP ~= p ** flagIs CF b)
+      |> safe @ (b == true  /\\ EIP ~= a ** CF ~= b) //\\
+         safe @ (b == false /\\ EIP ~= q ** CF ~= b) -->>
+      safe @ (EIP ~= p ** CF ~= b)
     ) <@ (p -- q :-> JC a).
 Proof.
-  replace (flagIs CF b) with (ConditionIs CC_B b) by reflexivity.
+  replace (CF ~= b) with (ConditionIs CC_B b) by reflexivity.
   apply: JCC_rule.
 Qed.
 
-Lemma JMP_I_rule a (p q: DWORD) :
+Lemma JMP_I_rule (a: DWORD) (p q: DWORD) :
   |-- (|> safe @ (EIP ~= a) -->> safe @ (EIP ~= p)) <@
         (p -- q :-> JMP a).
 Proof.
 rewrite /JMP/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2. 
-rewrite -H2 H1. specapply JMPrel_I_rule. sbazooka. 
+rewrite -H2 H1. specapply JMPrel_I_rule. by ssimpl. 
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 apply: limplAdj. apply: landL2. autorewrite with push_at. 
 cancel1. cancel1. sbazooka. 
@@ -120,7 +134,7 @@ Proof.
   rewrite /JMP. apply JMPrel_R_rule.
 Qed.   
 
-Lemma CALL_I_rule a (p q: DWORD) :
+Lemma CALL_I_rule (a:DWORD) (p q: DWORD) :
   |-- Forall w: DWORD, Forall sp:DWORD, (
       |> safe @ (EIP ~= a ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
          safe @ (EIP ~= p  ** ESP~=sp    ** sp-#4 :-> w)
@@ -129,7 +143,7 @@ Proof.
 specintros => w sp. 
 rewrite /CALL/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2 H1. specapply CALLrel_I_rule. sbazooka.
+rewrite -H2 H1. specapply CALLrel_I_rule. by ssimpl. 
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 autorewrite with push_at.
 apply: limplAdj. apply: landL2. cancel1. cancel1.
@@ -160,25 +174,21 @@ Definition ifthenelse (cond: Condition) (value: bool)
     specintros => i1 i2 i3 i4 <- -> i5 -> ->.
 
     (* JCC cond value THEN *)
-    specapply JCC_rule.
-    - by ssimpl.
+    specapply JCC_rule. by ssimpl. 
 
     specsplit.
     - (* THEN branch *)
       rewrite <-spec_later_weaken. specintro. move/eqP => ->.
-      specapply Hthen.
-      - by ssimpl.
+      specapply Hthen. by ssimpl. 
        rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
        apply: landL2. cancel1. by ssimpl.
 
     (* ELSE branch *)
     specintro. move/eqP => ->.
-    specapply Helse.
-    - by ssimpl.
+    specapply Helse. by ssimpl. 
 
     (* JMP END *)
-    specapply JMP_I_rule.
-    - by ssimpl.
+    specapply JMP_I_rule. by ssimpl. 
     rewrite <-spec_later_weaken.
     rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
     apply: landL2. by (cancel1; reflexivity).
@@ -228,19 +238,16 @@ Definition while (ptest: program)
 
     specsplit.
     (* JMP TEST *)
-    - specapply JMP_I_rule.
-      - by ssimpl.
+    - specapply JMP_I_rule. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. apply: landL2. by (autorewrite with push_at; reflexivity).
 
     (* ptest *)
-    specapply Htest.
-    - by ssimpl.
+    specapply Htest. by ssimpl.
 
     (* JCC cond value BODY *)
     specintro => b.
-    specapply JCC_rule.
-    - by ssimpl.
+    specapply JCC_rule. by ssimpl.
 
     (* Now there are two cases. Either we jumped to the loop body, or we fell
        through and exited the loop. *)
@@ -249,7 +256,7 @@ Definition while (ptest: program)
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
       specapply Hbody.
-      - sdestruct. move/eqP => ->. by ssimpl.
+      - sdestruct. move/eqP => ->. by ssimpl. 
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
 
@@ -308,19 +315,16 @@ Definition while (ptest: program)
 
     specsplit.
     (* JMP TEST *)
-    - specapply JMP_I_rule.
-      - by ssimpl.
+    - specapply JMP_I_rule. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. apply: landL2. by (autorewrite with push_at; reflexivity).
 
     (* ptest *)
-    specapply Htest.
-    - by ssimpl.
+    specapply Htest. by ssimpl.
 
     (* JCC cond value BODY *)
     specintro => b.
-    specapply JCC_rule.
-    - by ssimpl.
+    specapply JCC_rule. by ssimpl.
 
     (* Now there are two cases. Either we jumped to the loop body, or we fell
        through and exited the loop. *)
@@ -328,13 +332,13 @@ Definition while (ptest: program)
     - autorewrite with push_at. rewrite ->landL2; last reflexivity.
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
-      specapply (Hbody SKIP).
+      specapply (Hbody SKIP). 
       - sdestruct. move/eqP => ->. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
 
     (* End of loop *)
-    specapply Hcoda. sdestructs => EQ.  rewrite (eqP EQ). sbazooka. 
+    specapply Hcoda. sdestructs => EQ. rewrite (eqP EQ). sbazooka. 
     rewrite <-spec_reads_frame. apply: limplAdj.
     apply: landL2. apply: landL1. autorewrite with push_at. 
     cancel1. by ssimpl. 

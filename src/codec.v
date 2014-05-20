@@ -34,9 +34,11 @@ Inductive Codec : Type -> Type :=
 .
 
 (* Some nice syntax *)
-Notation "f $ g" := (Seq f g) (left associativity, at level 42). 
-Notation "g ~~> f" := (Cast f g) (left associativity, at level 50). 
-Notation "x ||| y" := (Alt x y) (at level 55). 
+Notation "x $ y"   := (Seq x y)   (left associativity, at level 42). 
+Notation "x ~~> f" := (Cast f x)  (left associativity, at level 50). 
+Notation "x ||| y" := (Alt x y)   (at level 55). 
+
+
 Notation "x .$ y" := (Seq x y ~~> sndUnitCast _) (at level 30).
 Notation "x $. y" := (Seq x y ~~> fstUnitCast _) (at level 30).
 
@@ -619,24 +621,16 @@ match c with
 | Seq _ _ c d => fun x =>
   let: (y,z) := x in 
   if enc c y is Some bs1 then
-  if enc d z is Some bs2 then Some (bs1++bs2) else None else None
-(*| Dep _ _ c d => fun x =>
-  let: existT y z := x in
-  if enc c y is Some bs1 then
-  if enc (d y) z is Some bs2 then Some (bs1++bs2) else None else None*)
+  if enc d z is Some bs2 then Some (bs1++bs2) 
+  else None else None
 | Alt _ c d => fun x =>     
-  (* If encShortest is set, then evaluate both and take the shorter encoding *)
-  if encShortest then
-    match enc c x, enc d x with
-    | Some bs1, Some bs2 => if size bs1 < size bs2 then Some bs1 else Some bs2
-    | None, Some bs2 => Some bs2
-    | Some bs1, None => Some bs1
-    | None, None => None
-    end
-  (* Otherwise simply pick the first to succeed *)  
-  else
-  if enc c x is Some bs then Some bs 
-  else enc d x
+  match enc c x, enc d x with
+  | Some bs1, Some bs2 => 
+    if size bs1 < size bs2 then Some bs1 else Some bs2
+  | None, Some bs2 => Some bs2
+  | Some bs1, None => Some bs1
+  | None, None => None
+  end
 | Star _ c => fun x => encs (enc c) x
 end.
 
@@ -1012,7 +1006,8 @@ Example ex : Codec bool :=
   Executable decoder function; assume that all uses of Alt are non-ambiguous
   ======================================================================================*)
 
-Inductive DecRes T := DecYes (t: T) (rest: seq sym) | DecNo.
+Inductive DecRes T := 
+  DecYes (t: T) (rest: seq sym) | DecNo.
 
 Definition castRes t u (f:CAST t u) (r: DecRes t) :=
   if r is DecYes v res then DecYes (upcast f v) res else DecNo _. 
@@ -1033,40 +1028,27 @@ Fixpoint decs t dec (l: seq sym) : DecRes (seq t) :=
 *)
 
 (* Note that dec actually does backtracking in Alt case *)
+Implicit Arguments DecNo [T].
+
 Fixpoint dec t (c: Codec t) (l: seq sym) : DecRes t :=
 match c with
-| Any       => if l is b::l then DecYes b l else DecNo _
-| Sym b     => if l is b'::l then if b==b' then DecYes tt l else DecNo _ else DecNo _
+| Any       => if l is b::l then DecYes b l else DecNo
+| Sym b     => if l is b'::l then if b==b' 
+               then DecYes tt l else DecNo else DecNo
 | Emp       => DecYes tt l
-| Void _    => DecNo _
-| Alt _ c d => match dec c l with DecNo => dec d l | other => other end
+| Void _    => DecNo
+| Alt _ c d => 
+  if dec c l is DecYes x l' then DecYes x l'
+  else dec d l
 | Seq _ _ c d => 
-  match dec c l with
-  | DecYes x l' =>
-    match dec d l' with
-    | DecYes y l'' => DecYes (x,y) l''
-    | DecNo => DecNo _
-    end
-  | DecNo => DecNo _ 
-  end
-(*| Dep _ _ c d =>
-  match dec c l with
-  | DecYes x l' =>
-    match dec (d x) l' with
-    | DecYes y l'' => DecYes (existT _ x y) l''
-    | DecNo => DecNo _
-    | DecEnd => DecEnd _
-    end
-  | DecNo => DecNo _ 
-  | DecEnd => DecEnd _
-  end*)
+  if dec c l is DecYes x l'
+  then if dec d l' is DecYes y l''
+  then DecYes (x,y) l'' else DecNo else DecNo
 | Cast _ _ f c => 
-  match dec c l with
-  | DecYes x l' => DecYes (upcast f x) l'
-  | DecNo => DecNo _
-  end
+  if dec c l is DecYes x l' 
+  then DecYes (f x) l' else DecNo
 | Star _ c => 
-  DecNo _
+  DecNo
 end.
 
 (* Soundness applies regardless of determinism or prefix-free-ness *)

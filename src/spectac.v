@@ -115,12 +115,14 @@ Ltac eforalls H :=
    other evars and leave a closed goal.
    This tactic is quite dumb and will do the wrong thing on a sophisticated
    assertion where EIP appears, for example, on the left of a magic wand. But
-   in practice, EIP is treated very schematically. *)
+   in practice, EIP is treated very schematically. 
+
+   NOTE: to get the match to succeed, we need the RegOrFlagR constructor. Grrr. *)
 Ltac solve_code :=
   match goal with
     |- ?P |-- ?Q /\ _ =>
-      match P with context [EIP ~= ?eip] =>
-        match Q with context [EIP ~= ?evar] =>
+      match P with context [RegOrFlagR EIP ~= ?eip] =>
+        match Q with context [RegOrFlagR EIP ~= ?evar] =>
           unify eip evar
         end
       end

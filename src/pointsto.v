@@ -873,24 +873,27 @@ apply (leB_bounded_weaken BOUND) => //. apply leq_addr.
 Qed.
 
 
-(* Other tactics such as ssimpl are very sensitive to syntax. *)
-Ltac ptsimpl :=
-(replace (@pointsTo (@DWORDorBYTE true)) with (@pointsTo DWORD) by done;  
-replace (@readerMemIs (@DWORDorBYTE true)) with (@readerMemIs DWORD) by done;  
-replace (@readDWORDorBYTE true) with (readDWORD) by done). 
-
 (* Disjointness for registers, flags and bytes *)
-Lemma regIs_disjoint r1 r2 v1 v2 : r1 ~= v1 ** r2 ~= v2 |-- r1 <> r2 /\\ (r1 ~= v1 ** r2 ~= v2).
+Lemma regIs_disjoint (r1 r2: AnyReg) v1 v2 : r1 ~= v1 ** r2 ~= v2 |-- r1 <> r2 /\\ (r1 ~= v1 ** r2 ~= v2).
 Proof. case E: (r1 == r2). rewrite (eqP E). by setoid_rewrite regIs_same at 1. 
 ssplit; last done. move => H. by rewrite H eq_refl in E. 
 Qed. 
 
-Lemma flagIs_disjoint f1 f2 v1 v2 : flagIs f1 v1 ** flagIs f2 v2 |-- f1 <> f2 /\\ (flagIs f1 v1 ** flagIs f2 v2).
+Lemma flagIs_disjoint (f1 f2: Flag) v1 v2 : f1 ~= v1 ** f2 ~= v2 |-- f1 <> f2 /\\ (f1 ~= v1 ** f2 ~= v2).
 Proof. case E: (f1 == f2). rewrite (eqP E). by setoid_rewrite flagIs_same at 1. 
 ssplit; last done. move => H. by rewrite H eq_refl in E. 
 Qed. 
 
-Lemma bytesIs_disjoint p1 p2 v1 v2 : byteIs p1 v1 ** byteIs p2 v2 |-- p1 <> p2 /\\ (byteIs p1 v1 ** byteIs p2 v2).
+Lemma byteIs_disjoint p1 p2 v1 v2 : byteIs p1 v1 ** byteIs p2 v2 |-- p1 <> p2 /\\ (byteIs p1 v1 ** byteIs p2 v2).
 Proof. case E: (p1 == p2). rewrite (eqP E). by setoid_rewrite byteIs_same at 1. 
 ssplit; last done. move => H. by rewrite H eq_refl in E. 
 Qed. 
+
+Ltac unifyPT P :=
+  match P with
+  | (?p :-> ?v, ?p :-> ?w) => unify v w
+  | _ => Solving.cheap_unify P
+  end.
+
+Ltac ssimpl := ssimpl_with unifyPT.
+Ltac sbazooka := sbazooka_with unifyPT.

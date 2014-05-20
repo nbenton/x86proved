@@ -57,12 +57,12 @@ Infix "\\//"   := lor (at level 76, right associativity).
 Infix "-->>"   := limpl (at level 77, right associativity).
 Notation "'Forall' x : T , p" := 
   (lforall (fun x : T => p)) (at level 78, x ident, right associativity).
-Notation "'Forall' x , p" := 
-  (lforall (fun x => p)) (at level 78, x ident, right associativity).
+Notation "'Forall' x .. y , p" :=
+  (lforall (fun x => .. (lforall (fun y => p)) .. )) (at level 78, x binder, y binder, right associativity).
 Notation "'Exists' x : T , p" := 
   (lexists (fun x : T => p)) (at level 78, x ident, right associativity).
-Notation "'Exists' x , p" := 
-  (lexists (fun x => p)) (at level 78, x ident, right associativity).
+Notation "'Exists' x .. y , p" :=
+  (lexists (fun x => .. (lexists (fun y => p)) .. )) (at level 78, x binder, y binder, right associativity).
 
 (* Axioms of an intuitionistic logic, presented in a sequent calculus style
    with singleton contexts on the left of the turnstile. This form is
@@ -105,6 +105,7 @@ Section ILogicExtra.
   Definition lequiv P Q := P |-- Q /\ Q |-- P.
   Definition lpropand (p: Prop) Q := Exists _: p, Q.
   Definition lpropimpl (p: Prop) Q := Forall _: p, Q.
+
 End ILogicExtra.
 
 Infix "/\\" := lpropand (at level 75, right associativity).
@@ -609,7 +610,7 @@ Next Obligation.
 Qed.
 
 (* Prop is an intuitionistic logic *)
-Instance ILogicOps_Prop : ILogicOps Prop := {|
+Instance ILogicOps_Prop : ILogicOps Prop | 2 := {|
   lentails P Q := P -> Q;
   ltrue        := True;
   lfalse       := False;

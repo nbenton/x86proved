@@ -23,8 +23,8 @@ Definition wrappedAlloc bytes (r1 r2:Reg) heapInfo: program :=
   %asm.
 
 Lemma wrappedAlloc_correct bytes (r1 r2: Reg) heapInfo : 
-  |-- Forall i: DWORD, Forall j: DWORD,   
-  toyfun i EDI? ((Exists p, EDI ~= p ** memAny p (p +# bytes)) \\// EDI ~= #0) 
+  |-- Forall i j: DWORD,   
+  toyfun i EDI? ((Exists p:DWORD, EDI ~= p ** memAny p (p +# bytes)) \\// EDI ~= #0) 
 
   @  (ESI? ** OSZCP_Any ** allocInv heapInfo) 
   <@ (i -- j :-> mkbody_toyfun (wrappedAlloc bytes r1 r2 heapInfo)). 
@@ -81,7 +81,7 @@ rewrite <-spec_later_weaken.
 rewrite <-spec_reads_frame. 
 apply: limplAdj. autorewrite with push_at. 
 apply: landL2. cancel1. 
-rewrite /OSZCP/OSZCP_Any/flagAny/regAny. sbazooka. apply: lorR1.
+rewrite /OSZCP/OSZCP_Any/stateIsAny. sbazooka. apply: lorR1.
  
 sbazooka. 
 Qed. 

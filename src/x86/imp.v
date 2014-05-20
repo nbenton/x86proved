@@ -217,13 +217,13 @@ Section LogicLemmas.
         @ (stack_denot s ** OSZCP_Any).
   Proof.
     autorewrite with push_at. case: e.
-    - move=> x /=.
+    - move=> x.
       eapply basic_basic; first apply MOV_RR_rule.
       - rewrite ->regs_read_var. by ssimpl.
-      ssimpl. exact: sepSPwand.
-    - move=> value /=.
+      rewrite /stack_denot/eeval. ssimpl. exact: sepSPwand.
+    - move=> value.
       eapply basic_basic; first apply MOV_RI_rule; reflexivity.
-    - move=> x y /=.
+    - move=> x y.
       eapply basic_seq.
       - eapply basic_basic; first apply MOV_RR_rule.
         + rewrite ->regs_read_var. by ssimpl.
@@ -232,9 +232,8 @@ Section LogicLemmas.
       eapply basic_basic; first apply SUB_RR_rule.
       - eassumption.
       - ssimpl. rewrite ->sepSPwand. rewrite ->regs_read_var. by ssimpl.
-      rewrite /OSZCP /OSZCP_Any /flagAny. sbazooka.
-      rewrite sepSPA. rewrite ->sepSPwand. cancel2. cancel2.
-      by rewrite /subB E.
+      rewrite /OSZCP /OSZCP_Any/stateIsAny. sbazooka.
+      rewrite sepSPA. rewrite ->sepSPwand. cancel2. by rewrite /eeval/subB E/snd. 
     - move=> x y. rewrite /compile_expr.
       case Hxy: (x == y).
       - move/eqP: Hxy => <-.
@@ -258,7 +257,7 @@ Section LogicLemmas.
       - eassumption.
       - by ssimpl.
       rewrite [X in X ** (_ -* _)]sepSPC. rewrite ->sepSPwand.
-      rewrite /OSZCP_Any /OSZCP /flagAny. sbazooka. cancel2.
+      rewrite /OSZCP_Any /OSZCP. sbazooka. cancel2.
       rewrite /eeval.
       have Hless := sbbB_ltB_leB (s x) (s y).
       rewrite E /fst in Hless.
@@ -266,20 +265,22 @@ Section LogicLemmas.
       - rewrite Hless. rewrite adcB_nat in E'.
         rewrite splitmsb_fromNat in E'.
         rewrite toNat_fromNat0 in E'.
-        rewrite [X in #(X)]/= in E'. rewrite !addn0 in E'.
-        rewrite /nat_of_bool in E'. congruence.
+        rewrite [X in #(X)]/= !addn0 in E'. 
+        rewrite /nat_of_bool in E'. by injection E' => -> _.        
       - rewrite leBltB_neg Hless.
         rewrite adcB_nat in E'.
         rewrite splitmsb_fromNat in E'.
         rewrite toNat_fromNat0 in E'.
         rewrite [X in #(X)]/= in E'. rewrite !addn0 in E'.
-        rewrite /nat_of_bool in E'. rewrite [~~true]/=. cbv iota. congruence.
+        rewrite /nat_of_bool in E'. rewrite [~~true]/=. cbv iota.  
+        by injection E' => -> _. 
+    rewrite /stateIsAny. sbazooka.
   Qed.
 
   Lemma compile_condition_correct s e:
     |-- basic (EDX? ** OSZCP_Any) (compile_condition e)
-              (EDX? ** flagIs ZF (eeval e s == zero _) **
-               flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF)
+              (EDX? ** ZF ~= (eeval e s == zero _) **
+               OF? ** SF? ** CF? ** PF?)
           @ (stack_denot s).
   Proof.
     rewrite /compile_condition. autorewrite with push_at.
@@ -288,10 +289,8 @@ Section LogicLemmas.
     eapply (basic_basic_context (T:=program)); first apply He.
     - done.
     - by ssimpl.
-    - reflexivity.
-    eapply basic_basic; first apply TEST_self_rule.
-    - by ssimpl.
-    rewrite /regAny /OSZCP /flagAny. sbazooka; reflexivity.
+    - reflexivity. basicapply TEST_self_rule. 
+    rewrite /stateIsAny /OSZCP. sbazooka; reflexivity.
   Qed.
 End LogicLemmas.
 
@@ -308,10 +307,10 @@ Section LogicRules.
       - done.
       - by ssimpl.
       reflexivity.
-    - eapply basic_basic; first apply MOV_RR_rule.
+    - basicapply MOV_RR_rule.
       - rewrite ->var_assign_subst with (e:=e) (x:=x).
-        rewrite /regAny /stack_denot. by sbazooka.
-      rewrite /regAny. sbazooka. rewrite /asn_denot /stack_denot.
+        rewrite /stateIsAny /stack_denot. by sbazooka.
+      rewrite /stateIsAny. sbazooka. rewrite /asn_denot /stack_denot.
       rewrite ->sepSPwand. ssplits; first apply Hsubst. by sbazooka.
   Qed.
 
@@ -366,7 +365,7 @@ Section LogicRules.
     rewrite /triple. autorewrite with push_at. move=> HC. simpl compile_cmd.
     set (I := fun b:bool =>
       asn_denot ((blurb e b) //\\ P) **
-      EDX? ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF).
+      EDX? ** OF? ** SF? ** CF? ** PF?).
     eapply basic_roc_post; first last; first apply (while_rule (I:=I)).
     - rewrite /asn_denot. specintros => s HP.
       have He := (@compile_condition_correct s e).
@@ -376,8 +375,8 @@ Section LogicRules.
       + by ssimpl.
       rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC.
-      rewrite /I /ConditionIs /OSZCP_Any /flagAny. by sbazooka.
-    - rewrite /I /ConditionIs /OSZCP_Any /flagAny /negb. by sbazooka.
+      rewrite /I /ConditionIs /OSZCP_Any/stateIsAny. by sbazooka.
+    - rewrite /I /ConditionIs /OSZCP_Any /negb/stateIsAny. by sbazooka.
   Qed.
   
   Theorem triple_if S P e C1 C2 Q:
@@ -396,13 +395,13 @@ Section LogicRules.
       reflexivity.
     set (I := fun b:bool =>
       asn_denot ((blurb e b) //\\ P) **
-      EDX? ** flagAny OF ** flagAny SF ** flagAny CF ** flagAny PF).
+      EDX? ** OF? ** SF? ** CF? ** PF?).
     apply: basic_roc_pre; last apply (if_rule (P:=I)).
     - rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC1.
-      rewrite /I /ConditionIs /OSZCP_Any /flagAny. by sbazooka.
+      rewrite /I /ConditionIs /OSZCP_Any/stateIsAny. by sbazooka.
     - eapply basic_roc_pre; last apply HC2.
-      rewrite /I /ConditionIs /OSZCP_Any /flagAny /negb. by sbazooka.
+      rewrite /I /ConditionIs /OSZCP_Any /negb/stateIsAny. by sbazooka.
   Qed.
   
   Local Transparent ILFun_Ops.

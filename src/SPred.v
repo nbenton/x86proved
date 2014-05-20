@@ -53,12 +53,13 @@ Definition fragTgt d :=
 (* None = "not described" for the purposes of separation logic *)
 Definition PState := forall f: Frag, fragDom f -> option (fragTgt f).
 
-(*
 Structure StateFrag : Type := {frag:Frag; carrier:>Type}.
-Canonical Structure RegStateFrag := @Build_StateFrag Registers AnyReg.
+Canonical Structure AnyRegStateFrag := @Build_StateFrag Registers AnyReg.
+Canonical Structure RegStateFrag := @Build_StateFrag Registers Reg.
+Canonical Structure NonSPRegStateFrag := @Build_StateFrag Registers NonSPReg.
 Canonical Structure FlagStateFrag := Build_StateFrag Flags Flag.
-*)
 
+Definition fragOf {sf: StateFrag} (x: carrier sf) := frag sf.
 
 Definition emptyPState : PState := fun _ => empFun _. 
 
@@ -80,7 +81,27 @@ Definition addFlagToPState (s:PState) f v : PState :=
   | Traces => s Traces
   end.
 
-(*  
+Definition addBYTEToPState (s:PState) (p:PTR) b : PState := 
+  fun (fr:Frag) =>
+  match fr as fr in Frag return fragDom fr -> option (fragTgt fr) with
+  | Memory => fun p' => if p == p' then Some (Some b) else s Memory p'
+  | Registers => s Registers
+  | Flags => s Flags
+  | Traces => s Traces
+  end.
+
+(*
+Definition addToPState (f:Frag) (s: PState) : fragDom f -> fragTgt f -> PState :=
+  match f with (* as f in Frag return fragDom f -> option (fragTgt f) with *)
+  | Registers => fun r v => addRegToPState s r v
+  | Flags => fun f v => addFlagToPState s f v
+  | Memory => fun p v => addBYTEToPState s p v
+  | Traces => fun t v => s
+  end.
+
+Definition genericAddToPState (f:StateFrag) (s: PState) (x: carrier f) (v: fragTgt (frag f)) := @addToPState (frag f) s x v.
+
+Check (fun s => genericAddToPState s EAX #0).
 Definition undefRegToPState s r := 
   mkPState (fun r' => if r==r' then None else pregisters s r') (pmemory s) (pflags s) (ptrace s).
 *) 
@@ -90,15 +111,6 @@ Definition addGenRegToPState s r v :=
   mkPState (fun r' => if r==r' then v else pregisters s r') (pmemory s) (pflags s) (ptrace s). 
 *)
 
-
-Definition addBYTEToPState (s:PState) p b : PState := 
-  fun (fr:Frag) =>
-  match fr as fr in Frag return fragDom fr -> option (fragTgt fr) with
-  | Memory => fun p' => if p == p' then Some (Some b) else s Memory p'
-  | Registers => s Registers
-  | Flags => s Flags
-  | Traces => s Traces
-  end.
 
 Definition extendState (s1 s2: PState) : PState := fun f => extend (s1 f) (s2 f). 
 Definition stateIncludedIn (s1 s2: PState) := forall f, includedIn (s1 f) (s2 f). 
@@ -378,9 +390,10 @@ Local Existing Instance ILFun_ILogic.
 Local Existing Instance SABIOps.
 Local Existing Instance SABILogic.
 
-Instance sepILogicOps : ILogicOps SPred := _.
-Instance sepLogicOps : BILOperators SPred := _.
-Instance sepLogic : BILogic SPred := _.
+(* Giving these cost 1 ensures that they are preferred over spec/Prop instances *)
+Instance sepILogicOps : ILogicOps SPred | 1 := _.
+Instance sepLogicOps : BILOperators SPred | 1 := _.
+Instance sepLogic : BILogic SPred | 1 := _.
 
 Implicit Arguments mkILFunFrm [[e] [ILOps]].
 
@@ -432,24 +445,37 @@ Proof.
   - simpl; intros; firstorder.
 Qed.
 
-(*---------------------------------------------------------------------------
-    Register-is predicate
-  ---------------------------------------------------------------------------*)
 
-Definition regIs r x := eq_pred (addRegToPState emptyPState r x). 
+Global Coercion lbool (b:bool) := lpropand b ltrue.
 
-Notation "r '~=' x" := (regIs r x) (at level 55, no associativity, format "r '~=' x"): spred_scope.
-Definition regAny r : SPred := lexists (regIs r). 
-Notation "r '?'" := (regAny r) (at level 2, format "r '?'"): spred_scope.
+(*===========================================================================
+    "is" predicates on registers and flags
+  ===========================================================================*)
 
-Open Scope spred_scope.
-
-(*---------------------------------------------------------------------------
-    Flag-is predicate
-  ---------------------------------------------------------------------------*)
+Definition regIs r v : SPred := eq_pred (addRegToPState emptyPState r v).
 Definition flagIs f b : SPred := eq_pred (addFlagToPState emptyPState f b).
 
-Definition flagAny f : SPred := lexists (flagIs f).
+Inductive RegOrFlag :=
+| RegOrFlagR :> AnyReg -> RegOrFlag
+| RegOrFlagF :> Flag -> RegOrFlag.
+
+Definition RegOrFlag_target rf :=
+match rf with RegOrFlagR _ => DWORD | RegOrFlagF _ => FlagVal end.
+
+Definition stateIs (x: RegOrFlag) : RegOrFlag_target x -> SPred :=
+match x with 
+| RegOrFlagR r => regIs r
+| RegOrFlagF f => flagIs f
+end.
+
+Implicit Arguments stateIs [].
+
+Definition stateIsAny x := lexists (stateIs x).
+
+Notation "x '~=' v" := (stateIs x v) (at level 55, no associativity, format "x '~=' v") : spred_scope.
+Notation "x '?'" := (stateIsAny x) (at level 2, format "x '?'"): spred_scope.
+
+Hint Unfold DWORDorBYTE RegOrFlag_target : spred.
 
 (*---------------------------------------------------------------------------
      Byte-is predicate
@@ -595,7 +621,9 @@ Global Opaque PStateSepAlgOps.
 (*---------------------------------------------------------------------------
     Some lemmas about the domains of primitive points-to-like predicates
   ---------------------------------------------------------------------------*)
-Lemma regIs_same r v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse. 
+Open Scope spred_scope.
+
+Lemma regIs_same (r:AnyReg) v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse. 
 Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]]. 
 simpl in H1a, H1b. rewrite <-H1a in H1. rewrite <-H1b in H1.
 rewrite /sa_mul/PStateSepAlgOps/= in H1.  
@@ -605,7 +633,7 @@ destruct H1; by destruct H.
 by destruct H1. 
 Qed. 
 
-Lemma flagIs_same (f:Flag) v1 v2 : flagIs f v1 ** flagIs f v2 |-- lfalse. 
+Lemma flagIs_same (f:Flag) v1 v2 : f ~= v1 ** f ~= v2 |-- lfalse. 
 Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]]. 
 simpl in H1a, H1b. rewrite <-H1a in H1. rewrite <-H1b in H1.
 rewrite /sa_mul/PStateSepAlgOps/= in H1.  
