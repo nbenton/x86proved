@@ -50,20 +50,21 @@ Hint Unfold allocSpec : specapply.
 
 (* Perhaps put a |> on the failLabel case *)
 
+Require Import basicprog.
 Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).  
 Proof.  
-  rewrite /allocImp/allocSpec. specintros => i j. unfold_program. 
+  rewrite /allocSpec/allocImp. specintros => i j. unfold_program. 
   specintros => i1 i2 i3 i4 i5 i6.
 
-  (* MOV ESI, infoBlock *)
-  specapply MOV_RI_rule. by ssimpl.
+  (* MOV ESI, infoBlock *)  
+  specapply MOV_RanyI_rule. by ssimpl. 
 
   (* MOV EDI, [ESI] *)
   rewrite {2}/allocInv. specintros => base limit.
-  specapply MOV_RM0_rule. by ssimpl.
+  specapply MOV_RanyM0_rule. by ssimpl.
 
   (* ADD EDI, bytes *)
-  elim E:(splitmsb (adcB false base (fromNat n))) => [carry res].
+  elim E:(adcB false base (fromNat n)) => [carry res].
   rewrite /ConstImm. specapply (ADD_RI_rule (r:=EDI)). by ssimpl.
 
   (* JC failed *)
@@ -105,6 +106,3 @@ Proof.
   rewrite <-Hres in *.
   ssimpl. by apply memAnySplit.
 Qed.
-
-
-

@@ -723,7 +723,7 @@ Proof.
     (* in this branch we don't need odd's spec *)
     etransitivity; first by apply ltrueR.
     (* perform MOV EAX, 1 *)
-    specapply (MOV_RI_rule (r := EAX)); first by sbazooka.
+    specapply (MOV_RanyI_rule (r := EAX)); first by sbazooka.
     (* perform RET *)
     specapply RET_rule; first by sbazooka.
     (* drop the read frame and massage the goal, quite clumsy *)
@@ -805,7 +805,7 @@ Proof.
     (* in this branch we don't need even's spec *)
     etransitivity; first by apply ltrueR.
     (* perform MOV EAX, 0 *)
-    specapply (MOV_RI_rule (r := EAX)); first by sbazooka.
+    specapply (MOV_RanyI_rule (r := EAX)); first by sbazooka.
     (* perform RET *)
     specapply RET_rule; first by sbazooka.
     (* drop the read frame and massage the goal, quite clumsy *)
@@ -949,12 +949,10 @@ Proof.
   autorewrite with push_at.
   unfold_program.
   rewrite / ConstImm. (* this gets in the way of spec tactics *)
-  specintros => c1. 
+  specintros => c1.
   (* perform MOV ECX, #42 *)
-
-  specapply (MOV_RI_rule (r := ECX)); first by sbazooka.
+  specapply (MOV_RanyI_rule (r := ECX)); first by sbazooka.
   specapply JMP_I_rule; first by sbazooka.
-  rewrite /stateIsAny. 
   rewrite -> spec_reads_frame.
   apply spec_reads_entails; last by reflexivity.
   apply lforallL with #42.
@@ -963,14 +961,14 @@ Proof.
   autorewrite with push_at.
   apply limplAdj.
   rewrite <- spec_later_weaken.
-admit. 
-(*  apply modus.
+admit.   (*apply modus.
   - apply AtContra_safe.
     sbazooka.
     reflexivity.
   - apply AtContra_safe.
     sbazooka.*)
 Qed.
+
 
 Theorem mainModuleCorrect lEven lOdd : moduleCorrect (mainModule lEven lOdd).
 Proof.

@@ -179,7 +179,7 @@ rewrite /ifEqDwordStarEAX /condbrspec.
 specintros => p v i j.
 unfold_program. specintros => i1 i2.
 
-specapply MOV_RM0_rule.
+specapply MOV_RanyM0_rule.
 by ssimpl.
 
 elim E: (sbbB false v b) => [carry res].

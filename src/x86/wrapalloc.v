@@ -51,7 +51,7 @@ autorewrite with push_at.
 
 (* MOV EDI, 0 *)
 rewrite /ConstImm.
-specapply MOV_RI_rule. 
+specapply MOV_RanyI_rule. 
 - by ssimpl.
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2. 
 autorewrite with push_at. cancel1. ssimpl. by apply: lorR2. 
@@ -69,15 +69,14 @@ rewrite E0 in H. simpl (snd _) in H. rewrite addB_negBn in H.
 rewrite H in E0.
 
 rewrite /ConstImm.
-specapply SUB_RI_rule; last eassumption.
-- by ssimpl.
+specapply SUB_RI_rule. sbazooka. 
 
 (* JMP SUCCEED *)
 specapply JMP_I_rule.
 - by ssimpl. 
 
 (* Final stuff *)
-rewrite <-spec_later_weaken.
+rewrite E0. rewrite <-spec_later_weaken.
 rewrite <-spec_reads_frame. 
 apply: limplAdj. autorewrite with push_at. 
 apply: landL2. cancel1. 

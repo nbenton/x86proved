@@ -18,7 +18,9 @@ Lemma inlineHead_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
   inlineHead_spec r1 r2 i j p e v vs (inlineHead r1 r2).
 Proof. 
 rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. unfold_program.
-specintro => q. specapply MOV_RM0_rule. by ssimpl.
+rewrite /stateIsAny.
+specintros => q old. 
+specapply MOV_RM0_rule. sbazooka. 
 rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. cancel1. by ssimpl.
 Qed. 
@@ -26,8 +28,9 @@ Qed.
 Lemma inlineTail_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
   inlineTail_spec r1 r2 i j p e v vs (inlineTail r1 r2). 
 Proof. 
-rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. unfold_program. 
-specintro => q. specapply MOV_RM_rule. by ssimpl.
+rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. unfold_program.
+rewrite /stateIsAny. 
+specintros => q old. specapply MOV_RM_rule. by ssimpl.
 rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. cancel1. by sbazooka.  
 Qed. 
@@ -57,9 +60,9 @@ rewrite E0 /snd addB_negBn in H.
 rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.  
 
 rewrite /ConstImm (* adds a "#" to the literal. Maybe change SUB_RI_rule instead. *).
-specapply SUB_RI_rule; last eassumption. by ssimpl.
+specapply SUB_RI_rule. sbazooka. 
 
-specapply MOV_M0R_rule. sbazooka.  
+specapply MOV_M0R_rule. rewrite E0. sbazooka.  
 
 specapply MOV_MR_rule. by ssimpl.
 
@@ -90,8 +93,10 @@ specsplit.
 (* failure case *)
 autorewrite with push_at.
 
+(* EDI: should be easier to identify this *)
+rewrite {6}/stateIsAny. specintros => olddi.  
 (* mov EDI, 0 *)
-rewrite /ConstImm. specapply MOV_RI_rule. by ssimpl.
+rewrite /ConstImm. specapply MOV_RI_rule. sbazooka. 
 
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2. 
 autorewrite with push_at. cancel1. ssimpl. by apply: lorR1. 

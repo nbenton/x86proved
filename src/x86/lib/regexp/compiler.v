@@ -347,7 +347,7 @@ Proof.
     specintros=> eq_pd.
 
     (* RUN: MOV EBX, [EAX] *)
-    specapply MOV_RM_rule;
+    specapply MOV_RanyM_rule;
       first by sbazooka;
                rewrite addB0;
                move/eqP: eq_pd ->;
@@ -388,7 +388,7 @@ Proof.
     specintros=> c_neq_0.
 
     (* MOV EBX, [EAX] *)
-    specapply MOV_RM_rule;
+    specapply MOV_RanyM_rule;
       first by sbazooka;
                rewrite addB0;
                sbazooka.

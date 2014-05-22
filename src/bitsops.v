@@ -57,19 +57,21 @@ Definition fullAdder carry b1 b2 : bool * bool :=
     end.
 
 (* Add with carry, producing a word one bit larger than the inputs *)  
-Fixpoint adcB n carry : BITS n -> BITS n -> BITS n.+1 :=
+Fixpoint adcBmain n carry : BITS n -> BITS n -> BITS n.+1 :=
   if n is _.+1 then
     fun p1 p2 => let (p1,b1) := splitlsb p1 in let (p2,b2) := splitlsb p2 in
            let (carry',b) := fullAdder carry b1 b2 in
-           joinlsb (adcB carry' p1 p2, b)
+           joinlsb (adcBmain carry' p1 p2, b)
   else fun _ _ => singleBit carry.
 
+Definition adcB {n} carry (p1 p2: BITS n) := splitmsb (adcBmain carry p1 p2).
+
 (* Add with carry=0 and ignore carry out *)
-Definition addB {n} (p1 p2: BITS n) := dropmsb (adcB false p1 p2).
+Definition addB {n} (p1 p2: BITS n) := (adcB false p1 p2).2.
 
 (* Add with carry=0 and return None on overflow *)
 Definition addBovf n (p1 p2: BITS n) := 
-  let: (c,r) := splitmsb (adcB false p1 p2) in 
+  let: (c,r) := adcB false p1 p2 in 
   if c then None else Some r.
 
 Definition computeOverflow n (arg1 arg2 res: BITS n) :=
@@ -85,7 +87,7 @@ Notation "b +# n" := (addB b #n) (at level 50, left associativity).
   ---------------------------------------------------------------------------*)
 
 Definition sbbB {n} borrow (arg1 arg2: BITS n) := 
-  let (carry,res) := splitmsb (adcB (~~borrow) arg1 (invB arg2))
+  let (carry,res) := adcB (~~borrow) arg1 (invB arg2)
   in (~~carry,res). 
 Definition subB {n} (p1 p2: BITS n) := (sbbB false p1 p2).2. 
 

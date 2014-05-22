@@ -91,6 +91,11 @@ Lemma lforallE_at_spec A (S':spec) S P a:
   S' |-- (S a) @ P.
 Proof. move=> H. rewrite ->H. rewrite spec_at_forall. by apply lforallL with a. Qed.
 
+Lemma lforallE_reads_spec A (S':spec) S P a:
+  S' |-- (Forall x:A, S x) <@ P ->
+  S' |-- (S a) <@ P.
+Proof. move=> H. rewrite ->H. rewrite spec_reads_forall. by apply lforallL with a. Qed.
+
 Lemma spec_evars (S S': spec) : S |-- S' -> S |-- S'.
 Proof. apply. Qed.
 
@@ -102,6 +107,7 @@ Ltac eforalls H :=
     repeat match type_of H with
     | _ |-- Forall _: _, _ => eapply lforallE_spec in H
     | _ |-- (Forall _: _, _) @ _ => eapply lforallE_at_spec in H
+    | _ |-- (Forall _: _, _) <@ _ => eapply lforallE_reads_spec in H
     end
   | .. ].
 
@@ -345,4 +351,7 @@ Module SpecApply.
 End SpecApply.
 
 Ltac specapply := SpecApply.specapply.
-
+Ltac unhideReg r :=
+  replace r? with (Exists x:DWORD, r ~= x) by done; specintro.
+Ltac unhideFlag f :=
+  replace f? with (Exists x:FlagVal, f ~= x) by done; specintro.

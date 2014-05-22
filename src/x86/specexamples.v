@@ -39,11 +39,11 @@ Example basic_inc3 x:
             (EAX ~= x +# 3) @ OSZCP_Any.
 Proof.
   autorewrite with push_at. rewrite /OSZCP_Any/stateIsAny.
-  specintros => o s z c p. 
-  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
-  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
-  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
-  rewrite addIsIterInc /iter. by sbazooka.
+  specintros => o s z c p.
+  basicapply INC_R_rule. rewrite /OSZCP; sbazooka. 
+  basicapply INC_R_rule. rewrite /OSZCP; sbazooka. 
+  basicapply INC_R_rule. rewrite /OSZCP; sbazooka. 
+  rewrite /OSZCP addIsIterInc/iter; sbazooka. 
 Qed.
 
 Example incdec_while c a:
@@ -79,10 +79,8 @@ Proof.
     + eapply basic_basic; first eapply DEC_R_rule.
       * rewrite /OSZCP/ConditionIs. by ssimpl. 
       done.
-    eapply basic_basic; first eapply INC_R_rule.
-    + by ssimpl.
-    ssplits; first last.
-    + rewrite /OSZCP/ConditionIs/OSZCP_Any. by sbazooka.
-    + rewrite <-Hadd. exact: addB_decB_incB.
-    + done.
+    basicapply INC_R_rule. 
+    by rewrite addB_decB_incB.
+    rewrite /OSZCP/ConditionIs.  
+    sbazooka. 
 Qed.

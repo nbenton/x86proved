@@ -51,6 +51,12 @@ Proof.
   apply H.
 Qed.
 
+(* Needed to avoid problems with coercions *)
+Lemma basic_instr S P i Q : 
+  S |-- basic P i Q -> 
+  S |-- basic P (prog_instr i) Q.
+Proof. done. Qed. 
+
 (* Attempts to apply "basic" lemma on a single command (basic_basic) or
    on the first of a sequence (basic_seq). Note that it attempts to use sbazooka
    to discharge subgoals, so be careful if existentials are exposed in the goal -- 
@@ -64,18 +70,26 @@ Qed.
     autorewrite with push_at in H.
 
 
-  Ltac  basicapp R :=
+  (* This is all very sensitive to use of "e" versions of apply/exact. Beware! *)
+  Ltac basicatom R :=
   match goal with
-    | |- |-- basic ?P (prog_seq ?p1 ?p2) ?Q =>  
-             (eapply basic_seq; first (eapply basic_basic; first exact R; autounfold with spred; sbazooka))
+    | |- |-- basic ?P (prog_instr ?i) ?Q =>  
+          (eapply basic_basic; first eapply basic_instr; first eexact R; autounfold with spred; sbazooka)
 
-    | _ => eapply basic_basic; first exact R; autounfold with spred; sbazooka
+    | _ => eapply basic_basic; first eexact R; autounfold with spred; sbazooka
+    end.
+
+  Ltac  basicseq R :=
+  match goal with
+    | |- |-- basic ?P (prog_seq ?p1 ?p2) ?Q => (eapply basic_seq; first basicatom R)
+    | _ => basicatom R
     end.
 
   Ltac basicapply R :=
     let Hlem := fresh in
     instRule R Hlem;
     repeat (autorewrite with basicapply in Hlem);
-    first basicapp Hlem;
+    first basicseq Hlem;
     clear Hlem.
+
   

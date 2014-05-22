@@ -144,28 +144,6 @@ Definition specAtMemSpec dword ms (f: DWORDorBYTE dword -> spec) :=
         f v @ (regToAnyReg r ~= pbase ** addB pbase offset :-> v)
     else Forall v, f v @ (offset :-> v).
 
-Definition specAtRegMemDst (src: RegMem true) (f: (DWORD -> SPred) -> spec) :spec  :=
-  match src with
-  | RegMemR r =>
-    f (fun v => regToAnyReg r ~= v) 
-
-  | RegMemM ms =>
-    specAtMemSpecDst (dword:=true) ms f
-  end.
-
-Definition specAtSrc src (f: DWORD -> spec) : spec :=
-  match src with
-  | SrcI v =>
-    f v
-
-  | SrcR r =>
-    Forall v, 
-    (f v @ (regToAnyReg r ~= v))
-
-  | SrcM ms =>
-    @specAtMemSpec true ms f
-  end.
-
 Definition BYTEregIsAux (r: BYTEReg) (d:DWORD) (b: BYTE) : SPred := 
   match r in BYTEReg return SPred with
   | AL => low 8 d == b /\\ EAX ~= d
@@ -180,18 +158,32 @@ Definition BYTEregIsAux (r: BYTEReg) (d:DWORD) (b: BYTE) : SPred :=
 
 Definition BYTEregIs r b := Exists d, BYTEregIsAux r d b.
 
-(*Canonical Structure BYTEReg_PStateOps : PStateOps := 
-  @Build_StateIs BYTEReg BYTE (fun r b => Exists d, BYTEregIsAux r d b).
-
-Canonical Structure DWORDorBYTE_StateIs d : StateIs :=
-  @Build_StateIs (DWORDorBYTEReg d) (DWORDorBYTE d)
-      (if d as d return DWORDorBYTEReg d -> DWORDorBYTE d -> SPred 
-      then fun r v => r ~= v else fun r v => r ~= v).
-*)
-
 Definition DWORDorBYTEregIs d : DWORDorBYTEReg d -> DWORDorBYTE d -> SPred :=
   if d as d return DWORDorBYTEReg d -> DWORDorBYTE d -> SPred
   then fun r v => r ~= v else fun r v => BYTEregIs r v.
+
+
+Definition specAtRegMemDst d (src: RegMem d) (f: (DWORDorBYTE d -> SPred) -> spec) :spec  :=
+  match src with
+  | RegMemR r =>
+    f (fun v => DWORDorBYTEregIs r v) 
+
+  | RegMemM ms =>
+    specAtMemSpecDst ms f
+  end.
+
+Definition specAtSrc src (f: DWORD -> spec) : spec :=
+  match src with
+  | SrcI v =>
+    f v
+
+  | SrcR r =>
+    Forall v, 
+    (f v @ (regToAnyReg r ~= v))
+
+  | SrcM ms =>
+    @specAtMemSpec true ms f
+  end.
 
 Definition specAtDstSrc dword (ds: DstSrc dword) (f: (DWORDorBYTE dword -> SPred) -> DWORDorBYTE dword -> spec) : spec :=
   match ds with
@@ -232,7 +224,7 @@ Hint Unfold
   evalInstr
   evalArithOp evalArithOpNoCarry evalArithUnaryOp evalArithUnaryOpNoCarry
   evalLogicalOp evalBinOp evalShiftOp evalUnaryOp evalCondition 
-  evalMOV evalDst evalSrc : eval.
+  evalMOV evalDst evalDstR evalDstM evalSrc evalMemSpec evalBYTEReg : eval.
 
 Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= p.
 
@@ -248,7 +240,7 @@ Proof. by apply triple_letGetRegSep. Qed.
 Lemma triple_preEq (T: eqType) (v w:T) P c Q :
   TRIPLE (v == w /\\ P) (c w) Q ->
   TRIPLE (v == w /\\ P) (c v) Q.
-Proof. move => S. apply triple_pre_exists => EQ. rewrite -(eqP EQ) eq_refl in S. 
+Proof. move => S. apply: triple_pre_exists => H. rewrite -(eqP H) eq_refl in S. 
 triple_apply S; sbazooka. Qed. 
 
 Lemma evalBYTERegAux_rule (r: BYTEReg) d v c Q : 
@@ -288,6 +280,14 @@ triple_apply evalBYTERegAux_rule. rewrite /BYTEregIs in T.
 triple_apply T; sbazooka. 
 Qed. 
 
+Lemma evalDWORDorBYTEReg_rule d(r: DWORDorBYTEReg d) v c Q : 
+  forall S,
+  TRIPLE (DWORDorBYTEregIs r v ** S) (c v) Q -> 
+  TRIPLE (DWORDorBYTEregIs r v ** S) (bind (evalDWORDorBYTEReg _ r) c) Q.
+Proof.
+destruct d; [apply evalReg_rule | apply evalBYTEReg_rule]. 
+Qed. 
+
 Lemma ASSOC (D: WORD) (b c:BYTE) : (D ## b) ## c = D ## b ## c.
 Proof. rewrite /catB. apply val_inj. simpl. by rewrite -catA. Qed. 
 
@@ -310,6 +310,11 @@ destruct r; apply triple_pre_existsSep => d; apply triple_pre_existsSep => _;
 + rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite LOWLEMMA.  
 + rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite LOWLEMMA.  
 Qed.
+
+Lemma triple_setDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w :
+  forall S, TRIPLE (DWORDorBYTEregIs r v ** S) (setDWORDorBYTERegInProcState _ r w) 
+                   (DWORDorBYTEregIs r w ** S).
+Proof. destruct d; [apply triple_setRegSep | apply triple_setBYTERegSep]. Qed.
 
 Lemma evalMemSpecNone_rule (r:Reg) p offset c Q :
   forall S,
@@ -334,7 +339,7 @@ Lemma evalPush_rule sp (v w:DWORD) (S:SPred) :
   TRIPLE (ESP~=sp ** (sp -# 4) :-> v ** S) 
          (evalPush w) 
          (ESP~=sp -# 4 ** (sp -# 4) :-> w ** S).
-Proof. rewrite /evalPush. 
+Proof. 
 triple_apply triple_letGetRegSep. 
 triple_apply triple_doSetRegSep. 
 triple_apply triple_setDWORDSep.
@@ -361,11 +366,9 @@ Proof.
   eapply H; eassumption.
 Qed.
 
-Lemma triple_doUpdateZPS S Q n (v: BITS n) c z p s:
-  TRIPLE (ZF ~= (v == #0) **
-          PF ~= (lsb v) **
-          SF ~= (msb v) ** S) c Q ->
-  TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** S) (do!updateZPS v; c) Q.
+Lemma triple_doUpdateZPS P Q n (v: BITS n) c z p s:
+  TRIPLE (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P) c Q ->
+  TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (do!updateZPS v; c) Q.
 Proof.
   move=> H. rewrite /updateZPS. 
   triple_apply triple_doSetFlagSep.
@@ -378,32 +381,32 @@ Qed.
     PUSH instruction
   ---------------------------------------------------------------------------*)
 
-(* Generic push *)
+(* Generic rule *)
 Lemma PUSH_rule src sp (v:DWORD) :
   |-- specAtSrc src (fun w => 
-      basic    (ESP ~= sp ** sp-#4 :-> v) (PUSH src) (ESP ~= sp-#4 ** sp-#4 :-> w)).  
+      basic    (ESP ~= sp    ** sp-#4 :-> v) (PUSH src) 
+               (ESP ~= sp-#4 ** sp-#4 :-> w)).  
 Proof.
 rewrite /specAtSrc. destruct src.
-- apply TRIPLE_basic => R.
-  rewrite /evalInstr/evalSrc. 
+- apply TRIPLE_basic => R. repeat autounfold with eval.
   triple_apply evalPush_rule. 
-- elim: ms => [optSIB offset]. 
+- rewrite /specAtMemSpec. 
+  elim: ms => [optSIB offset]. 
   case: optSIB => [[base indexAndScale] |]. 
   case: indexAndScale => [[rix sc] |]. 
-  rewrite /specAtMemSpec.
   + specintros => oldv pbase indexval. 
     autorewrite with push_at. apply TRIPLE_basic => R.
     autounfold with eval. rewrite /evalSrc.
     triple_apply evalMemSpec_rule.
     triple_apply triple_letGetDWORDSep. 
     triple_apply evalPush_rule. 
-  + rewrite /specAtMemSpec. specintros => oldv pbase.
+  + specintros => oldv pbase.
     autorewrite with push_at. apply TRIPLE_basic => R.
     autounfold with eval. rewrite /evalSrc.
     triple_apply evalMemSpecNone_rule. 
     triple_apply triple_letGetDWORDSep. 
     triple_apply evalPush_rule.
-  + rewrite /specAtMemSpec. specintros => oldv. 
+  + specintros => oldv. 
     autorewrite with push_at. apply TRIPLE_basic => R.
     autounfold with eval. rewrite /evalSrc/evalMemSpec. 
     triple_apply triple_letGetDWORDSep. 
@@ -417,33 +420,38 @@ rewrite /specAtSrc. destruct src.
   triple_apply evalPush_rule. 
 Qed. 
 
+Ltac basicPUSH :=
+  match goal with
+  | |- |-- basic ?p (PUSH ?a) ?q => basicapply (PUSH_rule a)
+  end.
+
 (* PUSH r *)
 Corollary PUSH_R_rule (r:Reg) sp (v w:DWORD) :
   |-- basic (r ~= v ** ESP ~= sp    ** sp-#4 :-> w) 
             (PUSH r)
             (r ~= v ** ESP ~= sp-#4 ** sp-#4 :-> v).
-Proof. basicapply (PUSH_rule r). Qed. 
+Proof. basicPUSH. Qed. 
 
 (* PUSH v *)
 Corollary PUSH_I_rule (sp v w:DWORD) :
   |-- basic (ESP ~= sp    ** sp-#4 :-> w) 
             (PUSH v)
             (ESP ~= sp-#4 ** sp-#4 :-> v).
-Proof. basicapply (PUSH_rule v). Qed. 
+Proof. basicPUSH. Qed. 
 
 (* PUSH [r + offset] *)
 Corollary PUSH_M_rule (r: Reg) (offset:nat) (sp v w pbase:DWORD) :
   |-- basic (r ~= pbase ** pbase +# offset :-> v ** ESP ~= sp    ** sp-#4 :-> w) 
             (PUSH [r + offset])
             (r ~= pbase ** pbase +# offset :-> v ** ESP ~= sp-#4 ** sp-#4 :-> v).
-Proof. basicapply (PUSH_rule [r + offset]). Qed.
+Proof. basicPUSH. Qed.
 
 (* PUSH [r] *)
 Corollary PUSH_M0_rule (r: Reg) (sp v w pbase:DWORD) :
   |-- basic (r ~= pbase ** pbase :-> v ** ESP ~= sp    ** sp-#4 :-> w) 
             (PUSH [r])
             (r ~= pbase ** pbase :-> v ** ESP ~= sp-#4 ** sp-#4 :-> v).
-Proof. basicapply (PUSH_rule [r]). Qed. 
+Proof. basicPUSH. Qed. 
 
 (*---------------------------------------------------------------------------
     POP instruction
@@ -457,9 +465,9 @@ Lemma POP_rule (rm:RegMem true) (sp:BITS 32) (oldv v:DWORD):
 Proof.
   rewrite /specAtRegMemDst. destruct rm.
   + apply TRIPLE_basic => R.
-    rewrite /evalInstr /evalDst /evalDstR.
+    repeat autounfold with eval. rewrite /DWORDorBYTEregIs. 
     triple_apply evalReg_rule.
-    triple_apply evalReg_rule.
+    triple_apply evalReg_rule. 
     triple_apply triple_letGetDWORDSep.
     triple_apply triple_doSetRegSep. 
     triple_apply triple_setRegSep. 
@@ -469,8 +477,9 @@ Proof.
     case: indexAndScale => [[rix sc] |]. 
     - specintros => pbase indexval. 
       autorewrite with push_at. apply TRIPLE_basic => R.
-      rewrite /evalInstr/evalDst/evalDstM.  
+      rewrite /evalInstr.
       triple_apply evalReg_rule. 
+      rewrite /evalDst/evalDstM.
       triple_apply evalMemSpec_rule. 
       triple_apply triple_letGetDWORDSep. 
       triple_apply triple_letGetDWORDSep.
@@ -496,42 +505,54 @@ Proof.
       triple_apply triple_setRegSep. 
 Qed.
 
+Ltac basicPOP :=
+  match goal with
+  | |- |-- basic ?p (POP ?a) ?q => basicapply (POP_rule a)
+  end.
+
+
 (* POP r *)
-Corollary POP_R_rule (r:Reg) (sp:BITS 32) (v w:DWORD):
-  |-- basic (r ~= v ** ESP ~= sp    ** sp:->w) (POP (RegMemR true r))
-            (r ~= w ** ESP ~= sp+#4 ** sp:->w).
-Proof. basicapply (POP_rule (RegMemR true r)). Qed. 
+Corollary POP_R_rule (r:Reg) (sp oldv v:DWORD) :
+  |-- basic (r ~= oldv ** ESP ~= sp    ** sp:->v) (POP (RegMemR true r))
+            (r ~= v    ** ESP ~= sp+#4 ** sp:->v).
+Proof. basicPOP. Qed. 
 
 (* POP [r + offset] *)
-Corollary POP_M_rule (r: Reg) (offset:nat) (sp v w pbase:DWORD) :
-  |-- basic (r ~= pbase ** pbase +# offset :-> v ** ESP ~= sp    ** sp :-> w) 
+Corollary POP_M_rule (r:Reg) (offset:nat) (sp oldv v pbase:DWORD) :
+  |-- basic (r ~= pbase ** pbase +# offset :-> oldv ** ESP ~= sp ** sp :-> v) 
             (POP (RegMemM _ [r + offset]))
-            (r ~= pbase ** pbase +# offset :-> w ** ESP ~= sp+#4 ** sp :-> w).
-Proof. basicapply (POP_rule (RegMemM _ [r + offset])). Qed. 
+            (r ~= pbase ** pbase +# offset :-> v ** ESP ~= sp+#4 ** sp :-> v).
+Proof. basicPOP. Qed. 
 
 (* POP [r] *)
-Corollary POP_M0_rule (r: Reg) (sp v w pbase:DWORD) :
-  |-- basic (r ~= pbase ** pbase :-> v ** ESP ~= sp    ** sp :-> w) 
+Corollary POP_M0_rule (r: Reg) (sp oldv v pbase:DWORD) :
+  |-- basic (r ~= pbase ** pbase :-> oldv ** ESP ~= sp    ** sp :-> v) 
             (POP (RegMemM _ [r]))
-            (r ~= pbase ** pbase :-> w ** ESP ~= sp+#4 ** sp :-> w).
-Proof. basicapply POP_M_rule. Qed.
+            (r ~= pbase ** pbase :-> v    ** ESP ~= sp+#4 ** sp :-> v).
+Proof. basicPOP. Qed.
 
 (*---------------------------------------------------------------------------
     MOV instruction
   ---------------------------------------------------------------------------*)
 
+Lemma triple_letGetDWORDorBYTESep d (p:PTR) (v:DWORDorBYTE d) c Q : 
+  forall S,
+  TRIPLE (p:->v ** S) (c v) Q -> 
+  TRIPLE (p:->v ** S) (bind (getDWORDorBYTEFromProcState _ p) c) Q.
+Proof. destruct d; [apply triple_letGetSep | apply triple_letGetBYTESep]. Qed. 
+
 (* Generic rule *)
-Lemma MOV_rule ds oldv:
+Lemma MOV_rule d ds oldv:
   |-- specAtDstSrc ds (fun V v =>
-      basic (V oldv) (MOVOP true ds) (V v)).
+      basic (V oldv) (MOVOP d ds) (V v)).
 Proof.
-rewrite /specAtDstSrc/DWORDorBYTEregIs.
+rewrite /specAtDstSrc.
 destruct ds.
 
 + specintros => v. autorewrite with push_at. apply TRIPLE_basic => R.
   rewrite /evalInstr/evalMOV.  
-  triple_apply evalReg_rule. 
-  triple_apply triple_setRegSep. 
+  triple_apply evalDWORDorBYTEReg_rule. 
+  triple_apply triple_setDWORDorBYTERegSep. 
 
 + rewrite /specAtMemSpec.
   elim: src => [optSIB offset].     
@@ -540,17 +561,17 @@ destruct ds.
   - specintros => v pbase ixval. autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV.
     triple_apply evalMemSpec_rule. 
-    triple_apply triple_letGetDWORDSep.
-    triple_apply triple_setRegSep.
+    triple_apply triple_letGetDWORDorBYTESep.
+    triple_apply triple_setDWORDorBYTERegSep.
   - specintros => v pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV.     
     triple_apply evalMemSpecNone_rule. 
-    triple_apply triple_letGetDWORDSep.
-    triple_apply triple_setRegSep.
+    triple_apply triple_letGetDWORDorBYTESep.
+    triple_apply triple_setDWORDorBYTERegSep.
   - specintros => v. autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV/evalMemSpec.     
-    triple_apply triple_letGetDWORDSep.
-    triple_apply triple_setRegSep.
+    triple_apply triple_letGetDWORDorBYTESep.
+    triple_apply triple_setDWORDorBYTERegSep.
 
 + rewrite /specAtMemSpecDst.
   specintros => v. 
@@ -560,22 +581,22 @@ destruct ds.
   - autorewrite with push_at. specintros => pbase ixval. 
     autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV.
-    triple_apply evalReg_rule. 
+    triple_apply evalDWORDorBYTEReg_rule. 
     triple_apply evalMemSpec_rule. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
   - specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV.     
-    triple_apply evalReg_rule. 
+    triple_apply evalDWORDorBYTEReg_rule. 
     triple_apply evalMemSpecNone_rule. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
   - autorewrite with push_at. apply TRIPLE_basic => R. 
-    rewrite /evalInstr/evalMOV/evalMemSpec/evalDWORDorBYTEReg. 
-    triple_apply evalReg_rule. 
-    triple_apply triple_setDWORDSep.
+    rewrite /evalInstr/evalMOV/evalMemSpec. 
+    triple_apply evalDWORDorBYTEReg_rule. 
+    triple_apply triple_setDWORDorBYTESep.
    
 + apply TRIPLE_basic => R. 
   rewrite /evalInstr/evalMOV.
-  triple_apply triple_setRegSep.
+  triple_apply triple_setDWORDorBYTERegSep.
 
 + rewrite /specAtMemSpecDst. 
   elim: dst => [optSIB offset].
@@ -585,46 +606,91 @@ destruct ds.
     autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV.
     triple_apply evalMemSpec_rule. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
   - specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV.     
     triple_apply evalMemSpecNone_rule. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
   - autorewrite with push_at. apply TRIPLE_basic => R. 
     rewrite /evalInstr/evalMOV/evalMemSpec.     
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
 Qed. 
 
+Ltac basicMOV :=
+  try unfold makeMOV;                
+  match goal with
+  | |- |-- basic ?p (@MOVOP ?d ?a) ?q => basicapply (@MOV_rule d a)
+  end.
+
 (* Register to register *)
-Lemma MOV_RR_rule (r1 r2:Reg) v:
-  |-- basic (r1? ** r2 ~= v) (MOV r1, r2) (r1 ~= v ** r2 ~= v).
-Proof. rewrite /stateIsAny. specintro => oldv. basicapply (MOV_rule (DstSrcRR true r1 r2)). Qed.
+Lemma MOV_RR_rule (r1 r2:Reg) v1 v2:
+  |-- basic (r1 ~= v1 ** r2 ~= v2) (MOV r1, r2) (r1 ~= v2 ** r2 ~= v2).
+Proof. basicMOV. Qed.
+
+Lemma MOV_RanyR_rule (r1 r2:Reg) v2:
+  |-- basic (r1? ** r2 ~= v2) (MOV r1, r2) (r1 ~= v2 ** r2 ~= v2).
+Proof. unhideReg r1 => old. basicMOV. Qed.
 
 (* Immediate to register *)
-Lemma MOV_RI_rule (r:Reg) (v:DWORD) :
-  |-- basic (r?) (MOV r, v) (r ~= v).
-Proof. rewrite /stateIsAny. specintro => oldv. basicapply (MOV_rule (DstSrcRI true r v)). Qed. 
+Lemma MOV_RI_rule (r:Reg) (v1 v2:DWORD) :
+  |-- basic (r ~= v1) (MOV r, v2) (r ~= v2).
+Proof. basicMOV. Qed. 
+
+Lemma MOV_RanyI_rule (r:Reg) (v2:DWORD) :
+  |-- basic r? (MOV r, v2) (r ~= v2).
+Proof. unhideReg r => old. basicMOV. Qed.
+
+(* Memory to register *)
+Lemma MOV_RM_rule (pd:BITS 32) (r1 r2:Reg) offset (v1 v2: DWORD) :
+  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2)
+            (MOV r1, [r2 + offset])
+            (r1 ~= v2 ** r2 ~= pd ** pd +# offset :-> v2).
+Proof. basicMOV. Qed. 
+
+Lemma MOV_RanyM_rule (pd:BITS 32) (r1 r2:Reg) offset (v2: DWORD) :
+  |-- basic (r1? ** r2 ~= pd ** pd +# offset :-> v2)
+            (MOV r1, [r2 + offset])
+            (r1 ~= v2 ** r2 ~= pd ** pd +# offset :-> v2).
+Proof. unhideReg r1 => old. basicMOV. Qed. 
+
+Lemma MOV_RM0_rule (pd:BITS 32) (r1 r2:Reg) (v1 v2: DWORD) :
+  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd :-> v2)
+            (MOV r1, [r2])
+            (r1 ~= v2 ** r2 ~= pd ** pd :-> v2).
+Proof. basicMOV. Qed. 
+
+Lemma MOV_RanyM0_rule (pd:BITS 32) (r1 r2:Reg) (v2: DWORD) :
+  |-- basic (r1? ** r2 ~= pd ** pd :-> v2)
+            (MOV r1, [r2])
+            (r1 ~= v2 ** r2 ~= pd ** pd :-> v2).
+Proof. unhideReg r1 => old. basicMOV. Qed. 
 
 (* Register to memory *)
 Lemma MOV_MR_rule (p: DWORD) (r1 r2: Reg) offset (v1 v2:DWORD) :
   |-- basic (r1~=p ** p +# offset :-> v1 ** r2~=v2)
             (MOV [r1 + offset], r2)
             (r1~=p ** p +# offset :-> v2 ** r2~=v2).
-Proof. basicapply (MOV_rule (DstSrcMR true (mkMemSpec (Some (r1, None)) #offset) r2) v1). Qed.
+Proof. basicMOV. Qed.
+
+(* Immediate to memory *)
+Lemma MOV_MI_rule dword (pd:BITS 32) (r:Reg) offset (v w:DWORDorBYTE dword) :
+  |-- basic (r ~= pd ** pd +# offset :-> v)
+            (MOVOP _ (DstSrcMI dword (mkMemSpec (Some(r, None)) #offset) w))
+            (r ~= pd ** pd +# offset :-> w).
+Proof. basicMOV. Qed. 
+
+Lemma MOV_M0R_rule (pd:BITS 32) (r1 r2:Reg) (v1 v2: DWORD) :
+  |-- basic (r1 ~= pd ** pd :-> v1 ** r2 ~= v2)
+            (MOV [r1], r2)
+            (r1 ~= pd ** pd :-> v2 ** r2 ~= v2).
+Proof. basicMOV. Qed. 
+
 
 Lemma MOV_MbR_rule (p: DWORD) (r1:Reg) (r2: BYTEReg) offset (v1:BYTE) (v2:BYTE) :
   |-- basic (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v2)
             (MOV [r1 + offset], r2)
             (r1 ~= p ** p +# offset :-> v2 ** BYTEregIs r2 v2).
-Proof.
-  apply TRIPLE_basic => R.
-  repeat autounfold with eval. 
-  rewrite /evalDWORDorBYTEReg/evalMemSpec. 
-  triple_apply evalBYTEReg_rule. 
-  triple_apply evalReg_rule. 
-  triple_apply triple_setBYTESep.  
-Qed.
-
+Proof. basicMOV. Qed. 
 
 Lemma MOV_MbR_ruleGen d (p: DWORD) (r1:Reg) (r2: DWORDorBYTEReg d) offset (v1 v2:DWORDorBYTE d):
   |-- basic (r1 ~= p ** p +# offset :-> v1 ** DWORDorBYTEregIs r2 v2)
@@ -640,58 +706,13 @@ Lemma MOV_RMb_rule (p: DWORD) (r1:Reg) (r2:BYTEReg) offset (v1:BYTE) (v2:BYTE) :
   |-- basic (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v2)
             (MOV r2, [r1 + offset])
             (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v1).
-Proof.
-  apply TRIPLE_basic => R.
-  repeat autounfold with eval. 
-  triple_apply evalMemSpecNone_rule. 
-  triple_apply triple_letGetBYTESep.
-  triple_apply triple_setBYTERegSep.
-Qed. 
+Proof. basicMOV. Qed. 
 
 Lemma MOV_MbI_rule (pd:BITS 32) (r1:Reg) offset (v1 v2:BYTE) :
   |-- basic (r1 ~= pd ** pd +# offset :-> v1)
             (MOV BYTE [r1 + offset], v2)
             (r1 ~= pd ** pd +# offset :-> v2).
-Proof.
-  apply TRIPLE_basic => R.
-  repeat autounfold with eval. rewrite /evalMemSpec.
-  triple_apply evalReg_rule. 
-  triple_apply triple_setBYTESep.
-Qed.
-
-(* Immediate to memory *)
-Lemma MOV_MI_rule dword (pd:BITS 32) (r:Reg) offset (v w:DWORDorBYTE dword) :
-  |-- basic (r ~= pd ** pd +# offset :-> v)
-            (MOVOP _ (DstSrcMI dword (mkMemSpec (Some(r, None)) #offset) w))
-            (r ~= pd ** pd +# offset :-> w).
-Proof.
-  apply TRIPLE_basic => R.
-  repeat autounfold with eval. rewrite /evalMemSpec. 
-  triple_apply evalReg_rule. 
-  triple_apply triple_setDWORDorBYTESep.  
-Qed.
-
-(* Memory to register *)
-Lemma MOV_RM_rule (pd:BITS 32) (r1 r2:Reg) offset (v: DWORD) :
-  |-- basic (r1? ** r2 ~= pd ** pd +# offset :-> v)
-            (MOV r1, [r2 + offset])
-            (r1 ~= v ** r2 ~= pd ** pd +# offset :-> v).
-Proof.
-  rewrite /stateIsAny. specintro => v0.
-  basicapply (MOV_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). 
-Qed. 
-
-Lemma MOV_RM0_rule (pd:BITS 32) (r1 r2:Reg) (v: DWORD) :
-  |-- basic (r1? ** r2 ~= pd ** pd :-> v)
-            (MOV r1, [r2])
-            (r1 ~= v ** r2 ~= pd ** pd :-> v).
-Proof. basicapply MOV_RM_rule. Qed. 
-
-Lemma MOV_M0R_rule (pd:BITS 32) (r1 r2:Reg) (v1 v2: DWORD) :
-  |-- basic (r1 ~= pd ** pd :-> v1 ** r2 ~= v2)
-            (MOV [r1], r2)
-            (r1 ~= pd ** pd :-> v2 ** r2 ~= v2).
-Proof. basicapply MOV_MR_rule. Qed. 
+Proof. basicMOV. Qed. 
 
 (*---------------------------------------------------------------------------
     LEA instruction
@@ -702,8 +723,7 @@ Lemma LEA_ruleSameBase (v indexval offset: DWORD) (r: Reg) (r1:NonSPReg) sc :
             (instr.LEA r (RegMemM _ (mkMemSpec (Some(r, Some(r1, sc))) offset)))
             (r ~= addB (addB v offset) (scaleBy sc indexval) ** r1 ~= indexval).
 Proof.
-  apply TRIPLE_basic => R.
-  repeat autounfold with eval. 
+  apply TRIPLE_basic => R. rewrite /evalInstr.
   triple_apply evalMemSpec_rule.
   triple_apply triple_setRegSep. 
 Qed. 
@@ -713,8 +733,7 @@ Lemma LEA_rule (old v indexval offset: DWORD) (r r': Reg) (r1:NonSPReg) sc :
             (instr.LEA r (RegMemM _ (mkMemSpec (Some(r', Some(r1, sc))) offset)))
             (r ~= addB (addB v offset) (scaleBy sc indexval) ** r' ~= v ** r1 ~= indexval).
 Proof.
-  apply TRIPLE_basic => R.
-  repeat autounfold with eval. 
+  apply TRIPLE_basic => R. rewrite /evalInstr.
   triple_apply evalMemSpec_rule.
   triple_apply triple_setRegSep. 
 Qed. 
@@ -724,9 +743,9 @@ Qed.
   ---------------------------------------------------------------------------*)
 
 (* Generic increment/decrement rule *)
-Lemma INCDEC_rule (dir: bool) (src:RegMem true) (oldv:DWORD) o s z c pf:
+Lemma INCDEC_rule d (dir: bool) (src:RegMem d) oldv o s z c pf:
   |-- specAtRegMemDst src (fun V => 
-      basic (V oldv ** OSZCP o s z c pf) (if dir then UOP _ OP_INC src else UOP _ OP_DEC src) 
+      basic (V oldv ** OSZCP o s z c pf) (if dir then UOP d OP_INC src else UOP d OP_DEC src) 
       (let w := if dir then incB oldv else decB oldv in 
       V w ** OSZCP (msb oldv!=msb w) (msb w) (w == #0) c (lsb w))).
 Proof. 
@@ -735,10 +754,10 @@ destruct src.
   apply TRIPLE_basic => R.
   autounfold with eval. rewrite /evalDst/evalDstR.
   destruct dir;
-    triple_apply evalReg_rule; rewrite /evalUnaryOp/OSZCP/evalArithUnaryOpNoCarry;
+    triple_apply evalDWORDorBYTEReg_rule; rewrite /evalUnaryOp/OSZCP/evalArithUnaryOpNoCarry;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
-    triple_apply triple_setRegSep.
+    triple_apply triple_setDWORDorBYTERegSep.
 
 destruct ms.
 + elim sib => [[r indexAndScale] |]. 
@@ -748,82 +767,88 @@ destruct ms.
   apply TRIPLE_basic => R.
   rewrite /evalInstr/evalDst/evalDstM.
   destruct dir. 
-  - autounfold with eval. 
-    triple_apply evalMemSpec_rule. 
-    triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
+  - triple_apply evalMemSpec_rule. 
+    triple_apply triple_letGetDWORDorBYTESep. rewrite /evalUnaryOp/evalArithUnaryOp.
+    rewrite /evalArithUnaryOpNoCarry/OSZCP.
     triple_apply triple_doSetFlagSep. rewrite /updateZPS.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
   - triple_apply evalMemSpec_rule.
-    triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
+    triple_apply triple_letGetDWORDorBYTESep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
     rewrite /evalArithUnaryOpNoCarry. 
     triple_apply triple_doSetFlagSep. rewrite /updateZPS.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
 
 rewrite /specAtMemSpecDst. 
 specintros => pbase.
 autorewrite with push_at.  apply TRIPLE_basic => R.
-  rewrite /evalInstr/evalDst/evalDstM.
-    rewrite /evalSrc.
+  rewrite /evalInstr/evalDst/evalDstM/evalSrc.
   destruct dir. 
   - triple_apply evalMemSpecNone_rule.
-    triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
+    triple_apply triple_letGetDWORDorBYTESep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
     rewrite /evalArithUnaryOpNoCarry. 
     triple_apply triple_doSetFlagSep. rewrite /updateZPS.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
   - triple_apply evalMemSpecNone_rule.
-    triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
+    triple_apply triple_letGetDWORDorBYTESep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
     rewrite /evalArithUnaryOpNoCarry. 
     triple_apply triple_doSetFlagSep. rewrite /updateZPS.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
 
 rewrite /specAtMemSpecDst. 
 autorewrite with push_at.  apply TRIPLE_basic => R.
   rewrite /evalInstr/evalDst/evalDstM/evalMemSpec.
     rewrite /evalSrc.
   destruct dir. 
-  - triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
+  - triple_apply triple_letGetDWORDorBYTESep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
     rewrite /evalArithUnaryOpNoCarry. 
     triple_apply triple_doSetFlagSep. rewrite /updateZPS.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    triple_apply triple_setDWORDSep.
-  - triple_apply triple_letGetDWORDSep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
+    triple_apply triple_setDWORDorBYTESep.
+  - triple_apply triple_letGetDWORDorBYTESep. rewrite /evalUnaryOp/evalArithUnaryOp/OSZCP.
     rewrite /evalArithUnaryOpNoCarry. 
     triple_apply triple_doSetFlagSep. rewrite /updateZPS.
     triple_apply triple_doSetFlagSep. 
     triple_apply triple_doSetFlagSep.
     triple_apply triple_doSetFlagSep. 
-    triple_apply triple_setDWORDSep.
+    triple_apply triple_setDWORDorBYTESep.
 Qed. 
 
-Definition INC_rule := Eval hnf in INCDEC_rule true.
-Definition DEC_rule := Eval hnf in INCDEC_rule false.
+Definition INC_rule := Eval hnf in @INCDEC_rule true true.
+Definition DEC_rule := Eval hnf in @INCDEC_rule true false.
+
+Ltac basicINCDEC :=
+  try unfold makeUOP;
+  match goal with
+  | |- |-- basic ?p (@UOP ?d OP_INC ?a) ?q => basicapply (@INCDEC_rule d true a)
+  | |- |-- basic ?p (@UOP ?d OP_DEC ?a) ?q => basicapply (@INCDEC_rule d false a)
+  end.
 
 (* Special case for increment register *)
 Corollary INC_R_rule (r:Reg) (v:DWORD) o s z c pf:
   let w := incB v in
   |-- basic (r~=v ** OSZCP o s z c pf) (INC r)
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. basicapply (INC_rule (RegMemR true r)). Qed. 
+Proof. basicINCDEC. Qed. 
 
 Corollary INC_M_rule (r:Reg) (offset:nat) (v pbase:DWORD) o s z c pf:
   let w := incB v in
   |-- basic (r ~= pbase ** pbase +# offset :-> v ** OSZCP o s z c pf) (INC [r + offset])
             (r ~= pbase ** pbase +# offset :-> w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. basicapply (INC_rule (RegMemM _ (mkMemSpec (Some(r, None)) #offset))). Qed. 
+Proof. basicINCDEC. Qed. 
 
 Lemma basicForgetFlags T (MI: MemIs T) P (x:T) Q o s z c p:
   |-- basic (P ** OSZCP_Any) x (Q ** OSZCP o s z c p) ->
@@ -836,7 +861,7 @@ Lemma INC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (INC r) (r~=incB v) @ OSZCP_Any.
 Proof.
 autorewrite with push_at. rewrite {1}/OSZCP_Any/stateIsAny. specintros => o s z c p. 
-basicapply (INC_rule (RegMemR true r)); rewrite /OSZCP/OSZCP_Any/stateIsAny; sbazooka. 
+basicINCDEC; rewrite /OSZCP/OSZCP_Any/stateIsAny; sbazooka. 
 Qed.
 
 (* Special case for decrement *)
@@ -844,25 +869,25 @@ Lemma DEC_R_rule (r:Reg) (v:DWORD) o s z c pf :
   let w := decB v in
   |-- basic (r~=v ** OSZCP o s z c pf) (DEC r)
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. basicapply (DEC_rule (RegMemR true r)). Qed. 
+Proof. basicINCDEC. Qed. 
 
 Lemma DEC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (DEC r) (r~=decB v) @ OSZCP_Any.
 Proof. 
 autorewrite with push_at. rewrite {1}/OSZCP_Any/stateIsAny. specintros => o s z c p. 
-basicapply (DEC_rule (RegMemR true r)); rewrite /OSZCP/OSZCP_Any/stateIsAny; sbazooka. 
+basicINCDEC; rewrite /OSZCP/OSZCP_Any/stateIsAny; sbazooka. 
 Qed. 
 
 
-Lemma NOT_rule (src:RegMem true) (v:DWORD):
-  |-- specAtRegMemDst src (fun V => basic (V v) (UOP true OP_NOT src) (V (invB v))).
+Lemma NOT_rule d (src:RegMem d) v:
+  |-- specAtRegMemDst src (fun V => basic (V v) (UOP d OP_NOT src) (V (invB v))).
 Proof. 
 rewrite /specAtRegMemDst.
 destruct src. 
   apply TRIPLE_basic => R.
   repeat autounfold with eval. 
-  triple_apply evalReg_rule.
-  triple_apply triple_setRegSep.
+  triple_apply evalDWORDorBYTEReg_rule.
+  triple_apply triple_setDWORDorBYTERegSep.
 
 rewrite /specAtMemSpecDst.
 destruct ms. 
@@ -874,33 +899,40 @@ autorewrite with push_at. apply TRIPLE_basic => R.
   autounfold with eval.
   rewrite /evalDst/evalDstM/evalInstr/evalUnaryOp.
   triple_apply evalMemSpec_rule.
-  triple_apply triple_letGetDWORDSep. 
-  triple_apply triple_setDWORDSep.
+  triple_apply triple_letGetDWORDorBYTESep. 
+  triple_apply triple_setDWORDorBYTESep.
 
 specintros => pbase.
 autorewrite with push_at. apply TRIPLE_basic => R.
   autounfold with eval. 
   rewrite /evalDst/evalDstM/evalSrc/evalUnaryOp.
   triple_apply evalMemSpecNone_rule.
-  triple_apply triple_letGetDWORDSep. 
-  triple_apply triple_setDWORDSep.
+  triple_apply triple_letGetDWORDorBYTESep. 
+  triple_apply triple_setDWORDorBYTESep.
 
 autorewrite with push_at. apply TRIPLE_basic => R.
   autounfold with eval. 
   rewrite /evalDst/evalDstM/evalSrc/evalUnaryOp. rewrite /evalMemSpec. 
-  triple_apply triple_letGetDWORDSep. 
-  triple_apply triple_setDWORDSep.
+  triple_apply triple_letGetDWORDorBYTESep. 
+  triple_apply triple_setDWORDorBYTESep.
 Qed.   
+
+Ltac basicNOT :=
+  try unfold makeUOP;
+  match goal with
+  | |- |-- basic ?p (@UOP ?d OP_NOT ?a) ?q => basicapply (@NOT_rule d a)
+  end.
+
 
 (* Special case for not *)
 Lemma NOT_R_rule (r:Reg) (v:DWORD):
   |-- basic (r~=v) (NOT r) (r~=invB v).
-Proof. basicapply (NOT_rule (RegMemR true r)). Qed. 
+Proof. basicNOT. Qed. 
 
 Corollary NOT_M_rule (r:Reg) (offset:nat) (v pbase:DWORD):
   |-- basic (r~=pbase ** pbase +# offset :-> v) (NOT [r + offset])
             (r~=pbase ** pbase +# offset :-> invB v).
-Proof. basicapply (NOT_rule (RegMemM true (mkMemSpec (Some(r, None)) #offset))). Qed. 
+Proof. basicNOT. Qed. 
 
 (* Special case for negation *)
 Lemma NEG_R_rule (r:Reg) (v:DWORD) :
@@ -928,28 +960,29 @@ Qed.
 (*---------------------------------------------------------------------------
     ADD instruction
   ---------------------------------------------------------------------------*)
-(* Generic ADD *)
-Lemma ADD_rule (ds:DstSrc true) (v1: DWORD) :
+(* Generic ADD/SUB rule *)
+Lemma ADDSUB_rule isSUB d (ds:DstSrc d) v1 :
    |-- specAtDstSrc ds (fun D v2 =>
        basic (D v1 ** OSZCP_Any)
-             (BOP true OP_ADD ds)
-             (let: (carry,v) := splitmsb (adcB false v1 v2) in
+             (BOP d (if isSUB then OP_SUB else OP_ADD) ds)
+             (let: (carry,v) := (if isSUB then sbbB else adcB) false v1 v2 in
               D v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof.
-  rewrite /specAtDstSrc/DWORDorBYTEregIs. 
+  rewrite /specAtDstSrc. 
   destruct ds. 
   (* RR *)
   specintros => v2. 
-  autorewrite with push_at. apply TRIPLE_basic => R.
-  repeat (autounfold with eval). 
-  triple_apply evalReg_rule. 
-  triple_apply evalReg_rule. 
-  elim: (splitmsb (adcB false v1 v2)) => [carry v]. 
+  autorewrite with push_at. apply TRIPLE_basic => R. rewrite /evalInstr/evalDstSrc/evalDstR.
+  triple_apply evalDWORDorBYTEReg_rule. 
+  triple_apply evalDWORDorBYTEReg_rule. 
+  rewrite /evalBinOp/evalArithOpNoCarry.
   triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doUpdateZPS. 
-  triple_apply triple_setRegSep. 
+  destruct isSUB;
+    (elim: (_ false v1 v2) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep; 
+    triple_apply triple_doUpdateZPS; 
+    triple_apply triple_setDWORDorBYTERegSep). 
   (* RM *)
   rewrite /specAtMemSpec. 
   elim:src => [optSIB offset].
@@ -957,44 +990,45 @@ Proof.
   case: ixopt => [[ixr sc] |]. 
 (* Indexed *)
   + specintros => v2 pbase ixval. 
-    autorewrite with push_at. apply TRIPLE_basic => R.
-    repeat (autounfold with eval). 
-    triple_apply evalReg_rule. 
+    autorewrite with push_at. apply TRIPLE_basic => R. rewrite /evalInstr/evalDstSrc/evalDstR.
+    triple_apply evalDWORDorBYTEReg_rule. 
     triple_apply evalMemSpec_rule. 
-    triple_apply triple_letGetDWORDSep. 
-  elim: (splitmsb (adcB false v1 v2)) => [carry v]. 
+    triple_apply triple_letGetDWORDorBYTESep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setRegSep. 
+  destruct isSUB;
+    (elim: (_ false v1 v2) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep; 
+    triple_apply triple_doUpdateZPS; 
+    triple_apply triple_setDWORDorBYTERegSep). 
 (* Non-indexed *)
   + specintros => v2 pbase. 
-    autorewrite with push_at. apply TRIPLE_basic => R.
-    repeat (autounfold with eval). 
-    rewrite /evalDstSrc/evalDstR. 
-    triple_apply evalReg_rule.
+    autorewrite with push_at. apply TRIPLE_basic => R. rewrite /evalInstr/evalDstSrc/evalDstR.
+    triple_apply evalDWORDorBYTEReg_rule.
     triple_apply evalMemSpecNone_rule.    
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
-    triple_apply triple_letGetDWORDSep. 
-    elim: (splitmsb (adcB false v1 v2)) => [carry v].    
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setRegSep. 
+    triple_apply triple_letGetDWORDorBYTESep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false v1 v2) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep; 
+    triple_apply triple_doUpdateZPS; 
+    triple_apply triple_setDWORDorBYTERegSep). 
 (* offset only *)
   + specintro => v2. 
-    autorewrite with push_at. apply TRIPLE_basic => R.
-    repeat (autounfold with eval). 
-    rewrite /evalDstSrc/evalDstR/evalMemSpec. 
-    triple_apply evalReg_rule.  
-    triple_apply triple_letGetDWORDSep. 
+    autorewrite with push_at. apply TRIPLE_basic => R. rewrite /evalInstr/evalDstSrc/evalDstR.
+    triple_apply evalDWORDorBYTEReg_rule.  rewrite /evalMemSpec.
+    triple_apply triple_letGetDWORDorBYTESep. 
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
-    elim: (splitmsb (adcB false v1 v2)) => [carry v].    
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setRegSep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false v1 v2) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep; 
+    triple_apply triple_doUpdateZPS; 
+    triple_apply triple_setDWORDorBYTERegSep). 
 
   (* MR *)
   specintros => v2. rewrite /specAtMemSpecDst. 
@@ -1003,49 +1037,57 @@ Proof.
   case: ixopt => [[ixr sc] |]. 
 (* Indexed *)
   + specintros => pbase ixval. autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM.
+    rewrite /evalInstr/evalDstSrc/evalDstM. 
     triple_apply evalMemSpec_rule. 
-    triple_apply triple_letGetDWORDSep. 
-    triple_apply evalReg_rule.
-    elim: (splitmsb (adcB false v1 v2)) => [carry v]. 
+    triple_apply triple_letGetDWORDorBYTESep. 
+    triple_apply evalDWORDorBYTEReg_rule.
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setDWORDSep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false v1 v2) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doUpdateZPS;
+    triple_apply triple_setDWORDorBYTESep). 
 (* Non-indexed *)
   + specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM.
+    rewrite /evalInstr/evalDstSrc/evalDstM. 
     triple_apply evalMemSpecNone_rule.
-    triple_apply triple_letGetDWORDSep. 
-    triple_apply evalReg_rule. 
-  elim: (splitmsb (adcB false v1 v2)) => [carry v]. 
+    triple_apply triple_letGetDWORDorBYTESep. 
+    triple_apply evalDWORDorBYTEReg_rule. 
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setDWORDSep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false v1 v2) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doUpdateZPS;
+    triple_apply triple_setDWORDorBYTESep). 
 (* Offset only *)
   + autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec.
-    triple_apply triple_letGetDWORDSep. 
-    triple_apply evalReg_rule. 
-  elim: (splitmsb (adcB false v1 v2)) => [carry v]. 
+    rewrite /evalInstr/evalDstSrc/evalDstM/evalMemSpec.
+    triple_apply triple_letGetDWORDorBYTESep. 
+    triple_apply evalDWORDorBYTEReg_rule. 
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setDWORDSep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false v1 v2) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doUpdateZPS;
+    triple_apply triple_setDWORDorBYTESep). 
   (* RI *)
   apply TRIPLE_basic => R.
-  repeat (autounfold with eval).  rewrite /evalDstSrc/evalDstR. 
-  triple_apply evalReg_rule. 
+  rewrite /evalInstr/evalDstSrc/evalDstR. 
+  triple_apply evalDWORDorBYTEReg_rule. 
   triple_apply triple_pre_introFlags => o sf zf cf pf. rewrite /OSZCP.
-  elim: (splitmsb (adcB false v1 c)) => [carry v]. 
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doUpdateZPS. 
-  triple_apply triple_setRegSep.  
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false _ _) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doUpdateZPS;
+    triple_apply triple_setDWORDorBYTERegSep). 
 
   (* MI *)
   rewrite /specAtMemSpecDst. 
@@ -1055,45 +1097,59 @@ Proof.
 
 (* Indexed *)
   + specintros => pbase ixval. autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM.
+    rewrite /evalInstr/evalDstSrc/evalDstM.
     triple_apply evalMemSpec_rule. 
-    triple_apply triple_letGetDWORDSep.    
-    elim: (splitmsb (adcB false v1 c)) => [carry v]. 
+    triple_apply triple_letGetDWORDorBYTESep.    
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setDWORDSep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false _ _) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doUpdateZPS;
+    triple_apply triple_setDWORDorBYTESep). 
 (* Non-indexed *)
   + specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R. 
     repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM. 
     triple_apply evalMemSpecNone_rule. 
-    triple_apply triple_letGetDWORDSep. 
-  elim: (splitmsb (adcB false v1 c)) => [carry v]. 
+    triple_apply triple_letGetDWORDorBYTESep. 
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setDWORDSep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false _ _) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doUpdateZPS;
+    triple_apply triple_setDWORDorBYTESep). 
 (* Offset only *)
   + autorewrite with push_at. apply TRIPLE_basic => R. 
-    repeat (autounfold with eval). rewrite /evalDstSrc/evalDstM/evalMemSpec. 
-    triple_apply triple_letGetDWORDSep. 
-  elim: (splitmsb (adcB false v1 c)) => [carry v]. 
+    rewrite /evalInstr/evalDstSrc/evalDstM/evalMemSpec. 
+    triple_apply triple_letGetDWORDorBYTESep. 
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doSetFlagSep. 
-    triple_apply triple_doUpdateZPS. 
-    triple_apply triple_setDWORDSep. 
+    rewrite /evalBinOp/evalArithOpNoCarry.
+  destruct isSUB;
+    (elim: (_ false _ _) => [carry v];
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doSetFlagSep;
+    triple_apply triple_doUpdateZPS;
+    triple_apply triple_setDWORDorBYTESep). 
 Qed.   
+
+Ltac basicADDSUB :=
+  try unfold makeBOP;
+  match goal with
+  | |- |-- basic ?p (@BOP ?d OP_ADD ?a) ?q => basicapply (@ADDSUB_rule false d a)
+  | |- |-- basic ?p (@BOP ?d OP_SUB ?a) ?q => basicapply (@ADDSUB_rule true d a)  
+  | _ => idtac
+  end.
 
 (* ADD r, v2 *)
 Corollary ADD_RI_rule (r:Reg) v1 (v2:DWORD):
   |-- basic (r~=v1 ** OSZCP_Any) (ADD r, v2)
-            (let: (carry,v) := splitmsb (adcB false v1 v2) in
+            (let: (carry,v) := adcB false v1 v2 in
              r~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) carry (lsb v)).
-Proof. apply (ADD_rule (DstSrcRI true r v2)). Qed.   
+Proof. basicADDSUB. Qed. 
 
 Corollary ADD_RI_ruleNoFlags (r1:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1) (ADD r1, v2) (r1~=addB v1 v2) @ OSZCP_Any.
@@ -1102,47 +1158,28 @@ Proof. apply: basicForgetFlags; apply ADD_RI_rule. Qed.
 (* ADD r1, r2 *)
 Corollary ADD_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** r2~=v2 ** OSZCP_Any) (ADD r1, r2)
-            (let: (carry,v) := splitmsb (adcB false v1 v2) in
+            (let: (carry,v) := adcB false v1 v2 in
              r1~=v ** r2~=v2 ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) carry (lsb v)).
-Proof. basicapply (ADD_rule (DstSrcRR true r1 r2)). 
-elim: (splitmsb _) => [carry v]. sbazooka. Qed. 
+Proof. basicADDSUB. sbazooka. elim: (adcB _) => [carry v]. by ssimpl. Qed. 
 
 Corollary ADD_RR_ruleNoFlags (r1 r2:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** r2~=v2 ** OSZCP_Any) (ADD r1, r2)
             (r1~=addB v1 v2 ** r2~=v2 ** OSZCP_Any). 
 Proof.
 rewrite /addB/dropmsb. 
-basicapply (ADD_rule (DstSrcRR true r1 r2)). 
-elim: (splitmsb _) => [carry v]. 
-rewrite /OSZCP_Any/OSZCP/stateIsAny. simpl snd.  
-sbazooka. 
+basicADDSUB. 
+elim: (adcB _) => [carry v]. 
+rewrite /OSZCP_Any/OSZCP/stateIsAny. simpl snd. sbazooka. 
 Qed. 
 
 Corollary ADD_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
             (ADD r1, [r2 + offset])
-            (let: (carry,v) := splitmsb (adcB false v1 v2) in
+            (let: (carry,v) := adcB false v1 v2 in
              r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof.
-  basicapply (ADD_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). 
-elim: (splitmsb _) => [carry v].
-sbazooka.
-Qed.   
-
-Lemma BINOP_RM_rule (pd:BITS 32) (r1 r2:Reg) (v1 v2:DWORD) (offset:nat):
-  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
-            (ADD r1, [r2 + offset])
-            (let: (carry,v) := splitmsb (adcB false v1 v2) in
-             r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
-             OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof.
-  basicapply (ADD_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). 
-elim: (splitmsb _) => [carry v].
-sbazooka.
-Qed.   
-
+Proof. basicADDSUB. elim: (adcB _) => [carry v]. by ssimpl. Qed.   
 
 Lemma XOR_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** r2~=v2 ** OSZCP_Any) (XOR r1, r2)
@@ -1160,27 +1197,16 @@ Proof.
   triple_apply triple_setRegSep. 
 Qed. 
 
-Lemma SUB_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) carry v:
-  sbbB false v1 v2 = (carry,v) ->
+Lemma SUB_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
             (SUB r1, [r2 + offset])
-            (r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
+            (let: (carry,v) := sbbB false v1 v2 in
+             r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof.
-  move => E. apply TRIPLE_basic => R.
-  repeat autounfold with eval.
-  triple_apply evalReg_rule. 
-  triple_apply evalMemSpecNone_rule. 
-  triple_apply triple_letGetDWORDSep. rewrite E.
-  triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doUpdateZPS. 
-  triple_apply triple_setRegSep. 
-Qed.
+Proof. basicADDSUB. elim (sbbB _) => [carry v]. by ssimpl. Qed.
 
 Lemma ADC_RI_rule (r1:Reg) v1 (v2:DWORD) carry v o s z c p:
-  splitmsb (adcB c v1 v2) = (carry,v) ->
+  adcB c v1 v2 = (carry,v) ->
   |-- basic (r1~=v1 ** OSZCP o s z c p) (ADC r1, v2)
             (r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) carry (lsb v)).
@@ -1203,9 +1229,9 @@ Corollary ADD_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any).
 Proof.
 autorewrite with push_at.
-  basicapply (ADD_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). 
+basicADDSUB.  
 rewrite /OSZCP/OSZCP_Any/stateIsAny/addB/dropmsb/snd.
-elim: (splitmsb _) => [carry v].
+elim: (adcB _) => [carry v].
 sbazooka.
 Qed.   
 
@@ -1215,8 +1241,8 @@ Corollary SUB_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat)
 Proof.
 autorewrite with push_at. rewrite /subB. 
 elim E: (sbbB _ _ _) => [carry v].
-basicapply (SUB_RM_rule (pd:=pd) (r1:=r1) (r2:=r2) (v1:=v1) (v2:=v2) (offset:=offset)). 
-rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka. by rewrite E /snd. 
+basicADDSUB. 
+rewrite /OSZCP/OSZCP_Any/stateIsAny/snd E. sbazooka.
 Qed.   
 
 
@@ -1465,43 +1491,17 @@ rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka.
 Qed.   
 
 
-Lemma SUB_RR_rule (r1 r2:Reg) v1 (v2:DWORD) carry v:
-  sbbB false v1 v2 = (carry,v) ->
+Lemma SUB_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** r2~=v2 ** OSZCP_Any) (SUB r1, r2)
-            (r1~=v  ** r2~=v2 **
+            (let: (carry,v) := sbbB false v1 v2 in r1~=v  ** r2~=v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof.
-  move => E. apply TRIPLE_basic => R.
-  repeat autounfold with eval. rewrite /evalDstSrc/evalDstR.
-  triple_apply evalReg_rule. 
-  triple_apply evalReg_rule.
-  triple_apply triple_pre_introFlags => o s z c p. rewrite /OSZCP.
-  rewrite E. 
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doUpdateZPS. 
-  triple_apply triple_setRegSep. 
-Qed. 
+Proof. basicADDSUB. elim (sbbB _ _ _) => [carry v]. by ssimpl. Qed. 
 
-Lemma SUB_RI_rule (r1:Reg) v1 (v2:DWORD) carry v:
-  sbbB false v1 v2 = (carry,v) ->
+Lemma SUB_RI_rule (r1:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** OSZCP_Any) (SUB r1, v2)
-            (r1~=v **
-             OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof.
-  (* Copy-paste of ADD_RI_rule proof *)
-  move => E. apply TRIPLE_basic => R.
-  repeat autounfold with eval.  
-  rewrite /evalDstSrc/evalDstR.
-  triple_apply evalReg_rule. 
-  triple_apply triple_pre_introFlags => o s z c p. rewrite /OSZCP.
-  rewrite E. 
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doSetFlagSep. 
-  triple_apply triple_doUpdateZPS. 
-  triple_apply triple_setRegSep. 
-Qed. 
-
+            (let: (carry,v) := sbbB false v1 v2 in 
+             r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
+Proof. basicADDSUB. Qed. 
 
 Lemma CMP_RI_rule (r1:Reg) v1 (v2:DWORD) carry res:
   sbbB false v1 v2 = (carry, res) ->

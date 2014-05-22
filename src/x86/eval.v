@@ -49,8 +49,8 @@ Definition evalLogicalOp {n} (f : BITS n -> BITS n -> BITS n) arg1 arg2 :=
 
 Definition evalBinOp {n} op : BITS n -> BITS n -> ST (BITS n) :=
   match op with
-  | OP_ADC => evalArithOp (fun c a b => splitmsb (adcB c a b))
-  | OP_ADD => evalArithOpNoCarry (fun c a b => splitmsb (adcB c a b))
+  | OP_ADC => evalArithOp adcB
+  | OP_ADD => evalArithOpNoCarry adcB
   | OP_AND => evalLogicalOp andB
   | OP_OR  => evalLogicalOp orB
   | OP_SBB => evalArithOp sbbB

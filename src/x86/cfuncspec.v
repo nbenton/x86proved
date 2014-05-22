@@ -168,12 +168,6 @@ Qed.
 
 (* Stack frame idiom *)
 
-Corollary POP_R_ruleAux (r:Reg) (sp:BITS 32) (w:DWORD):
-  |-- basic (r? ** ESP ~= sp    ** sp:->w) (POP (RegMemR true r))
-            (r ~= w ** ESP ~= sp+#4 ** sp:->w).
-Proof. rewrite /stateIsAny. specintros => old. 
-basicapply (POP_rule (RegMemR true r)); sbazooka. Qed. 
-
 Lemma stackframe_rule c P Q ebp esp :
   |-- basic (P ** EBP ~= esp-#4) c (Q ** EBP?) ->
   |-- basic P (PUSH EBP;; MOV EBP, ESP;; c;; POP EBP) Q @ (EBP ~= ebp ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
@@ -182,10 +176,11 @@ move => H.
 
 autorewrite with push_at. specintro => old.
 basicapply PUSH_R_rule.
-basicapply MOV_RR_rule. rewrite /stateIsAny. sbazooka. 
-basicapply H. 
-basicapply POP_R_ruleAux. 
-autorewrite with bitsHints. reflexivity. 
+basicapply MOV_RanyR_rule. rewrite /stateIsAny. sbazooka.
+basicapply H.
+unhideReg EBP => oldebp.
+basicapply POP_R_rule.
+autorewrite with bitsHints. reflexivity.
 Qed. 
 
 (* Reorganizing code *)
@@ -240,7 +235,7 @@ Proof.
 rewrite /incSpec/incBody/stacked_nonvoid1_impMeetsSpec/pre/post/fst/snd. 
 specintros => arg ebp. 
 autorewrite with push_at.
-basicapply MOV_RM_rule.
+basicapply MOV_RanyM_rule.
 rewrite {1}/OSZCP_Any/OSZCP{3 4 5 6 7}/stateIsAny.
 specintros => f1 f2 f3 f4 f5.
 eapply basic_basic.  apply INC_R_rule. 

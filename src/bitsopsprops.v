@@ -515,7 +515,7 @@ Qed.
 Lemma fullAdderTT c : fullAdder c true true = (true,c). 
 Proof. by destruct c. Qed.
 
-Lemma adcB_nat n : forall b (p1 p2: BITS n), adcB b p1 p2 = #(b + toNat p1 + toNat p2).
+Lemma adcBmain_nat n : forall b (p1 p2: BITS n), adcBmain b p1 p2 = #(b + toNat p1 + toNat p2).
 Proof. 
 induction n.
 + move => b p1 p2. rewrite 2!toNatNil. by destruct b. 
@@ -546,17 +546,17 @@ destruct b.
 + rewrite add0n -addn1 addnC addnA add1n. apply leq_add; first done. by rewrite ltnW. 
 Qed.
 
-Corollary toNat_adcB n b (p1 p2: BITS n) : toNat (adcB b p1 p2) = b + toNat p1 + toNat p2.
+Corollary toNat_adcBmain n b (p1 p2: BITS n) : toNat (adcBmain b p1 p2) = b + toNat p1 + toNat p2.
 Proof. 
-rewrite adcB_nat. rewrite toNat_fromNatBounded => //. 
+rewrite adcBmain_nat. rewrite toNat_fromNatBounded => //. 
 apply adcB_bounded. 
 Qed. 
 
 Lemma toZp_adcB n b (p1 p2:BITS n) : 
-  toZp (adcB b p1 p2) = (bool_inZp _ b + toZpAux p1 + toZpAux p2)%R. 
+  toZp (adcBmain b p1 p2) = (bool_inZp _ b + toZpAux p1 + toZpAux p2)%R. 
 Proof. 
 apply val_inj. rewrite /= Zp_cast; last apply pow2_gt1. 
-rewrite toNat_adcB.
+rewrite toNat_adcBmain.
 have BOUND:= adcB_bounded b p1 p2. 
 rewrite modn_small => //.
 rewrite (@modn_small b).
@@ -571,7 +571,7 @@ apply: leq_ltn_trans BOUND. rewrite -addnA. apply leq_addr.
 Qed. 
 
 Corollary toNat_addB n (p1 p2: BITS n) : toNat (addB p1 p2) = (toNat p1 + toNat p2) %% 2^n.
-Proof. rewrite /addB. rewrite toNat_dropmsb toNat_adcB. 
+Proof. rewrite /addB. rewrite toNat_dropmsb toNat_adcBmain.  
 by rewrite add0n. 
 Qed. 
 
@@ -598,20 +598,20 @@ Proof. move => x y z. destruct n; first apply trivialBits.
   by rewrite addrA. Qed.
 (*=End *)
 
-Lemma adcBC n c : commutative (@adcB n c).
-Proof. move => x y.
-apply toZp_inj. autorewrite with ZpHom.
+Lemma adcBC n c : commutative (@adcBmain n c).
+Proof. move => x y. apply toZp_inj.
+autorewrite with ZpHom.
 by rewrite addrAC. 
 Qed.
 
-Lemma adc0B n (p : BITS n) : adcB false #0 p = joinmsb0 p.
+Lemma adc0B n (p : BITS n) : adcBmain false #0 p = joinmsb0 p.
 Proof. 
 apply toZp_inj. rewrite fromNat0.  autorewrite with ZpHom. 
 rewrite /bool_inZp -Zp_nat. 
 by rewrite 2!add0r. 
 Qed. 
 
-Lemma adcB0 n (p : BITS n) : adcB false p #0 = joinmsb0 p.
+Lemma adcB0 n (p : BITS n) : adcBmain false p #0 = joinmsb0 p.
 Proof. 
 apply toZp_inj. rewrite fromNat0. autorewrite with ZpHom. 
 by rewrite /bool_inZp addr0 -!Zp_nat add0r. 
@@ -665,8 +665,8 @@ Qed.
 Lemma addNB n (p: BITS n) : addB p (negB p) = #0. 
 Proof. by rewrite addBC addBN. Qed. 
 
-Lemma adcIsInc n c (p:BITS n) : dropmsb (adcB c p #0) = if c then incB p else p.
-Proof. rewrite adcB_nat dropmsb_fromNat fromNat0 toNat_zero addn0. destruct c. 
+Lemma adcIsInc n c (p:BITS n) : dropmsb (adcBmain c p #0) = if c then incB p else p.
+Proof. rewrite adcBmain_nat dropmsb_fromNat fromNat0 toNat_zero addn0. destruct c. 
 + by rewrite -incB_fromNat toNatK.  
 + by rewrite add0n toNatK. 
 Qed. 
@@ -675,11 +675,11 @@ Qed.
 (* Add is iterated increment *)
 (* Proof seems a bit contorted! *)
 Lemma adcIsIterInc n m : forall c (p:BITS n), 
-  dropmsb (adcB c p #m) = iter m incB (if c then incB p else p). 
+  dropmsb (adcBmain c p #m) = iter m incB (if c then incB p else p). 
 Proof. 
 induction m => c p. 
 + by rewrite /= adcIsInc. 
-+ rewrite /= -IHm. clear IHm. rewrite 2!adcB_nat. rewrite !dropmsb_fromNat. 
++ rewrite /= -IHm. clear IHm. rewrite 2!adcBmain_nat. rewrite !dropmsb_fromNat. 
   set D := c + toNat p.
   rewrite incB_fromNat.  
   rewrite -(addn1 (D + toNat #m)) -addnA. 
@@ -694,15 +694,15 @@ Proof. apply adcIsIterInc. Qed.
     Properties of subtraction
   ---------------------------------------------------------------------------*)
 
-Lemma subB_is_dropmsb_adcB_invB  n (p q: BITS n) : subB p q = dropmsb (adcB true p (invB q)). 
-Proof. rewrite /subB/dropmsb/sbbB. simpl (~~false). 
-by case (splitmsb (adcB true p (invB q))).  
+Lemma subB_is_dropmsb_adcB_invB  n (p q: BITS n) : subB p q = dropmsb (adcBmain true p (invB q)). 
+Proof. rewrite /subB/dropmsb/sbbB/adcB. simpl (~~false). 
+case (splitmsb (adcBmain true p (invB q))) => //. 
 Qed. 
 
 Lemma toZp_subB n (p q: BITS n.+1) : toZp (subB p q) = (toZp p - toZp q)%R.
 Proof. rewrite subB_is_dropmsb_adcB_invB. 
 apply val_inj. rewrite toZp_dropmsb /toZpAux.
-rewrite toNat_adcB toNat_invB. rewrite add1n. 
+rewrite toNat_adcBmain toNat_invB. rewrite add1n. 
 rewrite /inZp/= Zp_cast; last apply pow2_gt1.  
 rewrite (@modn_small (toNat p)); last apply toNatBounded. 
 rewrite (@modn_small (toNat q)); last apply toNatBounded.
@@ -723,13 +723,13 @@ Qed.
 
 (* This is absurdly complicated! *)
 Lemma sbb0B_carry n (p: BITS n.+1) : fst (sbbB false #0 p) = (p != #0).
-Proof. rewrite /sbbB. simpl (~~false). 
-elim E: (splitmsb (adcB true #0 (invB p))) => [carry res]. 
-rewrite -(toNatK (adcB true #0 (invB p))) in E. 
+Proof. rewrite /sbbB. simpl (~~false). rewrite /adcB. 
+elim E: (splitmsb (adcBmain true #0 (invB p))) => [carry res]. 
+rewrite -(toNatK (adcBmain true #0 (invB p))) in E. 
 rewrite splitmsb_fromNat in E. 
-rewrite toNat_adcB toNat_fromNat0 addn0 toNat_invB in E.
+rewrite toNat_adcBmain toNat_fromNat0 addn0 toNat_invB in E.
 inversion E.  
-clear E H0 H1. 
+clear E H0 H1.
 rewrite add1n.
 case E: (p == #0).
 + rewrite (eqP E). rewrite toNat_fromNat0. 
@@ -771,7 +771,7 @@ Qed.
 
 Lemma toNat_addBn n : forall (p: BITS n) m, toNat (p +# m) = (toNat p + m) %% 2^n.
 Proof. move => p m. 
-rewrite /addB adcB_nat add0n dropmsb_fromNat. 
+rewrite /addB /adcB adcBmain_nat add0n. rewrite splitmsb_fromNat. 
 rewrite !toNat_fromNat. 
 by rewrite modnDmr. 
 Qed. 
@@ -788,7 +788,7 @@ Lemma toNat_addBn_wrap n : forall (p: BITS n) m,
   m<2^n -> toNat p + m >= 2^n -> toNat (p +# m) + 2^n = toNat p + m. 
 Proof. 
 move => p m BOUND H.
-rewrite /addB adcB_nat add0n dropmsb_fromNat. 
+rewrite /addB/adcB adcBmain_nat splitmsb_fromNat add0n. 
 rewrite toNat_fromNat. rewrite toNat_fromNat.
 rewrite modnDmr. apply modn_sub.
 + apply expn_gt0. + apply toNatBounded. + done. + done. 
@@ -991,7 +991,7 @@ Lemma leB_bounded_weaken {n} : forall (p:BITS n) m1 m2 m3,
 Proof.   
 move => p m1 m2 m3 BOUND LE1 LE2. move => H. 
 assert (H1 := leB_bounded BOUND H). 
-rewrite leB_nat. rewrite /addB !adcB_nat add0n !dropmsb_fromNat. 
+rewrite leB_nat. rewrite /addB /adcB !adcBmain_nat add0n 2!splitmsb_fromNat. 
 assert (m2 < 2^n) by apply (leq_ltn_trans LE2 BOUND). 
 rewrite (toNat_fromNatBounded H0). 
 assert (m1 < 2^n) by apply (leq_ltn_trans (leq_trans LE1 LE2) BOUND). 
@@ -1031,10 +1031,10 @@ Qed.
     Relationship of ltB/leB with addition
   ---------------------------------------------------------------------------*)
 Lemma ltBleB_joinmsb0_adcB n : forall c (p1 p2: BITS n),
-  if c then ltB (joinmsb0 p1) (adcB c p1 p2) else leB (joinmsb0 p1) (adcB c p1 p2).
+  if c then ltB (joinmsb0 p1) (adcBmain c p1 p2) else leB (joinmsb0 p1) (adcBmain c p1 p2).
 Proof. 
 move => c p1 p2. 
-rewrite ltB_nat leB_nat adcB_nat toNat_joinmsb0. 
+rewrite ltB_nat leB_nat adcBmain_nat toNat_joinmsb0. 
 assert (B1 := toNatBounded p1). 
 assert (B2 := toNatBounded p2). 
 assert (c + toNat p1 + toNat p2 < 2^n.+1). 
@@ -1048,15 +1048,15 @@ rewrite toNat_fromNatBounded; last done. by rewrite ltn_addr.
 rewrite toNat_fromNatBounded; last done. rewrite add0n. by rewrite leq_addr. 
 Qed. 
 
-Corollary leB_joinmsb0_adcB n : forall p1 p2: BITS n, leB (joinmsb0 p1) (adcB false p1 p2).
+Corollary leB_joinmsb0_adcB n : forall p1 p2: BITS n, leB (joinmsb0 p1) (adcBmain false p1 p2).
 Proof. apply (ltBleB_joinmsb0_adcB false). Qed. 
 
-Corollary ltB_joinmsb0_adcB n : forall p1 p2: BITS n, ltB (joinmsb0 p1) (adcB true p1 p2).
+Corollary ltB_joinmsb0_adcB n : forall p1 p2: BITS n, ltB (joinmsb0 p1) (adcBmain true p1 p2).
 Proof. apply (ltBleB_joinmsb0_adcB true). Qed.
 
 Lemma ltBleB_adcB n : 
   forall c (p1 p2 p : BITS n), 
-  splitmsb (adcB c p1 p2) = (false,p) -> 
+  splitmsb (adcBmain c p1 p2) = (false,p) -> 
   if c then ltB p1 p else leB p1 p.
 Proof. induction n. 
 + move => c p1 p2 p H. rewrite (tuple0 p) (tuple0 p1).
@@ -1069,7 +1069,7 @@ move => H. simpl in H.
 destruct b1.
 (* b1 = true *)
 specialize (IHn true p1 p2). 
-case E: (splitmsb (adcB true p1 p2)) => [carry' p']. 
+case E: (splitmsb (adcBmain true p1 p2)) => [carry' p']. 
 destruct b2. 
 (* b2 = true *)
 rewrite beheadCons theadCons E in H. inversion H. apply val_inj in H3. subst. 
@@ -1081,12 +1081,12 @@ rewrite IHn; first by rewrite orTb. done.
 destruct b2. 
 (* b2 = true *)
 specialize (IHn true p1 p2). 
-case E: (splitmsb (adcB true p1 p2)) => [carry' p']. 
+case E: (splitmsb (adcBmain true p1 p2)) => [carry' p']. 
 rewrite beheadCons E in H. inversion H. apply val_inj in H3. subst. 
 rewrite IHn; first by rewrite orTb. done. 
 (* b2 = false *) 
 specialize (IHn false p1 p2). 
-case E: (splitmsb (adcB false p1 p2)) => [carry' p']. 
+case E: (splitmsb (adcBmain false p1 p2)) => [carry' p']. 
 rewrite beheadCons E in H. inversion H. apply val_inj in H3. subst. simpl. 
 rewrite /leB in IHn. rewrite !andbT. by rewrite IHn.  
 
@@ -1097,26 +1097,26 @@ destruct b1.
 destruct b2. 
 (* b2 = true *)
 specialize (IHn true p1 p2). 
-case E: (splitmsb (adcB true p1 p2)) => [carry' p']. 
+case E: (splitmsb (adcBmain true p1 p2)) => [carry' p']. 
 rewrite beheadCons E in H. inversion H. apply val_inj in H3. subst. 
 specialize (IHn _ E). rewrite /leB. simpl. rewrite !beheadCons. by rewrite IHn. 
 (* b2 = false *) 
 specialize (IHn false p1 p2). 
-case E: (splitmsb (adcB false p1 p2)) => [carry' p']. 
+case E: (splitmsb (adcBmain false p1 p2)) => [carry' p']. 
 rewrite beheadCons E in H. inversion H. apply val_inj in H3. subst. 
 rewrite /leB. simpl. rewrite !beheadCons. specialize (IHn _ E). 
 rewrite /leB in IHn. rewrite andbF. rewrite orbF. done. 
 (* b1 = false *)
 specialize (IHn false p1 p2). destruct b2. 
 (* b2 = true *)
-case E: (splitmsb (adcB false p1 p2)) => [carry' p']. 
+case E: (splitmsb (adcBmain false p1 p2)) => [carry' p']. 
 rewrite beheadCons E in H. inversion H. apply val_inj in H3. subst.
 rewrite /leB.  
 simpl. rewrite !beheadCons !theadCons. 
 rewrite /leB in IHn. specialize (IHn _ E). rewrite orbA. rewrite orbF.  
 rewrite orbA. rewrite orbF. rewrite IHn. done. 
 (* b2 = false *) 
-case E: (splitmsb (adcB false p1 p2)) => [carry' p']. 
+case E: (splitmsb (adcBmain false p1 p2)) => [carry' p']. 
 rewrite beheadCons E in H. inversion H. apply val_inj in H3. subst. 
 rewrite /leB. simpl. 
 rewrite !beheadCons !theadCons. specialize (IHn _ E). 
@@ -1125,16 +1125,16 @@ done.
 
 Qed. 
 
-Corollary addB_leB n : forall p1 p2 p: BITS n, splitmsb (adcB false p1 p2) = (false, p) -> leB p1 p.
+Corollary addB_leB n : forall p1 p2 p: BITS n, adcB false p1 p2 = (false, p) -> leB p1 p.
 Proof. apply: ltBleB_adcB. Qed. 
 
-Corollary adcB_ltB n : forall p1 p2 p: BITS n, splitmsb (adcB true p1 p2) = (false, p) -> ltB p1 p.
+Corollary adcB_ltB n : forall p1 p2 p: BITS n, adcB true p1 p2 = (false, p) -> ltB p1 p.
 Proof. apply: ltBleB_adcB. Qed.
 
 
 
 Lemma adcB_leB_op n : forall (p1 p2 p: BITS n) c carry, 
-  splitmsb (adcB c p1 p2) = (carry,p) ->
+  splitmsb (adcBmain c p1 p2) = (carry,p) ->
   (if c then ltB p1 p else leB p1 p) -> carry = false. 
 Proof. induction n.
 + move => p1 p2 p. rewrite (tuple0 p1) (tuple0 p2) (tuple0 p) /= => c carry. 
@@ -1150,13 +1150,13 @@ Proof. induction n.
   (* b1 = true *)
   destruct b2. 
   (* b2 = true *)
-  case E: (splitmsb (adcB true p1 p2)) => [carry'' p'].
+  case E: (splitmsb (adcBmain true p1 p2)) => [carry'' p'].
   specialize (IHn _ _ _ _ _ E). rewrite beheadCons E in EQ. 
   injection EQ => E1 E2 E3. 
   rewrite -E3. apply IHn. 
   rewrite /= -(val_inj _ _ E1) in PE. by rewrite andbF andFb orbF in PE. 
   (* b2 = false *)
-  case E: (splitmsb (adcB true p1 p2)) => [carry'' p'].
+  case E: (splitmsb (adcBmain true p1 p2)) => [carry'' p'].
   specialize (IHn _ _ _ _ _ E). rewrite beheadCons E in EQ. 
   injection EQ => E1 E2 E3. 
   rewrite -E3. apply IHn. 
@@ -1164,13 +1164,13 @@ Proof. induction n.
   (* b1 = false *)
   destruct b2. 
   (* b2 = true *)
-  case E: (splitmsb (adcB true p1 p2)) => [carry'' p'].
+  case E: (splitmsb (adcBmain true p1 p2)) => [carry'' p'].
   specialize (IHn _ _ _ _ _ E). rewrite beheadCons E in EQ. 
   injection EQ => E1 E2 E3. 
   rewrite -E3. apply IHn. 
   rewrite /= -(val_inj _ _ E1) in PE. by rewrite -E2 andbF orbF in PE.   
   (* b2 = false *)
-  case E: (splitmsb (adcB false p1 p2)) => [carry'' p'].
+  case E: (splitmsb (adcBmain false p1 p2)) => [carry'' p'].
   specialize (IHn _ _ _ _ _ E). rewrite beheadCons E in EQ. 
   injection EQ => E1 E2 E3. 
   rewrite -E3. apply IHn. 
@@ -1182,13 +1182,13 @@ Proof. induction n.
   (* b1 = true *)
   destruct b2. 
   (* b2 = true *)
-  case E: (splitmsb (adcB true p1 p2)) => [carry'' p'].
+  case E: (splitmsb (adcBmain true p1 p2)) => [carry'' p'].
   specialize (IHn _ _ _ _ _ E). rewrite beheadCons E in EQ. 
   injection EQ => E1 E2 E3. 
   rewrite -E3. apply IHn. 
   rewrite /= -(val_inj _ _ E1) -E2 in PE. by rewrite !andbF orbF/= orbF in PE. 
   (* b2 = false *)
-  case E: (splitmsb (adcB false p1 p2)) => [carry'' p'].
+  case E: (splitmsb (adcBmain false p1 p2)) => [carry'' p'].
   specialize (IHn _ _ _ _ _ E). rewrite beheadCons E in EQ. 
   injection EQ => E1 E2 E3. 
   rewrite -E3. apply IHn. 
@@ -1196,13 +1196,13 @@ Proof. induction n.
   (* b1 = false *)
   destruct b2. 
   (* b2 = true *)
-  case E: (splitmsb (adcB false p1 p2)) => [carry'' p'].
+  case E: (splitmsb (adcBmain false p1 p2)) => [carry'' p'].
   specialize (IHn _ _ _ _ _ E). rewrite beheadCons E in EQ. 
   injection EQ => E1 E2 E3. 
   rewrite -E3. apply IHn. 
   rewrite /= -(val_inj _ _ E1) -E2 in PE. by rewrite !andbT /= orbF in PE. 
   (* b2 = false *)
-  case E: (splitmsb (adcB false p1 p2)) => [carry'' p'].
+  case E: (splitmsb (adcBmain false p1 p2)) => [carry'' p'].
   specialize (IHn _ _ _ _ _ E). rewrite beheadCons E in EQ. 
   injection EQ => E1 E2 E3. 
   rewrite -E3. apply IHn. 
@@ -1214,7 +1214,7 @@ Proof. move => b p. by destruct b. Qed.
 
 Corollary sbbB_ltB_leB n (p1 p2: BITS n) : 
   if (sbbB false p1 p2).1 then ltB p1 p2 else leB p2 p1.
-Proof. rewrite /sbbB adcB_nat toNat_invB splitmsb_fromNat ltB_nat leB_nat. 
+Proof. rewrite /sbbB/adcB adcBmain_nat toNat_invB splitmsb_fromNat ltB_nat leB_nat. 
 simpl. rewrite !add1n. assert (POS: 2^n > 0) by apply expn_gt0.  
 assert (B1 := toNatBounded p1). 
 assert (B2 := toNatBounded p2). 

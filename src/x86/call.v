@@ -40,16 +40,16 @@ Lemma toyfun_call (f:DWORD) P Q:
   |> toyfun f P Q |-- basic P (call_toyfun f) Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
-  apply basic_local => iret. 
-  eapply basic_seq.
-  - basicapply MOV_RI_rule.
+  apply basic_local => iret. rewrite /stateIsAny. specintros => old.
+  eapply basic_seq. eapply basic_basic. apply MOV_RI_rule; by ssimpl. by ssimpl. 
+  by ssimpl. 
   
   rewrite /basic. specintros => i j. unfold_program. specintros => _ <- -> {j}.
   specapply JMP_I_rule. by ssimpl.
   rewrite <-spec_reads_frame. autorewrite with push_at. 
   rewrite /toyfun. autorewrite with push_later. apply lforallL with iret.
   autorewrite with push_later. cancel2. rewrite <-spec_later_weaken.
-  cancel1. by ssimpl.
+  cancel1. rewrite /stateIsAny. sbazooka. 
   apply _.
   apply _.
 Qed.
@@ -101,11 +101,9 @@ Proof.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
   autorewrite with push_at. rewrite /OSZCP_Any/stateIsAny.
   specintros => o s z c p.
-  basicapply INC_R_rule. 
-    - rewrite /OSZCP. sbazooka.  
-  basicapply INC_R_rule.
-  - rewrite /OSZCP.
-  rewrite addIsIterInc /OSZCP /iter. by sbazooka.
+  basicapply INC_R_rule; rewrite /OSZCP; sbazooka. 
+  basicapply INC_R_rule; rewrite /OSZCP; sbazooka. 
+  rewrite addIsIterInc /OSZCP /iter; sbazooka.
 Qed.
 
 (* The toyfun spec assumed for f here is actually stronger than what lemma

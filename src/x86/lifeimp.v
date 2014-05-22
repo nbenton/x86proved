@@ -110,7 +110,7 @@ Proof.
   by apply (ltn_trans LT2). 
 
   specintros => /eqP->. 
-  basicapply MOV_RI_rule. rewrite {5}/stateIsAny; sbazooka.
+  basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny; sbazooka.
   rewrite /OSZCP_Any/stateIsAny. rewrite /ConditionIs. rewrite add0n modn_small. 
   sbazooka.
   destruct n => //. 
@@ -150,7 +150,7 @@ move => LT1 LT2.
   by apply (leq_ltn_trans (leq_pred _)). 
 
   specintros => /eqP->. 
-  basicapply MOV_RI_rule. rewrite {5}/stateIsAny. sbazooka.
+  basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny. sbazooka.
   rewrite /OSZCP_Any/stateIsAny. rewrite /ConditionIs. 
   rewrite (ltn_predK LT2). sbazooka. by rewrite modnn. 
 

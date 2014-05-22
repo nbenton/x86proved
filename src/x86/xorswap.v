@@ -55,13 +55,14 @@ Lemma tmpSwapCorrect (r1 r2 rt: Reg) :
 Proof. 
   rewrite /tmpSwapImpl/basicSwap. specintros => v w. autorewrite with push_at. 
 
+  (* Good example where automatic opening and pulling out of existentials would be helpful *)
   (* MOV rt, r1 *)
-  basicapply MOV_RR_rule.
+  basicapply MOV_RanyR_rule. 
 
   (* MOV r1, r2 *)
-  basicapply MOV_RR_rule; rewrite /stateIsAny; sbazooka.
+  basicapply MOV_RR_rule.
  
   (* MOV r2, r1 *)
-  basicapply MOV_RR_rule; rewrite /stateIsAny; sbazooka.
+  basicapply MOV_RR_rule. rewrite /stateIsAny. sbazooka.
 Qed. 
 
