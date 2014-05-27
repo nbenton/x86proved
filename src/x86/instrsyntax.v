@@ -183,14 +183,14 @@ Notation "'MOVSX' x , y" := (MOVX true true x y) (x,y at level 55, at level 60) 
     Shift and rotate
   ---------------------------------------------------------------------------*)
 
-Notation "'SAL' x , c" := (SHIFTOP true OP_SAL x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
-Notation "'SAR' x , c" := (SHIFTOP true OP_SAR x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
-Notation "'SHL' x , c" := (SHIFTOP true OP_SHL x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
-Notation "'SHR' x , c" := (SHIFTOP true OP_SHR x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
-Notation "'RCL' x , c" := (SHIFTOP true OP_RCL x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
-Notation "'RCR' x , c" := (SHIFTOP true OP_RCR x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
-Notation "'ROL' x , c" := (SHIFTOP true OP_ROL x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
-Notation "'ROR' x , c" := (SHIFTOP true OP_ROR x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
+Notation "'SAL' x , c" := (SHIFTOP _ OP_SAL x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
+Notation "'SAR' x , c" := (SHIFTOP _ OP_SAR x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
+Notation "'SHL' x , c" := (SHIFTOP _ OP_SHL x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
+Notation "'SHR' x , c" := (SHIFTOP _ OP_SHR x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
+Notation "'RCL' x , c" := (SHIFTOP _ OP_RCL x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
+Notation "'RCR' x , c" := (SHIFTOP _ OP_RCR x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
+Notation "'ROL' x , c" := (SHIFTOP _ OP_ROL x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
+Notation "'ROR' x , c" := (SHIFTOP _ OP_ROR x (ShiftCountI (fromNat c))) (x, c at level 55, at level 60) : instr_scope.
 
 Notation "'IMUL' x , y" := (IMUL x y) (x,y at level 55, at level 60) : instr_scope.
 

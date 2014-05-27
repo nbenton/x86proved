@@ -108,6 +108,9 @@ Definition signTruncate extra {n} (p: BITS (n.+1 + extra)) : option (BITS n.+1) 
 (* Zero extend by {extra} bits *)
 Definition zeroExtend extra {n} (p: BITS n) := zero extra ## p.
 
+Coercion WORDtoDWORD := zeroExtend (n:=16) 16 : WORD -> DWORD.
+Coercion BYTEtoDWORD := zeroExtend (n:=8) 24 : BYTE -> DWORD. 
+
 (* Take m least significant bits of n-bit argument and fill with zeros if m>n *)
 Fixpoint lowWithZeroExtend m {n} : BITS n -> BITS m := 
   if n is _.+1 

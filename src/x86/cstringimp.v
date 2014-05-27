@@ -103,22 +103,22 @@ Proof.
 
   (* Empty string *)
   + rewrite /OSZCP_Any/ConditionIs. 
-  eapply basic_basic; first eapply CMP_MbxI_eq_rule.
+  eapply basic_basic; first eapply CMP_MbxI_ZC_rule.
   rewrite /OSZCP_Any/stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString. 
   sbazooka. subst. sbazooka. rewrite <-pointsToCString_append_op.
-  rewrite /pointsToCString. sbazooka. 
+  rewrite /pointsToCString. rewrite /stateIsAny. sbazooka. 
 
   (* Non-empty string *)
   + subst. rewrite /OSZCP_Any/ConditionIs. 
-  eapply basic_basic; first eapply CMP_MbxI_eq_rule.
+  eapply basic_basic; first eapply CMP_MbxI_ZC_rule.
   rewrite /OSZCP_Any/stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString. 
   sbazooka.
   sbazooka.     
     red. destruct (zeroFree_append ISZF) as [_ [ZFM _]]. 
     by rewrite eq_sym eqbF_neg.    
-    rewrite <- pointsToCString_append_op. rewrite /pointsToCString-/pointsToCString. sbazooka. 
+    rewrite <- pointsToCString_append_op. rewrite /pointsToCString-/pointsToCString/stateIsAny. sbazooka. 
 
   (* Body of loop: INC ECX *)
   rewrite /ConditionIs/I. 

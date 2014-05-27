@@ -50,22 +50,46 @@ Hint Unfold allocSpec : specapply.
 
 (* Perhaps put a |> on the failLabel case *)
 
-Require Import basicprog.
+Hint Unfold 
+  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst mkRegMemR
+  DWORDorBYTEregIs
+  : basicapply.
+Hint Rewrite
+  addB0 : basicapply.
+
+Require Import tuple.
+Lemma CMP_MR_ZC_rule (pd: DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
+  |-- basic (r1 ~= pd ** r2 ~= v2 ** pd +# offset :-> v1 ** OSZCP_Any) (CMP [r1+offset], r2)
+            (r1 ~= pd ** r2 ~= v2 ** pd +# offset :-> v1 ** OF? ** SF? ** PF? ** 
+                        CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
+Proof. unfold makeBOP.
+eapply basic_basic.
+have R:= (@CMP_ruleZC true (DstSrcMR true (mkMemSpec (Some (r1, None)) #offset) r2) v1).
+rewrite /specAtDstSrc/specAtMemSpecDst/DWORDorBYTEregIs in R. 
+apply (lforallE_spec v2) in R.
+autorewrite with push_at in R. 
+apply (lforallE_spec pd) in R. 
+autorewrite with push_at in R. 
+apply R. 
+sbazooka. 
+sbazooka. 
+Qed. 
+
 Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).  
 Proof.  
   rewrite /allocSpec/allocImp. specintros => i j. unfold_program. 
   specintros => i1 i2 i3 i4 i5 i6.
 
   (* MOV ESI, infoBlock *)  
-  specapply MOV_RanyI_rule. by ssimpl. 
+  specapply MOV_RanyI_rule; first by ssimpl. 
 
   (* MOV EDI, [ESI] *)
   rewrite {2}/allocInv. specintros => base limit.
-  specapply MOV_RanyM0_rule. by ssimpl.
+  specapply MOV_RanyM0_rule; first by ssimpl.
 
   (* ADD EDI, bytes *)
   elim E:(adcB false base (fromNat n)) => [carry res].
-  rewrite /ConstImm. specapply (ADD_RI_rule (r:=EDI)). by ssimpl.
+  rewrite /ConstImm. specapply ADD_RI_rule; first by ssimpl. 
 
   (* JC failed *)
   rewrite E. specapply JC_rule.
@@ -78,31 +102,29 @@ Proof.
 
   (* CMP [ESI+4], EDI *)
   specintro. move/eqP => Hcarry. subst carry.
-  elim E0:(sbbB false limit res) => [carry0 res0].
-  specapply CMP_MR_rule; last eassumption.
-  - rewrite /OSZCP_Any/stateIsAny. by sbazooka.
+  specapply CMP_MR_ZC_rule. rewrite /OSZCP_Any/stateIsAny. sbazooka.  
 
   (* JC failed *)
-  specapply JC_rule.
-  - rewrite /OSZCP. sbazooka. 
+  specapply JC_rule; first by ssimpl.
 
   specsplit.
   - rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
-    rewrite /OSZCP_Any/stateIsAny /allocInv. by sbazooka.
-
+    rewrite /OSZCP_Any/stateIsAny/allocInv. sbazooka.
+ 
   (* MOV [ESI], EDI *)
-  specintro. move/eqP => Hcarry0. subst carry0.
-  specapply (MOV_M0R_rule (pd:=infoBlock) (r1:=ESI)).  
+  specintro. rewrite {1}ltBNle {1}eqb_negLR /negb. move => Hcarry0. 
+  specapply (MOV_M0R_rule (pd:=infoBlock) (r1:=ESI)).
   - sbazooka. 
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
   apply: landL2. cancel1.
-  rewrite /OSZCP_Any/stateIsAny/allocInv. ssplits.
+  rewrite /OSZCP_Any/allocInv. ssplits.
 
-  ssimpl.
+  ssimpl. 
   have Hres: base +# n = res by rewrite /addB /dropmsb E.
   have Hless1 := addB_leB E.
-  have Hless2 := sbbB_ltB_leB limit res. rewrite E0 /= in Hless2.
   rewrite <-Hres in *.
-  ssimpl. by apply memAnySplit.
+  ssimpl. have MAS:= @memAnySplit base (base +# n) limit Hless1. 
+  rewrite /leCursor in MAS. rewrite (eqP Hcarry0) in MAS. ssimpl.
+  rewrite /stateIsAny. sbazooka. apply MAS => //.  
 Qed.

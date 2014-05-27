@@ -704,7 +704,7 @@ Proof.
   rewrite / ConstImm. (* this gets in the way of spec tactics *)
   specintros => c1.
   (* perform CMP ECX, 0 *)
-  specapply CMP_RI_eq_rule; first by sbazooka.
+  specapply CMP_RI_ZC_rule; first by sbazooka.
   (* unfold more *)
   rewrite / ifthenelse.
   unfold_program.
@@ -744,7 +744,7 @@ Proof.
   + specintros => N0.
     specapply DEC_R_ruleNoFlags.
     sbazooka. rewrite /OSZCP_Any. sbazooka. 
-    rewrite {3}/stateIsAny. sbazooka. 
+    rewrite {3 4}/stateIsAny. sbazooka. 
 
     specapply JMP_I_rule; first by sbazooka.
     autorewrite with push_at.
@@ -786,7 +786,7 @@ Proof.
   rewrite / ConstImm. (* this gets in the way of spec tactics *)
   specintros => c1.
   (* perform CMP ECX, 0 *)
-  specapply CMP_RI_eq_rule; first by sbazooka.
+  specapply CMP_RI_ZC_rule; first by sbazooka.
   (* unfold more *)
   rewrite / ifthenelse.
   unfold_program.
@@ -826,7 +826,7 @@ Proof.
   (* else branch *)
   + specintros => N0.
     specapply DEC_R_ruleNoFlags. 
-    rewrite /OSZCP_Any. sbazooka. rewrite {3}/stateIsAny. sbazooka. 
+    rewrite /OSZCP_Any {8 9}/stateIsAny. sbazooka. 
     specapply JMP_I_rule; first by sbazooka.
     autorewrite with push_at.
     rewrite -> (spec_later_weaken (safe @ _)).

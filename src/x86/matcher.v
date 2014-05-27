@@ -184,10 +184,9 @@ by ssimpl.
 
 elim E: (sbbB false v b) => [carry res].
 have E': subB v b = res by rewrite /subB E. 
-specapply CMP_RI_rule; last eassumption.
-by ssimpl.
+specapply CMP_RI_rule. sbazooka. 
 
-rewrite -E' subB_eq0. 
+rewrite E -E' subB_eq0. 
 
 specapply JZ_rule.
 rewrite /OSZCP.
@@ -219,7 +218,7 @@ Section ByteEq.
 Variable r : BYTEReg.
 
 Definition ifEqByter (b:BYTE) (dest:DWORD) : program :=
-  (BOP false OP_CMP (DstSrcRI false r b));; (* syntax could do with improvement! *)
+  CMP r, b;;
   JE dest.
 
 Lemma condbrByter (b:BYTE) dest : 
@@ -229,26 +228,25 @@ rewrite /ifEqByter /condbrspec.
 specintros => _ v i j.
 unfold_program.
 specintros => i'.
-
-specapply CMP_RbI_eq_rule.
+rewrite /makeBOP.
+specapply CMP_RbI_ZC_rule.
 by ssimpl.
 
 specapply JZ_rule.
 sbazooka.
 
-rewrite /OSZCP_Any. 
+rewrite /OSZCP_Any. rewrite low_catB. 
 specsplit; rewrite <- spec_reads_frame; autorewrite with push_at.
 rewrite <- spec_later_weaken.
 apply limplValid.
 apply landL1.
 cancel1.
-sdestructs =>/eqP ->.
-rewrite {3}/stateIsAny. sbazooka.
+sdestructs =>/eqP ->. 
 rewrite /stateIsAny. sbazooka. 
 apply limplValid; apply landL2.
 cancel1.
-sdestructs =>/eqP ->.
-rewrite /stateIsAny. by sbazooka.
+sdestructs =>/eqP ->. 
+rewrite /stateIsAny. sbazooka.
 Qed.
 End ByteEq.
 

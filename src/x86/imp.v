@@ -244,7 +244,6 @@ Section LogicLemmas.
       elim E: (sbbB false (s x) (s y)) => [carry res].
       eapply basic_seq.
       - eapply basic_basic; first apply CMP_RR_rule.
-        + eassumption.
         + rewrite ->regs_read_vars. by ssimpl.
         + by move/eqP: Hxy.
         reflexivity.
@@ -255,7 +254,7 @@ Section LogicLemmas.
       elim E': (adcB carry (#0: DWORD) #0) => [carry' res'].
       eapply basic_basic; first apply ADC_RI_rule.
       - eassumption.
-      - by ssimpl.
+      - rewrite E. by ssimpl.
       rewrite [X in X ** (_ -* _)]sepSPC. rewrite ->sepSPwand.
       rewrite /OSZCP_Any /OSZCP /stateIsAny. sbazooka. 
       rewrite /eeval.

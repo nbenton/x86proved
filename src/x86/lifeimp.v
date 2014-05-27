@@ -97,14 +97,14 @@ Proof.
   rewrite /decModN.
 
   (* CMP r, 0 *)
-  basicapply CMP_RI_eq_rule.
+  basicapply CMP_RI_ZC_rule.
   
   apply: basic_roc_pre;
   last apply (if_rule 
     (P:= fun b => 
     (m == 0) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?)). 
 
-  rewrite /ConditionIs. sbazooka.
+  rewrite /ConditionIs. replace CF? with (Exists v, CF ~= v) by done. sbazooka.
  
   apply fromNatBounded_eq => //. 
   by apply (ltn_trans LT2). 
@@ -135,7 +135,7 @@ move => LT1 LT2.
   rewrite /incModN.
 
   (* CMP r, 0 *)
-  basicapply CMP_RI_eq_rule.
+  basicapply CMP_RI_ZC_rule.
 
   apply: basic_roc_pre;
   last apply (if_rule 
@@ -148,6 +148,7 @@ move => LT1 LT2.
   apply fromNatBounded_eq => //. 
 
   by apply (leq_ltn_trans (leq_pred _)). 
+  rewrite /stateIsAny. sbazooka. 
 
   specintros => /eqP->. 
   basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny. sbazooka.
