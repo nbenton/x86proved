@@ -128,7 +128,7 @@ Section LogicDefinitions.
   (* The high-level triple for the imp language. It lives in the low-level spec
      logic, which is maybe not really appropriate, but it works. *)
   Definition triple (P: asn) (C: cmd) (Q: asn) : spec :=
-    basic (asn_denot P) (compile_cmd C) (asn_denot Q) @ (EDX? ** OSZCP_Any).
+    basic (asn_denot P) (compile_cmd C) (asn_denot Q) @ (EDX? ** OSZCP?).
 
   (* Expression evaluation *)
   Definition eeval (e: expr) (s: stack) : DWORD :=
@@ -214,7 +214,7 @@ Section LogicLemmas.
 
   Lemma compile_expr_correct s e:
     |-- basic EDX? (compile_expr e) (EDX ~= eeval e s)
-        @ (stack_denot s ** OSZCP_Any).
+        @ (stack_denot s ** OSZCP?).
   Proof.
     autorewrite with push_at. case: e.
     - move=> x.
@@ -231,7 +231,7 @@ Section LogicLemmas.
       eapply basic_basic; first apply SUB_RR_rule. 
       - ssimpl. rewrite ->sepSPwand. rewrite ->regs_read_var. by ssimpl.
       elim E: (sbbB false (s x) (s y)) => [carry res].
-      rewrite /OSZCP /OSZCP_Any /stateIsAny. sbazooka.
+      rewrite /OSZCP /stateIsAny. sbazooka.
       rewrite sepSPA. rewrite ->sepSPwand. cancel2. rewrite /eeval. 
       by rewrite /subB E/snd. 
     - move=> x y. rewrite /compile_expr.
@@ -254,9 +254,9 @@ Section LogicLemmas.
       elim E': (adcB carry (#0: DWORD) #0) => [carry' res'].
       eapply basic_basic; first apply ADC_RI_rule.
       - eassumption.
-      - rewrite E. by ssimpl.
+      - rewrite E /natAsDWORD. by ssimpl.
       rewrite [X in X ** (_ -* _)]sepSPC. rewrite ->sepSPwand.
-      rewrite /OSZCP_Any /OSZCP /stateIsAny. sbazooka. 
+      rewrite /OSZCP /stateIsAny. sbazooka. 
       rewrite /eeval.
       have Hless := sbbB_ltB_leB (s x) (s y).
       rewrite E /fst in Hless.
@@ -277,7 +277,7 @@ Section LogicLemmas.
   Qed.
 
   Lemma compile_condition_correct s e:
-    |-- basic (EDX? ** OSZCP_Any) (compile_condition e)
+    |-- basic (EDX? ** OSZCP?) (compile_condition e)
               (EDX? ** ZF ~= (eeval e s == zero _) **
                OF? ** SF? ** CF? ** PF?)
           @ (stack_denot s).
@@ -310,7 +310,7 @@ Section LogicRules.
       reflexivity.
     - eapply basic_basic; first apply MOV_RanyR_rule.
       - rewrite ->var_assign_subst with (e:=e) (x:=x).
-        rewrite /stateIsAny /stack_denot. by sbazooka.
+        rewrite /stack_denot. ssimpl. rewrite {6}/stateIsAny. sbazooka.
       rewrite /stateIsAny. sbazooka. rewrite /asn_denot /stack_denot.
       rewrite ->sepSPwand. ssplits; first apply Hsubst. by sbazooka.
   Qed.
@@ -376,8 +376,8 @@ Section LogicRules.
       + by ssimpl.
       rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC.
-      rewrite /I /ConditionIs /OSZCP_Any /stateIsAny. by sbazooka.
-    - rewrite /I /ConditionIs /OSZCP_Any /stateIsAny /negb. by sbazooka.
+      rewrite /I /ConditionIs /stateIsAny. by sbazooka.
+    - rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.
   Qed.
   
   Theorem triple_if S P e C1 C2 Q:
@@ -400,9 +400,9 @@ Section LogicRules.
     apply: basic_roc_pre; last apply (if_rule (P:=I)).
     - rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC1.
-      rewrite /I /ConditionIs /OSZCP_Any /stateIsAny. by sbazooka.
+      rewrite /I /ConditionIs /stateIsAny. by sbazooka.
     - eapply basic_roc_pre; last apply HC2.
-      rewrite /I /ConditionIs /OSZCP_Any /stateIsAny /negb. by sbazooka.
+      rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.
   Qed.
   
   Local Transparent ILFun_Ops.

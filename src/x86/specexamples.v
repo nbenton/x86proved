@@ -36,9 +36,9 @@ Qed.
 Example basic_inc3 x:
   |-- basic (EAX ~= x)
             (INC EAX;; INC EAX;; INC EAX)
-            (EAX ~= x +# 3) @ OSZCP_Any.
+            (EAX ~= x +# 3) @ OSZCP?.
 Proof.
-  autorewrite with push_at. rewrite /OSZCP_Any/stateIsAny.
+  autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
   basicapply INC_R_rule. rewrite /OSZCP; sbazooka. 
   basicapply INC_R_rule. rewrite /OSZCP; sbazooka. 
@@ -56,7 +56,7 @@ Example incdec_while c a:
       )
     )
     (ECX ~= #0 ** EAX ~= addB c a)
-    @ OSZCP_Any.
+    @ OSZCP?.
 Proof.
   autorewrite with push_at.
   set (I := fun b => Exists c', Exists a',
@@ -66,13 +66,13 @@ Proof.
   eapply basic_basic_context; first apply (while_rule_ro (I:=I));
       first 2 last.
   - reflexivity.
-  - subst I. rewrite /OSZCP_Any/stateIsAny/ConditionIs. sbazooka.
+  - subst I. rewrite /stateIsAny/ConditionIs. sbazooka.
   - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.  
     rewrite ->(eqP Hzero) in *. rewrite add0B in Hadd.
-    subst a'. rewrite /OSZCP_Any/ConditionIs/stateIsAny. by sbazooka.
+    subst a'. rewrite /ConditionIs/stateIsAny. by sbazooka.
   - specintros => b1 b2. subst I; cbv beta. specintros => c' a' Hzero Hadd.
     eapply basic_basic; first eapply TEST_self_rule.
-    + rewrite /OSZCP_Any/ConditionIs/stateIsAny. by sbazooka.
+    + rewrite /ConditionIs/stateIsAny. by sbazooka.
     rewrite /OSZCP/ConditionIs/stateIsAny. by sbazooka.
   - subst I; cbv beta. specintros => c' a' Hzero Hadd.
     rewrite /stateIsAny. specintros => fo fs fc fp. eapply basic_seq. 

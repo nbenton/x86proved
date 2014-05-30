@@ -25,9 +25,9 @@ Fixpoint add_mulc nbits (r1 r2: Reg) (m: nat) :=
 Lemma add_mulcCorrect nbits : forall (r1 r2: Reg) m, m < 2^nbits ->
   |-- Forall v, Forall w, 
       basic
-      (r1 ~= v ** r2 ~= w ** OSZCP_Any)
+      (r1 ~= v ** r2 ~= w ** OSZCP?)
       (add_mulc nbits r1 r2 m)
-      (r1 ~= addB v (mulB w (fromNat m)) ** r2? ** OSZCP_Any).
+      (r1 ~= addB v (mulB w (fromNat m)) ** r2? ** OSZCP?).
 (*=End *)
 Proof. 
   induction nbits => r1 r2 m LT; rewrite /add_mulc; fold add_mulc; specintros => v w.
@@ -84,7 +84,7 @@ Lemma add_mulcAuxCorrect nbits : forall (c:nat) (r1 r2: Reg) (m:nat),
   basic
   (r1 ~= v ** r2 ~= w)
   (add_mulcAux nbits c r1 r2 m)
-  (r1 ~= addB v (w *# (m*2^c)) ** r2?) @ OSZCP_Any.
+  (r1 ~= addB v (w *# (m*2^c)) ** r2?) @ OSZCP?.
 Proof. 
   induction nbits => c r1 r2 m LT1 LT3;
   rewrite /add_mulcAux; fold add_mulcAux; specintros => v w.
@@ -171,7 +171,7 @@ Lemma add_mulcOptCorrect (r1 r2: NonSPReg) (m:nat):
   basic
   (r1 ~= v ** r2 ~= w)
   (add_mulcOpt r1 r2 m)
-  (r1 ~= addB v (w *# m) ** r2?) @ OSZCP_Any.
+  (r1 ~= addB v (w *# m) ** r2?) @ OSZCP?.
 Proof. 
 rewrite /add_mulcOpt.
 move => LT. specintros => v w. 
@@ -224,7 +224,7 @@ Lemma genCorrect nbits : forall (c:nat) (r1:Reg) (r2:NonSPReg) (m:nat),
   basic
   (r1 ~= v ** r2 ~= w)
   (gen nbits c r1 r2 m)
-  (r1 ~= addB v (w *# (m*2^c)) ** r2?) @ OSZCP_Any.
+  (r1 ~= addB v (w *# (m*2^c)) ** r2?) @ OSZCP?.
 Proof. 
   induction nbits => c r1 r2 m LT1 LT3;
   rewrite /gen; fold gen; specintros => v w.
@@ -338,7 +338,7 @@ Lemma add_mulcFastCorrect (r1 r2: NonSPReg) (d:DWORD):
   basic
   (r1 ~= v ** r2 ~= w)
   (add_mulcFast r1 r2 d)
-  (r1 ~= addB v (mulB w d) ** r2?) @ OSZCP_Any.
+  (r1 ~= addB v (mulB w d) ** r2?) @ OSZCP?.
 Proof. 
 rewrite /add_mulcFast.
 specintros => v w. 

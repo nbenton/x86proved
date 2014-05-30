@@ -23,7 +23,7 @@ Definition inlineComputeLinePos: program :=
 
 Definition inlineComputeLine_spec (row:nat) (base:DWORD) (instrs: program) :=
   basic (EDX ~= #row ** EDI ~= base) instrs
-        (EDX ~= #row ** EDI ~= base +# row*160) @ OSZCP_Any.
+        (EDX ~= #row ** EDI ~= base +# row*160) @ OSZCP?.
 
 Lemma inlineComputeLinePos_correct row base :
   row < numRows -> 
@@ -33,7 +33,7 @@ Proof.
   rewrite /inlineComputeLine_spec/inlineComputeLinePos.
   autorewrite with push_at. 
 
-  (* We don't unfold OSZCP_Any anywhere because no rules talk about flags *)
+  (* We don't unfold OSZCP? anywhere because no rules talk about flags *)
 
   (* SHL EDX, 5 *)
   basicapply SHL_RI_rule => //.  
@@ -89,7 +89,7 @@ Definition incModN (r: Reg) n : program :=
 
 Require Import div.
 Lemma decModN_correct (r:Reg) n m : n < 2^32 -> m < n ->
-  |-- basic (r ~= #m) (decModN r n) (r ~= #((m + n.-1) %% n)) @ OSZCP_Any.
+  |-- basic (r ~= #m) (decModN r n) (r ~= #((m + n.-1) %% n)) @ OSZCP?.
 Proof.
   move => LT1 LT2. 
 
@@ -111,13 +111,13 @@ Proof.
 
   specintros => /eqP->. 
   basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny; sbazooka.
-  rewrite /OSZCP_Any/stateIsAny. rewrite /ConditionIs. rewrite add0n modn_small. 
+  rewrite /stateIsAny. rewrite /ConditionIs/natAsDWORD. rewrite add0n modn_small. 
   sbazooka.
   destruct n => //. 
 
   simpl (~~ _). specintros => H. 
   basicapply DEC_R_ruleNoFlags. 
-  rewrite /OSZCP_Any/stateIsAny/ConditionIs. sbazooka.
+  rewrite /stateIsAny/ConditionIs. sbazooka.
   destruct m => //. 
   rewrite decB_fromSuccNat. 
   destruct n => //. rewrite succnK. rewrite addSnnS. rewrite modnDr. 
@@ -127,7 +127,7 @@ Proof.
 Qed. 
 
 Definition incModN_correct (r:Reg) n m : n < 2^32 -> m < n ->
-  |-- basic (r ~= #m) (incModN r n) (r ~= #((m.+1) %% n)) @ OSZCP_Any.
+  |-- basic (r ~= #m) (incModN r n) (r ~= #((m.+1) %% n)) @ OSZCP?.
 Proof.
 move => LT1 LT2. 
 
@@ -152,12 +152,12 @@ move => LT1 LT2.
 
   specintros => /eqP->. 
   basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny. sbazooka.
-  rewrite /OSZCP_Any/stateIsAny. rewrite /ConditionIs. 
+  rewrite /stateIsAny. rewrite /ConditionIs/natAsDWORD. 
   rewrite (ltn_predK LT2). sbazooka. by rewrite modnn. 
 
   simpl (~~ _). specintros => H. 
   basicapply  INC_R_ruleNoFlags. 
-  rewrite /OSZCP_Any/stateIsAny/ConditionIs. sbazooka.
+  rewrite /stateIsAny/ConditionIs. sbazooka.
   sbazooka. 
   rewrite incB_fromNat. rewrite modn_small => //.
   rewrite ltn_neqAle. rewrite LT2 andbT. 
@@ -169,28 +169,28 @@ Qed.
 Definition goLeft: program := decModN ECX numCols.
 
 Lemma goLeftCorrect col : col < numCols ->
-  |-- basic (ECX ~= # col) goLeft (ECX ~= #((col + numCols.-1) %% numCols))@ OSZCP_Any.
+  |-- basic (ECX ~= # col) goLeft (ECX ~= #((col + numCols.-1) %% numCols))@ OSZCP?.
 Proof. apply decModN_correct => //. Qed.
 
 (* Move ECX one column right, wrapping around if necessary *)
 Definition goRight: program := incModN ECX numCols. 
 
 Lemma goRightCorrect col : col < numCols ->
-  |-- basic (ECX ~= # col) goRight (ECX ~= #((col.+1) %% numCols)) @ OSZCP_Any.
+  |-- basic (ECX ~= # col) goRight (ECX ~= #((col.+1) %% numCols)) @ OSZCP?.
 Proof. apply incModN_correct => //. Qed.
 
 (* Move EDX one row up, wrapping around if necessary *)
 Definition goUp: program := decModN EDX numRows.
 
 Lemma goUpCorrect row : row < numRows ->
-  |-- basic (EDX ~= # row) goUp (EDX ~= #((row + numRows.-1) %% numRows)) @ OSZCP_Any.
+  |-- basic (EDX ~= # row) goUp (EDX ~= #((row + numRows.-1) %% numRows)) @ OSZCP?.
 Proof. apply decModN_correct => //. Qed.
 
 (* Move EDX one row down, wrapping around if necessary *)
 Definition goDown: program := incModN EDX numRows.
 
 Lemma goDownCorrect row : row < numRows ->
-  |-- basic (EDX ~= # row) goDown (EDX ~= #((row.+1) %% numRows)) @ OSZCP_Any.
+  |-- basic (EDX ~= # row) goDown (EDX ~= #((row.+1) %% numRows)) @ OSZCP?.
 Proof. apply incModN_correct => //. Qed.
 
 (* Given a character at buf[ECX, EDX], return its neighbour count in ESI *)
@@ -275,7 +275,7 @@ Definition copyBuf (src dst:DWORD) : program:=
       ).
 
 Definition delay:program := 
-      MOV EBX, (#x"08000001": DWORD);;
+      MOV EBX, (#x"08000001":DWORD);;
       while (CMP EBX, 0) CC_Z false (DEC EBX).
 
 

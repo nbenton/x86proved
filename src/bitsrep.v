@@ -55,6 +55,10 @@ Arguments fromNat n m : simpl never.
 
 Definition toNat {n} (p: BITS n) := foldr (fun (b:bool) n => b + n.*2) 0 p.
 
+Coercion natAsDWORD := @fromNat 32 : nat -> DWORD.
+Coercion natAsWORD := @fromNat 16 : nat -> WORD.
+Coercion natAsBYTE := @fromNat 8 : nat -> BYTE.
+
 (*---------------------------------------------------------------------------
     All bits identical
   ---------------------------------------------------------------------------*)
@@ -298,7 +302,7 @@ Definition stringToSeqBYTE (s: string) : seq BYTE :=
 (* Notation for hex, binary, and character/string *)
 Notation "#x y" := (fromHex y) (at level 0). 
 Notation "#b y" := (fromBin y) (at level 0).
-Notation "#c y" := (fromString y) (at level 0).
+Notation "#c y" := (fromString y : BYTE) (at level 0).
 
 (*=fortytwo *)
 Example fortytwo  := #42 : BYTE.

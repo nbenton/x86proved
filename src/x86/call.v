@@ -95,11 +95,11 @@ Definition toyfun_example (entry: DWORD) : program :=
 
 Example toyfun_example_callee_correct (f f': DWORD):
   |-- (Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
-        @ OSZCP_Any <@ (f--f' :-> toyfun_example_callee).
+        @ OSZCP? <@ (f--f' :-> toyfun_example_callee).
 Proof.
   specintro => a. autorewrite with push_at.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
-  autorewrite with push_at. rewrite /OSZCP_Any/stateIsAny.
+  autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
   basicapply INC_R_rule; rewrite /OSZCP; sbazooka. 
   basicapply INC_R_rule; rewrite /OSZCP; sbazooka. 
@@ -108,7 +108,7 @@ Qed.
 
 (* The toyfun spec assumed for f here is actually stronger than what lemma
    toyfun_example_callee_correct guarantees: we ask for a function that does
-   not have OSZCP_Any in its footprint. But thanks to the higher-order frame
+   not have OSZCP? in its footprint. But thanks to the higher-order frame
    rule, it will still be possible to compose the caller and the callee. *)
 Example toyfun_example_caller_correct a (f:DWORD):
   Forall a', toyfun f (EAX ~= a') (EAX ~= a' +# 2)
@@ -135,7 +135,7 @@ Example toyfun_example_correct entry (i j: DWORD) a:
   |-- (
       safe @ (EIP ~= j ** EAX ~= a +# 4) -->>
       safe @ (EIP ~= entry ** EAX ~= a)
-    ) @ (retreg? ** OSZCP_Any) <@ (i--j :-> toyfun_example entry).
+    ) @ (retreg? ** OSZCP?) <@ (i--j :-> toyfun_example entry).
 Proof.
   rewrite /toyfun_example. unfold_program.
   specintros => f _ <- -> {i} i1 _ <- ->. rewrite !empSPL.

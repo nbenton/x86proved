@@ -28,9 +28,9 @@ Require Import basic basicprog program instrsyntax macros instrrules.
 Require Import Setoid RelationClasses Morphisms.
 
 Example counterModuleSpec IAT P Inc Get :=
-      (Forall c: DWORD, toyfun Inc (P c ** ECX? ** OSZCP_Any) (P (c +# 1) ** ECX? ** OSZCP_Any))
+      (Forall c: DWORD, toyfun Inc (P c ** ECX? ** OSZCP?) (P (c +# 1) ** ECX? ** OSZCP?))
     //\\
-      (Forall c: DWORD, toyfun Get (EAX? ** P c ** ECX? ** OSZCP_Any) (EAX ~= c ** P c ** ECX? ** OSZCP_Any))
+      (Forall c: DWORD, toyfun Get (EAX? ** P c ** ECX? ** OSZCP?) (EAX ~= c ** P c ** ECX? ** OSZCP?))
     <@ (IAT :-> (Inc, Get)).
 
 Example counterModuleCode (Inc Get Counter: DWORD) :=    
@@ -60,7 +60,7 @@ specsplit.
 specintros => c.
 rewrite <- spec_reads_merge. 
 rewrite <- spec_reads_frame. 
-  etransitivity; [|apply toyfun_mkbody]. specintro => iret. rewrite /OSZCP_Any.
+  etransitivity; [|apply toyfun_mkbody]. specintro => iret. 
   rewrite /flagAny. specintros => O S Z C P. autorewrite with push_at. 
   basicapply MOV_RI_rule. 
   basicapply INC_M_rule. rewrite addB0.
@@ -75,7 +75,7 @@ rewrite <- spec_reads_frame.
 rewrite <- spec_reads_merge. 
 rewrite <- spec_reads_swap.
 rewrite <- spec_reads_frame.
-  etransitivity; [|apply toyfun_mkbody]. specintro => iret. rewrite /OSZCP_Any.
+  etransitivity; [|apply toyfun_mkbody]. specintro => iret. 
   rewrite /flagAny. specintros => O S Z C P. autorewrite with push_at. 
   basicapply MOV_RI_rule. 
   basicapply MOV_RM0_rule. rewrite /regAny. sbazooka. 
@@ -89,7 +89,7 @@ Example useCounterModule IAT : program :=
 Example useCounterModuleCorrect (codeStart codeEnd dataStart Inc Get IAT: DWORD):
   counterModuleSpec codeStart (fun v => dataStart :-> v) Inc Get 
   |-- basic (EAX?) (useCounterModule IAT) (EAX ~= #2) @ 
-      (EDI? ** OSZCP_Any ** retreg?) <@ (IAT :-> (Inc,Get)).
+      (EDI? ** OSZCP? ** retreg?) <@ (IAT :-> (Inc,Get)).
 Proof.
   rewrite /useCounterModule. autorewrite with push_at.
   rewrite <- spec_reads_frame. 

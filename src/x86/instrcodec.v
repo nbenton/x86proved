@@ -703,6 +703,12 @@ Instance encodeInstr : Writer Instr := fun instr =>
 Lemma writeBytesSkipFree xs : writerTmSkipFree (writeBytes xs). 
 Proof. induction xs => //. Qed. 
 
+(*
+Module Examples.
+
 Require Import instrsyntax. Open Scope instr_scope. 
 Compute bytesToHex (snd (fromBin (if enc InstrCodec 
   (BOP _ OP_ADD (DstSrcMI true (mkMemSpec (Some (nonSPReg EBX, Some(EDX,S4))) (#x"12345678")) (#x"87654321":DWORD))) is Some bs then bs else nil))).
+
+End Examples.
+*)

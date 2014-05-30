@@ -607,7 +607,7 @@ safe @ (EIP ~= ret   ** EAX ~= #(~~ lsb n) ** ECX?     ** ESP?         ** sp-#4 
 -->>
 safe @ (EIP ~= dEven ** EAX?               ** ECX ~= n ** ESP ~= sp-#4 ** sp-#4 :-> ret    )
 )
-@ (EDX? ** OSZCP_Any).
+@ (EDX? ** OSZCP?).
 
 Definition oddSpec (dOdd: DWORD) :=
 Forall n: DWORD, Forall sp : DWORD, Forall ret: DWORD,
@@ -616,7 +616,7 @@ safe @ (EIP ~= ret  ** EAX ~= #(lsb n) ** ECX?     ** ESP?         ** sp-#4 :-> 
 -->>
 safe @ (EIP ~= dOdd ** EAX?            ** ECX ~= n ** ESP ~= sp-#4 ** sp-#4 :-> ret    )
 )
-@ (EDX? ** OSZCP_Any).
+@ (EDX? ** OSZCP?).
 
 (* We build a module exposing the existence of even and odd *)
 Example parityModule : naryModule 2 :=
@@ -701,7 +701,6 @@ Proof.
   rewrite / readFrameAtom / applyNary / evenSpec / programMemIs / evenEntry / fst / snd.
   specintros => evenEnd n sp ret.
   unfold_program.
-  rewrite / ConstImm. (* this gets in the way of spec tactics *)
   specintros => c1.
   (* perform CMP ECX, 0 *)
   specapply CMP_RI_ZC_rule; first by sbazooka.
@@ -736,14 +735,14 @@ Proof.
     rewrite <- spec_later_weaken.
     apply limplAdj; apply landL2.
     apply at_contra.
-    rewrite / OSZCP_Any. sbazooka.
+    sbazooka.
     move : N0; case : (@eqP _ n #0) => N0 EQ; last easy; move : EQ => _.
     subst n.
     rewrite /stateIsAny. sbazooka. reflexivity.
   (* else branch *)
   + specintros => N0.
     specapply DEC_R_ruleNoFlags.
-    sbazooka. rewrite /OSZCP_Any. sbazooka. 
+    sbazooka. 
     rewrite {3 4}/stateIsAny. sbazooka. 
 
     specapply JMP_I_rule; first by sbazooka.
@@ -783,7 +782,6 @@ Proof.
   rewrite / readFrameAtom / applyNary / oddSpec / programMemIs / oddEntry / fst / snd.
   specintros => oddEnd n sp ret.
   unfold_program.
-  rewrite / ConstImm. (* this gets in the way of spec tactics *)
   specintros => c1.
   (* perform CMP ECX, 0 *)
   specapply CMP_RI_ZC_rule; first by sbazooka.
@@ -818,7 +816,6 @@ Proof.
     rewrite <- spec_later_weaken.
     apply limplAdj. apply landL2.
     apply at_contra.
-    rewrite / OSZCP_Any.
     sbazooka.
     move : N0; case : (@eqP _ n #0) => N0 EQ; last easy; move : EQ => _.
     subst n. rewrite /stateIsAny. sbazooka.
@@ -826,7 +823,7 @@ Proof.
   (* else branch *)
   + specintros => N0.
     specapply DEC_R_ruleNoFlags. 
-    rewrite /OSZCP_Any {8 9}/stateIsAny. sbazooka. 
+    rewrite  {8 9}/stateIsAny. sbazooka. 
     specapply JMP_I_rule; first by sbazooka.
     autorewrite with push_at.
     rewrite -> (spec_later_weaken (safe @ _)).
@@ -900,7 +897,7 @@ safe @ (EIP ~= ret   ** EAX ~= #1 ** ESP?         ** sp-#4 :-> ?:DWORD)
 -->>
 safe @ (EIP ~= lMain ** EAX?      ** ESP ~= sp-#4 ** sp-#4 :-> ret    )
 )
-@ (ECX? ** EDX? ** OSZCP_Any).
+@ (ECX? ** EDX? ** OSZCP?).
 
 Example mainModule lEven lOdd : naryModule 1 :=
   Build_naryModule
@@ -948,7 +945,6 @@ Proof.
   specintros => mainEnd sp ret.
   autorewrite with push_at.
   unfold_program.
-  rewrite / ConstImm. (* this gets in the way of spec tactics *)
   specintros => c1.
   (* perform MOV ECX, #42 *)
   specapply (MOV_RanyI_rule (r := ECX)); first by sbazooka.

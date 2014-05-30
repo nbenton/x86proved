@@ -67,7 +67,7 @@ Definition showOctal_program : program :=
 
 Theorem gcd_safe: forall endAddr: DWORD,
   |-- (safe @ (EIP ~= endAddr) -->> safe @ (EIP ~= codeAddr))
-        @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP_Any)
+        @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
        <@ (codeAddr -- endAddr :-> gcd_bytes).
 Proof.
   move=> endAddr. rewrite /gcd_bytes.
@@ -87,9 +87,9 @@ Qed.
    constructs. *)
 (*
 Corollary gcd_safe_nonfancy: forall (endAddr: DWORD) k R,
-  safe k (EIP ~= endAddr ** EAX? ** EBX? ** ECX? ** EDX? ** OSZCP_Any **
+  safe k (EIP ~= endAddr ** EAX? ** EBX? ** ECX? ** EDX? ** OSZCP? **
           codeAddr -- endAddr :-> gcd_bytes ** R) ->
-  safe k (EIP ~= codeAddr ** EAX? ** EBX? ** ECX? ** EDX? ** OSZCP_Any **
+  safe k (EIP ~= codeAddr ** EAX? ** EBX? ** ECX? ** EDX? ** OSZCP? **
           codeAddr -- endAddr :-> gcd_bytes ** R).
 Proof.
   move=> endAddr k R.

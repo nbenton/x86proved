@@ -1,11 +1,13 @@
 (*===========================================================================
     Instruction type and helpers
-    Instructions abstract the actual machine-code encoding in a number of ways:
-    (a) There may be more than one way of encoding the same instruction
-        e.g. short forms and long forms
-    (b) Jump and call targets are recorded as absolute addresses but might be
-        encoded as relative offsets.
-    Instructions therefore are *not* position-independent.
+
+    Notation to support Intel-style syntax is defined in instrsyntax.v.
+
+    Instructions are *not* in one-to-one correspondence with binary formats,
+    as there may be more than one way of encoding the same instruction e.g.
+    - short and long forms for constants (e.g. PUSH constant)
+    - special casing (e.g. special forms for EAX/AL register, special form for RET 0)
+    - symmetry in direction (e.g. MOV r1, r2 has two encodings)
   ===========================================================================*)
 Require Import bitsrep reg.
 
@@ -34,7 +36,10 @@ Inductive RegImm d :=
 | RegImmR (r: DWORDorBYTEReg d).
 (*=End *)
 
-Coercion mkRegMemR (r:Reg) := RegMemR true r.
+Coercion DWORDRegMemR (r:Reg)     := RegMemR true r.
+Coercion BYTERegMemR  (r:BYTEReg) := RegMemR false r.
+Coercion DWORDRegMemM (ms: MemSpec) := RegMemM true ms.
+Coercion DWORDRegImmI := RegImmI true.  
 
 (* Unary ops: immediate, register, or memory source *)
 (* Binary ops: five combinations of source and destination *)

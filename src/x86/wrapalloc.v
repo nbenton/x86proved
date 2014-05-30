@@ -26,7 +26,7 @@ Lemma wrappedAlloc_correct bytes (r1 r2: Reg) heapInfo :
   |-- Forall i j: DWORD,   
   toyfun i EDI? ((Exists p:DWORD, EDI ~= p ** memAny p (p +# bytes)) \\// EDI ~= #0) 
 
-  @  (ESI? ** OSZCP_Any ** allocInv heapInfo) 
+  @  (ESI? ** OSZCP? ** allocInv heapInfo) 
   <@ (i -- j :-> mkbody_toyfun (wrappedAlloc bytes r1 r2 heapInfo)). 
 Proof. 
 specintros => i j. 
@@ -50,11 +50,10 @@ specsplit.
 autorewrite with push_at.
 
 (* MOV EDI, 0 *)
-rewrite /ConstImm.
 specapply MOV_RanyI_rule. 
 - by ssimpl.
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2. 
-autorewrite with push_at. cancel1. ssimpl. by apply: lorR2. 
+autorewrite with push_at. cancel1. rewrite /natAsDWORD. ssimpl. by apply: lorR2. 
 
 (* success case *)
 autorewrite with push_at. 
@@ -68,7 +67,6 @@ assert (H:= subB_equiv_addB_negB (pb+#bytes) # bytes). rewrite /subB in H.
 rewrite E0 in H. simpl (snd _) in H. rewrite addB_negBn in H.
 rewrite H in E0.
 
-rewrite /ConstImm.
 specapply SUB_RI_rule. sbazooka. 
 
 (* JMP SUCCEED *)
@@ -80,7 +78,7 @@ rewrite E0. rewrite <-spec_later_weaken.
 rewrite <-spec_reads_frame. 
 apply: limplAdj. autorewrite with push_at. 
 apply: landL2. cancel1. 
-rewrite /OSZCP/OSZCP_Any/stateIsAny. sbazooka. apply: lorR1.
+rewrite /OSZCP/stateIsAny. sbazooka. apply: lorR1.
  
 sbazooka. 
 Qed. 

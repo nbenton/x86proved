@@ -74,12 +74,12 @@ Definition strlen : program :=
 Lemma strlen_correct p s : 
   zeroFree s ->
   |-- basic ECX? strlen (ECX ~= #(length s))
-    @ (OSZCP_Any ** EDI ~= p ** pointsToCString p s).
+    @ (OSZCP? ** EDI ~= p ** pointsToCString p s).
 Proof.
   move => ISZF. rewrite /strlen.
   autorewrite with push_at. 
 
-  rewrite /stateIsAny. specintros => oldecx.
+  unhideReg ECX => oldecx.
 
   (* MOV ECX, 0 *)
   basicapply MOV_RI_rule. rewrite /stateIsAny. sbazooka. 
@@ -102,17 +102,17 @@ Proof.
   case E: suffix => [| a s'].
 
   (* Empty string *)
-  + rewrite /OSZCP_Any/ConditionIs. 
+  + rewrite /ConditionIs. 
   eapply basic_basic; first eapply CMP_MbxI_ZC_rule.
-  rewrite /OSZCP_Any/stateIsAny/ConditionIs.
+  rewrite /stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString. 
   sbazooka. subst. sbazooka. rewrite <-pointsToCString_append_op.
   rewrite /pointsToCString. rewrite /stateIsAny. sbazooka. 
 
   (* Non-empty string *)
-  + subst. rewrite /OSZCP_Any/ConditionIs. 
+  + subst. rewrite /ConditionIs. 
   eapply basic_basic; first eapply CMP_MbxI_ZC_rule.
-  rewrite /OSZCP_Any/stateIsAny/ConditionIs.
+  rewrite /stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString. 
   sbazooka.
   sbazooka.     
@@ -139,15 +139,15 @@ Proof.
 
   (**)
   subst I. 
-    rewrite /OSZCP_Any/ConditionIs.
+    rewrite /ConditionIs.
     rewrite /stateIsAny. 
     sdestructs => o sf z c pf. sbazooka. instantiate (1:=s). by instantiate (1:=EmptyString). 
-    simpl (length _). by ssimpl.
+    simpl (length _). rewrite /natAsDWORD. by ssimpl.
   subst I; cbv beta. 
     sdestructs => prefix suffix -> END.
     rewrite /ConditionIs. 
     destruct suffix => //.
-    rewrite /OSZCP_Any/stateIsAny. rewrite length_append addn0. 
+    rewrite /stateIsAny. rewrite length_append addn0. 
     sbazooka. 
 Qed.   
 

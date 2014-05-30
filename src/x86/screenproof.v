@@ -20,7 +20,7 @@ Proof.
   rewrite /inlineComputeCharPos_spec/inlineComputeCharPos.
   autorewrite with push_at. 
 
-  (* We don't unfold OSZCP_Any anywhere because no rules talk about flags *)
+  (* We don't unfold OSZCP? anywhere because no rules talk about flags *)
 
   (* MOV EDI, screenBase *)
   rewrite {1}/stateIsAny. specintros => olddi.   

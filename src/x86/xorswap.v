@@ -29,7 +29,7 @@ Definition basicSwap (r1 r2: Reg) c :=
   (r1 ~= w ** r2 ~= v).
 
 Lemma xorSwapCorrect (r1 r2: Reg) : 
-  |-- basicSwap r1 r2 (xorSwapImpl r1 r2) @ OSZCP_Any.
+  |-- basicSwap r1 r2 (xorSwapImpl r1 r2) @ OSZCP?.
 Proof. 
   rewrite /xorSwapImpl/basicSwap. specintros => v w. autorewrite with push_at.
 
@@ -37,10 +37,10 @@ Proof.
   basicapply XOR_RR_rule. 
 
   (* XOR r2, r1 *)
-  basicapply XOR_RR_rule; rewrite /OSZCP_Any/stateIsAny/OSZCP; sbazooka.
+  basicapply XOR_RR_rule; rewrite /stateIsAny/OSZCP; sbazooka.
 
   (* XOR r1, r2 *)
-  basicapply XOR_RR_rule; rewrite /OSZCP_Any/stateIsAny/OSZCP; sbazooka.
+  basicapply XOR_RR_rule; rewrite /stateIsAny/OSZCP; sbazooka.
 
   (* Now we're left reasoning about XOR *)  
   rewrite {2}[X in xorB w X]xorBC. 

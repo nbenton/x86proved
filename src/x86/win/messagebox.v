@@ -18,8 +18,7 @@ Definition mbProg: topprog :=
   IMPORT "MessageBoxA" as MessageBoxA;
   GLOBAL message; GLOBAL title;
 SECTION CODE
-  MOV EDI, MessageBoxA;; 
-  call_with stdcall 4 [EDI] 0 title message 0;;
+  call_with stdcall 4 [MessageBoxA]%ms 0 title message 0;;
   RET 0;
 SECTION DATA
   message:;; dsz "Hello, world";;

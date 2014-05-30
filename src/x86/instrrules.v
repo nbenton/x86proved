@@ -235,15 +235,20 @@ Definition specAtDstSrc dword (ds: DstSrc dword) (f: (DWORDorBYTE dword -> SPred
     specAtMemSpec src (fun v => f (fun w => DWORDorBYTEregIs dst w) v)
   end.
 
+Notation "OSZCP?" := (OF? ** SF? ** ZF? ** CF? ** PF?).
+Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= p.
+
 (* We open a section in order to localize the hints *)
 Section InstrRules.
 
 Hint Unfold 
-  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst mkRegMemR
-  DWORDorBYTEregIs
+  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst 
+  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
+  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD 
+  makeMOV makeBOP makeUOP
   : basicapply.
 Hint Rewrite
-  addB0 : basicapply.
+  addB0 low_catB : basicapply.
 
 (*---------------------------------------------------------------------------
     Helpers for pieces of evaluation (adapted from spechelpers and
@@ -256,9 +261,6 @@ Hint Unfold
   evalLogicalOp evalBinOp evalShiftOp evalUnaryOp evalCondition 
   evalMOV evalDst evalDstR evalDstM evalSrc evalMemSpec evalBYTEReg : eval.
 
-Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= p.
-
-Definition OSZCP_Any := OF? ** SF? ** ZF? ** CF? ** PF?.
 
 Lemma evalReg_rule (r: Reg) v c Q : 
   forall S,
@@ -383,9 +385,9 @@ Proof. by apply triple_letGetRegSep. Qed.
 
 Lemma triple_pre_introFlags P comp Q :
   (forall o s z c p, TRIPLE (OSZCP o s z c p ** P) comp Q) ->
-  TRIPLE (OSZCP_Any ** P) comp Q.
+  TRIPLE (OSZCP? ** P) comp Q.
 Proof.
-  rewrite /OSZCP_Any /OSZCP /stateIsAny.
+  rewrite /OSZCP /stateIsAny.
   (* TODO: could use an sdestruct tactic for TRIPLE. *)
   move=> H s Hs.
   sdestruct: Hs => fo Hs.
@@ -550,14 +552,14 @@ Proof. basicPOP. Qed.
 (* POP [r + offset] *)
 Corollary POP_M_rule (r:Reg) (offset:nat) (sp oldv v pbase:DWORD) :
   |-- basic (r ~= pbase ** pbase +# offset :-> oldv ** ESP ~= sp ** sp :-> v) 
-            (POP (RegMemM _ [r + offset]))
+            (POP [r + offset])
             (r ~= pbase ** pbase +# offset :-> v ** ESP ~= sp+#4 ** sp :-> v).
 Proof. basicPOP. Qed. 
 
 (* POP [r] *)
 Corollary POP_M0_rule (r: Reg) (sp oldv v pbase:DWORD) :
   |-- basic (r ~= pbase ** pbase :-> oldv ** ESP ~= sp    ** sp :-> v) 
-            (POP (RegMemM _ [r]))
+            (POP [r])
             (r ~= pbase ** pbase :-> v    ** ESP ~= sp+#4 ** sp :-> v).
 Proof. basicPOP. Qed.
 
@@ -881,17 +883,17 @@ Corollary INC_M_rule (r:Reg) (offset:nat) (v pbase:DWORD) o s z c pf:
 Proof. basicINCDEC. Qed. 
 
 Lemma basicForgetFlags T (MI: MemIs T) P (x:T) Q o s z c p:
-  |-- basic (P ** OSZCP_Any) x (Q ** OSZCP o s z c p) ->
-  |-- basic P x Q @ OSZCP_Any.
+  |-- basic (P ** OSZCP?) x (Q ** OSZCP o s z c p) ->
+  |-- basic P x Q @ OSZCP?.
 Proof. move => H. autorewrite with push_at. 
-basicapply H. rewrite /OSZCP/OSZCP_Any/stateIsAny. sbazooka. 
+basicapply H. rewrite /OSZCP/stateIsAny. sbazooka. 
 Qed. 
 
 Lemma INC_R_ruleNoFlags (r:Reg) (v:DWORD):
-  |-- basic (r~=v) (INC r) (r~=incB v) @ OSZCP_Any.
+  |-- basic (r~=v) (INC r) (r~=incB v) @ OSZCP?.
 Proof.
-autorewrite with push_at. rewrite {1}/OSZCP_Any/stateIsAny. specintros => o s z c p. 
-basicINCDEC; rewrite /OSZCP/OSZCP_Any/stateIsAny; sbazooka. 
+autorewrite with push_at. rewrite /stateIsAny. specintros => o s z c p. 
+basicINCDEC; rewrite /OSZCP/stateIsAny; sbazooka. 
 Qed.
 
 (* Special case for decrement *)
@@ -902,10 +904,10 @@ Lemma DEC_R_rule (r:Reg) (v:DWORD) o s z c pf :
 Proof. basicINCDEC. Qed. 
 
 Lemma DEC_R_ruleNoFlags (r:Reg) (v:DWORD):
-  |-- basic (r~=v) (DEC r) (r~=decB v) @ OSZCP_Any.
+  |-- basic (r~=v) (DEC r) (r~=decB v) @ OSZCP?.
 Proof. 
-autorewrite with push_at. rewrite {1}/OSZCP_Any/stateIsAny. specintros => o s z c p. 
-basicINCDEC; rewrite /OSZCP/OSZCP_Any/stateIsAny; sbazooka. 
+autorewrite with push_at. rewrite /stateIsAny. specintros => o s z c p. 
+basicINCDEC; rewrite /OSZCP/stateIsAny; sbazooka. 
 Qed. 
 
 
@@ -968,7 +970,7 @@ Proof. basicNOT. Qed.
 Lemma NEG_R_rule (r:Reg) (v:DWORD) :
   let w := negB v in
   |-- basic
-    (r~=v ** OSZCP_Any) (NEG r)
+    (r~=v ** OSZCP?) (NEG r)
     (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) (v != #0) (lsb w)).
 Proof. 
   move => w. apply TRIPLE_basic => R. repeat autounfold with eval.
@@ -993,7 +995,7 @@ Qed.
 (* Generic ADD/SUB rule *)
 Lemma ADDSUB_rule isSUB d (ds:DstSrc d) v1 :
    |-- specAtDstSrc ds (fun D v2 =>
-       basic (D v1 ** OSZCP_Any)
+       basic (D v1 ** OSZCP?)
              (BOP d (if isSUB then OP_SUB else OP_ADD) ds)
              (let: (carry,v) := (if isSUB then sbbB else adcB) false v1 v2 in
               D v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
@@ -1176,36 +1178,36 @@ Ltac basicADDSUB :=
 (* Special cases *)
 (* ADD r, v2 *)
 Corollary ADD_RI_rule (r:Reg) v1 (v2:DWORD):
-  |-- basic (r~=v1 ** OSZCP_Any) (ADD r, v2)
+  |-- basic (r~=v1 ** OSZCP?) (ADD r, v2)
             (let: (carry,v) := adcB false v1 v2 in
              r~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) carry (lsb v)).
 Proof. basicADDSUB. Qed. 
 
 Corollary ADD_RI_ruleNoFlags (r1:Reg) v1 (v2:DWORD):
-  |-- basic (r1~=v1) (ADD r1, v2) (r1~=addB v1 v2) @ OSZCP_Any.
+  |-- basic (r1~=v1) (ADD r1, v2) (r1~=addB v1 v2) @ OSZCP?.
 Proof. apply: basicForgetFlags; apply ADD_RI_rule. Qed.
 
 (* ADD r1, r2 *)
 Corollary ADD_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
-  |-- basic (r1~=v1 ** r2~=v2 ** OSZCP_Any) (ADD r1, r2)
+  |-- basic (r1~=v1 ** r2~=v2 ** OSZCP?) (ADD r1, r2)
             (let: (carry,v) := adcB false v1 v2 in
              r1~=v ** r2~=v2 ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) carry (lsb v)).
 Proof. basicADDSUB. sbazooka. elim: (adcB _) => [carry v]. by ssimpl. Qed. 
 
 Corollary ADD_RR_ruleNoFlags (r1 r2:Reg) v1 (v2:DWORD):
-  |-- basic (r1~=v1 ** r2~=v2 ** OSZCP_Any) (ADD r1, r2)
-            (r1~=addB v1 v2 ** r2~=v2 ** OSZCP_Any). 
+  |-- basic (r1~=v1 ** r2~=v2 ** OSZCP?) (ADD r1, r2)
+            (r1~=addB v1 v2 ** r2~=v2 ** OSZCP?). 
 Proof.
 rewrite /addB/dropmsb. 
 basicADDSUB. 
 elim: (adcB _) => [carry v]. 
-rewrite /OSZCP_Any/OSZCP/stateIsAny. simpl snd. sbazooka. 
+rewrite /OSZCP/stateIsAny. simpl snd. sbazooka. 
 Qed. 
 
 Corollary ADD_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
-  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
+  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (ADD r1, [r2 + offset])
             (let: (carry,v) := adcB false v1 v2 in
              r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
@@ -1214,17 +1216,17 @@ Proof. basicADDSUB. elim: (adcB _) => [carry v]. by ssimpl. Qed.
 
 Corollary ADD_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (ADD r1, [r2 + offset]) (r1~=addB v1 v2)
-             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any).
+             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
 autorewrite with push_at.
 basicADDSUB.  
-rewrite /OSZCP/OSZCP_Any/stateIsAny/addB/dropmsb/snd.
+rewrite /OSZCP/stateIsAny/addB/dropmsb/snd.
 elim: (adcB _) => [carry v].
 sbazooka.
 Qed.   
 
 Lemma SUB_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
-  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
+  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (SUB r1, [r2 + offset])
             (let: (carry,v) := sbbB false v1 v2 in
              r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
@@ -1233,22 +1235,22 @@ Proof. basicADDSUB. elim (sbbB _) => [carry v]. by ssimpl. Qed.
 
 Corollary SUB_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (SUB r1, [r2 + offset]) (r1~=subB v1 v2)
-             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any).
+             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
 autorewrite with push_at. rewrite /subB. 
 elim E: (sbbB _ _ _) => [carry v].
 basicADDSUB. 
-rewrite /OSZCP/OSZCP_Any/stateIsAny/snd E. sbazooka.
+rewrite /OSZCP/stateIsAny/snd E. sbazooka.
 Qed.   
 
 Lemma SUB_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
-  |-- basic (r1~=v1 ** r2~=v2 ** OSZCP_Any) (SUB r1, r2)
+  |-- basic (r1~=v1 ** r2~=v2 ** OSZCP?) (SUB r1, r2)
             (let: (carry,v) := sbbB false v1 v2 in r1~=v  ** r2~=v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
 Proof. basicADDSUB. elim (sbbB _ _ _) => [carry v]. by ssimpl. Qed. 
 
 Lemma SUB_RI_rule (r1:Reg) v1 (v2:DWORD):
-  |-- basic (r1~=v1 ** OSZCP_Any) (SUB r1, v2)
+  |-- basic (r1~=v1 ** OSZCP?) (SUB r1, v2)
             (let: (carry,v) := sbbB false v1 v2 in 
              r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
 Proof. basicADDSUB. Qed. 
@@ -1260,7 +1262,7 @@ Proof. basicADDSUB. Qed.
 (* Generic rule *)
 Lemma CMP_rule d (ds:DstSrc d) v1 :
    |-- specAtDstSrc ds (fun D v2 =>
-       basic (D v1 ** OSZCP_Any)
+       basic (D v1 ** OSZCP?)
              (BOP d OP_CMP ds)
              (let: (carry,v) := sbbB false v1 v2 in
               D v1 ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
@@ -1432,7 +1434,7 @@ Qed.
 (* Generic rule with C and Z flags determining ltB and equality respectively *)
 Lemma CMP_ruleZC d (ds:DstSrc d) v1 :
    |-- specAtDstSrc ds (fun D v2 =>
-       basic (D v1 ** OSZCP_Any)
+       basic (D v1 ** OSZCP?)
              (BOP d OP_CMP ds)
              (D v1 ** OF? ** SF? ** PF? ** CF ~= ltB v1 v2 ** ZF ~= (v1==v2))).
 Proof. 
@@ -1527,20 +1529,20 @@ Ltac basicCMP_ZC :=
 
 (* Special cases *)
 Lemma CMP_RI_rule (r1:Reg) v1 (v2:DWORD):
-  |-- basic (r1 ~= v1 ** OSZCP_Any) (CMP r1, v2)
+  |-- basic (r1 ~= v1 ** OSZCP?) (CMP r1, v2)
             (let: (carry,res) := sbbB false v1 v2 in
              r1 ~= v1 ** OSZCP (computeOverflow v1 v2 res) (msb res)
                          (res == #0) carry (lsb res)).
 Proof. basicCMP. Qed.
 
 Lemma CMP_RbI_rule (r1:BYTEReg) (v1 v2:BYTE):
-  |-- basic (BYTEregIs r1 v1 ** OSZCP_Any) (BOP false OP_CMP (DstSrcRI false r1 v2))
+  |-- basic (BYTEregIs r1 v1 ** OSZCP?) (CMP r1, v2)
             (let: (carry,res) := sbbB false v1 v2 in
   BYTEregIs r1 v1 ** OSZCP (computeOverflow v1 v2 res) (msb res) (res == #0) carry (lsb res)).
-Proof. basicCMP. Qed.
+Proof. rewrite /BYTEtoDWORD/makeBOP low_catB. basicCMP. Qed.
 
 Lemma CMP_RM_rule (pd:BITS 32) (r1 r2:Reg) offset (v1 v2:DWORD) :
-  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
+  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (CMP r1, [r2+offset])
             (let (carry,res) := sbbB false v1 v2 in
              r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 **
@@ -1552,7 +1554,7 @@ sbazooka.
 Qed. 
 
 Lemma CMP_MR_rule (pd:BITS 32) (r1 r2:Reg) offset (v1 v2:DWORD):
-  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
+  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (CMP [r2+offset], r1)
             (let (carry,res) := sbbB false v2 v1 in
              r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 **
@@ -1563,9 +1565,14 @@ case E: (sbbB false v2 v1) => [carry res].
 sbazooka. 
 Qed. 
 
+Lemma CMP_MR_ZC_rule (pd: DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
+  |-- basic (r1 ~= pd ** r2 ~= v2 ** pd +# offset :-> v1 ** OSZCP?) (CMP [r1+offset], r2)
+            (r1 ~= pd ** r2 ~= v2 ** pd +# offset :-> v1 ** OF? ** SF? ** PF? ** 
+                        CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
+Proof. basicCMP_ZC. Qed.
 
 Lemma CMP_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
-  |-- basic (r1 ~= v1 ** r2 ~= v2 ** OSZCP_Any) (CMP r1, r2)
+  |-- basic (r1 ~= v1 ** r2 ~= v2 ** OSZCP?) (CMP r1, r2)
             (let: (carry,res) := sbbB false v1 v2 in
              r1 ~= v1 ** r2 ~= v2 **
               OSZCP (computeOverflow v1 v2 res) (msb res)
@@ -1574,38 +1581,38 @@ Proof. basicCMP. destruct (sbbB false v1 v2); by ssimpl. Qed.
 
 
 Lemma CMP_RI_ZC_rule (r1:Reg) v1 (v2:DWORD):
-  |-- basic (r1 ~= v1 ** OSZCP_Any) (CMP r1, v2)
+  |-- basic (r1 ~= v1 ** OSZCP?) (CMP r1, v2)
             (r1 ~= v1 ** OF? ** SF? ** PF? ** CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed. 
 
 Lemma CMP_MbR_ZC_rule (r1:Reg) (r2: BYTEReg) (p:DWORD) (v1 v2:BYTE):
-  |-- basic (r1 ~= p ** BYTEregIs r2 v2 ** p :-> v1 ** OSZCP_Any) (CMP [r1], r2)
+  |-- basic (r1 ~= p ** BYTEregIs r2 v2 ** p :-> v1 ** OSZCP?) (CMP [r1], r2)
             (r1 ~= p ** BYTEregIs r2 v2 ** p :-> v1 ** OF? ** SF? ** PF? ** 
                         CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed. 
 
 Lemma CMP_MbI_ZC_rule (r1:Reg) (p:DWORD) (v1 v2:BYTE):
-  |-- basic (r1 ~= p ** p :-> v1 ** OSZCP_Any) (CMP BYTE [r1], v2)
+  |-- basic (r1 ~= p ** p :-> v1 ** OSZCP?) (CMP BYTE [r1], v2)
             (r1 ~= p ** p :-> v1 ** OF? ** SF? ** PF? ** 
                          CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed. 
 
 Lemma CMP_MbxI_ZC_rule (r1:Reg) (r2:NonSPReg) (p ix:DWORD) (v1 v2:BYTE):
-  |-- basic (r1 ~= p ** r2 ~= ix ** addB p ix :-> v1 ** OSZCP_Any) (CMP BYTE [r1 + r2 + 0], v2)
+  |-- basic (r1 ~= p ** r2 ~= ix ** addB p ix :-> v1 ** OSZCP?) (CMP BYTE [r1 + r2 + 0], v2)
             (r1 ~= p ** r2 ~= ix ** addB p ix :-> v1 ** OF? ** SF? ** PF? ** 
                          CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC; rewrite /scaleBy; by ssimpl. Qed. 
 
 
 Lemma CMP_RbI_ZC_rule (r1:BYTEReg) (v1 v2:BYTE):
-  |-- basic (BYTEregIs r1 v1 ** OSZCP_Any) (BOP false OP_CMP (DstSrcRI false r1 v2))
+  |-- basic (BYTEregIs r1 v1 ** OSZCP?) (BOP false OP_CMP (DstSrcRI false r1 v2))
             (BYTEregIs r1 v1 ** OF? ** SF? ** PF? ** 
                          CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed.
 
 
 Lemma XOR_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
-  |-- basic (r1~=v1 ** r2~=v2 ** OSZCP_Any) (XOR r1, r2)
+  |-- basic (r1~=v1 ** r2~=v2 ** OSZCP?) (XOR r1, r2)
             (r1~=xorB v1 v2 ** r2~=v2 ** OSZCP false (msb (xorB v1 v2))
                             (xorB v1 v2 == #0) false (lsb (xorB v1 v2))).  
 Proof.
@@ -1645,7 +1652,7 @@ Qed.
 (* Generic AND *)
 Lemma AND_rule (ds:DstSrc true) (v1: DWORD) :
    |-- specAtDstSrc ds (fun D v2 =>
-       basic (D v1 ** OSZCP_Any)
+       basic (D v1 ** OSZCP?)
              (BOP true OP_AND ds)
              (let v:= andB v1 v2 in
               D v ** OSZCP false (msb v) (v == #0) false (lsb v))).
@@ -1791,7 +1798,7 @@ Qed.
 
 (* AND r1, r2 *)
 Corollary AND_RR_rule (r1 r2:Reg) v1 (v2:DWORD) :
-  |-- basic (r1~=v1 ** r2 ~= v2 ** OSZCP_Any)
+  |-- basic (r1~=v1 ** r2 ~= v2 ** OSZCP?)
             (AND r1, r2)
             (let v := andB v1 v2 in r1~=v ** r2 ~= v2 **
              OSZCP false (msb v) (v == #0) false (lsb v)).
@@ -1799,7 +1806,7 @@ Proof. basicapply (AND_rule (DstSrcRR true r1 r2)). Qed.
 
 (* AND r1, [r2 + offset] *)
 Corollary AND_RM_rule (pbase:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) :
-  |-- basic (r1~=v1 ** OSZCP_Any)
+  |-- basic (r1~=v1 ** OSZCP?)
             (AND r1, [r2 + offset])
             (let v:= andB v1 v2 in r1~=v ** OSZCP false (msb v) (v == #0) false (lsb v)) 
       @ (r2 ~= pbase ** pbase +# offset :-> v2).
@@ -1810,17 +1817,17 @@ Qed.
 
 Corollary AND_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (AND r1, [r2 + offset]) (r1~=andB v1 v2)
-             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any).
+             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
 autorewrite with push_at. 
 basicapply (AND_RM_rule (pbase:=pd) (r1:=r1) (r2:=r2) (v1:=v1) (v2:=v2) (offset:=offset)). 
-rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka. 
+rewrite /OSZCP/stateIsAny/snd. sbazooka. 
 Qed.   
 
 
 (* AND r, v *)
 Lemma AND_RI_rule (r:Reg) v1 (v2:DWORD) :
-  |-- basic (r~=v1 ** OSZCP_Any)
+  |-- basic (r~=v1 ** OSZCP?)
             (AND r, v2)
             (let v:= andB v1 v2 in r~=v ** OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof. basicapply (AND_rule (DstSrcRI true r v2)). Qed. 
@@ -1828,17 +1835,18 @@ Proof. basicapply (AND_rule (DstSrcRI true r v2)). Qed.
  
 Lemma OR_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
   orB v1 v2 = v ->
-  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
+  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (OR r1, [r2 + offset])
             (r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof.
   move => E. apply TRIPLE_basic => R.
   repeat autounfold with eval. rewrite /evalDstSrc/evalDstR.
-  triple_apply evalReg_rule. 
+  triple_apply evalReg_rule.
+  unfold natAsDWORD.  
   triple_apply evalMemSpecNone_rule. 
   triple_apply triple_letGetDWORDSep. 
-  triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
+  triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP. 
   triple_apply triple_doSetFlagSep. 
   triple_apply triple_doSetFlagSep. rewrite E.
   triple_apply triple_doUpdateZPS. 
@@ -1847,7 +1855,7 @@ Qed.
 
 Lemma XOR_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
   xorB v1 v2 = v ->
-  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any)
+  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (XOR r1, [r2 + offset])
             (r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP false (msb v) (v == #0) false (lsb v)).
@@ -1857,6 +1865,7 @@ Proof.
   repeat autounfold with eval. rewrite /evalDstSrc/evalDstR.
   triple_apply evalReg_rule. 
   triple_apply evalMemSpecNone_rule. 
+  unfold natAsDWORD. 
   triple_apply triple_letGetDWORDSep. 
   triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
   triple_apply triple_doSetFlagSep. 
@@ -1867,25 +1876,25 @@ Qed.
 
 Corollary OR_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (OR r1, [r2 + offset]) (r1~=orB v1 v2)
-             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any).
+             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
 autorewrite with push_at. 
 basicapply (@OR_RM_rule pd r1 r2 v1 v2 offset (orB v1 v2) (refl_equal _)).  
-rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka. 
+rewrite /OSZCP/stateIsAny/snd. sbazooka. 
 Qed.   
 
 Corollary XOR_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (XOR r1, [r2 + offset]) (r1~=xorB v1 v2)
-             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP_Any).
+             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
 autorewrite with push_at. 
 basicapply (@XOR_RM_rule pd r1 r2 v1 v2 offset (xorB v1 v2) (refl_equal _)).  
-rewrite /OSZCP/OSZCP_Any/stateIsAny/snd. sbazooka. 
+rewrite /OSZCP/stateIsAny/snd. sbazooka. 
 Qed.   
 
 
 Lemma TEST_self_rule (r:Reg) (v:DWORD) :
-  |-- basic (r ~= v ** OSZCP_Any) (TEST r, r)
+  |-- basic (r ~= v ** OSZCP?) (TEST r, r)
             (r ~= v ** OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof.
   apply TRIPLE_basic => R.
@@ -1907,8 +1916,8 @@ Qed.
 
 Lemma SHL_RI_rule (r:Reg) (v:DWORD) (count:nat):
   count < 32 -> 
-  |-- basic (r~=v ** OSZCP_Any) (SHL r, count)
-            (r~=iter count shlB v ** OSZCP_Any).
+  |-- basic (r~=v ** OSZCP?) (SHL r, count)
+            (r~=iter count shlB v ** OSZCP?).
 Proof.
   move => BOUND. 
   apply TRIPLE_basic => R.
@@ -1922,7 +1931,7 @@ Proof.
 
   + 
   triple_apply triple_pre_introFlags => o s z c p. 
-  rewrite /OSZCP_Any/OSZCP/stateIsAny. 
+  rewrite /OSZCP/stateIsAny. 
   triple_apply triple_doSetFlagSep. 
   case E': count' => [| count''].     
   + triple_apply triple_doSetFlagSep. 
@@ -1936,8 +1945,8 @@ Qed.
 
 Lemma SHR_RI_rule (r:Reg) (v:DWORD) (count:nat):
   count < 32 -> 
-  |-- basic (r~=v ** OSZCP_Any) (SHR r, count)
-            (r~=iter count shrB v ** OSZCP_Any).
+  |-- basic (r~=v ** OSZCP?) (SHR r, count)
+            (r~=iter count shrB v ** OSZCP?).
 Proof.
   move => BOUND. 
   apply TRIPLE_basic => R.
@@ -1951,7 +1960,7 @@ Proof.
 
   + 
   triple_apply triple_pre_introFlags => o s z c p. 
-  rewrite /OSZCP_Any/OSZCP/stateIsAny.
+  rewrite /OSZCP/stateIsAny.
   triple_apply triple_doSetFlagSep. 
   case E': count' => [| count''].     
   + triple_apply triple_doSetFlagSep. 

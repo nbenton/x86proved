@@ -70,7 +70,7 @@ Forall p, Forall x, Forall i j: DWORD,
  (table_precond vsbrs x //\\ safe @ (x \notin [seq fst i | i<-vsbrs] /\\ EIP ~=j)
   -->>
  safe @ (EIP ~= i))
- @ (valuepred p x) (* was (EAX ~= p ** EDI? ** p :-> x ** OSZCP_Any) *)
+ @ (valuepred p x) (* was (EAX ~= p ** EDI? ** p :-> x ** OSZCP?) *)
  <@ (i -- j :-> switch vsbrs).
 
 (* little lemma about sequence membership *)
@@ -173,7 +173,7 @@ Definition ifEqDwordStarEAX (b:DWORD) (dest:DWORD) : program :=
   JE dest.
 
 Lemma condbrDwordStarEAX (b:DWORD) dest : 
-    |-- condbrspec ifEqDwordStarEAX (fun p v:DWORD => (EAX ~= p ** EDI? ** p :-> v ** OSZCP_Any)) b dest.
+    |-- condbrspec ifEqDwordStarEAX (fun p v:DWORD => (EAX ~= p ** EDI? ** p :-> v ** OSZCP?)) b dest.
 Proof.
 rewrite /ifEqDwordStarEAX /condbrspec.
 specintros => p v i j.
@@ -201,7 +201,7 @@ apply landL1.
 cancel1.
 
 sdestructs =>/eqP ->.
-rewrite /OSZCP_Any/stateIsAny.
+rewrite /stateIsAny.
 by sbazooka.
 
 rewrite <- spec_reads_frame.
@@ -210,7 +210,7 @@ apply limplValid.
 apply landL2.
 cancel1.
 sdestructs =>/eqP ->.
-rewrite /OSZCP_Any/stateIsAny.
+rewrite /stateIsAny.
 by sbazooka.
 Qed.
 
@@ -222,7 +222,7 @@ Definition ifEqByter (b:BYTE) (dest:DWORD) : program :=
   JE dest.
 
 Lemma condbrByter (b:BYTE) dest : 
-  |-- condbrspec ifEqByter (fun (p:unit) => fun (v:BYTE) => (BYTEregIs r v ** OSZCP_Any)) b dest.
+  |-- condbrspec ifEqByter (fun (p:unit) => fun (v:BYTE) => (BYTEregIs r v ** OSZCP?)) b dest.
 Proof.
 rewrite /ifEqByter /condbrspec.
 specintros => _ v i j.
@@ -235,7 +235,7 @@ by ssimpl.
 specapply JZ_rule.
 sbazooka.
 
-rewrite /OSZCP_Any. rewrite low_catB. 
+rewrite low_catB. 
 specsplit; rewrite <- spec_reads_frame; autorewrite with push_at.
 rewrite <- spec_later_weaken.
 apply limplValid.
@@ -358,7 +358,7 @@ sbazooka.
 Qed.
 
 Lemma bytenextcons : forall s1 v s2,
-   |-- basic (byteseqsplit s1 (v::s2)) bytenext (byteseqsplit (s1 ++ [:: v]) s2) @ OSZCP_Any.
+   |-- basic (byteseqsplit s1 (v::s2)) bytenext (byteseqsplit (s1 ++ [:: v]) s2) @ OSZCP?.
 move => s1 v s2; rewrite /byteseqsplit /bytenext.
 specintros => q last.
 rewrite seqMemIsCons.

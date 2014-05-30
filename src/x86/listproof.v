@@ -19,7 +19,7 @@ Lemma inlineHead_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
 Proof. 
 rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. unfold_program.
 rewrite /stateIsAny.
-specintros => q old. 
+specintros => q old.
 specapply MOV_RM0_rule. sbazooka. 
 rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. cancel1. by ssimpl.
@@ -59,7 +59,6 @@ assert (H:= subB_equiv_addB_negB (pb+#8) #8). rewrite /subB in H.
 rewrite E0 /snd addB_negBn in H. 
 rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.  
 
-rewrite /ConstImm (* adds a "#" to the literal. Maybe change SUB_RI_rule instead. *).
 specapply SUB_RI_rule. sbazooka. 
 
 specapply MOV_M0R_rule. rewrite E0. sbazooka.  
@@ -69,7 +68,7 @@ specapply MOV_MR_rule. by ssimpl.
 (* Final stuff *)
 rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. apply landL2. cancel1.
-rewrite /OSZCP/OSZCP_Any/listSeg-/listSeg. rewrite /stateIsAny. sbazooka.
+rewrite /OSZCP/listSeg-/listSeg. rewrite /stateIsAny. sbazooka.
 Qed. 
 
 Lemma callCons_correct (r1 r2: Reg) heapInfo (i j h t e: DWORD) vs :
@@ -93,13 +92,12 @@ specsplit.
 (* failure case *)
 autorewrite with push_at.
 
-(* EDI: should be easier to identify this *)
-rewrite {6}/stateIsAny. specintros => olddi.  
+unhideReg EDI => olddi. 
 (* mov EDI, 0 *)
-rewrite /ConstImm. specapply MOV_RI_rule. sbazooka. 
+specapply MOV_RI_rule. sbazooka. 
 
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2. 
-autorewrite with push_at. cancel1. ssimpl. by apply: lorR1. 
+autorewrite with push_at. cancel1. ssimpl. apply: lorR1. by rewrite /natAsDWORD.
 
 (* success case *)
 autorewrite with push_at. 
@@ -112,6 +110,6 @@ rewrite <-spec_later_weaken.
 rewrite <-spec_reads_frame. 
 apply: limplAdj. autorewrite with push_at. 
 apply: landL2. cancel1. 
-rewrite /OSZCP/OSZCP_Any/stateIsAny. sbazooka. 
+rewrite /OSZCP/stateIsAny. sbazooka. 
 apply: lorR2. sbazooka. 
 Qed. 

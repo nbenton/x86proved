@@ -77,7 +77,7 @@ Definition fastcall_void1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 false)) : spe
     safe @ (EIP ~= iret ** ECX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** post FS v) -->>
     safe @ (EIP ~= f    ** ECX ~= v ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS  v) 
   ) 
-  @ (EAX? ** EDX? ** OSZCP_Any). 
+  @ (EAX? ** EDX? ** OSZCP?). 
 
 Definition fastcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec :=
   Forall arg:DWORD, 
@@ -87,7 +87,7 @@ Definition fastcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : s
     safe @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ECX?       ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** snd (post FS arg)) -->>
     safe @ (EIP ~= f    ** EAX?          ** ECX ~= arg ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS arg) 
   ) 
-  @ (EDX? ** OSZCP_Any). 
+  @ (EDX? ** OSZCP?). 
 
 (* This is a bit gross: we need to say that there is a DWORD extra available on the stack, for saving EBP *)
 Definition stdcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec :=
@@ -99,7 +99,7 @@ Definition stdcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : sp
     safe @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
     safe @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg) 
   ) 
-  @ (EBP ~= ebp ** ECX? ** EDX? ** OSZCP_Any ** sp-#12 :-> ?:DWORD). 
+  @ (EBP ~= ebp ** ECX? ** EDX? ** OSZCP? ** sp-#12 :-> ?:DWORD). 
 
 Definition cdecl_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec :=
   Forall arg:DWORD, 
@@ -109,7 +109,7 @@ Definition cdecl_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec
     safe @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp-#8 ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
     safe @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg) 
   ) 
-  @ (ECX? ** EDX? ** OSZCP_Any). 
+  @ (ECX? ** EDX? ** OSZCP?). 
 
 (*---------------------------------------------------------------------------
     Statement that the body of a nonvoid unary function meets a specification,
@@ -119,7 +119,7 @@ Definition cdecl_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec
 Definition fastcall_nonvoid1_impMeetsSpec (FS: FunSpec (mkFunSig 1 true)) (FI: programWithSig (mkFunSig 1 true)) : spec :=
   Forall arg:DWORD, 
   basic (EAX?          ** ECX ~= arg ** pre FS arg) (FI ECX)
-        (EAX ~= fst (post FS arg) ** ECX? ** snd (post FS arg)) @ (EDX? ** OSZCP_Any).
+        (EAX ~= fst (post FS arg) ** ECX? ** snd (post FS arg)) @ (EDX? ** OSZCP?).
 
 (*---------------------------------------------------------------------------
     Statement that the body of a nonvoid unary function meets a specification,
@@ -129,8 +129,8 @@ Definition fastcall_nonvoid1_impMeetsSpec (FS: FunSpec (mkFunSig 1 true)) (FI: p
   ---------------------------------------------------------------------------*)
 Definition stacked_nonvoid1_impMeetsSpec (FS: FunSpec (mkFunSig 1 true)) (FI: programWithSig (mkFunSig 1 true)) : spec :=
   Forall arg:DWORD, Forall ebp:DWORD, 
-  basic (EAX?          ** EBP ~= ebp ** ebp +# 8 :-> arg     ** pre FS arg) (FI [EBP+8])
-        (EAX ~= fst (post FS arg) ** EBP?       ** ebp +# 8 :-> ?:DWORD ** snd (post FS arg)) @ (ECX? ** EDX? ** OSZCP_Any).
+  basic (EAX?          ** EBP ~= ebp ** ebp +# 8 :-> arg     ** pre FS arg) (FI [EBP+8]%ms)
+        (EAX ~= fst (post FS arg) ** EBP?       ** ebp +# 8 :-> ?:DWORD ** snd (post FS arg)) @ (ECX? ** EDX? ** OSZCP?).
 
 Lemma fastcall_nonvoid1_defCorrect (f f': DWORD) FS FI :
   |-- fastcall_nonvoid1_impMeetsSpec FS FI ->
@@ -203,8 +203,8 @@ set C := (PUSH EBP;; _).
 unfold_program. specintro => f''.
 
 (* It's rather unpleasant that we have to do this! *)
-specapply (@stackframe_rule (FI [EBP+8]) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP_Any) 
-                                          (snd (post FS arg) ** EAX ~= fst (post FS arg) ** ECX? ** EDX? ** OSZCP_Any ** sp-#4 :-> ?:DWORD) ebp (sp-#8)). 
+specapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?) 
+                                          (snd (post FS arg) ** EAX ~= fst (post FS arg) ** ECX? ** EDX? ** OSZCP? ** sp-#4 :-> ?:DWORD) ebp (sp-#8)). 
 
 split; last first. rewrite /C. by ssimpl. 
 autorewrite with bitsHints. replace (8+4) with 12 by done. by ssimpl.
@@ -236,11 +236,11 @@ rewrite /incSpec/incBody/stacked_nonvoid1_impMeetsSpec/pre/post/fst/snd.
 specintros => arg ebp. 
 autorewrite with push_at.
 basicapply MOV_RanyM_rule.
-rewrite {1}/OSZCP_Any/OSZCP{3 4 5 6 7}/stateIsAny.
+rewrite /OSZCP{3 4 5 6 7}/stateIsAny.
 specintros => f1 f2 f3 f4 f5.
 eapply basic_basic.  apply INC_R_rule. 
 rewrite /OSZCP. sbazooka. 
-rewrite /OSZCP_Any/OSZCP/stateIsAny. 
+rewrite /OSZCP/stateIsAny. 
 sbazooka. 
 Qed. 
 
@@ -311,7 +311,7 @@ rewrite <-spec_later_weaken.
 rewrite /stateIsAny. eapply SAFEY; sbazooka. 
 Qed. 
 
-Definition scratch := EAX? ** ECX? ** EDX? ** OSZCP_Any.
+Definition scratch := EAX? ** ECX? ** EDX? ** OSZCP?.
 
 Definition calleeSpec_stdcall1 (f: DWORD) (P Q: DWORD -> SPred) : spec :=
   Forall v:DWORD, 
@@ -339,9 +339,9 @@ Fixpoint regIsIn (r: NonSPReg) (rs: seq NonSPReg) :=
 Lemma stdcall1_call f P Q (r: NonSPReg):
   |> calleeSpec_stdcall1 f P Q |--
      Forall v: DWORD, Forall esp: DWORD,
-     basic (r ~= v ** scratchedExcept r scratchRegisters ** OSZCP_Any ** P v)
+     basic (r ~= v ** scratchedExcept r scratchRegisters ** OSZCP? ** P v)
            (call_std_with 1 f v) 
-           ((if regIsIn r scratchRegisters then r? else r ~= v) ** scratchedExcept r scratchRegisters ** OSZCP_Any ** Q v) @ 
+           ((if regIsIn r scratchRegisters then r? else r ~= v) ** scratchedExcept r scratchRegisters ** OSZCP? ** Q v) @ 
            (ESP ~= esp ** esp-#4 :-> ?:DWORD ** esp-#8 :-> ?:DWORD).
 
 Proof.
