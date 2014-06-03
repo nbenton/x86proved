@@ -84,14 +84,14 @@ x86\testrun.vo \
 x86\matcher.vo \
 x86\cstringimp.vo \
 x86\cfunc.vo \
-# x86\lib\regexp\stringbuff.vo \
-# x86\lib\regexp\compiler.vo \
-# x86\lib\regexp\interfaceATBR.vo \
-# x86\lib\regexp\regexpsyntax.vo \
-# x86\lib\regexp\exampleregexp.vo \
-# x86\lib\regexp\regexpexe.vo \
+# x86\lib\regexp\stringbuff.vo 
+# x86\lib\regexp\compiler.vo 
+# x86\lib\regexp\interfaceATBR.vo 
+# x86\lib\regexp\regexpsyntax.vo 
+# x86\lib\regexp\exampleregexp.vo 
+# x86\lib\regexp\regexpexe.vo 
 x86\win\pecoff.vo \
-# x86\win\hexbin.vo \
+# x86\win\hexbin.vo 
 x86\cfuncspec.vo \
 x86\globals.vo \
 x86\basicprog.vo \
@@ -109,7 +109,7 @@ x86\win\helloworld.exe \
 x86\win\tell.exe \
 x86\win\usecounter.exe \
 x86\win\importer.exe \
-# x86\win\hexbinexe.exe \
+# x86\win\hexbinexe.exe 
 
 DLLTARGETS = \
 x86\win\ask.dll \
