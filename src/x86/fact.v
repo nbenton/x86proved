@@ -42,13 +42,13 @@ Definition main (printfSlot: DWORD) :=
     LOCAL format;   
       MOV EBX, 10;; callproc fact;;
       MOV EDI, printfSlot;; 
-      call_cdecl3 [EDI] format EBX EAX;;
+      call_cdecl3 [EDI]%ms format EBX EAX;;
       MOV EBX, 12;; callproc fact;;
       MOV EDI, printfSlot;; 
-      call_cdecl3 [EDI] format EBX EAX;;
+      call_cdecl3 [EDI]%ms format EBX EAX;;
       RET 0;;
     format:;; 
-      ds "Factorial of %d is %d";; db #10;; db #0.
+      ds "Factorial of %d is %d";; db 10;; db 0.
 
 Compute assembleToString #x"C0000004" (main #x"C0000000"). 
 (*=End *)

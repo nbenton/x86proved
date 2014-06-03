@@ -52,7 +52,7 @@ Record DLLExport := {
 
 (* We need character, string and byte sequence writers *)
 Instance charWriter : Writer ascii :=
-  fun c => writeBYTE #(nat_of_ascii c).
+  fun c => writeBYTE (nat_of_ascii c).
 
 Instance stringWriter : Writer string :=
   fix sw s :=
@@ -77,7 +77,7 @@ END:;.
 (* Section 2.2: Signature *)
 Definition PEsig:program :=
   ds "PE"%string;;
-  dw #0.
+  dw 0.
 
 (* Section 2.3: COFF File Header *)
 Definition makeCOFFFileHeader
@@ -90,10 +90,10 @@ Definition makeCOFFFileHeader
   (Characteristics: WORD) : program :=
 
   dw Machine;;
-  dw #NumberOfSections;;
+  dw NumberOfSections;;
   dd TimeDateStamp;;
   dd PointerToSymbolTable;;
-  dd #NumberOfSymbols;;
+  dd NumberOfSymbols;;
   dw SizeOfOptionalHeader;;
   dw Characteristics.
 
@@ -128,8 +128,8 @@ Definition makeMinimalHeader (targetType : TargetType) numberOfSections opthdrsi
   makeCOFFFileHeader
     IMAGE_FILE_MACHINE_i386
     numberOfSections (* Number of sections *)
-    #0             (* Timestamp *)
-    #0             (* Symbol table *)
+    0             (* Timestamp *)
+    0             (* Symbol table *)
     0              (* Number of symbols *)
     opthdrsize     (* Size of optional header *)
     (IMAGE_FILE_32BIT_MACHINE ||
@@ -151,16 +151,16 @@ Definition dv (v: Version) : program :=
 (* But this doesn't work yet because the assembler needs the file
    to match the memory layout *)
 Definition fileAlignBits := 9.
-Definition fileAlign: DWORD := iter fileAlignBits shlB #1.
+Definition fileAlign: DWORD := iter fileAlignBits shlB 1.
 
 (* Once mapped into memory the sections must be on 4K boundaries *)
 Definition sectAlignBits := 12.
-Definition sectAlign: DWORD := iter sectAlignBits shlB #1.
+Definition sectAlign: DWORD := iter sectAlignBits shlB 1.
 
 Fixpoint fixedString n s :=
   match n, s with
   | 0, _ => prog_skip
-  | n.+1, EmptyString => db #0;; fixedString n s
+  | n.+1, EmptyString => db 0;; fixedString n s
   | n.+1, String c s => db (fromNat (nat_of_ascii c));; fixedString n s
   end.
 
@@ -249,10 +249,10 @@ Fixpoint makeSections dRVA pointerToRawData endHeaders (sections: seq section)
         dRVA sectionStart;;
         dd sizeOfRawData;;
         dd pointerToRawData;;
-        dd #0;; (* PointerToRelocations *)
-        dd #0;; (* PointerToLinenumbers *)
-        dw #0;; (* NumberOfRelocations *)
-        dw #0;; (* NumberOfLinenumbers *)
+        dd 0;; (* PointerToRelocations *)
+        dd 0;; (* PointerToLinenumbers *)
+        dw 0;; (* NumberOfRelocations *)
+        dw 0;; (* NumberOfLinenumbers *)
         dd characteristics) :: 
         headers
       )
@@ -281,8 +281,8 @@ Fixpoint makeSections dRVA pointerToRawData endHeaders (sections: seq section)
 
 Fixpoint makeString (s:string) :=
   if s is String c s
-  then db #(nat_of_ascii c);; makeString s
-  else db #0.
+  then db (nat_of_ascii c);; makeString s
+  else db 0.
 
 (* [kEAT] is the continuation program writing the beginning of the Export Address Table
    [kENPT] is the continuation program writing the beginning of the Export Name Pointer Table
@@ -321,12 +321,12 @@ Definition makeExportTables dRVA (exports : seq DLLExport) baseEAT baseENPT base
 .
 
 Definition makeExportDirectoryTable dRVA (nbEntries baseName baseEAT baseENPT baseEOT : DWORD) :=
-  dd #0;; (* Reserved *)
-  dd #0;; (* Time stamp *)
-  dw #0;; (* Major version *)
-  dw #0;; (* Minor version *)
+  dd 0;; (* Reserved *)
+  dd 0;; (* Time stamp *)
+  dw 0;; (* Major version *)
+  dw 0;; (* Minor version *)
   dRVA baseName;; (* Name RVA *)
-  dd #1;; (* Ordinal base *)
+  dd 1;; (* Ordinal base *)
   dd nbEntries;; (* # of entries in Address Table *)
   dd nbEntries;; (* # of entries in Name Pointer and Ordinal Tables *)
   dRVA baseEAT;; (* EAT RVA *)
@@ -360,11 +360,11 @@ Fixpoint makeIATsILTs dRVA (imports: seq (DWORD*(DWORD*DLLImport))) (importAddrs
            LOCAL NAME;
              computeIATandILTforOneDLL entries addrs (IAT;; addr:;; dRVA NAME) (ILT;; dRVA NAME);;
            NAME:;;
-             dw #0;; (* hint *)
+             dw 0;; (* hint *)
              makeString n;;
              align 1 (* align on even byte *)
          end
-       | _, _ => makeIATsILTs dRVA imports importAddrs (IAT;; dd #0) (ILT;; dd #0)
+       | _, _ => makeIATsILTs dRVA imports importAddrs (IAT;; dd 0) (ILT;; dd 0)
       end
     ) entries addrs (IATs;; align 2;; IATbase:;) (ILTs;; align 2;; ILTbase:;)
   | _, _ => IATs;; ILTs 
@@ -379,8 +379,8 @@ Fixpoint makeImportDirectory dRVA (imports: seq (DWORD*(DWORD*DLLImport))) endID
   then
     LOCAL NAME; 
       dRVA ILT;;  (* ILT RVA *)
-      dd #0;;     (* Time stamp *)
-      dd #0;;     (* Forwarder chain *)
+      dd 0;;     (* Time stamp *)
+      dd 0;;     (* Forwarder chain *)
       dRVA NAME;; (* Name RVA *)
       dRVA IAT;;  (* IAT RVA *)
       makeImportDirectory dRVA imports endIDT;;
@@ -388,7 +388,7 @@ Fixpoint makeImportDirectory dRVA (imports: seq (DWORD*(DWORD*DLLImport))) endID
       makeString name
   else
   (* The table must end with an empty entry *)
-    dd #0;; dd #0;; dd #0;; dd #0;; dd #0;;
+    dd 0;; dd 0;; dd 0;; dd 0;; dd 0;;
     endIDT:;.
 
 Open Scope instr_scope. Open Scope ring_scope.
@@ -407,11 +407,11 @@ imageBase:;;
   MSDOSStub;;
   PEsig;;
   makeMinimalHeader targetType (size sections) (low 16 (endOptionalHeader - startOptionalHeader));;
-  makeSections dRVA fileAlign endHeaders sections nil nil #0 #0 #0 #0 #0
+  makeSections dRVA fileAlign endHeaders sections nil nil 0 0 0 0 0
   (fun BaseOfCode BaseOfData SizeOfCode SizeOfInitializedData SizeOfUninitializedData => 
 startOptionalHeader:;;
   dw #x"010B";;    (* PE32 format *)
-  db #11;; db #0;; (* linker version, major & minor numbers *) 
+  db 11;; db 0;; (* linker version, major & minor numbers *) 
   dd SizeOfCode;; 
   dd SizeOfInitializedData;; 
   dd SizeOfUninitializedData;;
@@ -419,16 +419,16 @@ startOptionalHeader:;;
   dRVA BaseOfCode;; 
   dRVA BaseOfData;;
   dd imageBase;;
-  dd sectAlign;;                   (* SectionAlignment *) 
-  dd fileAlign;;                   (* FileAlignment *)
-  dv (Build_Version #6 #0);;       (* OperatingSystemVersion *)
-  dv (Build_Version #0 #0);;       (* ImageVersion *)
-  dv (Build_Version #6 #0);;       (* SubsystemVersion *)
-  dd #0;;                          (* Win32VersionValue, must be zero *)
+  dd sectAlign;;                (* SectionAlignment *) 
+  dd fileAlign;;                (* FileAlignment *)
+  dv (Build_Version 6 0);;      (* OperatingSystemVersion *)
+  dv (Build_Version 0 0);;      (* ImageVersion *)
+  dv (Build_Version 6 0);;      (* SubsystemVersion *)
+  dd 0;;                        (* Win32VersionValue, must be zero *)
   dd (endFile - imageBase);;    (* SizeOfImage *)
   dd (endHeaders - imageBase);; (* SizeOfHeaders *)
-  dd #0;;                          (* CheckSum *)
-  dw #IMAGE_SUBSYSTEM_WINDOWS_CUI;;(* Subsystem *)
+  dd 0;;                        (* CheckSum *)
+  dw IMAGE_SUBSYSTEM_WINDOWS_CUI;;(* Subsystem *)
   dw (IMAGE_DLL_CHARACTERISTICS_NO_SEH ||
      IMAGE_DLL_CHARACTERISTICS_NX_COMPAT ||
      if targetType is DLL then IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE else #x"0000");; (* DllCharacteristics *)
@@ -436,41 +436,41 @@ startOptionalHeader:;;
   dd #x"00001000";;               (* SizeOfStackCommit *)
   dd #x"00100000";;               (* SizeOfHeapReserve *)
   dd #x"00001000";;               (* SizeOfHeapCommit *)
-  dd #0;;                         (* LoaderFlags, must be zero *)
-  dd #16;;                        (* NumberOfRvaAndSizes *)
+  dd 0;;                          (* LoaderFlags, must be zero *)
+  dd 16;;                         (* NumberOfRvaAndSizes *)
 startDirectories:;;
   (* Exports *)
   dRVA exportTableStart;; dd (exportTableEnd - exportTableStart);;
   (* Imports *)
   dRVA importTableStart;; dd (importTableEnd - importTableStart);;
   (* Resources *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Exceptions *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Certificates *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Base relocations *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Debug *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Architecture *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Global Ptr *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* TLS Table *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Load Config *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Bound Import *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* IAT *)
   dRVA IATStart;; dd (IATEnd - IATStart);;
   (* Delay Import Descriptor *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* CLR Runtime Header *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
   (* Reserved *)
-  dd #0;; dd #0;;
+  dd 0;; dd 0;;
 endOptionalHeader:;)
 ;;
 endFile:;.
@@ -486,7 +486,7 @@ baseName:;;
   startEDT:;;
   makeExportDirectoryTable
      dRVA
-     #(size exports)
+     (size exports)
      baseName
      baseEAT
      baseENPT
@@ -562,7 +562,7 @@ with applyTopImps {T} (local : (DWORD -> T) -> T) k nameDLL entries addrs import
       exports sections entry t
   end.
 
-Definition applyClosedTopProg {T} local k := applyTopProg (T:=T) local k nil nil nil nil #0.
+Definition applyClosedTopProg {T} local k := applyTopProg (T:=T) local k nil nil nil nil 0.
 
 Notation "'IMPORTDLL' s ';' p" := (topprog_importdll s p) 
   (at level 65, right associativity).
@@ -616,7 +616,7 @@ with computeImportsOneDLL (t: topimps) nameDLL entries addrs imports importAddrs
 
 Definition makeRange X (xs: seq X) f :=
   if xs is _::_ then LOCAL startLabel; LOCAL endLabel; f startLabel endLabel
-  else f #0 #0.
+  else f 0 0.
 
 (*=computeRVAsIn *)
 Definition computeRVAsIn (f: (DWORD -> program) -> program) : program :=
@@ -654,7 +654,7 @@ Proof. apply MSDOSStubHasSize. Qed.
 
 Lemma makeMinimalHeader_interp (i:DWORD) j  targetType numberOfSections opthdrsize :
   i -- j :-> makeMinimalHeader targetType numberOfSections opthdrsize
-  |-- Exists i1, Exists i2, memAny i i1 ** i1 -- i2 :-> (#numberOfSections:WORD) ** memAny i2 j.
+  |-- Exists i1, Exists i2, memAny i i1 ** i1 -- i2 :-> (numberOfSections:WORD) ** memAny i2 j.
 Proof. rewrite /makeMinimalHeader/makeCOFFFileHeader. unfold_program. 
 sdestructs => i1 i2 i3 i4 i5 i6. 
 rewrite -> programMemIs_entails_memAny. 
@@ -675,7 +675,7 @@ Lemma makePEfile_interp (i:DWORD) j
     exportTableStart exportTableEnd
    importTableStart importTableEnd
     IATStart IATEnd sections 
-  |-- Exists i1, Exists i2, memAny i i1 ** i1 -- i2 :-> (# (size sections):WORD) ** memAny i2 j.
+  |-- Exists i1, Exists i2, memAny i i1 ** i1 -- i2 :-> (size sections:WORD) ** memAny i2 j.
 Proof. rewrite /makePEfile.
 rewrite -> programMemIsLocal. sdestructs => L1. 
 rewrite -> programMemIsLocal. sdestructs => L2. 
@@ -715,7 +715,7 @@ Definition makePEfile_program
   makePEfile dRVA targetType entry
   startEDT endEDT
   startIDT endIDT 
-  #0 #0
+  0 0
   ((if exports is _::_
    then [::EDATA (makeExportSection dRVA startEDT endEDT progName exports)]
    else nil) ++

@@ -107,7 +107,7 @@ Definition call_with (cc: CallConv) :=
   ---------------------------------------------------------------------------*)
 Fixpoint introParams n offset : InstrSrc ^^ n --> program -> program :=
   if n is n'.+1
-  then fun p => introParams (offset + 4) (p [EBP + offset])
+  then fun p => introParams (offset + 4) (p [EBP + offset]%ms)
   else fun p => p.
 Implicit Arguments introParams [].
 

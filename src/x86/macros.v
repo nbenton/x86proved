@@ -27,6 +27,9 @@ Definition JMP t := if t is JmpTgtI (mkTgt t) then relToAbs JMPrel t else JMPrel
 Definition CALL t := if t is JmpTgtI (mkTgt t) then relToAbs CALLrel t else CALLrel t.
 Definition JCC cc cv := relToAbs (JCCrel cc cv).
 
+Arguments CALL (t)%ms.
+Arguments JMP (t)%ms.
+
 (*---------------------------------------------------------------------------
     Branch instructions
   ---------------------------------------------------------------------------*)

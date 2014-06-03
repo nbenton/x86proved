@@ -15,12 +15,12 @@ Example tellProg :=
   IMPORTDLL "ask.dll";    IMPORT "AskForNum" as AskForNumSlot;
   GLOBAL greeting;
   SECTION CODE
-    MOV EDI, AskForNumSlot;; CALL [EDI];;
+    CALL [AskForNumSlot];;
     MOV EBX, EAX;; ADD EAX, EAX;;
-    MOV EDI, printfSlot;; call_cdecl_with 3 [EDI] greeting EBX EAX;;
+    call_cdecl_with 3 [printfSlot]%ms greeting EBX EAX;;
     RET 0;
   SECTION DATA
-    greeting:;; ds "Twice %d is %d";; db #10;; db #0.
+    greeting:;; ds "Twice %d is %d";; db 10;; db 0.
 Compute makeEXE #x"00AB0000" "tell.exe" tellProg.
 (*=End *)
 

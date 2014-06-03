@@ -13,7 +13,7 @@ Import Prenex Implicits.
 Local Open Scope instr_scope.
 
 Definition inlineHead (r1 r2:Reg) :program :=
-  MOV r1, [r2+0]. 
+  MOV r1, [r2]. 
 
 Definition inlineTail (r1 r2:Reg) :program :=
   MOV r1, [r2+4]. 

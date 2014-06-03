@@ -14,16 +14,14 @@ Open Scope instr_scope.
 
 Example helloWorldCode :=
   IMPORTDLL "MSVCRT.DLL";
-  IMPORT "printf" as printf;
+  IMPORT "printf" as printfSlot;
   SECTION CODE
-    LOCAL formatString;
-    MOV EDI, formatString;;
-    PUSH EDI;;
-    MOV EDI, printf;;
-    CALL [EDI];;
+  LOCAL formatString;
+    PUSH formatString;;
+    CALL [printfSlot];;
     ADD ESP, 4;;    (* cdecl calling convention for printf *)
     RET 0;;
   formatString:;;
-    ds "Hello, world";; db #10;; db #0.
+    ds "Hello, world";; db 10;; db 0.
 
 Compute makeEXE #x"10E30000" "helloworld.exe" helloWorldCode.
