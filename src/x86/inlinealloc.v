@@ -8,14 +8,14 @@ Unset Strict Implicit.
 Import Prenex Implicits.
 
 Local Open Scope instr_scope.
-(* Allocation invariant: 
+(* Allocation invariant:
      infoBlock points to a pair of DWORDs:
        base, a pointer to the current available heap
        count, the number of bytes currently available
    Furthermore, "count" bytes of memory starting at "base" is defined
 *)
 Definition allocInv (infoBlock: DWORD) :=
-  Exists base: DWORD, 
+  Exists base: DWORD,
   Exists count: DWORD,
   infoBlock :-> base **
   infoBlock +#4 :-> count **
@@ -25,7 +25,7 @@ Definition allocInv (infoBlock: DWORD) :=
      infoBlock: Src  is pointer to two-word heap information block
      n: nat representing number of bytes to be allocated
      failed: DWORD is label to branch to on failure
-   If successful, EDI contains pointer to byte just beyond allocated block. 
+   If successful, EDI contains pointer to byte just beyond allocated block.
 *)
 Definition allocImp infoBlock (n: nat) (failed: DWORD) : program :=
   MOV ESI, infoBlock;;
@@ -50,56 +50,54 @@ Hint Unfold allocSpec : specapply.
 
 (* Perhaps put a |> on the failLabel case *)
 
-Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).  
-Proof.  
-  rewrite /allocSpec/allocImp. specintros => i j. unfold_program. 
-  specintros => i1 i2 i3 i4 i5 i6.
+Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).
+Proof.
+  rewrite /allocSpec/allocImp. specintros; intros. unfold_program.
+  specintros; intros.
 
-  (* MOV ESI, infoBlock *)  
-  specapply MOV_RanyI_rule; first by ssimpl. 
+  (* MOV ESI, infoBlock *)
+  specapply MOV_RanyI_rule; first by ssimpl.
 
   (* MOV EDI, [ESI] *)
   rewrite {2}/allocInv. specintros => base limit.
   specapply MOV_RanyM0_rule; first by ssimpl.
 
   (* ADD EDI, bytes *)
-  elim E:(adcB false base (fromNat n)) => [carry res].
-  specapply ADD_RI_rule; first by ssimpl. 
+  specapply ADD_RI_rule; first by ssimpl.
 
   (* JC failed *)
-  rewrite E. specapply JC_rule.
-  rewrite /OSZCP. sbazooka. 
-
+  elim E:(adcB false base (fromNat n)) => [carry res].
+  specapply JC_rule; first by rewrite /OSZCP; sbazooka.
   specsplit.
-    rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
+  { rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
-    rewrite /stateIsAny /allocInv. by sbazooka.
+    rewrite /stateIsAny /allocInv. by sbazooka. }
 
   (* CMP [ESI+4], EDI *)
   specintro. move/eqP => Hcarry. subst carry.
-  specapply CMP_MR_ZC_rule. rewrite /stateIsAny. sbazooka.  
+  specapply CMP_MR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
 
   (* JC failed *)
   specapply JC_rule; first by ssimpl.
 
   specsplit.
-  - rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
+  { rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
-    rewrite /stateIsAny/allocInv. sbazooka.
- 
+    rewrite /stateIsAny/allocInv. sbazooka. }
+
   (* MOV [ESI], EDI *)
-  specintro. rewrite {1}ltBNle {1}eqb_negLR /negb. move => Hcarry0. 
-  specapply (MOV_M0R_rule (pd:=infoBlock) (r1:=ESI)).
-  - sbazooka. 
+  specintro. rewrite {1}ltBNle {1}eqb_negLR /negb. move => Hcarry0.
+  specapply (MOV_M0R_rule (pd:=infoBlock) (r1:=ESI)); first by sbazooka.
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
   apply: landL2. cancel1.
   rewrite /allocInv. ssplits.
 
-  ssimpl. 
+  ssimpl.
   have Hres: base +# n = res by rewrite /addB /dropmsb E.
   have Hless1 := addB_leB E.
+
   rewrite <-Hres in *.
-  ssimpl. have MAS:= @memAnySplit base (base +# n) limit Hless1. 
+  ssimpl. have MAS:= @memAnySplit base (base +# n) limit Hless1.
   rewrite /leCursor in MAS. rewrite (eqP Hcarry0) in MAS. ssimpl.
-  rewrite /stateIsAny. sbazooka. apply MAS => //.  
+  rewrite /stateIsAny. sbazooka. apply MAS => //.
 Qed.

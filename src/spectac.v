@@ -51,11 +51,12 @@ End SpecSplit.
 Hint Resolve specsplit_at specsplit_reads specsplit_impl specsplit_and
   : specsplit.
 
-(* This tactic looks deep inside the goal to find a conjunction in a positive
-   position. It then generates two subgoals; one for each conjunct. *)
+(* This tactic looks deep inside the goal to find a conjunction in a
+   positive position. It then generates two subgoals; one for each
+   conjunct.  It fails if the goal is not splittable. *)
 Ltac specsplit :=
   eapply specsplit_do;
-  [auto 100 with specsplit| |].
+  [(by auto 100 with specsplit) || fail "Not a spec product" | | ].
 
 (* This is the lemma that justifies the specapply tactic. Executing specapply
    will essentially just bring the goal and rule to the form required by this
@@ -121,7 +122,7 @@ Ltac eforalls H :=
    other evars and leave a closed goal.
    This tactic is quite dumb and will do the wrong thing on a sophisticated
    assertion where EIP appears, for example, on the left of a magic wand. But
-   in practice, EIP is treated very schematically. 
+   in practice, EIP is treated very schematically.
 
    NOTE: to get the match to succeed, we need the RegOrFlagR constructor. Grrr. *)
 Ltac solve_code :=
@@ -247,7 +248,7 @@ Module SpecApply.
     eval_nf spr -|- eval t.
   Proof.
     elim: t spr => [ | S t IH | t IH R | t IH R ] spr Hoc.
-    - move: Hoc => [<-] /=. 
+    - move: Hoc => [<-] /=.
       rewrite emp_unit spec_reads_eq_at; rewrite <- emp_unit.
       do 2 rewrite spec_at_emp.
       by rewrite limpltrue.
@@ -255,7 +256,7 @@ Module SpecApply.
       move: Hoc => [<-]. rewrite /eval_nf.
       rewrite /eval_ospec /eval -/eval. rewrite -IH; [|reflexivity].
       rewrite /eval_nf;  simpl.
-      rewrite !emp_unit !spec_reads_eq_at. 
+      rewrite !emp_unit !spec_reads_eq_at.
       rewrite <- emp_unit. rewrite !spec_at_emp.
       by rewrite oconj_correct limplcurry.
     - simpl in Hoc. destruct (tonf t) as [[So Po Ro]|] => //.
@@ -268,7 +269,7 @@ Module SpecApply.
       move: Hoc => [<-]. rewrite /eval_nf.
       rewrite /eval -/eval. rewrite -IH; [|reflexivity].
       rewrite /eval_nf; simpl.
-      rewrite emp_unit !spec_reads_eq_at. 
+      rewrite emp_unit !spec_reads_eq_at.
       rewrite <- emp_unit. rewrite !spec_at_emp.
       reflexivity.
   Qed.
