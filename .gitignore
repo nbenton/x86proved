@@ -1,0 +1,6 @@
+*.vo
+*.v.d
+*.dep
+*.glob
+src/Makefile.coq
+src/Makefile.deps
