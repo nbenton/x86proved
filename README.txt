@@ -3,4 +3,4 @@
 Directory structure:
 
   src      Source files
-  doc      Documentation
+  doc      Documentation (under construction)
