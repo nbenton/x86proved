@@ -6,9 +6,7 @@ VS := $(subst \,/,$(VS_BACKSLASH))
 PWD := $(shell pwd)
 
 # Careful: the order matters...
-LIBS := ./contribs                 \
-	./contribs/ATBR            \
-	.                          \
+LIBS := .                          \
 	./charge                   \
 	./$(ARCH)                  \
 	./$(ARCH)/win              \
