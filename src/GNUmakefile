@@ -14,8 +14,10 @@ LIBS := .                          \
 	./$(ARCH)/win              \
 	./$(ARCH)/lib/regexp
 
-COQLIBS := $(patsubst %,-I %, $(LIBS))
+COQLIBS := $(addprefix -I ,$(LIBS))
 COQPROGARGS := $(patsubst %,\"$(abspath $(addprefix $(PWD)/,%))\", $(LIBS))
+
+OTHERFLAGS ?= -dont-load-proofs
 
 V = 0
 
