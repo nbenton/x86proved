@@ -52,8 +52,8 @@ Hint Unfold allocSpec : specapply.
 
 Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).
 Proof.
-  rewrite /allocSpec/allocImp. specintros; intros. unfold_program.
-  specintros; intros.
+  rewrite /allocSpec/allocImp.
+  specintros => *. unfold_program. specintros => *.
 
   (* MOV ESI, infoBlock *)
   specapply MOV_RanyI_rule; first by ssimpl.
@@ -68,7 +68,7 @@ Proof.
   (* JC failed *)
   elim E:(adcB false base (fromNat n)) => [carry res].
   specapply JC_rule; first by rewrite /OSZCP; sbazooka.
-  specsplit.
+  repeat specsplit.
   { rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
     rewrite /stateIsAny /allocInv. by sbazooka. }
