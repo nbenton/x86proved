@@ -8,6 +8,11 @@
 Require Import Setoid Morphisms RelationClasses Program.Basics Omega.
 Require Import CSetoid.
 
+(* We [Require] (and later [Import]) ssreflect, because when we inline
+   this file into other files, having ssreflect required in other
+   files breaks some notations in this one. *)
+Require Ssreflect.ssreflect.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 
@@ -15,6 +20,8 @@ Unset Strict Implicit.
 Global Instance ge_Pre: PreOrder ge.
 Proof. repeat constructor. hnf. eauto with arith. Qed.
 
+Module WeNeedSsreflectToGetTypingNotationsIfWeHaveRequiredIt.
+Import Ssreflect.ssreflect.
 (* These tactics are meant to relieve the user from remembering morphism names.
    In most cases they will apply the most general morphism for the arity
    requested. *)
@@ -29,6 +36,11 @@ Ltac cancel2 :=
 Ltac cancel3 :=
   apply (proper_prf (Proper := _: Proper (_ ==> _ ==> _ ==> _) _));
   postcancel.
+End WeNeedSsreflectToGetTypingNotationsIfWeHaveRequiredIt.
+Ltac postcancel := WeNeedSsreflectToGetTypingNotationsIfWeHaveRequiredIt.postcancel.
+Ltac cancel1 := WeNeedSsreflectToGetTypingNotationsIfWeHaveRequiredIt.cancel1.
+Ltac cancel2 := WeNeedSsreflectToGetTypingNotationsIfWeHaveRequiredIt.cancel2.
+Ltac cancel3 := WeNeedSsreflectToGetTypingNotationsIfWeHaveRequiredIt.cancel3.
 
 Class Inhabited A := { cinhabited : inhabited A}.
 
@@ -55,11 +67,11 @@ Infix "|--"  := lentails (at level 79, no associativity).
 Infix "//\\"   := land (at level 75, right associativity).
 Infix "\\//"   := lor (at level 76, right associativity).
 Infix "-->>"   := limpl (at level 77, right associativity).
-Notation "'Forall' x : T , p" := 
+Notation "'Forall' x : T , p" :=
   (lforall (fun x : T => p)) (at level 78, x ident, right associativity).
 Notation "'Forall' x .. y , p" :=
   (lforall (fun x => .. (lforall (fun y => p)) .. )) (at level 78, x binder, y binder, right associativity).
-Notation "'Exists' x : T , p" := 
+Notation "'Exists' x : T , p" :=
   (lexists (fun x : T => p)) (at level 78, x ident, right associativity).
 Notation "'Exists' x .. y , p" :=
   (lexists (fun x => .. (lexists (fun y => p)) .. )) (at level 78, x binder, y binder, right associativity).
@@ -98,10 +110,10 @@ Hint Extern 0 (?x |-- ?x) => reflexivity.
 Hint Extern 0 (_ |-- ltrue) => apply ltrueR.
 Hint Extern 0 (lfalse |-- _) => apply lfalseL.
 Hint Extern 0 (?P |-- ?Q) => (is_evar P; reflexivity) || (is_evar Q; reflexivity).
- 
+
 Section ILogicExtra.
   Context `{IL: ILogic Frm}.
-  
+
   Definition lequiv P Q := P |-- Q /\ Q |-- P.
   Definition lpropand (p: Prop) Q := Exists _: p, Q.
   Definition lpropimpl (p: Prop) Q := Forall _: p, Q.
@@ -117,13 +129,13 @@ Hint Extern 0 (?P -|- ?Q) => (is_evar P; reflexivity) || (is_evar Q; reflexivity
 
 Section ILogicMorphisms.
   Context `{IL: ILogic Frm}.
-  
+
   Global Instance lequivEqu : Equivalence lequiv.
   Proof.
     unfold lequiv. constructor; red.
     + split; reflexivity.
     + intuition.
-    + intros P Q R [HPQ HQP] [HQR HRQ]; 
+    + intros P Q R [HPQ HQP] [HQR HRQ];
       split; etransitivity; eassumption.
   Qed.
 
@@ -228,32 +240,32 @@ Section ILogicMorphisms.
     intros p p' Hp Q Q' HQ.
     split; cancel2; unfold impl; (apply Hp || apply HQ).
   Qed.
-    
+
   Global Instance lpropimpl_lentails_m:
     Proper (impl --> lentails ++> lentails) lpropimpl.
   Proof.
     intros p p' Hp Q Q' HQ.
     apply lforallR; intro H. apply lforallL; [apply Hp|]; assumption.
   Qed.
-  
+
   Global Instance lpropimpl_lequiv_m:
     Proper (iff ==> lequiv ==> lequiv) lpropimpl.
   Proof.
     intros p p' Hp Q Q' HQ.
     split; cancel2; unfold flip, impl; (apply Hp || apply HQ).
   Qed.
-    
+
 End ILogicMorphisms.
 
 Section ILogicFacts.
   Context `{IL: ILogic Frm}.
-  
+
   (* Experiments with proof search. *)
   Ltac landR :=
     repeat match goal with
     | |- _ |-- _ //\\ _ => apply landR
     end.
-  
+
   Ltac landL :=
     repeat match goal with
     | |- ?L1 //\\ ?L2 |-- ?R =>
@@ -273,12 +285,12 @@ Section ILogicFacts.
   Proof. split; landR; landL; reflexivity. Qed.
 
   (* Derivable but useful *)
-  Lemma lpropandTrue P : True /\\ P -|- P. 
-  Proof. unfold lpropand. split; [apply lexistsL | apply lexistsR]; trivial. Qed. 
+  Lemma lpropandTrue P : True /\\ P -|- P.
+  Proof. unfold lpropand. split; [apply lexistsL | apply lexistsR]; trivial. Qed.
 
-  Lemma lpropandFalse P : False /\\ P -|- lfalse. 
+  Lemma lpropandFalse P : False /\\ P -|- lfalse.
   Proof. unfold lpropand. split; [apply lexistsL |]; intuition. Qed.
-  
+
   (* Left-rule for limpl. This breaks the discipline of the ILogic presentation
      since the implication is not strictly the top symbol of the left-hand side,
      but it remains a convenient rule. *)
@@ -299,7 +311,7 @@ Section ILogicFacts.
   Lemma lpropimplL (p: Prop) (Q C: Frm) (Hp: p) (HQ: Q |-- C) :
     p ->> Q |-- C.
   Proof. apply lforallL with Hp; assumption. Qed.
-  
+
   Lemma lpropimplR C (p: Prop) Q (H: p -> C |-- Q) :
     C |-- p ->> Q.
   Proof. apply lforallR; intro Hp. apply H; assumption. Qed.
@@ -319,7 +331,7 @@ Section ILogicFacts.
     (Exists a, f a) //\\ P -|- Exists a, (f a //\\ P).
   Proof.
     split.
-    + apply landAdj; apply lexistsL; intro a; 
+    + apply landAdj; apply lexistsL; intro a;
       apply limplAdj; apply lexistsR with a; reflexivity.
     + apply lexistsL; intro a; apply landR.
       - apply landL1; apply lexistsR with a; reflexivity.
@@ -372,7 +384,7 @@ Section ILogicFacts.
       - apply lforallR; intro a; apply lforallL with a;
         apply lpropandL; intros; reflexivity.
   Qed.
-  
+
 End ILogicFacts.
 
 (* Most of the connectives in ILogicOps are redundant. They can be derived from
@@ -380,7 +392,10 @@ End ILogicFacts.
    since it is an adjoint. *)
 Section ILogicEquiv.
   Context `{IL: ILogic Frm}.
-  
+
+  Section WeNeedSsreflectToGetTypingNotationsIfWeHaveRequiredIt_1.
+  Import Ssreflect.ssreflect.
+
   Lemma land_is_forall P Q :
     P //\\ Q -|- Forall b : bool, if b then P else Q.
   Proof.
@@ -404,6 +419,7 @@ Section ILogicEquiv.
       + apply lorR1; reflexivity.
       + apply lorR2; reflexivity.
   Qed.
+  End WeNeedSsreflectToGetTypingNotationsIfWeHaveRequiredIt_1.
 
   Lemma ltrue_is_forall:
     ltrue -|- Forall x: Empty_set, Empty_set_rect _ x.
@@ -412,7 +428,7 @@ Section ILogicEquiv.
   Lemma lfalse_is_exists:
     lfalse -|- Exists x: Empty_set, Empty_set_rect _ x.
   Proof. split; [|apply lexistsL]; intuition. Qed.
-  
+
 End ILogicEquiv.
 (*
 (* Tactics for doing forward reasoning from a hypothesis. *)
@@ -529,7 +545,7 @@ Section ILogic_Fun.
   }.
 
   Global Instance ILFunFrmEquiv {H: Equiv Frm} : Equiv ILFunFrm := {
-     equiv p q := forall x, p x === q x 
+     equiv p q := forall x, p x === q x
   }.
 
   Global Instance ILfunFrmType `{H: type Frm} : type ILFunFrm.
@@ -540,7 +556,7 @@ Section ILogic_Fun.
     + intros x y z Hxy Hyz a; etransitivity;
       [apply Hxy | apply Hyz].
   Qed.
-  
+
   Notation "'mk'" := @mkILFunFrm.
 
   Program Definition ILFun_Ops : ILogicOps ILFunFrm := {|
@@ -570,10 +586,10 @@ Section ILogic_Fun.
   Next Obligation.
     apply lexistsL; intro a; apply lexistsR with a; apply ILFunFrm_closed; assumption.
   Qed.
-  
+
   Local Existing Instance ILFun_Ops.
 
-  Program Definition ILFun_ILogic : ILogic ILFunFrm. 
+  Program Definition ILFun_ILogic : ILogic ILFunFrm.
   Proof.
     split; unfold lentails; simpl; intros.
     - split; red; [reflexivity|].
@@ -602,8 +618,8 @@ Implicit Arguments mkILFunFrm [T Frm ILOps].
 Local Existing Instance ILFun_Ops.
 Local Existing Instance ILFun_ILogic.
 
-Program Definition ILFun_eq {T R} {ILOps: ILogicOps R} {ILogic: ILogic R} (P : T -> R) : 
-  @ILFunFrm T _ R ILOps := 
+Program Definition ILFun_eq {T R} {ILOps: ILogicOps R} {ILogic: ILogic R} (P : T -> R) :
+  @ILFunFrm T _ R ILOps :=
   @mkILFunFrm T eq R ILOps P _.
 Next Obligation.
   destruct H; simpl; reflexivity.

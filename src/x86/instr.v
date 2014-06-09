@@ -9,6 +9,8 @@
     - special casing (e.g. special forms for EAX/AL register, special form for RET 0)
     - symmetry in direction (e.g. MOV r1, r2 has two encodings)
   ===========================================================================*)
+(* We need ssreflect for the [if ... then ... else ...] syntax in an inlineable way. *)
+Require Import Ssreflect.ssreflect.
 Require Import bitsrep reg.
 
 
@@ -16,7 +18,7 @@ Require Import bitsrep reg.
 (*=MemSpec *)
 Inductive Scale := S1 | S2 | S4 | S8.
 Inductive MemSpec :=
-  mkMemSpec (sib: option (Reg * option (NonSPReg*Scale))) 
+  mkMemSpec (sib: option (Reg * option (NonSPReg*Scale)))
             (offset: DWORD).
 (*=End *)
 
@@ -28,7 +30,7 @@ Definition DWORDorBYTEReg (d: bool) := if d then Reg else BYTEReg.
 
 (* Register or memory *)
 (*=RegMem *)
-Inductive RegMem d := 
+Inductive RegMem d :=
 | RegMemR (r: DWORDorBYTEReg d)
 | RegMemM (ms: MemSpec).
 Inductive RegImm d :=
@@ -36,10 +38,10 @@ Inductive RegImm d :=
 | RegImmR (r: DWORDorBYTEReg d).
 (*=End *)
 
-Coercion DWORDRegMemR (r:Reg)     := RegMemR true r.
-Coercion BYTERegMemR  (r:BYTEReg) := RegMemR false r.
+Coercion DWORDRegMemR (r:Reg)       := RegMemR true r.
+Coercion BYTERegMemR  (r:BYTEReg)   := RegMemR false r.
 Coercion DWORDRegMemM (ms: MemSpec) := RegMemM true ms.
-Coercion DWORDRegImmI := RegImmI true.  
+Coercion DWORDRegImmI (d: DWORD)    := RegImmI true d.
 
 (* Unary ops: immediate, register, or memory source *)
 (* Binary ops: five combinations of source and destination *)
@@ -62,7 +64,7 @@ Coercion SrcM : MemSpec >-> Src.
 (* We make this a separate type constructor to pick up type class instances later *)
 (* Jump ops: immediate, register, or memory source *)
 (*=Tgt *)
-Inductive Tgt := 
+Inductive Tgt :=
 | mkTgt :> DWORD -> Tgt.
 Inductive JmpTgt :=
 | JmpTgtI :> Tgt -> JmpTgt
@@ -76,9 +78,9 @@ Inductive ShiftCount :=
 (* All binary operations come in byte and dword flavours, specified in the instruction *)
 (* Unary operations come in byte and dword flavours, except for POP *)
 (*=BinOp *)
-Inductive BinOp := 
+Inductive BinOp :=
 | OP_ADC | OP_ADD | OP_AND | OP_CMP | OP_OR | OP_SBB | OP_SUB | OP_XOR.
-Inductive UnaryOp := 
+Inductive UnaryOp :=
 | OP_INC | OP_DEC | OP_NOT | OP_NEG.
 Inductive BitOp :=
 | OP_BT | OP_BTC | OP_BTR | OP_BTS.
@@ -87,7 +89,7 @@ Inductive ShiftOp :=
 (*=End *)
 
 (*=Condition *)
-Inductive Condition := 
+Inductive Condition :=
 | CC_O | CC_B | CC_Z | CC_BE | CC_S | CC_P | CC_L | CC_LE.
 (*=End *)
 
@@ -102,18 +104,16 @@ Inductive Instr :=
 | MOVX (signextend w:bool) (dst: Reg) (src: RegMem w)
 | SHIFTOP d (op: ShiftOp) (dst: RegMem d) (count: ShiftCount)
 | MUL {d} (src: RegMem d)
-| IMUL (dst: Reg) (src: RegMem true) 
-| LEA (reg: Reg) (src: RegMem true) 
+| IMUL (dst: Reg) (src: RegMem true)
+| LEA (reg: Reg) (src: RegMem true)
 | XCHG d (reg: DWORDorBYTEReg d) (src: RegMem d)
 | JCCrel (cc: Condition) (cv: bool) (tgt: Tgt)
 | PUSH (src: Src)
 | POP (dst: RegMem true)
 | CALLrel (tgt: JmpTgt) | JMPrel (tgt: JmpTgt)
-| CLC | STC | CMC 
+| CLC | STC | CMC
 | RETOP (size: WORD)
 | OUT (d: bool) (port: BYTE)
 | IN (d: bool) (port: BYTE)
 | HLT | BADINSTR.
 (*=End *)
-
-

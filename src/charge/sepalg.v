@@ -22,7 +22,7 @@ Section SepAlgSect.
     (* sa_mul s1 s2 s if s = s1*s2 *)
     sa_mul : T -> T -> T -> Prop
   }.
-  
+
   Class SepAlg T `{SAOps: SepAlgOps T} : Type := {
     sa_mul_eqL a b c d : sa_mul a b c -> c === d -> sa_mul a b d;
     sa_mul_eqR a b c d : sa_mul a b c -> sa_mul a b d -> c === d;
@@ -40,10 +40,10 @@ Implicit Arguments SepAlg [[e] [eT] [SAOps]].
 
 Section SepAlgCompat.
   Context A `{SA: SepAlg A}.
-  
+
   Definition compat (a b : A) := exists s, sa_mul a b s.
   Definition subheap (a b : A) := exists c, sa_mul a c b.
-  
+
   Lemma sa_mulC2 a b c : sa_mul a b c <-> sa_mul b a c.
   Proof.
     apply sa_mulC.
@@ -74,7 +74,7 @@ Import SepAlgNotations.
 Delimit Scope sa_scope with sa.
 
 Instance subheap_preo A `{sa : SepAlg A} : PreOrder (@subheap A e eT SAOps).
-Proof. 
+Proof.
   split.
   + intros s; eexists; apply sa_unitI.
   + intros s0 s1 s2 [s10 HEq1] [s21 HEq2].
