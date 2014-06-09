@@ -22,6 +22,7 @@
 Require Import ssreflect ssrbool ssrfun ssrnat eqtype tuple seq fintype.
 Require Import bitsrep procstate procstatemonad SPred septac.
 Require Import instr eval monad monadinst reader step cursor.
+Require Import common_tactics.
 
 (* Importing this file really only makes sense if you also import ilogic, so we
    force that. *)
@@ -111,7 +112,7 @@ Proof.
   have Hnat' : forall k' k P, k' >= k -> f k' P -> f k P.
   - move => k' k P. elim; by auto.
   move=> k' k Hk P /= Hf.
-  eapply Hnat'; eassumption. 
+  eapply Hnat'; eassumption.
 Grab Existential Variables.
 Proof.
   move=> P P' HP /= Hf. eapply HSPred; eassumption.
@@ -204,7 +205,7 @@ Qed.
 
 Lemma spec_at_forall {T} F R: (Forall x:T, F x) @ R -|- Forall x:T, (F x @ R).
 Proof. split; rewrite /= /spec_fun /=; auto. Qed.
-  
+
 Lemma spec_at_exists {T} F R: (Exists x:T, F x) @ R -|- Exists x:T, (F x @ R).
 Proof. split; rewrite /= /spec_fun /= => k P [x Hx]; eauto. Qed.
 
@@ -433,7 +434,7 @@ Proof.
   move=> A f. setoid_rewrite spec_at_impl.
   rewrite ->at_ex', <-at_ex => //. (*TODO: why does at_ex' leave a subgoal? *)
   apply: limplAdj. apply: lforallR => x. apply: landAdj.
-  apply lforallL with x. apply: limplAdj. rewrite landC. apply: landAdj. 
+  apply lforallL with x. apply: limplAdj. rewrite landC. apply: landAdj.
   apply lforallL with x. apply: limplAdj. rewrite landC. apply: landAdj.
   reflexivity.
 Qed.
@@ -512,7 +513,7 @@ Module Export PullQuant.
   Hint Extern 0 (PullQuant (?S @ ?R) _) =>
     let t := quote_term R in
     apply (@pq_at S t); [apply _] : pullquant.
-  
+
   (* It's a slight breach of abstraction to [cbv [eval]] here, but it's easier
      than dealing with it in the hints that use reflection. *)
   (* For some reason, auto sometimes hangs when there are entailments among the
@@ -525,7 +526,7 @@ Module Export PullQuant.
     |];
     instantiate;
     cbv [eval].
-  
+
   Ltac specintros :=
     specintro; let x := fresh "x" in move=> x; try specintros; move: x.
 
@@ -614,16 +615,16 @@ Proof.
 Qed.
 
 Corollary spec_reads_byteIs S p b:
-  S <@ byteIs p b -|- S @ byteIs p b. 
-Proof. apply spec_reads_eq_at. Qed. 
+  S <@ byteIs p b -|- S @ byteIs p b.
+Proof. apply spec_reads_eq_at. Qed.
 
 Corollary spec_reads_flagIs S (p:Flag) b:
-  S <@ (p~=b) -|- S @ (p~=b). 
-Proof. apply spec_reads_eq_at. Qed. 
+  S <@ (p~=b) -|- S @ (p~=b).
+Proof. apply spec_reads_eq_at. Qed.
 
 Corollary spec_reads_regIs S (p:AnyReg) b:
-  S <@ (p~=b) -|- S @ (p~=b). 
-Proof. apply spec_reads_eq_at. Qed. 
+  S <@ (p~=b) -|- S @ (p~=b).
+Proof. apply spec_reads_eq_at. Qed.
 
 Lemma spec_reads_merge S R1 R2:
   S <@ R1 <@ R2 |-- S <@ (R1 ** R2).
@@ -729,7 +730,7 @@ Instance AtContra_reads S R {HS: AtContra S}: AtContra (S <@ R) := _.
 
 Module Export PullQuant_reads.
   Import Existentials.
-  
+
   Lemma pq_reads S t:
     match find t with
     | Some (mkf _ f) =>
@@ -738,7 +739,7 @@ Module Export PullQuant_reads.
     end.
   Proof.
     move: (@find_correct t). case: (find t) => [[A f]|]; last done.
-    move=> Heval. red. rewrite ->Heval. by apply spec_reads_ex.
+    move=> Heval. red. rewrite ->Heval. by apply_and spec_reads_ex.
   Qed.
 
   Hint Extern 0 (PullQuant (?S <@ ?R) _) =>
@@ -797,7 +798,7 @@ Proof.
   red in HS. rewrite <-HS. rewrite spec_later_forall. cancel1 => x.
   by rewrite spec_at_later.
 Qed.
-  
+
 Instance AtCovar_later S {HS: AtCovar S} : AtCovar (|> S).
 Proof.
   move=> P Q HPQ. autorewrite with push_at. by rewrite ->(HS _ _ HPQ).
@@ -807,4 +808,3 @@ Instance AtContra_later S {HS: AtContra S} : AtContra (|> S).
 Proof.
   move=> P Q HPQ. autorewrite with push_at. by rewrite ->(HS _ _ HPQ).
 Qed.
-
