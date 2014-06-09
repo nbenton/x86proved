@@ -9,6 +9,8 @@
     - special casing (e.g. special forms for EAX/AL register, special form for RET 0)
     - symmetry in direction (e.g. MOV r1, r2 has two encodings)
   ===========================================================================*)
+(* We need ssreflect for the [if ... then ... else ...] syntax in an inlineable way. *)
+Require Import Ssreflect.ssreflect.
 Require Import bitsrep reg.
 
 
