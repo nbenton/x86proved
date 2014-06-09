@@ -10,6 +10,7 @@ charge\ilogic.vo \
 charge\iltac.vo \
 charge\bilogic.vo \
 charge\later.vo \
+common_tactics.vo \
 cstring.vo \
 update.vo \
 monad.vo \
