@@ -235,7 +235,7 @@ Proof.
 rewrite /incSpec/incBody/stacked_nonvoid1_impMeetsSpec/pre/post.
 specintros => arg ebp.
 autorewrite with push_at.
-basicapply MOV_RanyM_rule.
+try_basicapply MOV_RanyM_rule.
 rewrite /OSZCP{3 4 5 6 7}/stateIsAny.
 specintros => f1 f2 f3 f4 f5.
 eapply basic_basic.  apply INC_R_rule.

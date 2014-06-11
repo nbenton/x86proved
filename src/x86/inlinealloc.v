@@ -50,14 +50,6 @@ Hint Unfold allocSpec : specapply.
 
 (* Perhaps put a |> on the failLabel case *)
 
-Require Import tuple.
-Corollary ADD_RI_ruleAux (r:Reg) v1 (v2:DWORD):
-  |-- basic (r~=v1 ** OSZCP?) (ADD r, v2)
-            (let v := addB v1 v2 in
-             r~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
-                            (v == #0) (fst (adcB false v1 v2)) (lsb v)).
-Proof. generalize (@ADD_RI_rule r v1 v2). by elim (adcB false v1 _). Qed.
-
 Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).
 Proof.
   rewrite /allocSpec/allocImp.
@@ -71,7 +63,7 @@ Proof.
   specapply MOV_RanyM0_rule; first by ssimpl.
 
   (* ADD EDI, bytes *)
-  specapply ADD_RI_ruleAux; first by ssimpl.
+  specapply ADD_RI_rule; first by ssimpl.
 
   (* JC failed *)
   specapply JC_rule; first by rewrite /OSZCP; ssimpl.

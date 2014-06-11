@@ -16,7 +16,19 @@ Local Open Scope instr_scope.
 
 Require Import x86.instrrules.core.
 
-(* We open a section in order to localize the hints *)
+Lemma NOT_rule d (src:RegMem d) v:
+  |-- specAtRegMemDst src (fun V => basic (V v) (UOP d OP_NOT src) (V (invB v))).
+Proof. do_instrrule_triple. Qed.
+
+Ltac basicNOT :=
+  rewrite /makeUOP;
+  let R := lazymatch goal with
+             | |- |-- basic ?p (@UOP ?d OP_NOT ?a) ?q => constr:(@NOT_rule d a)
+           end in
+  basicapply R.
+
+
+(** We open a section in order to localize the hints *)
 Section InstrRules.
 
 Hint Unfold
@@ -28,65 +40,7 @@ Hint Unfold
 Hint Rewrite
   addB0 low_catB : basicapply.
 
-(*---------------------------------------------------------------------------
-    Helpers for pieces of evaluation (adapted from spechelpers and
-    triplehelpers)
-  ---------------------------------------------------------------------------*)
-
-Hint Unfold
-  evalInstr
-  evalArithOp evalArithOpNoCarry evalArithUnaryOp evalArithUnaryOpNoCarry
-  evalLogicalOp evalBinOp evalShiftOp evalUnaryOp evalCondition
-  evalMOV evalDst evalDstR evalDstM evalSrc evalMemSpec evalBYTEReg : eval.
-
-Hint Unfold interpJmpTgt : specapply.
-
-Lemma NOT_rule d (src:RegMem d) v:
-  |-- specAtRegMemDst src (fun V => basic (V v) (UOP d OP_NOT src) (V (invB v))).
-Proof.
-rewrite /specAtRegMemDst.
-destruct src.
-  apply TRIPLE_basic => R.
-  repeat autounfold with eval.
-  triple_apply evalDWORDorBYTEReg_rule.
-  triple_apply triple_setDWORDorBYTERegSep.
-
-rewrite /specAtMemSpecDst.
-destruct ms.
-case sib => [[r indexAndScale] |].
-destruct indexAndScale.
-destruct p as [rix sc].
-specintros => pbase ixval.
-autorewrite with push_at. apply TRIPLE_basic => R.
-  autounfold with eval.
-  rewrite /evalDst/evalDstM/evalInstr/evalUnaryOp.
-  triple_apply evalMemSpec_rule.
-  triple_apply triple_letGetDWORDorBYTESep.
-  triple_apply triple_setDWORDorBYTESep.
-
-specintros => pbase.
-autorewrite with push_at. apply TRIPLE_basic => R.
-  autounfold with eval.
-  rewrite /evalDst/evalDstM/evalSrc/evalUnaryOp.
-  triple_apply evalMemSpecNone_rule.
-  triple_apply triple_letGetDWORDorBYTESep.
-  triple_apply triple_setDWORDorBYTESep.
-
-autorewrite with push_at. apply TRIPLE_basic => R.
-  autounfold with eval.
-  rewrite /evalDst/evalDstM/evalSrc/evalUnaryOp. rewrite /evalMemSpec.
-  triple_apply triple_letGetDWORDorBYTESep.
-  triple_apply triple_setDWORDorBYTESep.
-Qed.
-
-Ltac basicNOT :=
-  try unfold makeUOP;
-  match goal with
-  | |- |-- basic ?p (@UOP ?d OP_NOT ?a) ?q => try_basicapply (@NOT_rule d a)
-  end.
-
-
-(* Special case for not *)
+(** Special case for not *)
 Lemma NOT_R_rule (r:Reg) (v:DWORD):
   |-- basic (r~=v) (NOT r) (r~=invB v).
 Proof. basicNOT. Qed.

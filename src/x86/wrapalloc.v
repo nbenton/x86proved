@@ -80,5 +80,6 @@ apply: limplAdj. autorewrite with push_at.
 apply: landL2. cancel1.
 rewrite /OSZCP/stateIsAny. sbazooka. apply: lorR1.
 
+simpl snd.
 sbazooka.
 Qed.

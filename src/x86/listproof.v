@@ -61,7 +61,7 @@ rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.
 
 specapply SUB_RI_rule. sbazooka.
 
-specapply MOV_M0R_rule. rewrite E0. sbazooka.
+specapply MOV_M0R_rule. rewrite E0. simpl fst. simpl snd. by sbazooka.
 
 specapply MOV_MR_rule. by ssimpl.
 

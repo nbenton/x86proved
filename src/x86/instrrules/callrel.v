@@ -16,31 +16,6 @@ Local Open Scope instr_scope.
 
 Require Import x86.instrrules.core.
 
-(* We open a section in order to localize the hints *)
-Section InstrRules.
-
-Hint Unfold
-  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
-  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
-  makeMOV makeBOP makeUOP
-  : basicapply.
-Hint Rewrite
-  addB0 low_catB : basicapply.
-
-(*---------------------------------------------------------------------------
-    Helpers for pieces of evaluation (adapted from spechelpers and
-    triplehelpers)
-  ---------------------------------------------------------------------------*)
-
-Hint Unfold
-  evalInstr
-  evalArithOp evalArithOpNoCarry evalArithUnaryOp evalArithUnaryOpNoCarry
-  evalLogicalOp evalBinOp evalShiftOp evalUnaryOp evalCondition
-  evalMOV evalDst evalDstR evalDstM evalSrc evalMemSpec evalBYTEReg : eval.
-
-Hint Unfold interpJmpTgt : specapply.
-
 Lemma CALLrel_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) :
   |-- interpJmpTgt tgt q (fun P p' =>
       (
@@ -48,61 +23,15 @@ Lemma CALLrel_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) :
          safe @ (EIP ~= p  ** P ** ESP~=sp    ** sp-#4 :-> w)
     ) <@ (p -- q :-> CALLrel tgt)).
 Proof.
-  rewrite /interpJmpTgt.
-  destruct tgt.
-
-  (* JmpTgtI *)
-  destruct t.
-  apply TRIPLE_safe => R.
-  rewrite /evalInstr /evalRegMem /evalReg.
-  triple_apply triple_letGetRegSep.
-  rewrite /evalJmpTgt.
-  triple_apply triple_letGetRegSep.
-  triple_apply triple_doSetRegSep.
-  by triple_apply evalPush_rule.
-
-  (* JmpTgtM *)
-  destruct m.
-  - case: sib => [[base indexAndScale] |].
-    destruct indexAndScale.
-    destruct p0 as [rix sc].
-    rewrite /interpMemSpecSrc. specintros => pbase indexval addr.
-    apply TRIPLE_safe => R.
-    rewrite /evalInstr /evalRegMem /evalReg.
-    triple_apply triple_letGetRegSep.
-    rewrite /evalJmpTgt/evalMemSpec.
-    triple_apply triple_letGetRegSep.
-    triple_apply triple_letGetRegSep.
-    triple_apply triple_letGetDWORDSep.
-    triple_apply triple_doSetRegSep.
-    by triple_apply evalPush_rule.
-    rewrite /interpMemSpecSrc. specintros => pbase addr.
-    apply TRIPLE_safe => R.
-    rewrite /evalInstr /evalRegMem /evalReg.
-    triple_apply triple_letGetRegSep.
-    rewrite /evalJmpTgt/evalMemSpec.
-    triple_apply triple_letGetRegSep.
-    triple_apply triple_letGetDWORDSep.
-    triple_apply triple_doSetRegSep.
-    by triple_apply evalPush_rule.
-    rewrite /interpMemSpecSrc. specintros => addr.
-    apply TRIPLE_safe => R.
-    rewrite /evalInstr /evalRegMem /evalReg.
-    triple_apply triple_letGetRegSep.
-    rewrite /evalJmpTgt/evalMemSpec.
-    triple_apply triple_letGetDWORDSep.
-    triple_apply triple_doSetRegSep.
-    by triple_apply evalPush_rule.
-
-  (* JmpTgtR *)
-  specintros => addr.
-  apply TRIPLE_safe => R.
-  rewrite /evalInstr /evalRegMem /evalReg.
-  triple_apply triple_letGetRegSep.
-  triple_apply triple_letGetRegSep.
-  triple_apply triple_doSetRegSep.
-  by triple_apply evalPush_rule.
+  rewrite /interpJmpTgt/interpMemSpecSrc.
+  do_instrrule
+    ((try specintros => *; autorewrite with push_at);
+     apply TRIPLE_safe => ?;
+     do !instrrule_triple_bazooka_step idtac).
 Qed.
+
+Section specapply_hint.
+Local Hint Unfold interpJmpTgt : specapply.
 
 Corollary CALLrel_R_rule (r:Reg) (p q: DWORD) :
   |-- Forall w: DWORD, Forall sp:DWORD, Forall p', (
@@ -131,4 +60,4 @@ Proof.
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
   cancel1. cancel1. sbazooka.
 Qed.
-End InstrRules.
+End specapply_hint.

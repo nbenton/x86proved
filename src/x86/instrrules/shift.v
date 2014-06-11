@@ -26,28 +26,15 @@ Lemma SHL_RI_rule (r:Reg) (v:DWORD) (count:nat):
   |-- basic (r~=v ** OSZCP?) (SHL r, count)
             (r~=iter count shlB v ** OSZCP?).
 Proof.
+  change (stateIs r) with (@DWORDorBYTEregIs true r).
   move => BOUND.
-  apply TRIPLE_basic => R.
-  repeat autounfold with eval. rewrite /evalDst/evalDstR.
-  triple_apply evalReg_rule.
-  rewrite /evalShiftCount/evalShiftOp. rewrite id_l.
-  rewrite (SmallCount BOUND).
-  case E: count => [| count'].
-  + replace (iter _ _ v) with v by done.
-    triple_apply triple_setRegSep.
-
-
-  triple_apply triple_pre_introFlags => o s z c p.
-  rewrite /OSZCP/stateIsAny.
-  triple_apply triple_doSetFlagSep.
-  case E': count' => [| count''].
-  + triple_apply triple_doSetFlagSep.
-    try_triple_apply triple_setRegSep. rewrite dropmsb_iter_shlB.
-    sbazooka.
-  + triple_apply triple_doForgetFlagSep.
-    try_triple_apply triple_setRegSep.
-    rewrite dropmsb_iter_shlB.
-    rewrite /stateIsAny. sbazooka.
+  (** We don't want to spin forever if something goes wrong, so we
+      only allow [count] to be destructed 5 times.  We do it in the
+      middle of the proof to reduce proof term size. *)
+  do 5?[do ![ progress instrrule_triple_bazooka using sbazooka
+            | progress rewrite (SmallCount BOUND)
+            | progress rewrite /stateIsAny ]
+       | destruct count as [|count]; rewrite /(iter 0) ?dropmsb_iter_shlB ].
 Qed.
 
 Lemma SHR_RI_rule (r:Reg) (v:DWORD) (count:nat):
@@ -55,26 +42,13 @@ Lemma SHR_RI_rule (r:Reg) (v:DWORD) (count:nat):
   |-- basic (r~=v ** OSZCP?) (SHR r, count)
             (r~=iter count shrB v ** OSZCP?).
 Proof.
+  change (stateIs r) with (@DWORDorBYTEregIs true r).
   move => BOUND.
-  apply TRIPLE_basic => R.
-  rewrite /evalInstr/evalDst/evalDstR.
-  triple_apply evalReg_rule.
-  rewrite /evalShiftCount/evalShiftOp id_l.
-  rewrite (SmallCount BOUND).
-  case E: count => [| count'].
-  + replace (iter _ _ v) with v by done.
-    triple_apply triple_setRegSep.
-
-
-  triple_apply triple_pre_introFlags => o s z c p.
-  rewrite /OSZCP/stateIsAny.
-  triple_apply triple_doSetFlagSep.
-  case E': count' => [| count''].
-  + triple_apply triple_doSetFlagSep.
-    try_triple_apply triple_setRegSep. rewrite droplsb_iter_shrB.
-    sbazooka.
-  + triple_apply triple_doForgetFlagSep.
-    try_triple_apply triple_setRegSep.
-    rewrite droplsb_iter_shrB.
-    rewrite /stateIsAny. sbazooka.
+  (** We don't want to spin forever if something goes wrong, so we
+      only allow [count] to be destructed 5 times.  We do it in the
+      middle of the proof to reduce proof term size. *)
+  do 5?[do ![ progress instrrule_triple_bazooka using sbazooka
+            | progress rewrite (SmallCount BOUND)
+            | progress rewrite /stateIsAny ]
+       | destruct count as [|count]; rewrite /(iter 0) ?droplsb_iter_shrB ].
 Qed.

@@ -24,9 +24,5 @@ Lemma RET_rule p' (sp:DWORD) (offset:WORD) (p q: DWORD) :
     ) <@ (p -- q :-> RETOP offset).
 Proof.
   apply TRIPLE_safe => R.
-  rewrite /evalInstr.
-  triple_apply triple_letGetRegSep.
-  triple_apply triple_letGetDWORDSep.
-  triple_apply triple_doSetRegSep.
-  triple_apply triple_setRegSep.
+  do_instrrule_triple.
 Qed.

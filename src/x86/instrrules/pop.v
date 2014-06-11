@@ -16,7 +16,21 @@ Local Open Scope instr_scope.
 
 Require Import x86.instrrules.core.
 
-(* We open a section in order to localize the hints *)
+(** ** Generic POP *)
+Lemma POP_rule (rm:RegMem true) (sp:DWORD) (oldv v:DWORD):
+  |-- specAtRegMemDst rm (fun V =>
+      basic (V oldv ** ESP ~= sp    ** sp:->v) (POP rm)
+            (V v    ** ESP ~= sp+#4 ** sp:->v)).
+Proof. do_instrrule_triple. Qed.
+
+Ltac basicPOP :=
+  let R := lazymatch goal with
+             | |- |-- basic ?p (POP ?a) ?q => constr:(POP_rule a)
+           end in
+  basicapply R.
+
+
+(** We open a section in order to localize the hints *)
 Section InstrRules.
 
 Hint Unfold
@@ -27,73 +41,6 @@ Hint Unfold
   : basicapply.
 Hint Rewrite
   addB0 low_catB : basicapply.
-
-(*---------------------------------------------------------------------------
-    Helpers for pieces of evaluation (adapted from spechelpers and
-    triplehelpers)
-  ---------------------------------------------------------------------------*)
-
-Hint Unfold
-  evalInstr
-  evalArithOp evalArithOpNoCarry evalArithUnaryOp evalArithUnaryOpNoCarry
-  evalLogicalOp evalBinOp evalShiftOp evalUnaryOp evalCondition
-  evalMOV evalDst evalDstR evalDstM evalSrc evalMemSpec evalBYTEReg : eval.
-
-Hint Unfold interpJmpTgt : specapply.
-
-(** ** Generic POP *)
-Lemma POP_rule (rm:RegMem true) (sp:DWORD) (oldv v:DWORD):
-  |-- specAtRegMemDst rm (fun V =>
-      basic (V oldv ** ESP ~= sp    ** sp:->v) (POP rm)
-            (V v    ** ESP ~= sp+#4 ** sp:->v)).
-Proof.
-  rewrite /specAtRegMemDst. destruct rm.
-  + apply TRIPLE_basic => R.
-    repeat autounfold with eval. rewrite /DWORDorBYTEregIs.
-    triple_apply evalReg_rule.
-    triple_apply evalReg_rule.
-    triple_apply triple_letGetDWORDSep.
-    triple_apply triple_doSetRegSep.
-    triple_apply triple_setRegSep.
-  + rewrite /specAtMemSpecDst.
-    elim: ms => [optSIB offset].
-    elim: optSIB => [[base indexAndScale] |].
-    case: indexAndScale => [[rix sc] |].
-    - specintros => pbase indexval.
-      autorewrite with push_at. apply TRIPLE_basic => R.
-      rewrite /evalInstr.
-      triple_apply evalReg_rule.
-      rewrite /evalDst/evalDstM.
-      triple_apply evalMemSpec_rule.
-      triple_apply triple_letGetDWORDSep.
-      triple_apply triple_letGetDWORDSep.
-      triple_apply triple_doSetDWORDSep.
-      triple_apply triple_setRegSep.
-    - specintros => pbase.
-      autorewrite with push_at. apply TRIPLE_basic => R.
-      rewrite /evalInstr/evalDst/evalDstM.
-      triple_apply evalReg_rule.
-      triple_apply evalMemSpecNone_rule.
-      triple_apply triple_letGetDWORDSep.
-      triple_apply triple_letGetDWORDSep.
-      triple_apply triple_doSetDWORDSep.
-      triple_apply triple_setRegSep.
-    - autorewrite with push_at.
-      apply TRIPLE_basic => R.
-      rewrite /evalInstr/evalDst/evalDstM.
-      triple_apply evalReg_rule.
-      rewrite /evalMemSpec.
-      triple_apply triple_letGetDWORDSep.
-      triple_apply triple_letGetDWORDSep.
-      triple_apply triple_doSetDWORDSep.
-      triple_apply triple_setRegSep.
-Qed.
-
-Ltac basicPOP :=
-  match goal with
-  | |- |-- basic ?p (POP ?a) ?q => try_basicapply (POP_rule a)
-  end.
-
 
 (** ** POP r *)
 Corollary POP_R_rule (r:Reg) (sp oldv v:DWORD) :
