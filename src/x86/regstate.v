@@ -42,7 +42,7 @@ Qed.
 
 Definition initialReg : RegState := fun _ => #0. 
 
-Require Import String.
+Require Import Coq.Strings.String.
 Definition regStateToString (rs:RegState) :=
   (" EIP=" ++ toHex (rs EIP) ++
    " ESP=" ++ toHex (rs ESP) ++

@@ -69,7 +69,7 @@ Definition initialFlagState :=
   ! SF := mkFlag false
   ! OF := mkFlag false.
 
-Require Import String.
+Require Import Coq.Strings.String.
 Definition showFlag s res := (if res is mkFlag f then (if f then s else ".") else "?")%string.
 Definition flagsToString (f:FlagState) :=
   (showFlag "C" (f CF) ++

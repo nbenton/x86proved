@@ -16,7 +16,7 @@ Local Open Scope update_scope.
 Record ProcState := mkProcState 
 { registers:> RegState; flags:> FlagState; memory:> Mem }.
 (*=End *)
-Require Import String. 
+Require Import Coq.Strings.String. 
 Definition procStateToString s := 
   (let: mkProcState rs fs ms := s in 
   regStateToString rs ++ " EFL=" ++ flagsToString fs ++ " " ++ memToString ms)%string.

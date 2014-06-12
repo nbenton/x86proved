@@ -1,7 +1,7 @@
 (*===========================================================================
     X86 Exceptions
   ===========================================================================*)
-Require Import String.
+Require Import Coq.Strings.String.
 
 Inductive GeneralException :=
 | ExnDE  (* Divide error *)

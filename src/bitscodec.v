@@ -3,7 +3,7 @@
   ======================================================================================*)
 Require Import ssreflect ssrfun seq ssrbool ssrnat fintype.
 Require Import bitsrep bitsprops bitsops eqtype tuple.
-Require Import String.
+Require Import Coq.Strings.String.
 Require Import cast codec.
 
 Set Implicit Arguments.

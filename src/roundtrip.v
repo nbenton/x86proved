@@ -2,7 +2,7 @@
     Round trip properties for readers and writers
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-Require Import bitsrep bitsprops monad reader cursor writer String cstring.
+Require Import bitsrep bitsprops monad reader cursor writer Coq.Strings.String cstring.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -14,7 +14,7 @@ Import Prenex Implicits.
    they are allowed to read the cursor position independently of each other.
    If the writer fails, there is no restriction on the reader.
  *)
-Inductive simrw {X T} (x: X): 
+Inductive simrw {X T} (x: X):
   Cursor 32 -> Reader X -> WriterTm T -> Prop :=
 | simrw_retn p t: simrw x p (readerRetn x) (writerRetn t)
 | simrw_next p R b W': simrw x (next p) (R b) W' -> simrw x p (readerNext R) (writerNext b W')
@@ -63,7 +63,7 @@ Qed.
    BYTE, WORD and DWORD reading and writing
   ---------------------------------------------------------------------------*)
 Instance RoundtripBYTE : Roundtrip readBYTE writeBYTE.
-Proof. move => x. elim => [p |]; repeat constructor. Qed. 
+Proof. move => x. elim => [p |]; repeat constructor. Qed.
 
 Instance RoundtripSkip : Roundtrip readSkip writeSkipBYTE.
 Proof. case. elim => [p |]; repeat constructor. Qed.
@@ -87,69 +87,68 @@ Proof.
   apply simrw_next' => {p'} p' _.
   apply simrw_next' => {p'} p' _.
   rewrite -(split4eta (x:BITS (8+8+8+8))) e. constructor.
-Qed. 
+Qed.
 
 (*---------------------------------------------------------------------------
    DWORDorBYTE reading and writing
   ---------------------------------------------------------------------------*)
-Instance RoundtripDWORDorBYTE dw : Roundtrip (readDWORDorBYTE dw) (writeDWORDorBYTE dw) := 
-  if dw as dw return Roundtrip (readDWORDorBYTE dw) (writeDWORDorBYTE dw) 
-  then RoundtripDWORD else RoundtripBYTE. 
+Instance RoundtripDWORDorBYTE dw : Roundtrip (readDWORDorBYTE dw) (writeDWORDorBYTE dw) :=
+  if dw as dw return Roundtrip (readDWORDorBYTE dw) (writeDWORDorBYTE dw)
+  then RoundtripDWORD else RoundtripBYTE.
 
 Instance RoundtripPadWith b m : Roundtrip (readPad m) (writePadWith b m).
-Proof. 
-  induction m => v p; case v. 
-  apply simrw_retn. 
-  apply simrw_next' => p' _. 
-  apply IHm.  
-Qed.   
+Proof.
+  induction m => v p; case v.
+  apply simrw_retn.
+  apply simrw_next' => p' _.
+  apply IHm.
+Qed.
 
 Instance RoundtripSkipPad m : Roundtrip (readSkipPad m) (writeSkipBy m).
-Proof. 
-  induction m => v p; case v. 
+Proof.
+  induction m => v p; case v.
   apply simrw_retn.
-  simpl. 
-  destruct p. 
-  - apply: simrw_skip. apply IHm.   
-  - constructor. 
-Qed.   
+  simpl.
+  destruct p.
+  - apply: simrw_skip. apply IHm.
+  - constructor.
+Qed.
 
-Instance RoundtripPad m : Roundtrip (readPad m) (writePad m). 
-Proof. apply RoundtripPadWith. Qed. 
+Instance RoundtripPad m : Roundtrip (readPad m) (writePad m).
+Proof. apply RoundtripPadWith. Qed.
 
 Require Import tuplehelp.
 Instance RoundtripTupleBYTE m : Roundtrip (readTupleBYTE m) (@writeTupleBYTE m).
-Proof. 
-  induction m => v p. 
-+ rewrite (tuple0 v)/=. apply simrw_retn.  
+Proof.
+  induction m => v p.
++ rewrite (tuple0 v)/=. apply simrw_retn.
 + case/tupleP: v => [b bs].
   simpl. apply simrw_next' => p' _.
   rewrite beheadCons theadCons.
   apply simrw_bind_end; first apply IHm.
   move => p''.
-  apply simrw_retn.    
-Qed.   
+  apply simrw_retn.
+Qed.
 
-Instance RoundtripAlignWith b m : Roundtrip (readAlign m) (writeAlignWith b m). 
-Proof. 
+Instance RoundtripAlignWith b m : Roundtrip (readAlign m) (writeAlignWith b m).
+Proof.
 rewrite /readAlign/writeAlignWith/Roundtrip.
-move => v p. case v. 
+move => v p. case v.
 constructor.
 constructor.
 destruct p; last exact: simrw_retn.
-apply: RoundtripPadWith. 
-Qed. 
+apply: RoundtripPadWith.
+Qed.
 
-Instance RoundtripAlign m : Roundtrip (readAlign m) (writeAlign m). 
-Proof. apply RoundtripAlignWith. Qed. 
+Instance RoundtripAlign m : Roundtrip (readAlign m) (writeAlign m).
+Proof. apply RoundtripAlignWith. Qed.
 
-Instance RoundtripSkipAlign m : Roundtrip (readSkipAlign m) (writeSkipAlign m). 
-Proof. 
+Instance RoundtripSkipAlign m : Roundtrip (readSkipAlign m) (writeSkipAlign m).
+Proof.
 rewrite /readSkipAlign/writeSkipAlign/Roundtrip.
-move => v p. case v. 
+move => v p. case v.
 constructor.
 constructor.
 destruct p; last exact: simrw_retn.
 apply: RoundtripSkipPad.
-Qed. 
-
+Qed.

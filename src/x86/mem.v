@@ -144,7 +144,7 @@ Definition writeMem {T} (w:Writer T) (m:Mem) (pos: Cursor 32) (t: T):
     option (Cursor 32 * Mem) :=
   writeMemTm (w t) m pos.
 
-Require Import String.
+Require Import Coq.Strings.String.
 Import Ascii.
 Fixpoint enumMemToString (xs: seq (DWORD * BYTE)) :=
   (if xs is (p,b)::xs then toHex p ++ ":=" ++ toHex b ++ ", " ++ enumMemToString xs

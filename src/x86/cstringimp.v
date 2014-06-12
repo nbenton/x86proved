@@ -5,7 +5,7 @@ Require Import ssreflect ssrbool ssrnat eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
 Require Import SPred septac spec spectac safe basic basicprog program.
 Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor basic flags macros.
-Require Import String cstring Ascii.
+Require Import Coq.Strings.String cstring Ascii.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

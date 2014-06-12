@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun seq ssrbool ssrnat fintype eqtype tuple.
-Require Import String.
+Require Import Coq.Strings.String.
 Require Import cast codec regex.
 Require Import Setoid Morphisms RelationClasses.
 Require Import FunctionalExtensionality.
