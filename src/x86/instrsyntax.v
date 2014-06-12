@@ -4,7 +4,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool seq.
 Require Import bitsrep bitsops reg instr.
-Require Export String.
+Require Export Coq.Strings.String.
 
 Delimit Scope instr_scope with asm.
 Delimit Scope memspec_scope with ms.
@@ -227,4 +227,3 @@ Example ex8 := CMP AL, (#c"!":BYTE).
 
 Close Scope instr_scope.
 End Examples.
-

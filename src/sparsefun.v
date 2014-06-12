@@ -1,4 +1,4 @@
-Require Import List.
+Require Import Coq.Lists.List.
 
 (* If n>=m return difference otherwise return None *)
 Fixpoint diff n m :=
