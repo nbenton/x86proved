@@ -12,7 +12,7 @@
   Proofs of properties of operations can be found in bitsopsprops.v
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple fintype zmodp.
-Require Import ZArith String.
+Require Import Coq.ZArith.ZArith Coq.Strings.String.
 
 (* We represent n-bit words by a tuple of booleans, least-significant bit at the head *)
 (* DWORDorBYTE is especially useful for multi-mode instructions *)
