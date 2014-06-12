@@ -8,6 +8,6 @@ Local Open Scope update_scope.
 Class Update M K V {ops: UpdateOps M K V} :=
 { update_same m k v w : (m !k:=v !k:=w) = (m !k:=w)
 ; update_diff m k l v w : k<>l -> (m !k:=v !l:=w) = (m !l:=w !k:=v)
-}. 
+}.
 
 

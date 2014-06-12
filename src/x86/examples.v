@@ -13,34 +13,34 @@ Import Prenex Implicits.
 Local Open Scope instr_scope.
 
 (*=max *)
-(* Determine max(r1,r2), leaving result in r1 *) 
+(* Determine max(r1,r2), leaving result in r1 *)
 Definition max (r1 r2: Reg) : program :=
   LOCAL Bigger;
     CMP r1, r2;; JG Bigger;; MOV r1, r2;;
-  Bigger:; . 
+  Bigger:; .
 (*=End *)
 
 (*=letproc *)
 Definition callproc f :=
   LOCAL iret;
-   MOV EDI, iret;; JMP f;; 
+   MOV EDI, iret;; JMP f;;
   iret:;.
 
 Definition defproc (p: program) :=
   p;; JMP EDI.
 
-Notation "'letproc' f ':=' p 'in' q" := 
-  (LOCAL skip; LOCAL f; 
-    JMP skip;; 
-   f:;;    defproc p;; 
-   skip:;; q) 
+Notation "'letproc' f ':=' p 'in' q" :=
+  (LOCAL skip; LOCAL f;
+    JMP skip;;
+   f:;;    defproc p;;
+   skip:;; q)
   (at level 65, f ident, right associativity).
 
 (* Multiply EAX by nine, trashing EBX *)
 Example ex :=
-  letproc tripleEAX := 
+  letproc tripleEAX :=
     MOV EBX, EAX;; SHL EAX, 2;; ADD EAX, EBX
-  in 
+  in
     callproc tripleEAX;; callproc tripleEAX.
 (*=End *)
 

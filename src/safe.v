@@ -15,7 +15,7 @@ Local Obligation Tactic := idtac.
 
 Program Definition safe := mkspec (fun k P =>
     forall s: ProcState, (P ** ltrue) (toPState s) ->
-    exists s', exists o, 
+    exists s', exists o,
     doMany k step s = (o, Success _ (s',tt))
   ) _ _.
 Next Obligation.
@@ -23,12 +23,12 @@ Next Obligation.
   have ->: k.+1 = (k + 1)%coq_nat by omega.
   move => P Hsafe s Hs.
   have [s'' [o'' Hs'']] := Hsafe s Hs. move: Hs''.
-  rewrite doManyAdd /=. 
-  case: (doMany k step s) => [o' u]. 
-  case: u => //. elim => [s' u]. exists s'. exists o'. by destruct u. 
+  rewrite doManyAdd /=.
+  case: (doMany k step s) => [o' u].
+  case: u => //. elim => [s' u]. exists s'. exists o'. by destruct u.
 Qed.
 Next Obligation.
-  move=> k P P' [R HR] Hsafe s Hs. 
+  move=> k P P' [R HR] Hsafe s Hs.
   edestruct (Hsafe s); last by eauto.
   rewrite ->lentails_eq in Hs. rewrite <-HR in Hs.
   rewrite lentails_eq. rewrite ->Hs. by ssimpl.
@@ -37,7 +37,7 @@ Qed.
 Transparent ILPre_Ops.
 Instance AtEx_safe: AtEx safe.
 Proof.
-  move=> A f. 
+  move=> A f.
   move=> k P Hf.
   unfold safe, spec_at, mkspec, spec_fun in *; simpl in *.
   move=> s Hs.

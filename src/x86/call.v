@@ -23,8 +23,8 @@ Definition mkbody_toyfun (p: program) :=
   p;; JMP retreg.
 
 (* It's useful to define local functions *)
-Notation "'let_toyfun' f  ':=' p 'in' q" := 
-  (LOCAL skip; JMP skip;; LOCAL f; f:;; mkbody_toyfun p;; skip:;; q)%asm  
+Notation "'let_toyfun' f  ':=' p 'in' q" :=
+  (LOCAL skip; JMP skip;; LOCAL f; f:;; mkbody_toyfun p;; skip:;; q)%asm
   (at level 45, f ident, right associativity).
 
 Lemma spec_at_toyfun f P Q R:
@@ -41,15 +41,15 @@ Lemma toyfun_call (f:DWORD) P Q:
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
   apply basic_local => iret. rewrite /stateIsAny. specintros => old.
-  eapply basic_seq. eapply basic_basic. apply MOV_RI_rule; by ssimpl. by ssimpl. 
-  by ssimpl. 
-  
+  eapply basic_seq. eapply basic_basic. apply MOV_RI_rule; by ssimpl. by ssimpl.
+  by ssimpl.
+
   rewrite /basic. specintros => i j. unfold_program. specintros => _ <- -> {j}.
   specapply JMP_I_rule. by ssimpl.
-  rewrite <-spec_reads_frame. autorewrite with push_at. 
+  rewrite <-spec_reads_frame. autorewrite with push_at.
   rewrite /toyfun. autorewrite with push_later. apply lforallL with iret.
   autorewrite with push_later. cancel2. rewrite <-spec_later_weaken.
-  cancel1. rewrite /stateIsAny. sbazooka. 
+  cancel1. rewrite /stateIsAny. sbazooka.
   apply _.
   apply _.
 Qed.
@@ -64,7 +64,7 @@ Proof.
   eapply safe_safe_ro; first reflexivity.
   - apply lforallL with f. apply lforallL with i1. reflexivity.
   - split; sbazooka.
-  specapply JMP_R_rule. by ssimpl. 
+  specapply JMP_R_rule. by ssimpl.
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
   rewrite <-spec_later_weaken. rewrite /stateIsAny. autorewrite with push_at.
   cancel1. by sbazooka.
@@ -101,8 +101,8 @@ Proof.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  basicapply INC_R_rule; rewrite /OSZCP; sbazooka. 
-  basicapply INC_R_rule; rewrite /OSZCP; sbazooka. 
+  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
+  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
   rewrite addIsIterInc /OSZCP /iter; sbazooka.
 Qed.
 
@@ -114,21 +114,21 @@ Example toyfun_example_caller_correct a (f:DWORD):
   Forall a', toyfun f (EAX ~= a') (EAX ~= a' +# 2)
   |-- basic (EAX ~= a) (toyfun_example_caller f) (EAX ~= a +# 4) @ retreg?.
 Proof.
-  rewrite /toyfun_example_caller. rewrite /RegOrFlag_target. 
-  autorewrite with push_at. 
-  eapply basic_seq. 
+  rewrite /toyfun_example_caller. rewrite /RegOrFlag_target.
+  autorewrite with push_at.
+  eapply basic_seq.
   - apply lforallL with a.
     eapply basic_basic_context.
     - have H := toyfun_call. setoid_rewrite spec_at_basic in H. apply H.
     - by apply spec_later_weaken.
-    - by sbazooka. 
+    - by sbazooka.
     done.
   apply lforallL with (a +# 2).
   eapply basic_basic_context.
   - have H := toyfun_call. setoid_rewrite spec_at_basic in H. apply H.
   - by apply spec_later_weaken.
   - by ssimpl.
-  rewrite -addB_addn. sbazooka. reflexivity. 
+  rewrite -addB_addn. sbazooka. reflexivity.
 Qed.
 
 Example toyfun_example_correct entry (i j: DWORD) a:
@@ -147,9 +147,9 @@ Proof.
   cancel2; last reflexivity. autorewrite with push_at.
   eapply safe_safe_ro; first reflexivity.
   - eapply lforallL. eapply lforallL. reflexivity.
-  - split; sbazooka. 
+  - split; sbazooka.
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
-  rewrite spec_at_emp. cancel1. sbazooka. 
+  rewrite spec_at_emp. cancel1. sbazooka.
 Qed.
 
 (*
@@ -182,7 +182,7 @@ Example toyfun_apply_correct (f f' g: DWORD) P Q:
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
   specintro => iret. rewrite limpland.
-  specapply JMP_R_rule. by ssimpl. 
+  specapply JMP_R_rule. by ssimpl.
   autorewrite with push_at.
   rewrite <-spec_reads_frame. rewrite -limpland. apply limplValid.
   rewrite /toyfun. eapply lforallL. rewrite <-spec_later_weaken.

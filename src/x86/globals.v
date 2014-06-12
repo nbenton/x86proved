@@ -742,8 +742,8 @@ Proof.
   (* else branch *)
   + specintros => N0.
     specapply DEC_R_ruleNoFlags.
-    sbazooka. 
-    rewrite {3 4}/stateIsAny. sbazooka. 
+    sbazooka.
+    rewrite {3 4}/stateIsAny. sbazooka.
 
     specapply JMP_I_rule; first by sbazooka.
     autorewrite with push_at.
@@ -822,8 +822,8 @@ Proof.
     reflexivity.
   (* else branch *)
   + specintros => N0.
-    specapply DEC_R_ruleNoFlags. 
-    rewrite  {8 9}/stateIsAny. sbazooka. 
+    specapply DEC_R_ruleNoFlags.
+    rewrite  {8 9}/stateIsAny. sbazooka.
     specapply JMP_I_rule; first by sbazooka.
     autorewrite with push_at.
     rewrite -> (spec_later_weaken (safe @ _)).

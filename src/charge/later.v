@@ -7,14 +7,14 @@ Unset Strict Implicit.
 Section LaterSect.
   Context {A : Type}.
   Context `{ILOps: ILogicOps A}.
-          
+
 
 Class ILLOperators (A : Type) := {
   illater : A -> A
 }.
 
 Class ILLater {ILLOps: ILLOperators A} := {
-  illogic :> ILogic A;                                           
+  illogic :> ILogic A;
   spec_lob P : illater P |-- P -> |-- P;
   spec_later_weaken P : P |-- illater P;
   spec_later_impl P Q : illater (P -->> Q) -|- (illater P) -->> (illater Q);
@@ -55,7 +55,7 @@ Section ILogicLaterCoreRules.
     do 2 rewrite lor_is_exists; split;
     [rewrite spec_later_exists_inhabited; [|firstorder]| rewrite <- spec_later_exists];
     apply lexistsL; intro x; apply lexistsR with x; destruct x; reflexivity.
-  Qed.    
+  Qed.
 
   Lemma spec_later_true : |>ltrue -|- ltrue.
   Proof.
@@ -79,7 +79,7 @@ Section ILogic_nat.
   Context {A : Type}.
   Context `{IL: ILogic A}.
 
-  Program Definition ILLaterPreOps : ILLOperators (ILPreFrm ge A)  := 
+  Program Definition ILLaterPreOps : ILLOperators (ILPreFrm ge A)  :=
     {|
       illater P := mkILPreFrm (fun x => Forall y : nat, y < x ->> P y) _
     |}.
@@ -98,7 +98,7 @@ Local Existing Instance ILPre_ILogic.
   Proof.
     split.
     + apply _.
-    + intros P H x; induction x. 
+    + intros P H x; induction x.
       - rewrite <- H; simpl; apply lforallR; intro y.
         apply lpropimplR; intros; omega.
       - rewrite <- H; simpl; apply lforallR; intro y.
@@ -122,7 +122,7 @@ Local Existing Instance ILPre_ILogic.
         apply limplAdj.
         apply limplL.
         apply lforallL with z.
-        apply lpropimplL; [assumption| reflexivity].        
+        apply lpropimplL; [assumption| reflexivity].
         apply landL1; reflexivity.
       - eapply lforallR; intro y.
         eapply lpropimplR; intros Hyx.
@@ -160,7 +160,7 @@ Local Existing Instance ILPre_ILogic.
       apply lexistsR with a.
       apply lforallL with y.
       apply lpropimplL; [assumption|reflexivity].
-    + intros T F Hin x; simpl.      
+    + intros T F Hin x; simpl.
       inversion Hin as [a]; destruct x.
       - apply lexistsR with a.
         apply lforallR; intro y.

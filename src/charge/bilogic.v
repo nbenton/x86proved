@@ -1,4 +1,4 @@
-Require Import Setoid Morphisms RelationClasses Program.Basics. 
+Require Import Setoid Morphisms RelationClasses Program.Basics.
 Require Import ilogic iltac CSetoid.
 
 Set Implicit Arguments.
@@ -39,12 +39,12 @@ Section CoreInferenceRules.
   Definition strict P := forall Q, ((Q ** ltrue) //\\ P) |-- (Q ** (Q -->> P)).
 
   Lemma wandSPAdj P Q C (HSep: C ** P |-- Q) : C |-- P -* Q.
-  Proof. 
+  Proof.
     apply wandSepSPAdj; assumption.
   Qed.
 
   Lemma sepSPAdj P Q C (HWand: C |-- P -* Q) : C ** P |-- Q.
-  Proof. 
+  Proof.
     apply wandSepSPAdj; assumption.
   Qed.
 
@@ -67,7 +67,7 @@ Section CoreInferenceRules.
   Proof.
     split; [apply sepSPA1 | apply sepSPA2].
   Qed.
-    
+
   Lemma wandSPI (P Q R : A) (HQ : P ** Q |-- R) : (P |-- Q -* R).
   Proof.
     apply wandSPAdj; assumption.
@@ -127,14 +127,14 @@ Section BILogicMorphisms.
     rewrite -> sepSPC.
     etransitivity; [apply bilsep; exact HQ|].
     rewrite -> sepSPC. reflexivity.
-  Qed.  
+  Qed.
 
   Global Instance sepSP_lequiv_m:
     Proper (lequiv ==> lequiv ==> lequiv) sepSP.
   Proof.
     intros P P' HP Q Q' HQ.
     split; apply sepSP_lentails_m; (apply HP || apply HQ).
-  Qed.  
+  Qed.
 
   Global Instance wandSP_lentails_m:
     Proper (lentails --> lentails ++> lentails) wandSP.
@@ -149,7 +149,7 @@ Section BILogicMorphisms.
   Proof.
     intros P P' HP Q Q' HQ.
     split; apply wandSP_lentails_m; (apply HP || apply HQ).
-  Qed.  
+  Qed.
 
 End BILogicMorphisms.
 
@@ -168,10 +168,10 @@ Section DerivedInferenceRules.
     rewrite -> sepSPC; apply sepSP_falseR.
   Qed.
 
-  Lemma land_sepSP P Q R : (P//\\Q) ** R |-- (P ** R) //\\ (Q**R).  
-  Proof. apply landR. apply sepSP_lentails_m. apply landL1. reflexivity. reflexivity. 
-                      apply sepSP_lentails_m. apply landL2. reflexivity. reflexivity. 
-  Qed. 
+  Lemma land_sepSP P Q R : (P//\\Q) ** R |-- (P ** R) //\\ (Q**R).
+  Proof. apply landR. apply sepSP_lentails_m. apply landL1. reflexivity. reflexivity.
+                      apply sepSP_lentails_m. apply landL2. reflexivity. reflexivity.
+  Qed.
 
 End DerivedInferenceRules.
 
@@ -187,7 +187,7 @@ Section BISepAlg.
     empSP := mkILFunFrm e (fun x => sa_unit === x /\\ ltrue) _;
     sepSP P Q := mkILFunFrm e (fun x => Exists x1, Exists x2, sa_mul x1 x2 x /\\
                                                 P x1 //\\ Q x2) _;
-    wandSP P Q := mkILFunFrm e (fun x => Forall x1, Forall x2, sa_mul x x1 x2 ->> 
+    wandSP P Q := mkILFunFrm e (fun x => Forall x1, Forall x2, sa_mul x x1 x2 ->>
                                                  P x1 -->> Q x2) _
   }.
   Next Obligation.
@@ -209,7 +209,7 @@ Section BISepAlg.
   Local Existing Instance ILFun_Ops.
   Local Existing Instance ILFun_ILogic.
   Local Transparent ILFun_Ops.
-  
+
   Definition SABILogic : BILogic (ILFunFrm A B).
   Proof.
     split.
@@ -265,6 +265,6 @@ Section BISepAlg.
   Qed.
 
 End BISepAlg.
-  
+
 Global Opaque SABIOps.
 

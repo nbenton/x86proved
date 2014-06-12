@@ -26,22 +26,22 @@ Variable paramtype : Type.
 Variable valuepred : paramtype -> valuetype -> SPred.
 
 (* This is the generalized spec for one-armed branch-if-equals
-   See condbrDwordStarEAX lower down for an example its instantiation 
+   See condbrDwordStarEAX lower down for an example its instantiation
 
    Note that there's already a subtle awkwardness about existentials, though:
-   If we define valuepred v as (Exists p, EAX ~= p ** p :-> v ** ..), as seems natural, then the Exists p 
-   could be instantiated differently in the pre and post conditions which would totally mess up modularity 
+   If we define valuepred v as (Exists p, EAX ~= p ** p :-> v ** ..), as seems natural, then the Exists p
+   could be instantiated differently in the pre and post conditions which would totally mess up modularity
    - in this particular case we want to know that EAX is preserved in order to glue the multiple tests together
    as well as to integrate with some larger context. Hence we explicitly parameterize by a "p" of type
    paramtype, which in general could be any type
 *)
-Definition condbrspec (b:valuetype) dest := 
-    Forall p, Forall v, Forall i j:DWORD, 
+Definition condbrspec (b:valuetype) dest :=
+    Forall p, Forall v, Forall i j:DWORD,
      (safe @ ( (v:valuetype) == b /\\ EIP ~= dest) //\\
       safe @ (((v != b)) /\\ EIP ~= j)
       -->>
      safe @ (EIP ~= i))
-      @  (valuepred p v) 
+      @  (valuepred p v)
      <@ (i -- j :-> testcode b dest).
 
 
@@ -53,7 +53,7 @@ Definition condbrspec (b:valuetype) dest :=
    case. If no value in the table matches, then the code falls through
 *)
 Fixpoint switch (vsbrs : list (valuetype * DWORD)) : program :=
-if vsbrs is (v,br)::rest then testcode v br ;; switch rest else prog_skip.  
+if vsbrs is (v,br)::rest then testcode v br ;; switch rest else prog_skip.
 
 (* This is the precondition associated with such a table, saying for a
    value x that it's safe to jump to label br_i if x = v_i
@@ -66,7 +66,7 @@ else ltrue.
    requirement that it be safe to fall through if the value is not in the list
 *)
 Definition table_precond_all (vsbrs : seq (valuetype*DWORD)) (x:valuetype) :=
-Forall p, Forall x, Forall i j: DWORD, 
+Forall p, Forall x, Forall i j: DWORD,
  (table_precond vsbrs x //\\ safe @ (x \notin [seq fst i | i<-vsbrs] /\\ EIP ~=j)
   -->>
  safe @ (EIP ~= i))
@@ -83,25 +83,25 @@ Qed.
 (* Now prove the generic version of correctness for multiway switch.
    Not quite sure about using Coq implication here, rather than internalizing in the spec logic...
 *)
-Lemma switchlemma : 
-  (forall b dest, |-- condbrspec b dest) -> 
+Lemma switchlemma :
+  (forall b dest, |-- condbrspec b dest) ->
    (forall vsbrs x,  |-- table_precond_all vsbrs x).
 move => Hbranchspec vsbrs x.
 elim: vsbrs x => [| [v br] rest IHrest] x.
 rewrite /table_precond_all.
-specintros => p x0 i j. 
+specintros => p x0 i j.
 (* here just need to know that i=j as program is empty, and that the notin is trivial *)
 rewrite /switch. unfold_program.
 specintro => <-.
 rewrite <- spec_reads_frame.
 rewrite <- spec_frame.
 apply: limplAdj.
-apply landL2. 
+apply landL2.
 apply landL2.
 cancel1.
 by sbazooka.
 
-rewrite /table_precond_all. rewrite /switch-/switch. 
+rewrite /table_precond_all. rewrite /switch-/switch.
 specintros => p v0 i j. unfold_program. specintro => imid.
 (* here we use the hypothesis *)
 rewrite /condbrspec in Hbranchspec.
@@ -109,7 +109,7 @@ specapply Hbranchspec.
 by ssimpl.
 specsplit.
 (* this proof state should totally fall to automation - it's really tedious to do by hand *)
-rewrite /table_precond-/table_precond. 
+rewrite /table_precond-/table_precond.
 autorewrite with push_at.
 rewrite <- spec_reads_frame.
 apply: limplAdj.
@@ -144,15 +144,15 @@ apply landL1.
 apply landL2.
 
 
-rewrite -[X in _ |-- X]spec_at_at. 
-apply spec_frame. 
+rewrite -[X in _ |-- X]spec_at_at.
+apply spec_frame.
 (* Alternative: rewrite -!spec_at_at. apply spec_frame.
-   Note that {2} doesn't work here as the first occurence of the pattern messes up the unification, I think  
+   Note that {2} doesn't work here as the first occurence of the pattern messes up the unification, I think
 *)
 apply landL2.
 rewrite footle.
 cancel1.
-sdestructs =>  ->. 
+sdestructs =>  ->.
 rewrite Neq.
 by sbazooka.
 Qed.
@@ -172,7 +172,7 @@ Definition ifEqDwordStarEAX (b:DWORD) (dest:DWORD) : program :=
   CMP EDI, b;;
   JE dest.
 
-Lemma condbrDwordStarEAX (b:DWORD) dest : 
+Lemma condbrDwordStarEAX (b:DWORD) dest :
     |-- condbrspec ifEqDwordStarEAX (fun p v:DWORD => (EAX ~= p ** EDI? ** p :-> v ** OSZCP?)) b dest.
 Proof.
 rewrite /ifEqDwordStarEAX /condbrspec.
@@ -183,10 +183,10 @@ specapply MOV_RanyM0_rule.
 by ssimpl.
 
 elim E: (sbbB false v b) => [carry res].
-have E': subB v b = res by rewrite /subB E. 
-specapply CMP_RI_rule. sbazooka. 
+have E': subB v b = res by rewrite /subB E.
+specapply CMP_RI_rule. sbazooka.
 
-rewrite E -E' subB_eq0. 
+rewrite E -E' subB_eq0.
 
 specapply JZ_rule.
 rewrite /OSZCP.
@@ -221,7 +221,7 @@ Definition ifEqByter (b:BYTE) (dest:DWORD) : program :=
   CMP r, b;;
   JE dest.
 
-Lemma condbrByter (b:BYTE) dest : 
+Lemma condbrByter (b:BYTE) dest :
   |-- condbrspec ifEqByter (fun (p:unit) => fun (v:BYTE) => (BYTEregIs r v ** OSZCP?)) b dest.
 Proof.
 rewrite /ifEqByter /condbrspec.
@@ -235,17 +235,17 @@ by ssimpl.
 specapply JZ_rule.
 sbazooka.
 
-rewrite low_catB. 
+rewrite low_catB.
 specsplit; rewrite <- spec_reads_frame; autorewrite with push_at.
 rewrite <- spec_later_weaken.
 apply limplValid.
 apply landL1.
 cancel1.
-sdestructs =>/eqP ->. 
-rewrite /stateIsAny. sbazooka. 
+sdestructs =>/eqP ->.
+rewrite /stateIsAny. sbazooka.
 apply limplValid; apply landL2.
 cancel1.
-sdestructs =>/eqP ->. 
+sdestructs =>/eqP ->.
 rewrite /stateIsAny. sbazooka.
 Qed.
 End ByteEq.
@@ -264,9 +264,9 @@ Structure iter := mkiter {
  valis : option T -> SPred; (* this doesn't have the extra parameter in at the moment *)
  valany : SPred;
  valisisany : forall v, valis v |-- valany;
- curnil : forall s1, 
+ curnil : forall s1,
    |-- basic (valany ** seqsplit s1 [::]) current (valis None ** seqsplit s1 [::]);
- curcons : forall s1 v s2, 
+ curcons : forall s1 v s2,
    |-- basic (valany ** seqsplit s1 (v::s2)) current (valis (Some v) ** seqsplit s1 (v::s2));
  nextcons : forall s1 v s2,
    |-- basic (seqsplit s1 (v::s2)) next (seqsplit (s1 ++ [:: v]) s2) (* frame on valis/any of course *)
@@ -275,7 +275,7 @@ Structure iter := mkiter {
 Definition NZBYTE := {x : BYTE | x != #0}.
 Variable start : DWORD.
 
-Definition byteseqsplit (s1 s2 : seq NZBYTE) := 
+Definition byteseqsplit (s1 s2 : seq NZBYTE) :=
  Exists q:DWORD, Exists r, EAX ~= q ** start -- q :-> s1 ** q -- r :-> s2 ** r :-> (#0 : BYTE).
 
 Variable r : BYTEReg.
@@ -294,7 +294,7 @@ Lemma bytevalisisany : forall v, bytevalis v |-- bytevalany.
 elim=> [a |]; rewrite /bytevalis /bytevalany; sbazooka.
 Qed.
 
-Lemma bytecurnil : forall s1, 
+Lemma bytecurnil : forall s1,
    |-- basic (bytevalany ** byteseqsplit s1 [::]) bytecurrent (bytevalis None ** byteseqsplit s1 [::]).
 move =>s; rewrite /bytevalany /byteseqsplit /bytecurrent /bytevalis.
 specintros => v q last.
@@ -306,14 +306,14 @@ rewrite seqMemIsNil.
 sbazooka.
 Qed.
 
-Lemma bytecurcons : forall s1 v s2, 
+Lemma bytecurcons : forall s1 v s2,
    |-- basic (bytevalany ** byteseqsplit s1 (v::s2)) bytecurrent (bytevalis (Some v) ** byteseqsplit s1 (v::s2)).
-move => s1 v s2; rewrite /bytevalany /byteseqsplit /bytecurrent /bytevalis. 
+move => s1 v s2; rewrite /bytevalany /byteseqsplit /bytecurrent /bytevalis.
 specintros => v0 q last.
 rewrite seqMemIsCons.
 specintros => p'.
 (* at this point, I should know that p' is q+1 *)
-setoid_rewrite memIsBYTE_next_entails.  
+setoid_rewrite memIsBYTE_next_entails.
 specintro => H.
 rewrite H.
 basicapply MOV_RMb_rule; rewrite addB0.
@@ -327,7 +327,7 @@ rewrite /pointsTo.
 sdestruct => q'.
 setoid_rewrite (@memIsBYTE_next_entails q q' (sval v)).
 sdestruct => ->.
-apply subMemIsSub. 
+apply subMemIsSub.
 Qed.
 
 (* that was a bit more of a slog than it could have been - I'm only loading a single byte! *)
@@ -353,7 +353,7 @@ ssimpl.
 elim (cursor.next p).
 move => np.
 apply (IH np q b Hq).
-setoid_rewrite (@memIsFromTop _ _ _ q). 
+setoid_rewrite (@memIsFromTop _ _ _ q).
 sbazooka.
 Qed.
 
@@ -373,7 +373,7 @@ setoid_rewrite (@pointsToBYTE_NonTop last #0).
 specintros => lastbits lasteqn.
 rewrite lasteqn.
 
-setoid_rewrite (@memIsNonTop _ _ _ (cursor.next q)). 
+setoid_rewrite (@memIsNonTop _ _ _ (cursor.next q)).
 specintros => q' Hseq.
 basicapply (@INC_R_ruleNoFlags EAX q).
 rewrite /cursor.next.
@@ -382,19 +382,19 @@ elim: (q == ones 32).
 (* this is the contradictory case want to apply seq_BYTE_top but seq BYTE mismatches with seq NZBYTE *)
 (* this doesn't help: rewrite {3}/memIs /subtypememis. *)
 rewrite [top 32 -- lastbits :-> s2]seqSubMemIs.
-setoid_rewrite memIsFromTop. 
+setoid_rewrite memIsFromTop.
 sbazooka.
 (* don't ssimpl at this point - loses information that next q isn't top (so inc q isn't zero) *)
 (* now down to the real result about adding something to the end of the sequence *)
-ssimpl. 
+ssimpl.
 
 rewrite seqSubMemIs.
 rewrite seqSubMemIs.
 rewrite map_cat.
 eapply app1.
-move: Hseq. 
-rewrite /cursor.next. 
+move: Hseq.
+rewrite /cursor.next.
 case (q == ones 32).
 by [].
-done. 
+done.
 Qed.

@@ -8,7 +8,7 @@ Local Open Scope quotient_scope.
 
  * Equality of [program]s is defined by [progEq], which captures the
  * monoidal sequencing of operations (unit: [prog_skip], composition:
- * [prog_seq]) (and scope extrusion, not treated here). 
+ * [prog_seq]) (and scope extrusion, not treated here).
  *
  * This module quotients away these identities by reflecting [program]
  * onto the [program -> program] function space: identity is thus
@@ -30,13 +30,13 @@ Fixpoint quote (p: program): program -> program :=
     fun p => quote p1 (quote p2 p)
   | prog_declabel body =>
     fun p => prog_declabel body ;; p
-  | prog_label l => 
+  | prog_label l =>
     fun p => prog_label l ;; p
-  | prog_data T R W RT v => 
+  | prog_data T R W RT v =>
     fun p => prog_data RT v ;; p
   end.
 
-Definition reify (q: program -> program): program := 
+Definition reify (q: program -> program): program :=
   q prog_skip.
 
 Definition norm (p: program): program := reify (quote p).
@@ -74,10 +74,10 @@ Lemma soundness (p: program): progEq (norm p) p.
 Proof.
   apply progEqTrans with (p2 := p ;; prog_skip);
     last by apply progEqSeqSkip.
-  apply: quote_hom.  
+  apply: quote_hom.
 Qed.
 
-Lemma program_equal (p1 p2: program): 
+Lemma program_equal (p1 p2: program):
   progEq (norm p1) (norm p2) -> progEq p1 p2.
 Proof.
   move=> H.

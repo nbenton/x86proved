@@ -6,7 +6,7 @@ Require Import ssreflect ssrbool seq.
 Require Import bitsrep bitsops reg instr.
 Require Export String.
 
-Delimit Scope instr_scope with asm. 
+Delimit Scope instr_scope with asm.
 Delimit Scope memspec_scope with ms.
 
 (*---------------------------------------------------------------------------
@@ -22,49 +22,49 @@ Definition fromSingletonMemSpec (msa: SingletonMemSpec) :=
   | RegMemSpec r => mkMemSpec (Some(r,None)) 0
   end.
 
-Notation "'[' m ']'" := 
+Notation "'[' m ']'" :=
   (fromSingletonMemSpec m)
   (at level 0, m at level 0) : memspec_scope.
 
-Notation "'[' r '+' n ']'" := 
+Notation "'[' r '+' n ']'" :=
   (mkMemSpec (Some(r:Reg, None)) n)
   (at level 0, r at level 0, n at level 0) : memspec_scope.
 
-Notation "'[' r '-' n ']'" := 
-  (mkMemSpec (Some(r:Reg, None)) (negB n)) 
+Notation "'[' r '-' n ']'" :=
+  (mkMemSpec (Some(r:Reg, None)) (negB n))
   (at level 0, r at level 0, n at level 0) : memspec_scope.
 
-Notation "'[' r '+' i '+' n ']'" := 
-  (mkMemSpec (Some(r:Reg, Some (i,S1))) n) 
+Notation "'[' r '+' i '+' n ']'" :=
+  (mkMemSpec (Some(r:Reg, Some (i,S1))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
-Notation "'[' r '+' i '*' '2' ']'" := 
-  (mkMemSpec (Some(r:Reg, Some(i,S2))) #0) 
+Notation "'[' r '+' i '*' '2' ']'" :=
+  (mkMemSpec (Some(r:Reg, Some(i,S2))) #0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
-Notation "'[' r '+' i '*' '2' '+' n ']'" := 
-  (mkMemSpec (Some(r:Reg, Some(i,S2))) n) 
+Notation "'[' r '+' i '*' '2' '+' n ']'" :=
+  (mkMemSpec (Some(r:Reg, Some(i,S2))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
-Notation "'[' r '+' i '*' '4' ']'" := 
-  (mkMemSpec (Some(r:Reg, Some(i,S4))) 0) 
+Notation "'[' r '+' i '*' '4' ']'" :=
+  (mkMemSpec (Some(r:Reg, Some(i,S4))) 0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
-Notation "'[' r '+' i '*' '4' '+' n ']'" := 
-  (mkMemSpec (Some(r:Reg, Some(i,S4))) n) 
+Notation "'[' r '+' i '*' '4' '+' n ']'" :=
+  (mkMemSpec (Some(r:Reg, Some(i,S4))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
-Notation "'[' r '+' i '*' '8' ']'" := 
-  (mkMemSpec (Some(r:Reg, Some(i,S8))) 0) 
+Notation "'[' r '+' i '*' '8' ']'" :=
+  (mkMemSpec (Some(r:Reg, Some(i,S8))) 0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
-Notation "'[' r '+' i '*' '8' '+' n ']'" := 
-  (mkMemSpec (Some(r:Reg, Some(i,S8))) n) 
+Notation "'[' r '+' i '*' '8' '+' n ']'" :=
+  (mkMemSpec (Some(r:Reg, Some(i,S8))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Definition DWORDtoDWORDorBYTE dword : DWORD -> DWORDorBYTE dword :=
-  match dword return DWORD -> DWORDorBYTE dword 
-  with true => fun d => d | false =>fun d => low 8 d end. 
+  match dword return DWORD -> DWORDorBYTE dword
+  with true => fun d => d | false =>fun d => low 8 d end.
 
 Inductive InstrArg :=
 | BYTERegArg :> BYTEReg -> InstrArg
@@ -83,7 +83,7 @@ Definition SrcToRegImm src :=
   | SrcM m => RegImmI _ (#0: DWORDorBYTE true)
   end.
 
-Bind Scope memspec_scope with MemSpec.  
+Bind Scope memspec_scope with MemSpec.
 
 (*---------------------------------------------------------------------------
     Unary operations
@@ -95,27 +95,27 @@ Definition makeUOP op (i: InstrArg) :=
   | MemSpecArg ms => UOP true op (RegMemM true ms)
   end.
 
-Notation "'NOT' x"          
+Notation "'NOT' x"
   := (makeUOP OP_NOT x%ms) (x at level 55, at level 60) : instr_scope.
-Notation "'NOT' 'BYTE' m"   
+Notation "'NOT' 'BYTE' m"
   := (UOP false OP_NOT (RegMemM false m%ms)) (m at level 55, at level 60) : instr_scope.
-Notation "'NEG' x"          
+Notation "'NEG' x"
   := (makeUOP OP_NEG x%ms) (x at level 55, at level 60) : instr_scope.
-Notation "'NEG' 'BYTE' m"   
+Notation "'NEG' 'BYTE' m"
   := (UOP false OP_NEG (RegMemM false m%ms)) (m at level 55, at level 60) : instr_scope.
-Notation "'INC' x"          
+Notation "'INC' x"
   := (makeUOP OP_INC x%ms) (x at level 55, at level 60) : instr_scope.
-Notation "'INC' 'BYTE' m"   
+Notation "'INC' 'BYTE' m"
   := (UOP false OP_INC (RegMemM false m%ms)) (m at level 55, at level 60) : instr_scope.
-Notation "'DEC' x"          
+Notation "'DEC' x"
   := (makeUOP OP_DEC x%ms) (x at level 55, at level 60) : instr_scope.
-Notation "'DEC' 'BYTE' m"   
+Notation "'DEC' 'BYTE' m"
   := (UOP false OP_DEC (RegMemM false m%ms)) (m at level 55, at level 60) : instr_scope.
 
 (*---------------------------------------------------------------------------
     Binary operations
   ---------------------------------------------------------------------------*)
-Definition makeBOP op dst (src: InstrSrc) := 
+Definition makeBOP op dst (src: InstrSrc) :=
   match dst, src with
   | BYTERegArg dst, BYTERegArg src => BOP false op (DstSrcRR false dst src)
   | BYTERegArg dst, MemSpecArg src => BOP false op (DstSrcRM false dst src)
@@ -138,28 +138,28 @@ Notation "'OR' x , y" := (makeBOP OP_OR x%ms y%ms) (x,y at level 55, at level 60
 Notation "'XOR' x , y" := (makeBOP OP_XOR x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
 Notation "'CMP' x , y" := (makeBOP OP_CMP x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
 
-(* Only need byte modifier for constant source, memspec destination *) 
-Notation "'ADC' 'BYTE' x , y" := 
+(* Only need byte modifier for constant source, memspec destination *)
+Notation "'ADC' 'BYTE' x , y" :=
   (BOP false OP_ADC (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'ADD' 'BYTE' x , y" := 
+Notation "'ADD' 'BYTE' x , y" :=
   (BOP false OP_ADD (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'SUB' 'BYTE' x , y" := 
+Notation "'SUB' 'BYTE' x , y" :=
   (BOP false OP_SUB (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'SBB' 'BYTE' x , y" := 
+Notation "'SBB' 'BYTE' x , y" :=
   (BOP false OP_SBB (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'AND' 'BYTE' x , y" := 
+Notation "'AND' 'BYTE' x , y" :=
   (BOP false OP_AND (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'OR' 'BYTE' x , y" := 
+Notation "'OR' 'BYTE' x , y" :=
   (BOP false OP_OR (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'XOR' 'BYTE' x , y" := 
+Notation "'XOR' 'BYTE' x , y" :=
   (BOP false OP_XOR (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'CMP' 'BYTE' x , y" := 
+Notation "'CMP' 'BYTE' x , y" :=
   (BOP false OP_CMP (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 
 (*---------------------------------------------------------------------------
     MOV operations
   ---------------------------------------------------------------------------*)
-Definition makeMOV dst (src: InstrSrc) := 
+Definition makeMOV dst (src: InstrSrc) :=
   match dst, src with
   | BYTERegArg dst, BYTERegArg src => MOVOP false (DstSrcRR false dst src)
   | BYTERegArg dst, MemSpecArg src => MOVOP false (DstSrcRM false dst src)
@@ -174,7 +174,7 @@ Definition makeMOV dst (src: InstrSrc) :=
   end.
 
 Notation "'MOV' x , y" := (makeMOV x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
-Notation "'MOV' 'BYTE' x , y" := 
+Notation "'MOV' 'BYTE' x , y" :=
   (MOVOP false (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 
 (*---------------------------------------------------------------------------
@@ -203,7 +203,7 @@ Notation "'IMUL' x , y" := (IMUL x%ms y%ms) (x,y at level 55, at level 60) : ins
 
 Notation "'LEA' x , y" := (LEA x (RegMemM true y%ms)) (x,y at level 55, at level 60) : instr_scope.
 
-Notation "'RET' x" := (RETOP x) (at level 60, x at level 55, format "'RET' x") : instr_scope. 
+Notation "'RET' x" := (RETOP x) (at level 60, x at level 55, format "'RET' x") : instr_scope.
 
 Definition NOP := XCHG true EAX (RegMemR true EAX).
 
@@ -216,12 +216,12 @@ Declare Reduction showinstr := cbv beta delta -[fromNat makeMOV makeUOP makeBOP]
 Module Examples.
 Open Scope instr_scope.
 
-Example ex1 := ADD EAX, [EBX + 3]. 
+Example ex1 := ADD EAX, [EBX + 3].
 Example ex2 := INC BYTE [ECX + EDI*4 + 78].
-Example ex3 (r:Reg) := MOV EDI, [r]. 
-Example ex4 (a:DWORD) := MOV EDI, [a]. 
+Example ex3 (r:Reg) := MOV EDI, [r].
+Example ex4 (a:DWORD) := MOV EDI, [a].
 Example ex5 (a:DWORD) := MOV EDI, a.
-Example ex6 (r:BYTEReg) := MOV AL, r. 
+Example ex6 (r:BYTEReg) := MOV AL, r.
 Example ex7 (r:Reg) := POP [r + #x"0000001C"].
 Example ex8 := CMP AL, (#c"!":BYTE).
 

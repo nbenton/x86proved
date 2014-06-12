@@ -9,7 +9,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import FunctionalExtensionality. 
+Require Import FunctionalExtensionality.
 
 
 (* This should not be here, //Jesper *)
@@ -17,10 +17,10 @@ Require Import FunctionalExtensionality.
 Section ILogicSSReflect.
   Context {A} `{ILogic A}.
 
-  Lemma lpropandT P : true /\\ P -|- P. 
-  Proof. rewrite /lpropand. split; [by apply lexistsL | by apply lexistsR]. Qed. 
+  Lemma lpropandT P : true /\\ P -|- P.
+  Proof. rewrite /lpropand. split; [by apply lexistsL | by apply lexistsR]. Qed.
 
-  Lemma lpropandF P : false /\\ P -|- lfalse. 
+  Lemma lpropandF P : false /\\ P -|- lfalse.
   Proof. rewrite /lpropand. split; [by apply lexistsL | done]. Qed.
 
 End ILogicSSReflect.

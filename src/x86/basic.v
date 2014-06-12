@@ -3,7 +3,7 @@
   For store assertions P and Q and "code" c, we write
      basic P c Q
   to mean
-     for any addresses i and j that point to code c, 
+     for any addresses i and j that point to code c,
      if   it's safe to run from EIP=j with assertion Q
      then it's safe to run from EIP=i with assertion P
   ===========================================================================*)
@@ -17,7 +17,7 @@ Section Basic.
 
   (** Basic block of position-independent code *)
   Definition basic P (c:T) Q : spec :=
-    Forall i j:DWORD, 
+    Forall i j:DWORD,
     (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> c).
 
   (* Experimental: multiple alternative exits *)
@@ -119,7 +119,7 @@ Hint Unfold basic : specapply.
 
 Module Export Existentials_basic.
   Import Existentials.
-  
+
   Lemma pq_basic {M} {HM: MemIs M} t c Q:
     match find t with
     | Some (mkf _ f) =>
@@ -131,7 +131,7 @@ Module Export Existentials_basic.
     red. move=> Heval. rewrite ->Heval.
     apply basic_exists => a. by apply lforallL with a.
   Qed.
-  
+
   Hint Extern 0 (PullQuant (@basic ?M ?HM ?P ?c ?Q) _) =>
     let t := quote_term P in
     apply (@pq_basic M HM t c Q) : pullquant.

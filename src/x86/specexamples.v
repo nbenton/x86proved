@@ -40,10 +40,10 @@ Example basic_inc3 x:
 Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  basicapply INC_R_rule. rewrite /OSZCP; sbazooka. 
-  basicapply INC_R_rule. rewrite /OSZCP; sbazooka. 
-  basicapply INC_R_rule. rewrite /OSZCP; sbazooka. 
-  rewrite /OSZCP addIsIterInc/iter; sbazooka. 
+  basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
+  basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
+  basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
+  rewrite /OSZCP addIsIterInc/iter; sbazooka.
 Qed.
 
 Example incdec_while c a:
@@ -67,7 +67,7 @@ Proof.
       first 2 last.
   - reflexivity.
   - subst I. rewrite /stateIsAny/ConditionIs. sbazooka.
-  - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.  
+  - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.
     rewrite ->(eqP Hzero) in *. rewrite add0B in Hadd.
     subst a'. rewrite /ConditionIs/stateIsAny. by sbazooka.
   - specintros => b1 b2. subst I; cbv beta. specintros => c' a' Hzero Hadd.
@@ -75,12 +75,12 @@ Proof.
     + rewrite /ConditionIs/stateIsAny. by sbazooka.
     rewrite /OSZCP/ConditionIs/stateIsAny. by sbazooka.
   - subst I; cbv beta. specintros => c' a' Hzero Hadd.
-    rewrite /stateIsAny. specintros => fo fs fc fp. eapply basic_seq. 
+    rewrite /stateIsAny. specintros => fo fs fc fp. eapply basic_seq.
     + eapply basic_basic; first eapply DEC_R_rule.
-      * rewrite /OSZCP/ConditionIs. by ssimpl. 
+      * rewrite /OSZCP/ConditionIs. by ssimpl.
       done.
-    basicapply INC_R_rule. 
+    basicapply INC_R_rule.
     by rewrite addB_decB_incB.
-    rewrite /OSZCP/ConditionIs.  
-    sbazooka. 
+    rewrite /OSZCP/ConditionIs.
+    sbazooka.
 Qed.

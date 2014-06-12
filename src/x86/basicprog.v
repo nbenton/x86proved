@@ -5,14 +5,14 @@ Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
 Require Import SPred septac spec spectac safe pointsto cursor instr reader instrcodec.
 Require Import Setoid RelationClasses Morphisms.
-Require Import program basic. 
+Require Import program basic.
 
 (* Morphism for program equivalence *)
 Global Instance basic_progEq_m:
 Proper (lequiv ==> progEq ==> lequiv ==> lequiv) basic.
   Proof.
     move => P P' HP c c' Hc Q Q' HQ. rewrite {1}/basic.
-    setoid_rewrite HQ. setoid_rewrite HP. setoid_rewrite Hc. reflexivity. 
+    setoid_rewrite HQ. setoid_rewrite HP. setoid_rewrite Hc. reflexivity.
   Qed.
 
 (* Skip rule *)
@@ -21,7 +21,7 @@ Proof.
   rewrite /basic. specintros => i j.
   unfold_program.
   specintro => H.
-  rewrite emp_unit spec_reads_eq_at; rewrite <- emp_unit. 
+  rewrite emp_unit spec_reads_eq_at; rewrite <- emp_unit.
   rewrite spec_at_emp. inversion H. subst. by apply limplValid.
 Qed.
 
@@ -32,10 +32,10 @@ Lemma basic_seq (c1 c2: program) S P Q R:
   S |-- basic P (c1;; c2) R.
 Proof.
   rewrite /basic. move=> Hc1 Hc2. specintros => i j.
-  unfold_program. 
-  specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst. 
+  unfold_program.
+  specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst.
   specapply Hc1. by ssimpl.
-  specapply Hc2. by ssimpl. 
+  specapply Hc2. by ssimpl.
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
   by rewrite spec_at_emp.
 Qed.
@@ -52,28 +52,28 @@ Proof.
 Qed.
 
 (* Needed to avoid problems with coercions *)
-Lemma basic_instr S P i Q : 
-  S |-- basic P i Q -> 
+Lemma basic_instr S P i Q :
+  S |-- basic P i Q ->
   S |-- basic P (prog_instr i) Q.
-Proof. done. Qed. 
+Proof. done. Qed.
 
 (* Attempts to apply "basic" lemma on a single command (basic_basic) or
    on the first of a sequence (basic_seq). Note that it attempts to use sbazooka
-   to discharge subgoals, so be careful if existentials are exposed in the goal -- 
+   to discharge subgoals, so be careful if existentials are exposed in the goal --
    they will be instantiated! *)
   Hint Unfold not : basicapply.
   Hint Rewrite eq_refl : basicapply.
   Ltac instRule R H :=
     move: (R) => H;
     repeat (autounfold with basicapply in H);
-    eforalls H; 
+    eforalls H;
     autorewrite with push_at in H.
 
 
   (* This is all very sensitive to use of "e" versions of apply/exact. Beware! *)
   Ltac basicatom R :=
   match goal with
-    | |- |-- basic ?P (prog_instr ?i) ?Q =>  
+    | |- |-- basic ?P (prog_instr ?i) ?Q =>
           (eapply basic_basic; first eapply basic_instr; first eexact R; autounfold with spred; sbazooka)
 
     | _ => eapply basic_basic; first eexact R; autounfold with spred; sbazooka
@@ -92,4 +92,4 @@ Proof. done. Qed.
     first basicseq Hlem;
     clear Hlem.
 
-  
+

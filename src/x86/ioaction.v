@@ -19,27 +19,27 @@ Definition actionEq a1 a2 :=
   end.
 
 Lemma action_eqP: Equality.axiom actionEq.
-Proof. case => c1 d1.  case => c2 d2. simpl. 
-+ case E1: (c1 == c2). 
-  case E2: (d1 == d2). 
+Proof. case => c1 d1.  case => c2 d2. simpl.
++ case E1: (c1 == c2).
+  case E2: (d1 == d2).
   simpl. rewrite (eqP E1) (eqP E2). by apply ReflectT.
-  apply ReflectF => H.  inversion H. 
-  rewrite H2 in E2. by rewrite eq_refl in E2. 
-  apply ReflectF => H. inversion H. 
+  apply ReflectF => H.  inversion H.
+  rewrite H2 in E2. by rewrite eq_refl in E2.
+  apply ReflectF => H. inversion H.
   rewrite H1 in E1. by rewrite eq_refl in E1.
-  by apply ReflectF => H.  
-  case => c2 d2. 
   by apply ReflectF => H.
-simpl. 
-case E1: (c1 == c2). 
-case E2: (d1 == d2). 
+  case => c2 d2.
+  by apply ReflectF => H.
+simpl.
+case E1: (c1 == c2).
+case E2: (d1 == d2).
   simpl. rewrite (eqP E1) (eqP E2). by apply ReflectT.
-  apply ReflectF => H.  inversion H. 
-  rewrite H2 in E2. by rewrite eq_refl in E2. 
-  apply ReflectF => H. inversion H. 
+  apply ReflectF => H.  inversion H.
+  rewrite H2 in E2. by rewrite eq_refl in E2.
+  apply ReflectF => H. inversion H.
   rewrite H1 in E1. by rewrite eq_refl in E1.
-Qed.   
+Qed.
 
-Canonical action_eqMixin := EqMixin action_eqP. 
-Canonical action_eqType := Eval hnf in EqType _ action_eqMixin. 
+Canonical action_eqMixin := EqMixin action_eqP.
+Canonical action_eqType := Eval hnf in EqType _ action_eqMixin.
 

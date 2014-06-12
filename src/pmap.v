@@ -17,14 +17,14 @@ Section Maps.
 (* Non-empty maps, possibly-empty maps *)
 (*=PMAP *)
 Variable V: Type.
-Inductive NEPMAP : nat -> Type := 
+Inductive NEPMAP : nat -> Type :=
 | VAL    : V -> NEPMAP 0
 | SPLIT  : forall n (lo hi: NEPMAP n), NEPMAP n.+1
 | LSPLIT : forall n (lo   : NEPMAP n), NEPMAP n.+1
 | RSPLIT : forall n (hi   : NEPMAP n), NEPMAP n.+1.
-Inductive PMAP n := 
+Inductive PMAP n :=
 | PMap      : NEPMAP n -> PMAP n
-| EmptyPMap : PMAP n. 
+| EmptyPMap : PMAP n.
 (*=End *)
 
 (* Lookup an element in the map *)
@@ -40,24 +40,24 @@ Inductive PMAP n :=
   Fixpoint singleNE n : BITS n -> V -> NEPMAP n :=
   match n with
   | O => fun p v => VAL v
-  | S _ => fun p v => let (p,b) := splitlsb p in 
-                      if b then RSPLIT (singleNE p v) 
+  | S _ => fun p v => let (p,b) := splitlsb p in
+                      if b then RSPLIT (singleNE p v)
                            else LSPLIT (singleNE p v)
   end.
 
   (* Update an element in the map *)
   Fixpoint updateNE n (m: NEPMAP n) : BITS n -> V -> NEPMAP n :=
   match m with
-  | SPLIT _ lo hi => 
-    fun p v => let (p,b) := splitlsb p in 
+  | SPLIT _ lo hi =>
+    fun p v => let (p,b) := splitlsb p in
     if b then SPLIT lo (updateNE hi p v) else SPLIT (updateNE lo p v) hi
-  | LSPLIT _ lo => 
+  | LSPLIT _ lo =>
     fun p v => let (p,b) := splitlsb p in
     if b then SPLIT lo (singleNE p v) else LSPLIT (updateNE lo p v)
-  | RSPLIT _ hi => 
-    fun p v => let (p,b) := splitlsb p in 
+  | RSPLIT _ hi =>
+    fun p v => let (p,b) := splitlsb p in
     if b then RSPLIT (updateNE hi p v) else SPLIT (singleNE p v) hi
-  | VAL _ => 
+  | VAL _ =>
     fun p v => VAL v
   end.
 
@@ -67,28 +67,28 @@ Inductive PMAP n :=
   (* Remove an element from the map if it is present *)
   Fixpoint removeNE n (m: NEPMAP n) : BITS n -> option (NEPMAP n) :=
   match m with
-  | SPLIT _ lo hi => 
+  | SPLIT _ lo hi =>
     fun p => let (p,b) := splitlsb p in
-    if b then 
+    if b then
       if removeNE hi p is Some m' then Some (SPLIT lo m') else Some (LSPLIT lo)
-    else 
+    else
       if removeNE lo p is Some m' then Some (SPLIT m' hi) else Some (RSPLIT hi)
 
-  | LSPLIT _ lo => 
-    fun p => let (p,b) := splitlsb p in 
+  | LSPLIT _ lo =>
+    fun p => let (p,b) := splitlsb p in
     if b then Some (LSPLIT lo)
     else if removeNE lo p is Some m' then Some (LSPLIT m') else None
-  | RSPLIT _ hi => 
+  | RSPLIT _ hi =>
     fun p => let (p,b) := splitlsb p in
     if b then if removeNE hi p is Some m' then Some (RSPLIT m') else None
     else Some (RSPLIT hi)
-  | VAL _ => 
+  | VAL _ =>
     fun p => None
   end.
 
   Definition removePMap n (m: PMAP n) (p: BITS n) :=
-  if m is PMap m' 
-  then (if removeNE m' p is Some m'' then PMap m'' else EmptyPMap _) 
+  if m is PMap m'
+  then (if removeNE m' p is Some m'' then PMap m'' else EmptyPMap _)
   else m.
 
   Definition consBfun A n b (f: BITS n.+1 -> A): BITS n -> A :=
@@ -125,20 +125,20 @@ Inductive PMAP n :=
   Fixpoint enumNE n n' (m: NEPMAP n) (loworder: BITS n') (*: seq (BITS (n'+n) * V) *) :=
   match m in NEPMAP n return seq (BITS (n+n') * V) with
   | VAL v          => [::(loworder,v)]
-  | SPLIT _  lo hi => 
+  | SPLIT _  lo hi =>
     List.app (List.map (fun p => (cons_tuple false p.1, p.2)) (enumNE lo loworder))
              (List.map (fun p => (cons_tuple true p.1, p.2)) (enumNE hi loworder))
   | LSPLIT _ lo    => List.map (fun p => (cons_tuple false p.1, p.2)) (enumNE lo ((*cons_tuple false *) loworder))
   | RSPLIT _ hi    => List.map (fun p => (cons_tuple true p.1, p.2)) (enumNE hi ((*cons_tuple true *) loworder))
   end.
 
-  Definition enumPMap n (m: PMAP n) := 
+  Definition enumPMap n (m: PMAP n) :=
   if m is PMap m' then enumNE m' (nil_tuple _) else [::].
 
 (*=lookup *)
 Definition lookup n (m: PMAP n) (p: BITS n) : option V
  := if m is PMap m' then lookupNE m' p else None.
-Global Coercion lookup : PMAP >-> Funclass. 
+Global Coercion lookup : PMAP >-> Funclass.
 (*=End *)
 
 End Maps.
@@ -146,7 +146,7 @@ End Maps.
 (* Usually we just use function application for lookup *)
 
 (* Nice syntax for functional update *)
-Instance PMapUpdateOps n V : UpdateOps (PMAP V n) _ _ := @updatePMap V n. 
+Instance PMapUpdateOps n V : UpdateOps (PMAP V n) _ _ := @updatePMap V n.
 
 Open Scope update_scope.
 

@@ -21,7 +21,7 @@ Notation "` c" := (RegExp.var (Pos.of_nat c)) (at level 2): regex_scope.
 
 Local Open Scope regex_scope.
 
-Definition char (c: Ascii.ascii): regex := 
+Definition char (c: Ascii.ascii): regex :=
   RegExp.var (Pos.of_nat (Ascii.nat_of_ascii c)).
 Notation "'$' c" := (char c)
   ( at level 0) : regex_scope.
@@ -29,11 +29,11 @@ Notation "'$' c" := (char c)
 Definition any (l: seq regex): regex :=
   foldr (RegExp.plus) rO l.
 
-Notation "'[[' c1 , c2 , .. , cn ']]'" := 
+Notation "'[[' c1 , c2 , .. , cn ']]'" :=
   ((any (map (fun (c: Ascii.ascii) => char c) (c1 :: c2 :: .. [:: cn] ..))))
   (at level 60) : regex_scope.
 
-Notation "'[{' x ',' y '}]'" := 
+Notation "'[{' x ',' y '}]'" :=
   (any [seq RegExp.var (Pos.of_nat c) | c <- iota (Ascii.nat_of_ascii x) ((Ascii.nat_of_ascii y) + 1 - (Ascii.nat_of_ascii x))])
   (right associativity, at level 60) : regex_scope.
 

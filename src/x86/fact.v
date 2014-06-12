@@ -15,41 +15,41 @@ Local Open Scope instr_scope.
 Definition defproc (p: program) :=
   p;; JMP EDI.
 
-Notation "'letproc' f ':=' p 'in' q" := 
-  (LOCAL skip; JMP skip;; LOCAL f; f:;; defproc p;; skip:;; q) 
+Notation "'letproc' f ':=' p 'in' q" :=
+  (LOCAL skip; JMP skip;; LOCAL f; f:;; defproc p;; skip:;; q)
   (at level 65, f ident, right associativity).
 
 Definition callproc f :=
-  LOCAL iret; MOV EDI, iret;; JMP f;; 
+  LOCAL iret; MOV EDI, iret;; JMP f;;
   iret:;.
 
 (*=main *)
-Definition call_cdecl3 f arg1 arg2 arg3 := 
-  PUSH arg3;; PUSH arg2;; PUSH arg1;; 
+Definition call_cdecl3 f arg1 arg2 arg3 :=
+  PUSH arg3;; PUSH arg2;; PUSH arg1;;
   CALL f;; ADD ESP, 12.
 
-Definition main (printfSlot: DWORD) :=  
+Definition main (printfSlot: DWORD) :=
   (* Argument in EBX *)
   letproc fact :=
-    MOV EAX, 1;; 
+    MOV EAX, 1;;
     MOV ECX, 1;;
       (* while ECX <= EBX *)
-      while (CMP ECX, EBX) CC_LE true ( 
+      while (CMP ECX, EBX) CC_LE true (
         MUL ECX;; (* Multiply EAX by ECX *)
         INC ECX
       )
   in
-    LOCAL format;   
+    LOCAL format;
       MOV EBX, 10;; callproc fact;;
-      MOV EDI, printfSlot;; 
+      MOV EDI, printfSlot;;
       call_cdecl3 [EDI]%ms format EBX EAX;;
       MOV EBX, 12;; callproc fact;;
-      MOV EDI, printfSlot;; 
+      MOV EDI, printfSlot;;
       call_cdecl3 [EDI]%ms format EBX EAX;;
       RET 0;;
-    format:;; 
+    format:;;
       ds "Factorial of %d is %d";; db 10;; db 0.
 
-Compute assembleToString #x"C0000004" (main #x"C0000000"). 
+Compute assembleToString #x"C0000004" (main #x"C0000000").
 (*=End *)
 

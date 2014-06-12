@@ -15,7 +15,7 @@ Inductive program :=
 Coercion prog_instr: Instr >-> program.
 (*=End *)
 
-Require Import tuple. 
+Require Import tuple.
 
 (* Instructions in instrsyntax are up to level 60, so delimiters need to be
    above that. *)
@@ -37,10 +37,10 @@ Definition dd := prog_data RoundtripDWORD.
 (*=End *)
 Definition ds s := prog_data (@RoundtripTupleBYTE (String.length s)) (stringToTupleBYTE s).
 Definition dsz s := ds s;; db #0.
-Definition align m := prog_data (RoundtripAlign m) tt. 
-Definition alignWith b m := prog_data (RoundtripAlignWith b m) tt. 
-Definition pad m := prog_data (RoundtripPad m) tt. 
-Definition padWith b m := prog_data (RoundtripPadWith b m) tt. 
+Definition align m := prog_data (RoundtripAlign m) tt.
+Definition alignWith b m := prog_data (RoundtripAlignWith b m) tt.
+Definition pad m := prog_data (RoundtripPad m) tt.
+Definition padWith b m := prog_data (RoundtripPadWith b m) tt.
 Definition skipAlign m := prog_data (RoundtripSkipAlign m) tt.
 
 (* Sometimes handy just to get nice output *)
@@ -53,20 +53,20 @@ Fixpoint linearizeWith (p: program) tail :=
   end.
 Definition linearize p := linearizeWith p prog_skip.
 
-Declare Reduction showprog := 
+Declare Reduction showprog :=
   cbv beta delta -[fromNat fromHex makeMOV makeUOP makeBOP db dw dd ds align pad] zeta iota.
 
 Fixpoint interpProgram i j prog :=
   match prog with
   | prog_instr c => i -- j :-> c
-  | prog_skip => 
+  | prog_skip =>
     match i, j with
       mkCursor i, mkCursor j => i = j /\\ empSP
     | _, _ => i = j /\\ empSP
     end
   | prog_seq p1 p2 => Exists i': DWORD, interpProgram i i' p1 ** interpProgram i' j p2
   | prog_declabel body => Exists l, interpProgram i j (body l)
-  | prog_label l => 
+  | prog_label l =>
     match i, j with
       mkCursor i, mkCursor j => i = j /\\ i = l /\\ empSP
     | _, _ => i = j /\\ i = l /\\ empSP
@@ -78,50 +78,50 @@ Require Import septac.
 Lemma interpProgramLeAux prog : forall p q, interpProgram p q prog |-- leCursor p q /\\ interpProgram p q prog.
 Proof.
 induction prog => p q; rewrite /interpProgram-/interpProgram.
-+ apply memIsLe. 
-+ destruct p. destruct q; sdestruct => ->; rewrite leCursor_refl; sbazooka. 
++ apply memIsLe.
++ destruct p. destruct q; sdestruct => ->; rewrite leCursor_refl; sbazooka.
   sdestruct => ->; rewrite leCursor_refl; sbazooka.
-+ sdestruct => p'. rewrite -> IHprog1.   rewrite -> IHprog2. 
-  sdestruct => H1. sdestruct => H2. rewrite (leCursor_trans H1 H2). sbazooka. 
-+ sdestruct => p'. rewrite -> H. sbazooka. 
-+ destruct p. destruct q; sdestructs => -> ->; rewrite leCursor_refl; sbazooka. 
++ sdestruct => p'. rewrite -> IHprog1.   rewrite -> IHprog2.
+  sdestruct => H1. sdestruct => H2. rewrite (leCursor_trans H1 H2). sbazooka.
++ sdestruct => p'. rewrite -> H. sbazooka.
++ destruct p. destruct q; sdestructs => -> ->; rewrite leCursor_refl; sbazooka.
   sdestruct => ->; rewrite leCursor_refl; sbazooka.
-+ apply memIsLe. 
-Qed. 
++ apply memIsLe.
+Qed.
 
-Definition interpProgramLe p q prog := @interpProgramLeAux prog p q. 
+Definition interpProgramLe p q prog := @interpProgramLeAux prog p q.
 
-Global Instance programMemIs : MemIs program := Build_MemIs interpProgramLe. 
+Global Instance programMemIs : MemIs program := Build_MemIs interpProgramLe.
 
 Lemma programMemIsSkip (p q:Cursor 32) : p -- q :-> prog_skip -|- p = q /\\ empSP.
 Proof. destruct p => //. destruct q => //=. split. sdestruct => ->. sbazooka.
-sdestruct => H. injection H => ->. sbazooka. destruct q => //=. Qed. 
+sdestruct => H. injection H => ->. sbazooka. destruct q => //=. Qed.
 
 Lemma programMemIsInstr p q i : p -- q :-> prog_instr i -|- p -- q :-> i.
-Proof. by reflexivity. Qed. 
+Proof. by reflexivity. Qed.
 
 Lemma programMemIsData T R W (RT:Roundtrip R W) p q (d:T) : p -- q :-> prog_data _ d -|- p -- q :-> d.
-Proof. by simpl. Qed. 
+Proof. by simpl. Qed.
 
-Lemma programMemIsSeq p q p1 p2 : 
-  p -- q :-> prog_seq p1 p2 -|- Exists p':DWORD, p -- p' :-> p1 ** p' -- q :-> p2.  
-Proof. by simpl. Qed. 
+Lemma programMemIsSeq p q p1 p2 :
+  p -- q :-> prog_seq p1 p2 -|- Exists p':DWORD, p -- p' :-> p1 ** p' -- q :-> p2.
+Proof. by simpl. Qed.
 
 Lemma programMemIsLabel (p q: Cursor 32) l :
   p -- q :-> prog_label l -|- p = q /\\ p = l /\\ empSP.
-Proof. split.  
+Proof. split.
 destruct p => //. simpl. destruct q => //. sbazooka. congruence. congruence.
-by simpl. sdestructs => -> ->. simpl. sbazooka. 
-Qed. 
+by simpl. sdestructs => -> ->. simpl. sbazooka.
+Qed.
 
 Lemma programMemIsLocal p q p1 :
   p -- q :-> prog_declabel p1 -|- Exists L, p -- q :-> (p1 L).
-Proof. split => //=. Qed. 
+Proof. split => //=. Qed.
 
 (*Require Import bitsops.
-Lemma programMemIsAlign (p:DWORD) q m : 
+Lemma programMemIsAlign (p:DWORD) q m :
   p -- q :-> align m -|- apart (toNat (negB (lowWithZeroExtend m p))) p q /\\ p -- q :-> align m.
-Proof. simpl. 
+Proof. simpl.
 rewrite /readPad. rewrite programMemIsData.
 Qed.
 *)
@@ -184,37 +184,37 @@ End ProgramTactic.
 Ltac unfold_program := ProgramTactic.unfold_program.
 
 (*
-Require Import spec spectac reg. 
+Require Import spec spectac reg.
 Require Import instrsyntax. Open Scope instr_scope.
 Example exampleUnfoldLemma (i j: DWORD) p1  :
- i -- j :-> (LOCAL L;prog_skip;;L:;;p1;;INC EAX;;dd #4) |-- i -- j :-> p1. 
-Proof. 
+ i -- j :-> (LOCAL L;prog_skip;;L:;;p1;;INC EAX;;dd #4) |-- i -- j :-> p1.
+Proof.
 unfold_program.
-sdestructs => i1 i2  -> i3 -> -> i4 i5. 
-rewrite -> memIsLe. sdestruct => H1. 
-rewrite -> memIsLe at 2. sdestruct => H1. 
-sbazooka. 
-Qed. 
+sdestructs => i1 i2  -> i3 -> -> i4 i5.
+rewrite -> memIsLe. sdestruct => H1.
+rewrite -> memIsLe at 2. sdestruct => H1.
+sbazooka.
+Qed.
 *)
 
 Lemma programMemIs_entails_memAny (p: program) : forall i j,
   i -- j :-> p |-- memAny i j.
-Proof. induction p => i j. 
-+ by apply readerMemIs_entails_memAny. 
-+ rewrite -> programMemIsSkip. sdestruct => ->. by apply memAnyEmpty. 
-+ rewrite programMemIsSeq. sdestruct => p'. rewrite -> IHp1. 
-rewrite -> IHp2. by apply memAnyMerge. 
+Proof. induction p => i j.
++ by apply readerMemIs_entails_memAny.
++ rewrite -> programMemIsSkip. sdestruct => ->. by apply memAnyEmpty.
++ rewrite programMemIsSeq. sdestruct => p'. rewrite -> IHp1.
+rewrite -> IHp2. by apply memAnyMerge.
 + simpl. sdestruct => l. by rewrite -> H.
-  rewrite -> programMemIsLabel. 
-  sdestructs => -> H. apply memAnyEmpty. 
-+ by apply readerMemIs_entails_memAny.  
-Qed. 
+  rewrite -> programMemIsLabel.
+  sdestructs => -> H. apply memAnyEmpty.
++ by apply readerMemIs_entails_memAny.
+Qed.
 
 Lemma ddApart p q (v:DWORD) : p -- q :-> dd v |-- apart 4 p q /\\ p -- q :-> dd v.
-Proof. rewrite programMemIsData. apply memIsFixed. Qed. 
+Proof. rewrite programMemIsData. apply memIsFixed. Qed.
 
 Lemma dbApart p q (v:BYTE) : p -- q :-> db v |-- apart 1 p q /\\ p -- q :-> db v.
-Proof. rewrite programMemIsData. apply memIsFixed. Qed. 
+Proof. rewrite programMemIsData. apply memIsFixed. Qed.
 
 Lemma dwApart p q (v:WORD) : p -- q :-> dw v |-- apart 2 p q /\\ p -- q :-> dw v.
 Proof. rewrite programMemIsData. apply memIsFixed. Qed.
@@ -223,11 +223,11 @@ Lemma dsApart p q v : p -- q :-> ds v |-- apart (length v) p q /\\ p -- q :-> ds
 Proof. rewrite programMemIsData. apply memIsFixed. Qed.
 
 Lemma fixedSizePad n : fixedSizeReader (readPad n) n.
-Proof. 
-induction n => //=. 
-+ by apply fixedSizeReader_retn. 
+Proof.
+induction n => //=.
++ by apply fixedSizeReader_retn.
 + by apply (fixedSizeReader_bind fixedSizeBYTE).
-Qed. 
+Qed.
 
 Lemma padApart p q n : p -- q :-> pad n |-- apart n p q /\\ p -- q :-> pad n.
 Proof. rewrite programMemIsData. apply fixedSizePad. Qed.
@@ -235,43 +235,43 @@ Proof. rewrite programMemIsData. apply fixedSizePad. Qed.
 
 Definition hasSize n (pr: program) := forall p q, p -- q :-> pr |-- apart n p q /\\ p -- q :-> pr.
 
-Lemma dbHasSize b : hasSize 1 (db b). 
-Proof. rewrite /hasSize. move => p q. apply dbApart. Qed. 
+Lemma dbHasSize b : hasSize 1 (db b).
+Proof. rewrite /hasSize. move => p q. apply dbApart. Qed.
 
-Lemma dwHasSize b : hasSize 2 (dw b). 
-Proof. rewrite /hasSize. move => p q. apply dwApart. Qed. 
+Lemma dwHasSize b : hasSize 2 (dw b).
+Proof. rewrite /hasSize. move => p q. apply dwApart. Qed.
 
-Lemma ddHasSize b : hasSize 4 (dd b). 
-Proof. rewrite /hasSize. move => p q. apply ddApart. Qed. 
+Lemma ddHasSize b : hasSize 4 (dd b).
+Proof. rewrite /hasSize. move => p q. apply ddApart. Qed.
 
-Lemma padHasSize n : hasSize n ( pad n). 
-Proof. rewrite /hasSize. move => p q. apply padApart. Qed. 
+Lemma padHasSize n : hasSize n ( pad n).
+Proof. rewrite /hasSize. move => p q. apply padApart. Qed.
 
-Lemma dsHasSize s : hasSize (length s) (ds s). 
-Proof. rewrite /hasSize. move => p q. apply dsApart. Qed. 
+Lemma dsHasSize s : hasSize (length s) (ds s).
+Proof. rewrite /hasSize. move => p q. apply dsApart. Qed.
 
 Lemma seqHasSize p1 p2 n1 n2 : hasSize n1 p1 -> hasSize n2 p2 -> hasSize (n1+n2) (p1;;p2).
 Proof. move => H1 H2 p q. rewrite programMemIsSeq. sdestructs => p'.
 rewrite /hasSize in H1, H2. rewrite -> H1. rewrite -> H2.
-sdestructs => A1 A2. 
-have A := (apart_addn A1 A2). sbazooka. 
-Qed. 
+sdestructs => A1 A2.
+have A := (apart_addn A1 A2). sbazooka.
+Qed.
 
 Lemma localHasSize n f : (forall L, hasSize n (f L)) -> hasSize n (LOCAL L; f L).
-Proof. move => H. rewrite /hasSize. move => p q. rewrite programMemIsLocal.  
-sdestruct => L. rewrite /hasSize in H. rewrite -> H. sbazooka. 
-Qed. 
+Proof. move => H. rewrite /hasSize. move => p q. rewrite programMemIsLocal.
+sdestruct => L. rewrite /hasSize in H. rewrite -> H. sbazooka.
+Qed.
 
 Lemma labelHasSize L : hasSize 0 (prog_label L).
-Proof. rewrite /hasSize. move => p q. rewrite programMemIsLabel. sbazooka. Qed. 
+Proof. rewrite /hasSize. move => p q. rewrite programMemIsLabel. sbazooka. Qed.
 
 
 
 (*---------------------------------------------------------------------------
     Structural equivalence on programs, capturing monoidal sequencing and
-    scope extrusion    
+    scope extrusion
   ---------------------------------------------------------------------------*)
-Definition liftEq T U (eq: T -> T -> Prop) := fun (f g: U -> T) => forall u, eq (f u) (g u). 
+Definition liftEq T U (eq: T -> T -> Prop) := fun (f g: U -> T) => forall u, eq (f u) (g u).
 Inductive progEq : program -> program -> Prop :=
 | progEqRefl:  forall p, progEq p p
 | progEqSym:   forall p1 p2, progEq p1 p2 -> progEq p2 p1
@@ -286,18 +286,18 @@ Inductive progEq : program -> program -> Prop :=
 | progEqDecLabelSkip: progEq (prog_declabel (fun l => prog_skip)) prog_skip.
 
 (* Add progEq as an instance of Equivalence for rewriting *)
-Require Import Setoid Morphisms RelationClasses. 
+Require Import Setoid Morphisms RelationClasses.
 Global Instance progEqEqu : Equivalence progEq.
-Proof. constructor; red. 
-+ apply progEqRefl. 
-+ apply progEqSym. 
-+ apply progEqTrans. 
-Qed. 
+Proof. constructor; red.
++ apply progEqRefl.
++ apply progEqSym.
++ apply progEqTrans.
+Qed.
 
 (* Declare morphisms for context rules *)
 Global Instance progEq_seq_m:
-  Proper (progEq ==> progEq ==> progEq) prog_seq. 
-Proof. move => p1 p2 EQ1 q1 q2 EQ2 . by apply progEqSeq. Qed. 
+  Proper (progEq ==> progEq ==> progEq) prog_seq.
+Proof. move => p1 p2 EQ1 q1 q2 EQ2 . by apply progEqSeq. Qed.
 
 Global Instance progEq_decLabel_m:
   Proper (liftEq progEq ==> progEq) prog_declabel.
@@ -305,38 +305,38 @@ Proof. move => f1 f2 EQ. by apply progEqDecLabel. Qed.
 
 (* Main lemma: memIs respects progEq *)
 Require Import septac.
-Lemma memIsProgEquiv p1 p2 : progEq p1 p2 -> forall (l l':DWORD), l -- l' :-> p1 -|- l -- l' :-> p2. 
-Proof. move => EQ. induction EQ => l l'. 
+Lemma memIsProgEquiv p1 p2 : progEq p1 p2 -> forall (l l':DWORD), l -- l' :-> p1 -|- l -- l' :-> p2.
+Proof. move => EQ. induction EQ => l l'.
 (* progEqRefl *)
 + done.
 (* progEqSym *)
-+ by rewrite IHEQ. 
++ by rewrite IHEQ.
 (* progEqTrans *)
-+ by rewrite IHEQ1 IHEQ2. 
++ by rewrite IHEQ1 IHEQ2.
 (* progEqDecLabel *)
-+ unfold_program. unfold_program. split. sdestruct => lab. ssplit. rewrite -> H0. reflexivity. 
-sdestruct => lab. ssplit. rewrite <-H0. reflexivity. 
++ unfold_program. unfold_program. split. sdestruct => lab. ssplit. rewrite -> H0. reflexivity.
+sdestruct => lab. ssplit. rewrite <-H0. reflexivity.
 (* progEqSeq *)
-+ unfold_program. unfold_program. split; sdestructs => i. rewrite IHEQ1 IHEQ2; sbazooka. 
-rewrite -IHEQ1 -IHEQ2; sbazooka. 
++ unfold_program. unfold_program. split; sdestructs => i. rewrite IHEQ1 IHEQ2; sbazooka.
+rewrite -IHEQ1 -IHEQ2; sbazooka.
 (* progEqSeqAssoc *)
-+ unfold_program. unfold_program. split; sbazooka. 
++ unfold_program. unfold_program. split; sbazooka.
 (* progEqSeqSkip *)
-+ unfold_program. split. sdestructs => i ->. by ssimpl. 
-  sbazooka. 
++ unfold_program. split. sdestructs => i ->. by ssimpl.
+  sbazooka.
 (* progEqSkipSeq *)
-+ unfold_program. split. sdestructs => i' ->. by ssimpl. 
-  sbazooka. 
++ unfold_program. split. sdestructs => i' ->. by ssimpl.
+  sbazooka.
 (* progEqSeqDecLabel *)
-+ unfold_program. do 3 rewrite /memIs/=. split; sbazooka. 
++ unfold_program. do 3 rewrite /memIs/=. split; sbazooka.
 (* progEqDecLabelSeq *)
-+ unfold_program. do 3 rewrite /memIs/=. split; sbazooka. 
++ unfold_program. do 3 rewrite /memIs/=. split; sbazooka.
 (* progEqDecLabelSkip *)
-+ unfold_program. unfold_program. split. sdestructs => i ->. sbazooka. 
-  apply lexistsR with #0. sbazooka. 
-Qed. 
++ unfold_program. unfold_program. split. sdestructs => i ->. sbazooka.
+  apply lexistsR with #0. sbazooka.
+Qed.
 
 (* Now declare memIs as a morphism wrt progEq *)
 Global Instance memIs_progEq_m (p p': DWORD):
-  Proper (progEq ==> lequiv) (@memIs _ _ p p'). 
-Proof. move => p1 p2 EQ. by apply memIsProgEquiv. Qed. 
+  Proper (progEq ==> lequiv) (@memIs _ _ p p').
+Proof. move => p1 p2 EQ. by apply memIsProgEquiv. Qed.
