@@ -33,7 +33,7 @@ Definition getFlagFromProcState f :=
     raiseUnspecified.
 
 (* This is wrong because wrap-around is under-specified *)
-Definition getFromProcState R {r:Reader R} (p: BITS 32) : ST R :=
+Definition getFromProcState R {r:Reader R} (p: DWORD) : ST R :=
   let! s = getProcState;
   match readMem readNext (memory s) p with
   | readerFail => raiseExn ExnGP
@@ -41,7 +41,7 @@ Definition getFromProcState R {r:Reader R} (p: BITS 32) : ST R :=
   | readerOk v _ => retn v
   end.
 
-Definition readFromProcState R {r:Reader R} (p: BITS 32) : ST (R*DWORD) :=
+Definition readFromProcState R {r:Reader R} (p: DWORD) : ST (R*DWORD) :=
   let! s = getProcState;
   match readMem readNext (memory s) p with
   | readerOk v (mkCursor p) => retn (v,p)

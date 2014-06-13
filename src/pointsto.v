@@ -21,7 +21,7 @@ Import Prenex Implicits.
    We require that memIs p q v implies p<=q.
   ---------------------------------------------------------------------------*)
 Class MemIs T := {
-  memIs:> Cursor 32 -> Cursor 32 -> T -> SPred;
+  memIs:> DWORDCursor -> DWORDCursor -> T -> SPred;
   memIsLe :> forall p q v, memIs p q v |-- leCursor p q /\\ memIs p q v
 }.
 
@@ -37,7 +37,7 @@ Lemma memIs_pointsTo {R} {_:MemIs R} p q v :
 Proof. rewrite /pointsTo. by apply lexistsR with q. Qed.
 
 (* This is a consequence of memIsLe *)
-Lemma memIsNonTop T {_:MemIs T} (v: T) (p: Cursor 32) (q:DWORD) :
+Lemma memIsNonTop T {_:MemIs T} (v: T) (p: DWORDCursor) (q:DWORD) :
     p -- q :-> v |-- Exists p':DWORD, p = mkCursor p' /\\ p -- q :-> v.
 Proof. eapply lentailsPre. apply memIsLe.
 sdestruct => H. elim (leCursorNonTop H) => [p' EQ].
@@ -45,8 +45,9 @@ apply lexistsR with p'. rewrite EQ. sbazooka.
 Qed.
 
 (* This is another consequence of memIsLe *)
+(* We leave the argument to [top] unspecified so that it may be picked up as a constant an not be a numeral. *)
 Lemma memIsFromTop T (_:MemIs T) (v: T) (q: DWORD) :
-  top 32 -- q :-> v |-- lfalse.
+  top _ -- q :-> v |-- lfalse.
 Proof. rewrite -> memIsLe. rewrite /leCursor. by apply lpropandL. Qed.
 
 (* Our characterisation of fixed-size encodings *)
@@ -57,7 +58,7 @@ Class FixedMemIs T n `(MI: MemIs T) :=
    We can interpret reader terms purely logically, using the primitive
    byteIs predicate and separating conjunction.
   ---------------------------------------------------------------------------*)
-Fixpoint interpReader T (rt:Reader T) (p q: Cursor 32) (v: T) :=
+Fixpoint interpReader T (rt:Reader T) (p q: DWORDCursor) (v: T) :=
   match rt with
   | readerRetn x =>
     v = x /\\ p = q /\\ empSP
@@ -153,14 +154,14 @@ Definition fixedSizeReader R (r: Reader R) n :=
    readerMemIs for bytes
   ---------------------------------------------------------------------------*)
 
-Lemma interpReader_bindBYTE T (r: BYTE -> Reader T) w (p:DWORD) (q:Cursor 32) :
+Lemma interpReader_bindBYTE T (r: BYTE -> Reader T) w (p:DWORD) (q:DWORDCursor) :
   interpReader (readerBind readNext r) p q w -|-
   Exists b:BYTE, byteIs p b ** interpReader (r b) (next p) q w.
 Proof. rewrite interpReader_bind/readNext/readBYTE/interpReader-/interpReader.
 split. sbazooka. sbazooka. subst. by ssimpl. sbazooka.
 Qed.
 
-Lemma interpReader_bindBYTE_top T (r: BYTE -> Reader T) w (q:Cursor 32) :
+Lemma interpReader_bindBYTE_top T (r: BYTE -> Reader T) w (q:DWORDCursor) :
   interpReader (readerBind readNext r) (top _) q w -|-
   lfalse.
 Proof.
@@ -180,7 +181,7 @@ Qed.
 Instance FixedMemIsBYTE : FixedMemIs 1 (readerMemIs BYTE).
 Proof. apply fixedSizeBYTE. Qed.
 
-Lemma memIsBYTE_next_entails (p:BITS _) q (v:BYTE) :
+Lemma memIsBYTE_next_entails (p:DWORD) q (v:BYTE) :
   p -- q :-> v |-- q = next p /\\ p -- q :-> v.
 Proof. have MI := @memIsFixed _ _ _ FixedMemIsBYTE p q v.
 by simpl (apart _ _ _) in MI.
@@ -201,7 +202,7 @@ Qed.
    MemIs for unit type, pairs and sequences
   ---------------------------------------------------------------------------*)
 
-Definition unitMemIs (p q: Cursor 32) (v: unit) := p = q /\\ empSP.
+Definition unitMemIs (p q: DWORDCursor) (v: unit) := p = q /\\ empSP.
 
 Lemma unitMemIsLe p q v : unitMemIs p q v |-- leCursor p q /\\ unitMemIs p q v.
 Proof. rewrite /unitMemIs. sdestruct => ->. rewrite leCursor_refl. sbazooka. Qed.
@@ -284,7 +285,7 @@ Section SeqMemIs.
 
   Global Instance SeqMemIs : MemIs (seq X) := Build_MemIs seqMemIsLe.
 
-  Lemma seqMemIsSimpl (p q:Cursor 32) (xs: seq X):
+  Lemma seqMemIsSimpl (p q:DWORDCursor) (xs: seq X):
     p -- q :-> xs -|- if xs is x::xs then Exists p', p -- p' :-> x ** p' -- q :-> xs
                                        else p = q /\\ empSP.
   Proof. case xs.
@@ -292,12 +293,12 @@ Section SeqMemIs.
   + move => x xs'. rewrite /memIs/SeqMemIs/seqMemIs-/seqMemIs. by rewrite /memIs/SeqMemIs.
   Qed.
 
-  Lemma seqMemIsCons (p q:Cursor 32) (x:X) (xs: seq X):
+  Lemma seqMemIsCons (p q:DWORDCursor) (x:X) (xs: seq X):
     p -- q :-> (x::xs) -|- Exists p', p -- p' :-> x ** p' -- q :-> xs.
   Proof. apply seqMemIsSimpl. Qed.
 
 
-  Lemma seqMemIsNil (p q:Cursor 32):
+  Lemma seqMemIsNil (p q:DWORDCursor):
     p -- q :-> (nil:seq X) -|- p = q /\\ empSP.
   Proof. apply seqMemIsSimpl. Qed.
 
@@ -320,7 +321,7 @@ Section SeqMemIs.
         apply lexistsR with p'. sbazooka.
   Qed.
 
-  Lemma seqPointsToNil (p:Cursor 32) : p :-> ([::]: seq X) -|- empSP.
+  Lemma seqPointsToNil (p:DWORDCursor) : p :-> ([::]: seq X) -|- empSP.
   Proof.
     rewrite /pointsTo. split.
     + sdestructs => q. rewrite -> seqMemIsNil. by sdestruct => _.
@@ -377,7 +378,7 @@ split.
   sdestructs => ->. sbazooka.
 Qed.
 
-Lemma pointsToBYTE_NonTop (c : Cursor 32) (b:BYTE) :
+Lemma pointsToBYTE_NonTop (c : DWORDCursor) (b:BYTE) :
   c :-> b |-- Exists bits, c = mkCursor bits /\\ c :-> b.
 Proof.
 elim c => [bits |].
@@ -457,7 +458,7 @@ Qed.
 Fixpoint catBYTES (xs: seq BYTE) : BITS (size xs * 8) :=
   if xs is x::xs return BITS (size xs * 8) then catBYTES xs ## x else nilB.
 
-Lemma cursorPointsTo_consBYTE (p:Cursor 32) (b:BYTE) bs :
+Lemma cursorPointsTo_consBYTE (p:DWORDCursor) (b:BYTE) bs :
   p :-> (b::bs) -|- Exists p', (p = mkCursor p' /\\ p' :-> b ** (next p') :-> bs).
 Proof.
 elim p => [p' |]. rewrite pointsTo_consBYTE. split.  apply lexistsR with p'. sbazooka.
@@ -610,7 +611,7 @@ Qed.
    Logical interpretation of writers
   ---------------------------------------------------------------------------*)
 
-Fixpoint interpWriterTm {T} (wt:WriterTm T) (p q: Cursor 32) (t: T) :=
+Fixpoint interpWriterTm {T} (wt:WriterTm T) (p q: DWORDCursor) (t: T) :=
   match wt with
   | writerRetn t' => t = t' /\\ p = q /\\ empSP
   | writerNext b wt' =>
@@ -681,15 +682,15 @@ Proof.
   - split; first done. by sbazooka.
 Qed.
 
-Lemma interpWriterTm_retn {X} (p q: Cursor 32) (t t':X) :
+Lemma interpWriterTm_retn {X} (p q: DWORDCursor) (t t':X) :
   interpWriterTm (writerRetn t) p q t' -|- (t' = t /\\ p = q /\\ empSP).
 Proof.  simpl. reflexivity. Qed.
 
-Lemma interpWriterTm_getWCursor (p q r: Cursor 32) :
+Lemma interpWriterTm_getWCursor (p q r: DWORDCursor) :
   interpWriterTm getWCursor p q r -|- p = q /\\ q = r /\\ empSP.
 Proof. simpl. split; sdestructs => H1 H2; subst; sbazooka. Qed.
 
-Lemma interpWriterTm_writerFail (p q: Cursor 32) :
+Lemma interpWriterTm_writerFail (p q: DWORDCursor) :
   interpWriterTm writerFail p q tt -|- lfalse.
 Proof. reflexivity. Qed.
 
@@ -704,7 +705,7 @@ Qed.
 
 (* This could also be an instance of memIs just like readerMemIs, but we don't
    want typeclass resolution to be ambiguous. *)
-Definition interpWriter X {W: Writer X} (p q: Cursor 32) (x: X) :=
+Definition interpWriter X {W: Writer X} (p q: DWORDCursor) (x: X) :=
   interpWriterTm (W x) p q tt.
 
 Lemma interpWriter_roundtrip X (W: Writer X) (R: Reader X)
@@ -742,7 +743,7 @@ Proof.
   by apply lexistsR with q.
 Qed.
 
-Lemma entails_memAnyNext (p: BITS 32) q :
+Lemma entails_memAnyNext (p: DWORD) q :
   ltCursor p q -> memAny p q |-- Exists b: BYTE, p :-> b ** memAny (next p) q.
 Proof.
   rewrite -leCursor_next.

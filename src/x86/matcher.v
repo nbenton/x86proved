@@ -378,10 +378,10 @@ specintros => q' Hseq.
 basicapply (@INC_R_ruleNoFlags EAX q).
 rewrite /cursor.next.
 (* So now we know that last is not top, so q can't be ones 32 (note s2 might be empty so inc q == last) *)
-elim: (q == ones 32).
+elim: (q == ones _).
 (* this is the contradictory case want to apply seq_BYTE_top but seq BYTE mismatches with seq NZBYTE *)
 (* this doesn't help: rewrite {3}/memIs /subtypememis. *)
-rewrite [top 32 -- lastbits :-> s2]seqSubMemIs.
+rewrite [top _ -- lastbits :-> s2]seqSubMemIs.
 setoid_rewrite memIsFromTop.
 sbazooka.
 (* don't ssimpl at this point - loses information that next q isn't top (so inc q isn't zero) *)

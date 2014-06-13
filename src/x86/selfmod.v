@@ -213,7 +213,7 @@ rewrite <- spec_reads_frame.
 apply limplValid. cancel1. sbazooka.
 Qed.
 
-Lemma MOV_M0R_ruleAux (pd:BITS 32) pe (r1 r2:Reg) (v1 v2: DWORD) :
+Lemma MOV_M0R_ruleAux (pd:DWORD) pe (r1 r2:Reg) (v1 v2: DWORD) :
   |-- basic (r1 ~= pd ** pd -- pe :-> v1 ** r2 ~= v2)
             (MOV [r1], r2)
             (r1 ~= pd ** pd -- pe :-> v2 ** r2 ~= v2).

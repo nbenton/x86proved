@@ -95,12 +95,12 @@ Definition updateBYTE (p:DWORD) (b:BYTE) (ms: Mem) : option Mem :=
    read m p = readerOk x q if memory between p inclusive and q exclusive represents x:X
   ---------------------------------------------------------------------------*)
 Inductive readerResult T :=
-  readerOk (x: T) (q: Cursor 32) | readerWrap | readerFail.
+  readerOk (x: T) (q: DWORDCursor) | readerWrap | readerFail.
 Implicit Arguments readerOk [T].
 Implicit Arguments readerWrap [T].
 Implicit Arguments readerFail [T].
 
-Fixpoint readMem T (r:Reader T) (m:Mem) (pos:Cursor 32) : readerResult T :=
+Fixpoint readMem T (r:Reader T) (m:Mem) (pos:DWORDCursor) : readerResult T :=
   match r with
   | readerRetn x => readerOk x pos
   | readerNext rd =>
@@ -116,8 +116,8 @@ Fixpoint readMem T (r:Reader T) (m:Mem) (pos:Cursor 32) : readerResult T :=
   end.
 
 (* Example of interpretation of writer on sequences *)
-Fixpoint writeMemTm (w:WriterTm unit) (m:Mem) (pos: Cursor 32) :
-    option (Cursor 32 * Mem) :=
+Fixpoint writeMemTm (w:WriterTm unit) (m:Mem) (pos: DWORDCursor) :
+    option (DWORDCursor * Mem) :=
   match w with
   | writerRetn _ => Some (pos, m)
   | writerNext byte w =>
@@ -140,8 +140,8 @@ Fixpoint writeMemTm (w:WriterTm unit) (m:Mem) (pos: Cursor 32) :
     None
   end.
 
-Definition writeMem {T} (w:Writer T) (m:Mem) (pos: Cursor 32) (t: T):
-    option (Cursor 32 * Mem) :=
+Definition writeMem {T} (w:Writer T) (m:Mem) (pos: DWORDCursor) (t: T):
+    option (DWORDCursor * Mem) :=
   writeMemTm (w t) m pos.
 
 Require Import Coq.Strings.String.

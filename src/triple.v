@@ -357,7 +357,7 @@ Qed.
 
 
 (*
-Lemma pointsToBYTEdef (p:BITS 32) (v: BYTE) (s:PState) : (p:->v) s -> s Memory p = Some (Some v).
+Lemma pointsToBYTEdef (p:DWORD) (v: BYTE) (s:PState) : (p:->v) s -> s Memory p = Some (Some v).
 Proof. move => [q H].
 destruct H as [b [s1 [s2 [H1 [H2 H3]]]]].
 rewrite /byteIs in H2. rewrite -H2 in H1.

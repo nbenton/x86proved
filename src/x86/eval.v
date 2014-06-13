@@ -11,7 +11,7 @@ Definition updateZPS {n} (result: BITS n) :=
 
 
 Definition evalArithOp {n}
-  (f : bool -> BITS _ -> BITS _ -> bool * BITS n) (arg1 arg2: BITS n)  :=
+  (f : bool -> BITS n -> BITS n -> bool * BITS n) (arg1 arg2: BITS n)  :=
   let! c = getFlagFromProcState CF;
   let (c,result) := f c arg1 arg2 in
   do! updateFlagInProcState CF c;
@@ -20,7 +20,7 @@ Definition evalArithOp {n}
   retn result.
 
 Definition evalArithOpNoCarry {n}
-  (f : bool -> BITS _ -> BITS _ -> bool * BITS n) (arg1 arg2: BITS n)  :=
+  (f : bool -> BITS n -> BITS n -> bool * BITS n) (arg1 arg2: BITS n)  :=
   let (c,result) := f false arg1 arg2 in
   do! updateFlagInProcState CF c;
   do! updateFlagInProcState OF (computeOverflow arg1 arg2 result);
@@ -462,4 +462,3 @@ Definition evalInstr instr : ST unit :=
     raiseUnspecified
 
   end.
-

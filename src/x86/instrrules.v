@@ -490,7 +490,7 @@ Proof. basicPUSH. Qed.
   ---------------------------------------------------------------------------*)
 
 (* Generic POP *)
-Lemma POP_rule (rm:RegMem true) (sp:BITS 32) (oldv v:DWORD):
+Lemma POP_rule (rm:RegMem true) (sp:DWORD) (oldv v:DWORD):
   |-- specAtRegMemDst rm (fun V =>
       basic (V oldv ** ESP ~= sp    ** sp:->v) (POP rm)
             (V v    ** ESP ~= sp+#4 ** sp:->v)).
@@ -673,25 +673,25 @@ Lemma MOV_RanyI_rule (r:Reg) (v2:DWORD) :
 Proof. unhideReg r => old. basicMOV. Qed.
 
 (* Memory to register *)
-Lemma MOV_RM_rule (pd:BITS 32) (r1 r2:Reg) offset (v1 v2: DWORD) :
+Lemma MOV_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2: DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2)
             (MOV r1, [r2 + offset])
             (r1 ~= v2 ** r2 ~= pd ** pd +# offset :-> v2).
 Proof. basicMOV. Qed.
 
-Lemma MOV_RanyM_rule (pd:BITS 32) (r1 r2:Reg) offset (v2: DWORD) :
+Lemma MOV_RanyM_rule (pd:DWORD) (r1 r2:Reg) offset (v2: DWORD) :
   |-- basic (r1? ** r2 ~= pd ** pd +# offset :-> v2)
             (MOV r1, [r2 + offset])
             (r1 ~= v2 ** r2 ~= pd ** pd +# offset :-> v2).
 Proof. unhideReg r1 => old. basicMOV. Qed.
 
-Lemma MOV_RM0_rule (pd:BITS 32) (r1 r2:Reg) (v1 v2: DWORD) :
+Lemma MOV_RM0_rule (pd:DWORD) (r1 r2:Reg) (v1 v2: DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd :-> v2)
             (MOV r1, [r2])
             (r1 ~= v2 ** r2 ~= pd ** pd :-> v2).
 Proof. basicMOV. Qed.
 
-Lemma MOV_RanyM0_rule (pd:BITS 32) (r1 r2:Reg) (v2: DWORD) :
+Lemma MOV_RanyM0_rule (pd:DWORD) (r1 r2:Reg) (v2: DWORD) :
   |-- basic (r1? ** r2 ~= pd ** pd :-> v2)
             (MOV r1, [r2])
             (r1 ~= v2 ** r2 ~= pd ** pd :-> v2).
@@ -705,13 +705,13 @@ Lemma MOV_MR_rule (p: DWORD) (r1 r2: Reg) offset (v1 v2:DWORD) :
 Proof. basicMOV. Qed.
 
 (* Immediate to memory *)
-Lemma MOV_MI_rule dword (pd:BITS 32) (r:Reg) offset (v w:DWORDorBYTE dword) :
+Lemma MOV_MI_rule dword (pd:DWORD) (r:Reg) offset (v w:DWORDorBYTE dword) :
   |-- basic (r ~= pd ** pd +# offset :-> v)
             (MOVOP _ (DstSrcMI dword (mkMemSpec (Some(r, None)) #offset) w))
             (r ~= pd ** pd +# offset :-> w).
 Proof. basicMOV. Qed.
 
-Lemma MOV_M0R_rule (pd:BITS 32) (r1 r2:Reg) (v1 v2: DWORD) :
+Lemma MOV_M0R_rule (pd:DWORD) (r1 r2:Reg) (v1 v2: DWORD) :
   |-- basic (r1 ~= pd ** pd :-> v1 ** r2 ~= v2)
             (MOV [r1], r2)
             (r1 ~= pd ** pd :-> v2 ** r2 ~= v2).
@@ -740,7 +740,7 @@ Lemma MOV_RMb_rule (p: DWORD) (r1:Reg) (r2:BYTEReg) offset (v1:BYTE) (v2:BYTE) :
             (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v1).
 Proof. basicMOV. Qed.
 
-Lemma MOV_MbI_rule (pd:BITS 32) (r1:Reg) offset (v1 v2:BYTE) :
+Lemma MOV_MbI_rule (pd:DWORD) (r1:Reg) offset (v1 v2:BYTE) :
   |-- basic (r1 ~= pd ** pd +# offset :-> v1)
             (MOV BYTE [r1 + offset], v2)
             (r1 ~= pd ** pd +# offset :-> v2).
@@ -1206,7 +1206,7 @@ elim: (adcB _) => [carry v].
 rewrite /OSZCP/stateIsAny. simpl snd. sbazooka.
 Qed.
 
-Corollary ADD_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
+Corollary ADD_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (ADD r1, [r2 + offset])
             (let: (carry,v) := adcB false v1 v2 in
@@ -1214,7 +1214,7 @@ Corollary ADD_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
 Proof. basicADDSUB. elim: (adcB _) => [carry v]. by ssimpl. Qed.
 
-Corollary ADD_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
+Corollary ADD_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (ADD r1, [r2 + offset]) (r1~=addB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
@@ -1225,7 +1225,7 @@ elim: (adcB _) => [carry v].
 sbazooka.
 Qed.
 
-Lemma SUB_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
+Lemma SUB_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (SUB r1, [r2 + offset])
             (let: (carry,v) := sbbB false v1 v2 in
@@ -1233,7 +1233,7 @@ Lemma SUB_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
 Proof. basicADDSUB. elim (sbbB _) => [carry v]. by ssimpl. Qed.
 
-Corollary SUB_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
+Corollary SUB_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (SUB r1, [r2 + offset]) (r1~=subB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
@@ -1541,7 +1541,7 @@ Lemma CMP_RbI_rule (r1:BYTEReg) (v1 v2:BYTE):
   BYTEregIs r1 v1 ** OSZCP (computeOverflow v1 v2 res) (msb res) (res == #0) carry (lsb res)).
 Proof. rewrite /BYTEtoDWORD/makeBOP low_catB. basicCMP. Qed.
 
-Lemma CMP_RM_rule (pd:BITS 32) (r1 r2:Reg) offset (v1 v2:DWORD) :
+Lemma CMP_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (CMP r1, [r2+offset])
             (let (carry,res) := sbbB false v1 v2 in
@@ -1553,7 +1553,7 @@ case E: (sbbB false v1 v2) => [carry res].
 sbazooka.
 Qed.
 
-Lemma CMP_MR_rule (pd:BITS 32) (r1 r2:Reg) offset (v1 v2:DWORD):
+Lemma CMP_MR_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (CMP [r2+offset], r1)
             (let (carry,res) := sbbB false v2 v1 in
@@ -1805,7 +1805,7 @@ Corollary AND_RR_rule (r1 r2:Reg) v1 (v2:DWORD) :
 Proof. basicapply (AND_rule (DstSrcRR true r1 r2)). Qed.
 
 (* AND r1, [r2 + offset] *)
-Corollary AND_RM_rule (pbase:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) :
+Corollary AND_RM_rule (pbase:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) :
   |-- basic (r1~=v1 ** OSZCP?)
             (AND r1, [r2 + offset])
             (let v:= andB v1 v2 in r1~=v ** OSZCP false (msb v) (v == #0) false (lsb v))
@@ -1815,7 +1815,7 @@ Proof.
   basicapply (AND_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))).
 Qed.
 
-Corollary AND_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
+Corollary AND_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (AND r1, [r2 + offset]) (r1~=andB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
@@ -1833,7 +1833,7 @@ Lemma AND_RI_rule (r:Reg) v1 (v2:DWORD) :
 Proof. basicapply (AND_rule (DstSrcRI true r v2)). Qed.
 
 
-Lemma OR_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
+Lemma OR_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
   orB v1 v2 = v ->
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (OR r1, [r2 + offset])
@@ -1853,7 +1853,7 @@ Proof.
   triple_apply triple_setRegSep.
 Qed.
 
-Lemma XOR_RM_rule (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
+Lemma XOR_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
   xorB v1 v2 = v ->
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (XOR r1, [r2 + offset])
@@ -1874,7 +1874,7 @@ Proof.
   triple_apply triple_setRegSep.
 Qed.
 
-Corollary OR_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
+Corollary OR_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (OR r1, [r2 + offset]) (r1~=orB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
@@ -1883,7 +1883,7 @@ basicapply (@OR_RM_rule pd r1 r2 v1 v2 offset (orB v1 v2) (refl_equal _)).
 rewrite /OSZCP/stateIsAny/snd. sbazooka.
 Qed.
 
-Corollary XOR_RM_ruleNoFlags (pd:BITS 32) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
+Corollary XOR_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (XOR r1, [r2 + offset]) (r1~=xorB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
@@ -2100,8 +2100,8 @@ Proof.
     apply: lorR2. by sbazooka.
 Qed.
 
-Lemma RET_rule p' (sp:BITS 32) (offset:WORD) (p q: DWORD) :
-  let sp':BITS 32 := addB (sp+#4) (zeroExtend 16 offset) in
+Lemma RET_rule p' (sp:DWORD) (offset:WORD) (p q: DWORD) :
+  let sp':DWORD := addB (sp+#4) (zeroExtend 16 offset) in
   |-- (
       |> safe @ (EIP ~= p' ** ESP ~= sp' ** sp :-> p') -->>
          safe @ (EIP ~= p  ** ESP ~= sp  ** sp :-> p')

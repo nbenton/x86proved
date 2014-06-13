@@ -28,8 +28,8 @@ Definition DWORDorBYTE (d: bool) := BITS (if d then 32 else 8).
 
 
 Identity Coercion DWORDtoBITS32 : DWORD >-> BITS.
-Identity Coercion BYTEtoBITS32 : BYTE >-> BITS.
-Identity Coercion WORDtoBITS32 : WORD >-> BITS.
+Identity Coercion BYTEtoBITS8 : BYTE >-> BITS.
+Identity Coercion WORDtoBITS16 : WORD >-> BITS.
 
 (* Construction *)
 Notation "'nilB'" := (nil_tuple _).

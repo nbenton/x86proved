@@ -94,7 +94,7 @@ Proof. induction r.
   by apply H.
 Qed.
 
-Definition fromByteCursor (c: Cursor 32) : BitCursor := widenCursor 3 c.
+Definition fromByteCursor (c: DWORDCursor) : BitCursor := widenCursor 3 c.
 
 (* We can use a byte-reader to implement a bit-reader by accumulating the bits of the
    next byte read in a list. Notice the use of reverse: we read bits from msb to lsb. *)
@@ -159,8 +159,8 @@ Qed.
    holds if the bit reader state (bitc,bits) is equivalent
          to the byte reader state (bytec, accbits, bytes)
 *)
-Inductive BBInv : Cursor 35 -> seq bool -> Cursor 32 -> seq bool -> seq BYTE -> Prop :=
-| BBInvAligned (p: Cursor 32) bytes :
+Inductive BBInv : Cursor 35 -> seq bool -> DWORDCursor -> seq bool -> seq BYTE -> Prop :=
+| BBInvAligned (p: DWORDCursor) bytes :
   BBInv (fromByteCursor p) (toBin bytes) p nil bytes
 
 | BBInvCons (p: DWORD) accbit accbits bytes :
@@ -249,12 +249,12 @@ Qed.
 
 (* Note that if bits is non-null then the byte cursor is already advanced to the next
    location *)
-Definition bitCursorAndBitsToByteCursor (c:Cursor 35) (bits:seq bool) : Cursor 32 :=
+Definition bitCursorAndBitsToByteCursor (c:Cursor 35) (bits:seq bool) : DWORDCursor :=
   if c is mkCursor p then if bits is nil then mkCursor (@high 32 3 p)
                           else next (@high 32 3 p) else top _.
 
 Corollary bitReaderToReader_correct t (br: BitReader t) :
-  forall bytes resbits (cursor: Cursor 32) (cursor':Cursor 35) v,
+  forall bytes resbits (cursor: DWORDCursor) (cursor':Cursor 35) v,
   runBitReader br (fromByteCursor cursor) (toBin bytes) = Some (cursor', resbits, v) ->
   exists resbytes, exists resbits',
   runReader (bitReaderToReader br nil) cursor bytes =

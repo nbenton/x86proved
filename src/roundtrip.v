@@ -15,7 +15,7 @@ Import Prenex Implicits.
    If the writer fails, there is no restriction on the reader.
  *)
 Inductive simrw {X T} (x: X):
-  Cursor 32 -> Reader X -> WriterTm T -> Prop :=
+  DWORDCursor -> Reader X -> WriterTm T -> Prop :=
 | simrw_retn p t: simrw x p (readerRetn x) (writerRetn t)
 | simrw_next p R b W': simrw x (next p) (R b) W' -> simrw x p (readerNext R) (writerNext b W')
 | simrw_skip p R W': simrw x (next p) R W' -> simrw x p (readerSkip R) (writerSkip W')
@@ -34,8 +34,8 @@ Class Roundtrip X (R: Reader X) (W: Writer X) :=
 (*=End *)
 
 (* Generalisation of simrw_next that also handles Cursor *)
-Lemma simrw_next' A (x:A) (p: Cursor 32) R b (W': WriterTm unit):
-  (forall p': BITS 32, p = p' -> simrw x (next p') (R b) W') ->
+Lemma simrw_next' A (x:A) (p: DWORDCursor) R b (W': WriterTm unit):
+  (forall p': DWORD, p = p' -> simrw x (next p') (R b) W') ->
   simrw x p (readerNext R) (writerNext b W').
 Proof.
   intros H. elim Hp: p => [p'|]; last constructor. constructor. exact: H.
@@ -43,7 +43,7 @@ Qed.
 
 (* Further generalisation. *)
 Lemma simrw_bind A B T (R: Reader T) (W: Writer T) (HRW: Roundtrip R W)
-      (x:A) (t:T) (p: Cursor 32) R' (W': WriterTm B):
+      (x:A) (t:T) (p: DWORDCursor) R' (W': WriterTm B):
   (forall p', simrw x p' (R' t) W') ->
   simrw x p (let! t' = readNext; R' t') (do! writeNext t; W').
 Proof.
@@ -52,7 +52,7 @@ Proof.
 Qed.
 
 Lemma simrw_bind_end A T (R: Reader T) (W: Writer T) (HRW: Roundtrip R W)
-      (x:A) (t:T) (p: Cursor 32) R':
+      (x:A) (t:T) (p: DWORDCursor) R':
   (forall p', simrw x p' (R' t) (retn tt)) ->
   simrw x p (let! t' = readNext; R' t') (writeNext t).
 Proof.

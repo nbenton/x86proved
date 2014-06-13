@@ -93,7 +93,7 @@ Definition interpProgramLe p q prog := @interpProgramLeAux prog p q.
 
 Global Instance programMemIs : MemIs program := Build_MemIs interpProgramLe.
 
-Lemma programMemIsSkip (p q:Cursor 32) : p -- q :-> prog_skip -|- p = q /\\ empSP.
+Lemma programMemIsSkip (p q:DWORDCursor) : p -- q :-> prog_skip -|- p = q /\\ empSP.
 Proof. destruct p => //. destruct q => //=. split. sdestruct => ->. sbazooka.
 sdestruct => H. injection H => ->. sbazooka. destruct q => //=. Qed.
 
@@ -107,7 +107,7 @@ Lemma programMemIsSeq p q p1 p2 :
   p -- q :-> prog_seq p1 p2 -|- Exists p':DWORD, p -- p' :-> p1 ** p' -- q :-> p2.
 Proof. by simpl. Qed.
 
-Lemma programMemIsLabel (p q: Cursor 32) l :
+Lemma programMemIsLabel (p q: DWORDCursor) l :
   p -- q :-> prog_label l -|- p = q /\\ p = l /\\ empSP.
 Proof. split.
 destruct p => //. simpl. destruct q => //. sbazooka. congruence. congruence.
