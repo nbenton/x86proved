@@ -73,8 +73,6 @@ Hint Rewrite
   @spec_later_forall
   : push_later.
 
-Print Acc.
-
 Section ILogic_nat.
   Context {A : Type}.
   Context `{IL: ILogic A}.

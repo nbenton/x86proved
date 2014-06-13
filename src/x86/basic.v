@@ -20,16 +20,6 @@ Section Basic.
     Forall i j:DWORD, 
     (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> c).
 
-  (* Experimental: multiple alternative exits *)
-  Fixpoint otherExits (Qs: seq (DWORD * SPred)) : spec :=
-  if Qs is (i,Q)::Qs'
-  then |> safe @ (EIP ~= i ** Q) //\\ otherExits Qs'
-  else ltrue.
-
-  Definition multiexit P (c:T) Q Qs : spec :=
-    Forall i j:DWORD,
-    ((safe @ (EIP ~= j ** Q) //\\ otherExits Qs) -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> c).
-
   (* Push spec through basic *)
   Lemma spec_at_basic P c Q R :
     basic P c Q @ R -|- basic (P ** R) c (Q ** R).

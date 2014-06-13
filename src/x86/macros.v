@@ -81,20 +81,6 @@ specsplit.
 - apply: landL2. cancel1. sbazooka. 
 Qed. 
 
-Lemma JCC_ruleAlt a cc cv (b:bool):
-  |-- multiexit ltrue (JCC cc cv a) (b == ~~cv /\\ ltrue) [::(a, b == cv /\\ ltrue)] @ (ConditionIs cc b). 
-Proof.
-rewrite/multiexit/JCC/relToAbs. specintros => i j. autorewrite with push_at.
-rewrite /otherExits. unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2. rewrite H1. specapply JCCrel_rule. sbazooka. 
-rewrite addB_subBK. 
-rewrite <-spec_reads_frame. apply: limplAdj. 
-(* Conjuncts are other way round, with drop-through first *)
-apply: landL2. autorewrite with push_at. specsplit. 
-- apply: landL2. apply: landL1. cancel1. cancel1. sbazooka. 
-- apply: landL1. cancel1. sbazooka. 
-Qed. 
-
 Lemma JZ_rule a (b:bool) (p q: DWORD) :
   |-- (
       |> safe @ (b == true  /\\ EIP ~= a ** ZF ~= b) //\\
