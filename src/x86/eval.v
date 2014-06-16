@@ -338,11 +338,11 @@ Definition evalInstr instr : ST unit :=
 
   | MOVX signextend false dst src =>
     let! v = evalRegMemBYTE src;
-    setRegInProcState dst (if signextend then signExtend 24 v else zeroExtend 24 v)
+    setRegInProcState dst (if signextend then signExtend n24 v else zeroExtend n24 v)
 
   | MOVX signextend true dst src =>
     let! v = evalRegMemWORD src;
-    setRegInProcState dst (if signextend then signExtend 16 v else zeroExtend 16 v)
+    setRegInProcState dst (if signextend then signExtend n16 v else zeroExtend n16 v)
 
     (* @todo akenn: implement bit operations *)
   | BITOP op dst b =>
@@ -358,11 +358,11 @@ Definition evalInstr instr : ST unit :=
 
   | SHIFTOP true op dst count =>
     evalDst true false dst
-    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=31) op d c)
+    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=n31) op d c)
 
   | SHIFTOP false op dst count =>
     evalDst false false dst
-    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=7) op d c)
+    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=n7) op d c)
 
   | IMUL dst src =>
     raiseExn ExnUD
@@ -371,9 +371,9 @@ Definition evalInstr instr : ST unit :=
     let! v1 = getRegFromProcState EAX;
     let! v2 = evalRegMem true src;
     let res := fullmulB v1 v2 in
-    let cfof := high 32 res == #0 in
-    do! setRegInProcState EAX (low 32 res);
-    do! setRegInProcState EDX (high 32 res);
+    let cfof := high n32 res == #0 in
+    do! setRegInProcState EAX (low n32 res);
+    do! setRegInProcState EDX (high n32 res);
     do! updateFlagInProcState CF cfof;
     do! updateFlagInProcState OF cfof;
     do! forgetFlagInProcState SF;
@@ -444,7 +444,7 @@ Definition evalInstr instr : ST unit :=
     let! oldSP = getRegFromProcState ESP;
     let! IP' = getDWORDFromProcState oldSP;
     do! setRegInProcState ESP
-      (addB (oldSP+#4) (zeroExtend 16 offset));
+      (addB (oldSP+#n4) (zeroExtend n16 offset));
     setRegInProcState EIP IP'
 (*=End *)
 

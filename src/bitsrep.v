@@ -18,12 +18,32 @@ Require Import Coq.ZArith.ZArith Coq.Strings.String.
 (* DWORDorBYTE is especially useful for multi-mode instructions *)
 (*=BITS *)
 Definition BITS n := n.-tuple bool.
-Definition NIBBLE := BITS 4.
-Definition BYTE   := BITS 8.
-Definition WORD   := BITS 16.
-Definition DWORD  := BITS 32.
-Definition QWORD  := BITS 64.
-Definition DWORDorBYTE (d: bool) := BITS (if d then 32 else 8).
+(** We define aliases for various numbers, to speed up proofs.  We use [.+1] to ensure convertibility after adding or subtracting 1. *)
+Definition n3 := 3.
+Definition n7 := 7.
+Definition n15 := 15.
+Definition n31 := 31.
+Definition n63 := 63.
+Arguments n3 : simpl never.
+Arguments n7 : simpl never.
+Arguments n15 : simpl never.
+Arguments n31 : simpl never.
+Arguments n63 : simpl never.
+Opaque n3 n7 n15 n31 n63.
+Notation n4 := n3.+1.
+Notation n8 := n7.+1.
+Notation n16 := n15.+1.
+Notation n32 := n31.+1.
+Notation n64 := n63.+1.
+Definition n24 := 24.
+Arguments n24 : simpl never.
+Opaque n24.
+Definition NIBBLE := BITS n4.
+Definition BYTE   := BITS n8.
+Definition WORD   := BITS n16.
+Definition DWORD  := BITS n32.
+Definition QWORD  := BITS n64.
+Definition DWORDorBYTE (d: bool) := BITS (if d then n32 else n8).
 (*=End *)
 
 
@@ -55,9 +75,9 @@ Arguments fromNat n m : simpl never.
 
 Definition toNat {n} (p: BITS n) := foldr (fun (b:bool) n => b + n.*2) 0 p.
 
-Coercion natAsDWORD := @fromNat 32 : nat -> DWORD.
-Coercion natAsWORD := @fromNat 16 : nat -> WORD.
-Coercion natAsBYTE := @fromNat 8 : nat -> BYTE.
+Coercion natAsDWORD := @fromNat _ : nat -> DWORD.
+Coercion natAsWORD := @fromNat _ : nat -> WORD.
+Coercion natAsBYTE := @fromNat _ : nat -> BYTE.
 
 (*---------------------------------------------------------------------------
     All bits identical

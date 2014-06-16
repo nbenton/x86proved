@@ -313,12 +313,12 @@ End Cursors.
 Coercion mkCursor : BITS >-> Cursor.
 
 (** Convenience definitions for various sizes of cursor *)
-(*Definition NIBBLECursor := Cursor 4.
-Definition BYTECursor   := Cursor 8.
-Definition WORDCursor   := Cursor 16.*)
-Definition DWORDCursor  := Cursor 32.
-(*Definition QWORDCursor  := Cursor 64.
-Definition DWORDorBYTECursor (d: bool) := Cursor (if d then 32 else 8).*)
+(*Definition NIBBLECursor := Cursor n4.
+Definition BYTECursor   := Cursor n8.
+Definition WORDCursor   := Cursor n16.*)
+Definition DWORDCursor  := Cursor n32.
+(*Definition QWORDCursor  := Cursor n64.
+Definition DWORDorBYTECursor (d: bool) := Cursor (if d then n32 else n8).*)
 
 (*Coercion mkNIBBLECursor (x: NIBBLE) : NIBBLECursor := mkCursor x.
 Coercion mkBYTECursor   (x: BYTE)   : BYTECursor   := mkCursor x.

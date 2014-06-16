@@ -51,7 +51,9 @@ Qed.
    are the index of the current bit that we are reading, with 0 representing the *most*
    significant bit and 7 the least significant (this is the opposite to our usual
    ordering) *)
-Definition BitCursor := Cursor 35.
+Definition n35 := n32.+3.
+Arguments n35 : simpl never.
+Definition BitCursor := Cursor n35.
 
 (* Functional interpretation of bitReader on sequences. Returns the
    final position, the tail of the given sequence and the value
@@ -168,7 +170,7 @@ Inductive BBInv : BitCursor -> seq bool -> DWORDCursor -> seq bool -> seq BYTE -
   BBInv (p ## fromNat (n:=3) (7 - size accbits)) (accbit::accbits++toBin bytes)
   (next p) (accbit::accbits) bytes.
 
-Lemma BBInvProp1 (bytec: DWORD) (byte:BYTE) (bytes: seq BYTE) accbit accbits (p:BITS 35) :
+Lemma BBInvProp1 (bytec: DWORD) (byte:BYTE) (bytes: seq BYTE) accbit accbits (p:BITS n35) :
   fromByteCursor bytec = mkCursor p  ->
   rev byte = accbit :: accbits ->
   BBInv p (accbit :: accbits ++ toBin bytes) bytec [::] (byte :: bytes) ->
@@ -180,7 +182,7 @@ have: size (rev byte) = 8 by rewrite size_rev size_tuple. rewrite E2/=; congruen
 destruct accbits => //.
 injection E1 => <-. simpl.
 replace (zero 3) with (fromNat (n:=3) 0).
-have NC := @nextCat 32 3 bytec 0. rewrite NC => //.
+have NC := @nextCat n32 3 bytec 0. rewrite NC => //.
 simpl in SIZELO. injection SIZELO => SIZEACCBITS.
 replace (fromNat (n:=3) 1) with (fromNat (n:=3) (7 - size accbits)).
 apply BBInvCons. by rewrite SIZEACCBITS. by rewrite SIZEACCBITS.
@@ -250,8 +252,8 @@ Qed.
 (* Note that if bits is non-null then the byte cursor is already advanced to the next
    location *)
 Definition bitCursorAndBitsToByteCursor (c:BitCursor) (bits:seq bool) : DWORDCursor :=
-  if c is mkCursor p then if bits is nil then mkCursor (@high 32 3 p)
-                          else next (@high 32 3 p) else top _.
+  if c is mkCursor p then if bits is nil then mkCursor (@high n32 3 p)
+                          else next (@high n32 3 p) else top _.
 
 Corollary bitReaderToReader_correct t (br: BitReader t) :
   forall bytes resbits (cursor: DWORDCursor) (cursor':BitCursor) v,

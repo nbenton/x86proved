@@ -332,7 +332,7 @@ Qed.
 
 (* that was a bit more of a slog than it could have been - I'm only loading a single byte! *)
 
-Lemma app1 : forall (s : seq BYTE) (p q : DWORD) b, q != ones 32 ->  p -- q :-> s ** q -- incB q :-> b |-- p -- incB q :-> (s ++ [:: b])%SEQ.
+Lemma app1 : forall (s : seq BYTE) (p q : DWORD) b, q != ones n32 ->  p -- q :-> s ** q -- incB q :-> b |-- p -- incB q :-> (s ++ [:: b])%SEQ.
 elim => [| h t IH] p q b Hq.
 rewrite /cat.
 rewrite seqMemIsNil.
@@ -394,7 +394,7 @@ rewrite map_cat.
 eapply app1.
 move: Hseq.
 rewrite /cursor.next.
-case (q == ones 32).
+case (q == ones n32).
 by [].
 done.
 Qed.
