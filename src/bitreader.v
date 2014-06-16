@@ -159,7 +159,7 @@ Qed.
    holds if the bit reader state (bitc,bits) is equivalent
          to the byte reader state (bytec, accbits, bytes)
 *)
-Inductive BBInv : Cursor 35 -> seq bool -> DWORDCursor -> seq bool -> seq BYTE -> Prop :=
+Inductive BBInv : BitCursor -> seq bool -> DWORDCursor -> seq bool -> seq BYTE -> Prop :=
 | BBInvAligned (p: DWORDCursor) bytes :
   BBInv (fromByteCursor p) (toBin bytes) p nil bytes
 
@@ -249,12 +249,12 @@ Qed.
 
 (* Note that if bits is non-null then the byte cursor is already advanced to the next
    location *)
-Definition bitCursorAndBitsToByteCursor (c:Cursor 35) (bits:seq bool) : DWORDCursor :=
+Definition bitCursorAndBitsToByteCursor (c:BitCursor) (bits:seq bool) : DWORDCursor :=
   if c is mkCursor p then if bits is nil then mkCursor (@high 32 3 p)
                           else next (@high 32 3 p) else top _.
 
 Corollary bitReaderToReader_correct t (br: BitReader t) :
-  forall bytes resbits (cursor: DWORDCursor) (cursor':Cursor 35) v,
+  forall bytes resbits (cursor: DWORDCursor) (cursor':BitCursor) v,
   runBitReader br (fromByteCursor cursor) (toBin bytes) = Some (cursor', resbits, v) ->
   exists resbytes, exists resbits',
   runReader (bitReaderToReader br nil) cursor bytes =
@@ -268,6 +268,3 @@ exists bytes', accbits'. rewrite H1. inversion H2; subst.
   destruct bytec' => //. rewrite /widenCursor. by rewrite high_catB.
 + split => //. by rewrite /bitCursorAndBitsToByteCursor high_catB.
 Qed.
-
-
-
