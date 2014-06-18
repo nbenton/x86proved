@@ -436,7 +436,7 @@ Proof.
   rewrite -> memIsBYTE_next_entails.
   sdestruct => ->.
 
-  destruct m.
+  destruct m as [|m].
     rewrite addB0. rewrite -> (@memIsLe _ _ (next p)). rewrite leCursor_next /ltCursor.
     rewrite ltB_nat ltnn.  rewrite lpropandF. by ssimpl.
     simpl (size _). apply ltnW in BOUND.
