@@ -1,7 +1,37 @@
 (** * Various useful general purpose tactics *)
 (** Require [ssreflect] so notations like [_ : _] don't break. *)
+(** SSReflect breaks [type of] and overrides [rewrite].  Sometimes we want the original one. *)
 Ltac type_of x := type of x.
+Tactic Notation "coq_rewrite" open_constr(H) := rewrite H.
+Tactic Notation "coq_rewrite" "->" open_constr(H) := rewrite -> H.
+Tactic Notation "coq_rewrite" "<-" open_constr(H) := rewrite <- H.
+
 Require Import Ssreflect.ssreflect.
+
+Notation eta_expand x := (fst x, snd x).
+
+(** Test if a tactic succeeds, but always roll-back the results *)
+Tactic Notation "test" tactic3(tac) :=
+  try (first [ tac | fail 2 tac "does not succeed" ]; fail tac "succeeds"; [](* test for [t] solved all goals *)).
+
+(** [not tac] is equivalent to [fail tac "succeeds"] if [tac] succeeds, and is equivalent to [idtac] if [tac] fails *)
+Tactic Notation "not" tactic3(tac) := try ((test tac); fail 1 tac "succeeds").
+
+(** fail if [x] is a function application, a dependent product ([fun _
+    => _]), or a pi type ([forall _, _]), or a fixpoint *)
+Ltac atomic x :=
+  idtac;
+  match x with
+    | _ => is_evar x; fail 1 x "is not atomic (evar)"
+    | ?f _ => fail 1 x "is not atomic (application)"
+    | (fun _ => _) => fail 1 x "is not atomic (fun)"
+    | forall _, _ => fail 1 x "is not atomic (forall)"
+    | let x := _ in _ => fail 1 x "is not atomic (let in)"
+    | match _ with _ => _ end => fail 1 x "is not atomic (match)"
+    | _ => is_fix x; fail 1 x "is not atomic (fix)"
+    | context[?E] => (* catch-all *) (not constr_eq E x); fail 1 x "is not atomic (has subterm" E ")"
+    | _ => idtac
+  end.
 
 (** Coq's built in tactics don't work so well with things like [iff]
     so split them up into multiple hypotheses *)
@@ -199,4 +229,10 @@ Ltac destruct_exists := destruct_head_hnf @sigT;
     | [ |- @sigT ?T _ ] => destruct_exists' T
 (*    | [ |- @sig2 ?T _ _ ] => destruct_exists' T*)
     | [ |- @sigT2 ?T _ _ ] => destruct_exists' T
+  end.
+
+(** Run [elim] on anything that's being discriminated inside a [match] which is also atomic *)
+Ltac elim_atomic_in_match' :=
+  match goal with
+    | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; elim E
   end.
