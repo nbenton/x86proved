@@ -23,7 +23,7 @@ Section PullQuantifier.
       | t_propand p t => p /\\ eval t
       | t_propimpl p t => p ->> eval t
     end.
-  
+
   Record find_res := mkf {
     find_type : Type;
     find_closure : find_type -> A
@@ -114,7 +114,7 @@ Section PullExistential.
     - destruct (find_exists t1) as [[T f]|].
       + rewrite -> IHt1, landexistsD; reflexivity.
       + destruct (find_exists t2) as [[T f]|]; [|tauto].
-        rewrite -> IHt2, landC, landexistsD. 
+        rewrite -> IHt2, landC, landexistsD.
         setoid_rewrite landC at 1; reflexivity.
     - reflexivity.
     - fold find_exists. destruct (find_exists t) as [[T f]|]; [|tauto].
@@ -172,7 +172,7 @@ Section PullExistential.
   Qed.
 
 End PullExistential.
-  
+
 Ltac quote_term_exists P :=
   match P with
     | ?P1 //\\ ?P2 =>
@@ -215,7 +215,7 @@ Section ExampleExists.
     lexistsL; intro a; lexistsL; intro b.
     Fail lexistsL. apply ltrueR.
   Qed.
-  
+
   Example ex2 P : lfalse |-- P //\\ (Exists x1, 0 = 0 /\\ f x1) //\\ (Exists x2, f (1 + x2)).
   Proof.
     lexistsR 0.
@@ -237,7 +237,7 @@ Section PullUniversal.
     - destruct (find_forall t1) as [[T f]|].
       + rewrite -> IHt1, landforallDL; reflexivity.
       + destruct (find_forall t2) as [[B f]|]; [|tauto].
-        rewrite -> IHt2, landC, landforallDL. 
+        rewrite -> IHt2, landC, landforallDL.
         setoid_rewrite landC at 1; reflexivity.
     - reflexivity.
     - fold find_forall. destruct (find_forall t) as [[H f]|]; [|tauto].
@@ -280,11 +280,11 @@ Section PullUniversal.
   Proof.
     pose proof (find_correct_forall_push t) as Hpush.
     destruct (find_forall t) as [[T f]|]; [..|tauto].
-    intros HT. rewrite <- Hpush; [apply lforallR |assumption]. 
+    intros HT. rewrite <- Hpush; [apply lforallR |assumption].
   Qed.
 
 End PullUniversal.
-  
+
   Ltac quote_term_forall P :=
     match P with
     | ?P1 //\\ ?P2 =>
@@ -308,7 +308,7 @@ End PullUniversal.
     end.
 
   Ltac lforallR :=
-    first [apply lforallR | 
+    first [apply lforallR |
     match goal with
     | |- ?P |-- ?Q =>
         let t := quote_term_forall Q in
@@ -328,7 +328,7 @@ End PullUniversal.
       lforallL 0. lforallL 1.
       Fail lforallL 0. apply ltrueR.
     Qed.
-    
+
     Example fa2 P : lfalse |-- P //\\ (Forall x1, 0 = 0 /\\ f x1) //\\ (Forall x2, f (1 + x2)).
     Proof.
       lforallR; intro x.
@@ -407,7 +407,7 @@ Section PullAndProp.
   Qed.
 
 End PullAndProp.
-  
+
 Ltac quote_term_andprop P :=
   match P with
     | ?P1 //\\ ?P2 =>
@@ -446,7 +446,7 @@ Section ExamplePropAnd.
     lpropandL; intro H.
     Fail lexistsL. apply ltrueR.
   Qed.
-  
+
   Example exprop2 P : lfalse |-- P //\\ (Exists x1, 0 = 0 /\\ f x1) //\\ (Exists x2, f (1 + x2)).
   Proof.
     lexistsR 0.
@@ -488,7 +488,7 @@ Section PullPropImpl.
   Qed.
 
 End PullPropImpl.
-  
+
 Ltac quote_term_implprop P :=
   match P with
     | ?P1 //\\ ?P2 =>

@@ -16,7 +16,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import FunctionalExtensionality. 
+Require Import FunctionalExtensionality.
 
 (*---------------------------------------------------------------------------
     Define partial states and lift definitions and lemmas from partial functions
@@ -29,14 +29,14 @@ Require Import FunctionalExtensionality.
 
 Inductive Frag := Registers | Memory | Flags.
 Definition fragDom d :=
-  match d with 
+  match d with
   | Registers => AnyReg
   | Memory => PTR
   | Flags => Flag
   end.
 
 Definition fragTgt d :=
-  match d with 
+  match d with
   | Registers => DWORD
     (* None = "memory not mapped" or "memory inaccessible".
        Access to such memory should cause a trap handler to be executed *)
@@ -58,9 +58,9 @@ Canonical Structure FlagStateFrag := Build_StateFrag Flags Flag.
 
 Definition fragOf {sf: StateFrag} (x: carrier sf) := frag sf.
 
-Definition emptyPState : PState := fun _ => empFun _. 
+Definition emptyPState : PState := fun _ => empFun _.
 
-Definition addRegToPState (s:PState) (r:AnyReg) (v:DWORD) : PState := 
+Definition addRegToPState (s:PState) (r:AnyReg) (v:DWORD) : PState :=
   fun (f:Frag) =>
   match f as f in Frag return fragDom f -> option (fragTgt f) with
   | Registers => fun r' => if r == r' then Some v else s Registers r'
@@ -68,7 +68,7 @@ Definition addRegToPState (s:PState) (r:AnyReg) (v:DWORD) : PState :=
   | Memory => s Memory
   end.
 
-Definition addFlagToPState (s:PState) f v : PState := 
+Definition addFlagToPState (s:PState) f v : PState :=
   fun (fr:Frag) =>
   match fr as fr in Frag return fragDom fr -> option (fragTgt fr) with
   | Registers => s Registers
@@ -76,7 +76,7 @@ Definition addFlagToPState (s:PState) f v : PState :=
   | Memory => s Memory
   end.
 
-Definition addBYTEToPState (s:PState) (p:PTR) b : PState := 
+Definition addBYTEToPState (s:PState) (p:PTR) b : PState :=
   fun (fr:Frag) =>
   match fr as fr in Frag return fragDom fr -> option (fragTgt fr) with
   | Memory => fun p' => if p == p' then Some (Some b) else s Memory p'
@@ -95,20 +95,20 @@ Definition addToPState (f:Frag) (s: PState) : fragDom f -> fragTgt f -> PState :
 Definition genericAddToPState (f:StateFrag) (s: PState) (x: carrier f) (v: fragTgt (frag f)) := @addToPState (frag f) s x v.
 
 Check (fun s => genericAddToPState s EAX #0).
-Definition undefRegToPState s r := 
+Definition undefRegToPState s r :=
   mkPState (fun r' => if r==r' then None else pregisters s r') (pmemory s) (pflags s) (ptrace s).
-*) 
+*)
 
 (*
-Definition addGenRegToPState s r v := 
-  mkPState (fun r' => if r==r' then v else pregisters s r') (pmemory s) (pflags s) (ptrace s). 
+Definition addGenRegToPState s r v :=
+  mkPState (fun r' => if r==r' then v else pregisters s r') (pmemory s) (pflags s) (ptrace s).
 *)
 
 
-Definition extendState (s1 s2: PState) : PState := fun f => extend (s1 f) (s2 f). 
-Definition stateIncludedIn (s1 s2: PState) := forall f, includedIn (s1 f) (s2 f). 
+Definition extendState (s1 s2: PState) : PState := fun f => extend (s1 f) (s2 f).
+Definition stateIncludedIn (s1 s2: PState) := forall f, includedIn (s1 f) (s2 f).
 
-Lemma stateIncludedIn_trans (s1 s2 s3:PState) : 
+Lemma stateIncludedIn_trans (s1 s2 s3:PState) :
   stateIncludedIn s1 s2 -> stateIncludedIn s2 s3 -> stateIncludedIn s1 s3.
 Proof. move => H1 H2 f. by apply: includedIn_trans. Qed.
 
@@ -149,14 +149,14 @@ Qed.
 Definition stateSplitsAs (s s1 s2: PState) := forall f, splitsAs (s f) (s1 f) (s2 f).
 
 Lemma stateSplitsAsIncludes s s1 s2 :
-  stateSplitsAs s s1 s2 -> stateIncludedIn s1 s /\ stateIncludedIn s2 s. 
-Proof. move => H. 
-split => f. apply (proj1 (splitsAsIncludes (H f))). apply (proj2 (splitsAsIncludes (H f))).  
-Qed. 
+  stateSplitsAs s s1 s2 -> stateIncludedIn s1 s /\ stateIncludedIn s2 s.
+Proof. move => H.
+split => f. apply (proj1 (splitsAsIncludes (H f))). apply (proj2 (splitsAsIncludes (H f))).
+Qed.
 
 Lemma stateSplitsAsExtendL s s1 s2 s3 s4 : stateSplitsAs s s1 s2 -> stateSplitsAs s2 s3 s4 ->
   stateSplitsAs s (extendState s1 s3) s4.
-Proof. move => H1 H2 f. by apply: splitsAsExtendL. Qed. 
+Proof. move => H1 H2 f. by apply: splitsAsExtendL. Qed.
 
 Lemma stateSplitsAsExtends s s1 s2 : stateSplitsAs s s1 s2 -> s = extendState s1 s2.
 Proof.
@@ -166,48 +166,48 @@ Proof.
   exact: splitsAsExtend.
 Qed.
 
-Lemma stateSplitsAs_s_emp_s s : stateSplitsAs s emptyPState s. 
-Proof. move => f. apply: splitsAs_f_emp_f. Qed. 
+Lemma stateSplitsAs_s_emp_s s : stateSplitsAs s emptyPState s.
+Proof. move => f. apply: splitsAs_f_emp_f. Qed.
 
-Lemma stateSplitsAs_s_s_emp s : stateSplitsAs s s emptyPState. 
-Proof. move => f. apply: splitsAs_f_f_emp. Qed. 
+Lemma stateSplitsAs_s_s_emp s : stateSplitsAs s s emptyPState.
+Proof. move => f. apply: splitsAs_f_f_emp. Qed.
 
 Lemma stateSplitsAs_s_emp_t s t : stateSplitsAs s emptyPState t -> s = t.
-Proof. move => H. extensionality f. 
-apply: functional_extensionality. apply: splitsAs_f_emp_g. apply: H. 
-Qed. 
+Proof. move => H. extensionality f.
+apply: functional_extensionality. apply: splitsAs_f_emp_g. apply: H.
+Qed.
 
 Lemma stateSplitsAs_s_t_emp s t : stateSplitsAs s t emptyPState -> s = t.
-Proof. move => H. extensionality f. 
-apply: functional_extensionality. apply: splitsAs_f_g_emp. apply: H. 
-Qed. 
+Proof. move => H. extensionality f.
+apply: functional_extensionality. apply: splitsAs_f_g_emp. apply: H.
+Qed.
 
 Lemma stateSplitsAs_s_t_s s t: stateSplitsAs s t s -> t = emptyPState.
-Proof. move => H. extensionality f. 
-apply: functional_extensionality. apply: splitsAs_f_g_f. apply H. 
-Qed. 
+Proof. move => H. extensionality f.
+apply: functional_extensionality. apply: splitsAs_f_g_f. apply H.
+Qed.
 
 Lemma stateSplitsAs_s_s_t s t: stateSplitsAs s s t -> t = emptyPState.
-Proof. move => H. extensionality f. 
-apply: functional_extensionality. apply: splitsAs_f_f_g. apply H. 
-Qed. 
+Proof. move => H. extensionality f.
+apply: functional_extensionality. apply: splitsAs_f_f_g. apply H.
+Qed.
 
 Lemma stateSplitsAsIncludedInSplitsAs f f1 f2 g :
-    stateSplitsAs f f1 f2 -> stateIncludedIn f g -> exists g1, exists g2, 
+    stateSplitsAs f f1 f2 -> stateIncludedIn f g -> exists g1, exists g2,
     stateSplitsAs g g1 g2 /\ stateIncludedIn f1 g1 /\ stateIncludedIn f2 g2.
-Proof. move => H1 H2. 
-exists f1. 
-set g2 := fun fr => fun x => if f1 fr x is Some _ then None else if f2 fr x is Some y then Some y else g fr x. 
+Proof. move => H1 H2.
+exists f1.
+set g2 := fun fr => fun x => if f1 fr x is Some _ then None else if f2 fr x is Some y then Some y else g fr x.
 exists g2.
-split => //.  
-move => fr. apply (splitsAsIncludedInSplitsAs (H1 fr) (H2 fr)).  
-split => //. 
-move => fr. apply (splitsAsIncludedInSplitsAs (H1 fr) (H2 fr)).  
-Qed. 
+split => //.
+move => fr. apply (splitsAsIncludedInSplitsAs (H1 fr) (H2 fr)).
+split => //.
+move => fr. apply (splitsAsIncludedInSplitsAs (H1 fr) (H2 fr)).
+Qed.
 
 (* a version more faithful to [splitsAsIncludedInSplitsAs] *)
 Lemma stateSplitsAsIncludedInSplitsAs' (f f1 f2 g: PState) :
-  stateSplitsAs f f1 f2 -> stateIncludedIn f g -> 
+  stateSplitsAs f f1 f2 -> stateIncludedIn f g ->
   exists g2,
   stateSplitsAs g f1 g2 /\ stateIncludedIn f2 g2.
 Proof.
@@ -220,48 +220,48 @@ Lemma stateSplitsAs_functional s1 s2 h i : stateSplitsAs h s1 s2 -> stateSplitsA
 Proof. move => H1 H2.
 extensionality f.
 specialize (H1 f). specialize (H2 f).
-have H:= splitsAs_functional H1 H2.  
-apply: functional_extensionality. 
-move => x. by specialize (H x). 
-Qed. 
+have H:= splitsAs_functional H1 H2.
+apply: functional_extensionality.
+move => x. by specialize (H x).
+Qed.
 
-Lemma stateSplitsAs_functionalArg s s1 s2 s3 : stateSplitsAs s s2 s1 -> stateSplitsAs s s3 s1 -> s2 = s3. 
-Proof. move => H1 H2. 
-extensionality f. 
-specialize (H1 f). specialize (H2 f). 
-have H := splitsAs_functionalArg H1 H2. 
-apply: functional_extensionality. 
-move => x. by specialize (H x). 
-Qed. 
+Lemma stateSplitsAs_functionalArg s s1 s2 s3 : stateSplitsAs s s2 s1 -> stateSplitsAs s s3 s1 -> s2 = s3.
+Proof. move => H1 H2.
+extensionality f.
+specialize (H1 f). specialize (H2 f).
+have H := splitsAs_functionalArg H1 H2.
+apply: functional_extensionality.
+move => x. by specialize (H x).
+Qed.
 
 Lemma stateSplitsAs_commutative s s1 s2 :
   stateSplitsAs s s1 s2 -> stateSplitsAs s s2 s1.
-Proof. move => H f. by apply: splitsAs_commutative. Qed. 
+Proof. move => H f. by apply: splitsAs_commutative. Qed.
 
 Lemma stateSplitsAs_associative s s1 s2 s3 s4 :
   stateSplitsAs s s1 s2 ->
   stateSplitsAs s2 s3 s4 ->
-  exists s5, 
+  exists s5,
   stateSplitsAs s s3 s5 /\
   stateSplitsAs s5 s1 s4.
 Proof. move => H1 H2.
-set s5 := fun fr => fun x => if s4 fr x is Some y then Some y else s1 fr x. 
-exists s5. 
-split; move => fr; apply (splitsAs_associative (H1 fr) (H2 fr)). 
-Qed. 
+set s5 := fun fr => fun x => if s4 fr x is Some y then Some y else s1 fr x.
+exists s5.
+split; move => fr; apply (splitsAs_associative (H1 fr) (H2 fr)).
+Qed.
 
-Definition restrictState (s: PState) (p: forall f:Frag, fragDom f -> bool) : PState := 
-  fun f => fun x => if p f x then s f x else None. 
+Definition restrictState (s: PState) (p: forall f:Frag, fragDom f -> bool) : PState :=
+  fun f => fun x => if p f x then s f x else None.
 
 Lemma stateSplitsOn (s: PState) p :
-stateSplitsAs s (restrictState s p) 
-                (restrictState s (fun f => fun x => ~~p f x)). 
-Proof. move => f x. 
+stateSplitsAs s (restrictState s p)
+                (restrictState s (fun f => fun x => ~~p f x)).
+Proof. move => f x.
 case E: (s f x) => [a |] => //. rewrite /restrictState.
 case E': (p f x). rewrite E. left; done. right. by rewrite E.
-rewrite /restrictState.  rewrite E. 
-by case (p f x). 
-Qed. 
+rewrite /restrictState.  rewrite E.
+by case (p f x).
+Qed.
 
 (* Builds a total memory with the same mappings as the partial memory s.
    Locations that are not in s will be unmapped in the result. *)
@@ -341,7 +341,7 @@ Qed.
 Lemma state_extensional (s1 s2: PState) : (forall f, s1 f =1 s2 f) -> s1 === s2.
 Proof. unfold equiv, PStateEquiv; move => H f; apply H. Qed.
 
-Program Definition my_sa_mul : (PState -s> PState -s> PState -s> Prop) := 
+Program Definition my_sa_mul : (PState -s> PState -s> PState -s> Prop) :=
   lift3s (fun s1 s2 s => forall f, splitsAs (s f) (s1 f) (s2 f)) _ _ _.
 Next Obligation.
   intros t1 t2 HEqt; unfold equiv, PStateEquiv in HEqt.
@@ -376,7 +376,7 @@ Proof.
   + intros; apply stateSplitsAs_s_s_emp.
 Qed.
 
-Definition SPred := ILFunFrm PState Prop. 
+Definition SPred := ILFunFrm PState Prop.
 
 Local Existing Instance ILFun_Ops.
 Local Existing Instance ILFun_ILogic.
@@ -390,7 +390,7 @@ Instance sepLogic : BILogic SPred | 1 := _.
 
 Implicit Arguments mkILFunFrm [[e] [ILOps]].
 
-Definition mkSPred (P : PState -> Prop) 
+Definition mkSPred (P : PState -> Prop)
         (f : forall t t' : PState, t === t' -> P t |-- P t') : SPred :=
   mkILFunFrm PState Prop P f.
 
@@ -517,7 +517,7 @@ Definition RegOrFlag_target rf :=
 match rf with RegOrFlagR _ => DWORD | RegOrFlagF _ => FlagVal end.
 
 Definition stateIs (x: RegOrFlag) : RegOrFlag_target x -> SPred :=
-match x with 
+match x with
 | RegOrFlagR r => regIs r
 | RegOrFlagF f => flagIs f
 end.
@@ -536,7 +536,7 @@ Hint Unfold DWORDorBYTE RegOrFlag_target : spred.
   ---------------------------------------------------------------------------*)
 Program Definition byteIs p b : SPred := eq_pred (addBYTEToPState emptyPState p b).
 
-Definition byteAny p : SPred := lexists (byteIs p). 
+Definition byteAny p : SPred := lexists (byteIs p).
 
 Instance flagIsEquiv_m :
   Proper (eq ==> eq ==> CSetoid.equiv ==> iff) flagIs.
@@ -584,62 +584,62 @@ Proof. rewrite isc_cat /=. by rewrite empSPR. Qed.
 Class StrictlyExact (P: SPred) := strictly_exact:
   forall s s', P s -> P s' -> s === s'.
 
-Instance StrictlyExactRegIs r v: StrictlyExact (regIs r v). 
-Proof. move => s s'. simpl. by move ->. Qed. 
+Instance StrictlyExactRegIs r v: StrictlyExact (regIs r v).
+Proof. move => s s'. simpl. by move ->. Qed.
 
-Instance StrictlyExactFlagIs f v: StrictlyExact (flagIs f v). 
-Proof. move => s s'. simpl. by move ->. Qed. 
+Instance StrictlyExactFlagIs f v: StrictlyExact (flagIs f v).
+Proof. move => s s'. simpl. by move ->. Qed.
 
-Instance StrictlyExactByteIs p v: StrictlyExact (byteIs p v). 
-Proof. move => s s'. simpl. by move ->. Qed. 
+Instance StrictlyExactByteIs p v: StrictlyExact (byteIs p v).
+Proof. move => s s'. simpl. by move ->. Qed.
 
 Instance StrictlyExactSep P Q `{PH: StrictlyExact P} `{QH: StrictlyExact Q}
   : StrictlyExact (P**Q).
-Proof. move => s s' [s1 [s2 [H1 [H2 H3]]]] [s1' [s2' [H1' [H2' H3']]]]. 
-specialize (PH s1 s1' H2 H2'). 
+Proof. move => s s' [s1 [s2 [H1 [H2 H3]]]] [s1' [s2' [H1' [H2' H3']]]].
+specialize (PH s1 s1' H2 H2').
 specialize (QH s2 s2' H3 H3').
-rewrite -> PH, QH in H1. 
-by rewrite (stateSplitsAsExtends H1) (stateSplitsAsExtends H1'). 
-Qed. 
+rewrite -> PH, QH in H1.
+by rewrite (stateSplitsAsExtends H1) (stateSplitsAsExtends H1').
+Qed.
 
-Instance StrictlyExactEmpSP : StrictlyExact empSP. 
-Proof. move => s s' H H'. 
+Instance StrictlyExactEmpSP : StrictlyExact empSP.
+Proof. move => s s' H H'.
 destruct H as [H _]. destruct H' as [H' _].
-by rewrite -H -H'. 
-Qed. 
+by rewrite -H -H'.
+Qed.
 
 Instance StrictlyExactConj P Q `{PH: StrictlyExact P} `{QH: StrictlyExact Q}
   : StrictlyExact (P //\\ Q).
-Proof. move => s s' [H1 H2] [H1' H2'].  
-by apply (PH s s' H1 H1'). 
-Qed. 
+Proof. move => s s' [H1 H2] [H1' H2'].
+by apply (PH s s' H1 H1').
+Qed.
 
 Class Precise (P: SPred) := precise:
-  forall s s1 s2, stateIncludedIn s1 s -> stateIncludedIn s2 s -> P s1 -> P s2 -> s1 === s2. 
+  forall s s1 s2, stateIncludedIn s1 s -> stateIncludedIn s2 s -> P s1 -> P s2 -> s1 === s2.
 
-Instance PreciseStrictlyExact P `{PH: StrictlyExact P} : Precise P. 
-Proof. move => s s1 s2 H1 H2. intuition. Qed. 
+Instance PreciseStrictlyExact P `{PH: StrictlyExact P} : Precise P.
+Proof. move => s s1 s2 H1 H2. intuition. Qed.
 
 Corollary Distributive P0 P1 Q `{QH: Precise Q} :
   (P0 ** Q) //\\ (P1 ** Q) |-- (P0 //\\ P1) ** Q.
-Proof. 
-unfold "|--". rewrite /sepILogicOps/ILFun_Ops. move => s [H0 H1]. 
-destruct H0 as [s0 [s0' [H0a [H0b H0c]]]]. 
+Proof.
+unfold "|--". rewrite /sepILogicOps/ILFun_Ops. move => s [H0 H1].
+destruct H0 as [s0 [s0' [H0a [H0b H0c]]]].
 destruct H1 as [s1 [s1' [H1a [H1b H1c]]]].
-have SSI0 := stateSplitsAsIncludes H0a. 
-have SSI1 := stateSplitsAsIncludes H1a. 
-destruct SSI0 as [SSI0a SSI0b]. 
-destruct SSI1 as [SSI1a SSI1b]. 
-have QH1 := (QH _ _ _ SSI0b SSI1b H0c H1c). 
-exists s0. exists s1'. 
-split. rewrite -> QH1 in H0a. 
+have SSI0 := stateSplitsAsIncludes H0a.
+have SSI1 := stateSplitsAsIncludes H1a.
+destruct SSI0 as [SSI0a SSI0b].
+destruct SSI1 as [SSI1a SSI1b].
+have QH1 := (QH _ _ _ SSI0b SSI1b H0c H1c).
+exists s0. exists s1'.
+split. rewrite -> QH1 in H0a.
 
-exact H0a. 
-split. split. exact H0b. rewrite -> QH1 in SSI0b. 
+exact H0a.
+split. split. exact H0b. rewrite -> QH1 in SSI0b.
 rewrite -> QH1 in H0a.
-rewrite <- (stateSplitsAs_functionalArg H1a H0a). exact H1b. 
-exact H1c. 
-Qed. 
+rewrite <- (stateSplitsAs_functionalArg H1a H0a). exact H1b.
+exact H1c.
+Qed.
 
 (*---------------------------------------------------------------------------
     A partial application of [eq] is a predicate
@@ -655,7 +655,7 @@ Proof.
     simpl in *.
     rewrite <- Hs1', <- Hs2' in Hs'.
     eapply sa_mul_eqR; eassumption.
-  - simpl. move=> s' H1. 
+  - simpl. move=> s' H1.
     rewrite -> H1 in H.
     exists s1; exists s2; done.
 Qed.
@@ -677,34 +677,34 @@ Global Opaque PStateSepAlgOps.
   ---------------------------------------------------------------------------*)
 Open Scope spred_scope.
 
-Lemma regIs_same (r:AnyReg) v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse. 
-Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]]. 
+Lemma regIs_same (r:AnyReg) v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse.
+Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]].
 simpl in H1a, H1b. rewrite <-H1a in H1. rewrite <-H1b in H1.
-rewrite /sa_mul/PStateSepAlgOps/= in H1.  
-specialize (H1 Registers r). simpl in H1. 
+rewrite /sa_mul/PStateSepAlgOps/= in H1.
+specialize (H1 Registers r). simpl in H1.
 destruct (s Registers r); rewrite eq_refl in H1.
-destruct H1; by destruct H. 
-by destruct H1. 
-Qed. 
+destruct H1; by destruct H.
+by destruct H1.
+Qed.
 
-Lemma flagIs_same (f:Flag) v1 v2 : f ~= v1 ** f ~= v2 |-- lfalse. 
-Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]]. 
+Lemma flagIs_same (f:Flag) v1 v2 : f ~= v1 ** f ~= v2 |-- lfalse.
+Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]].
 simpl in H1a, H1b. rewrite <-H1a in H1. rewrite <-H1b in H1.
-rewrite /sa_mul/PStateSepAlgOps/= in H1.  
-specialize (H1 Flags f). simpl in H1. 
+rewrite /sa_mul/PStateSepAlgOps/= in H1.
+specialize (H1 Flags f). simpl in H1.
 destruct (s Flags f); rewrite eq_refl in H1.
-destruct H1; by destruct H. 
-by destruct H1. 
-Qed. 
+destruct H1; by destruct H.
+by destruct H1.
+Qed.
 
 Lemma byteIs_same p v1 v2 : byteIs p v1 ** byteIs p v2 |-- lfalse.
-Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]]. 
+Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]].
 simpl in H1a, H1b. rewrite <-H1a in H1. rewrite <-H1b in H1.
-rewrite /sa_mul/PStateSepAlgOps/= in H1.  
-specialize (H1 Memory p). simpl in H1. 
+rewrite /sa_mul/PStateSepAlgOps/= in H1.
+specialize (H1 Memory p). simpl in H1.
 destruct (s Memory p); rewrite eq_refl in H1.
-destruct H1; by destruct H. 
-by destruct H1. 
-Qed. 
+destruct H1; by destruct H.
+by destruct H1.
+Qed.
 
 

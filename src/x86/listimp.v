@@ -13,10 +13,10 @@ Import Prenex Implicits.
 Local Open Scope instr_scope.
 
 Definition inlineHead (r1 r2:Reg) :program :=
-  MOV r1, [r2]. 
+  MOV r1, [r2].
 
 Definition inlineTail (r1 r2:Reg) :program :=
-  MOV r1, [r2+4]. 
+  MOV r1, [r2+4].
 
 (* Head is in r1, tail is in r2, result in EDI, ESI trashed *)
 Definition updateCons (r1 r2:Reg) :program :=
@@ -37,5 +37,5 @@ Definition callCons (r1 r2:Reg) heapInfo: program :=
     MOV EDI, 0;;
   SUCCEED:;.
 
-    
+
 

@@ -1,0 +1,1 @@
+* Remove the [doSet] versions (such as [doSetBYTERegSet], and just [eapply triple_seq] first in [triple_apply]

@@ -18,8 +18,8 @@ Local Open Scope instr_scope.
     Calling-convention-independent definitions
   ---------------------------------------------------------------------------*)
 
-(* A function signature is simply an arity and a bool 
-   denoting the presence or absence of a return value. In future we could 
+(* A function signature is simply an arity and a bool
+   denoting the presence or absence of a return value. In future we could
    extend this to deal with other types e.g. floats, 64-bit integers *)
 (*=FunSig *)
 Structure FunSig := mkFunSig { arity: nat; nonvoid: bool }.
@@ -27,7 +27,7 @@ Structure FunSig := mkFunSig { arity: nat; nonvoid: bool }.
 
 (* A function body can be defined independently of calling convention by
    parameterizing it on InstrSrc arguments. Result is assumed to be in EAX. *)
-Definition programWithSig sig := 
+Definition programWithSig sig :=
   InstrSrc ^^ arity sig --> program.
 
 (* Here is an example: \n.n+1 *)
@@ -39,9 +39,9 @@ Example incBody : programWithSig (mkFunSig 1 true) :=
   ---------------------------------------------------------------------------*)
 
 (* Push n arguments on the stack *)
-Fixpoint pushArgs n (p:program) : nfun Src n program := 
+Fixpoint pushArgs n (p:program) : nfun Src n program :=
   if n is n.+1
-  then fun arg => pushArgs n (PUSH arg;; p) 
+  then fun arg => pushArgs n (PUSH arg;; p)
   else p.
 
 Definition makeMOVsrc (r:Reg) (s: Src) : program :=
@@ -52,11 +52,11 @@ Definition makeMOVsrc (r:Reg) (s: Src) : program :=
   end.
 
 (* Put first argument in ECX, second in EDX, and the rest on the stack *)
-Definition pushFastArgs n (p:program) : nfun Src n program := 
+Definition pushFastArgs n (p:program) : nfun Src n program :=
   match n with
   | 0 => p
   | 1 => fun arg => (makeMOVsrc ECX arg;; p)
-  | n.+2 => fun arg1 arg2 => pushArgs n (makeMOVsrc ECX arg1;; makeMOVsrc EDX arg2;; p) 
+  | n.+2 => fun arg1 arg2 => pushArgs n (makeMOVsrc ECX arg1;; makeMOVsrc EDX arg2;; p)
   end.
 
 (*---------------------------------------------------------------------------
@@ -83,9 +83,9 @@ Inductive CallConv := cdecl | stdcall | fastcall.
 (*=End *)
 
 (*---------------------------------------------------------------------------
-    Generate calling sequence for cdecl, stdcall and fastcall conventions 
+    Generate calling sequence for cdecl, stdcall and fastcall conventions
   ---------------------------------------------------------------------------*)
-Definition call_cdecl_with (n:nat) (f:JmpTgt) := 
+Definition call_cdecl_with (n:nat) (f:JmpTgt) :=
   pushArgs n (CALL f;; ADD ESP, n*4).
 
 Definition call_std_with (n:nat) (f: JmpTgt) :=
@@ -101,7 +101,7 @@ Definition call_with (cc: CallConv) :=
   | fastcall => call_fast_with
   end.
 
- 
+
 (*---------------------------------------------------------------------------
     Helper for creating function prologues and epilogues
   ---------------------------------------------------------------------------*)
@@ -113,33 +113,33 @@ Implicit Arguments introParams [].
 
 
 (*---------------------------------------------------------------------------
-    Create function definitions for cdecl, stdcall and fastcall conventions 
+    Create function definitions for cdecl, stdcall and fastcall conventions
   ---------------------------------------------------------------------------*)
 Definition def_cdecl sig : programWithSig sig -> program :=
   match sig return programWithSig sig -> program with
-  | mkFunSig n _ => 
-    fun body => 
-    PUSH EBP;; MOV EBP, ESP;; 
+  | mkFunSig n _ =>
+    fun body =>
+    PUSH EBP;; MOV EBP, ESP;;
     introParams n 8 body;; POP EBP;; RET 0
   end.
 Implicit Arguments def_cdecl [].
 
 Definition def_std sig : programWithSig sig -> program :=
   match sig return programWithSig sig -> program with
-  | mkFunSig n _ => 
-    fun body => 
-    PUSH EBP;; MOV EBP, ESP;; 
+  | mkFunSig n _ =>
+    fun body =>
+    PUSH EBP;; MOV EBP, ESP;;
     introParams n 8 body;; POP EBP;; RET (n*4)
 
   end.
 Implicit Arguments def_std [].
 
-Definition def_fast sig := 
+Definition def_fast sig :=
   match sig return programWithSig sig -> program with
   | mkFunSig 0 _ => fun body => body;; RET 0
   | mkFunSig 1 _ => fun body => body ECX;; RET 0
   | mkFunSig 2 _ => fun body => body ECX EDX;; RET 0
-  | mkFunSig n.+2 _ => 
+  | mkFunSig n.+2 _ =>
     fun body => PUSH EBP;; MOV EBP, ESP;; introParams n 8 (body ECX EDX);; POP EBP;; RET 0
   end.
 Implicit Arguments def_fast [].
@@ -155,19 +155,19 @@ Implicit Arguments def_fun [].
 Definition callconv cc sig := (call_with cc sig.(arity), def_fun cc sig).
 
 (* Examples: compare http://en.wikibooks.org/wiki/X86_Disassembly/Calling_Conventions *)
-      
+
 (*=addfun *)
-Example addfun (cc: CallConv) := 
+Example addfun (cc: CallConv) :=
   let (call, def) := callconv cc (mkFunSig 3 true) in
   LOCAL AddThree; LOCAL ExampleUse;
-    AddThree:;; 
+    AddThree:;;
       def (fun a b c =>  MOV EAX, a;; ADD EAX, b;; ADD EAX, c);;
     ExampleUse:;;
       call AddThree 2 3 4.
 (*=End *)
 
 (*
-Eval showinstr in linearize (addfun cdecl). 
-Eval showinstr in linearize (addfun stdcall). 
-Eval showinstr in linearize (addfun fastcall). 
+Eval showinstr in linearize (addfun cdecl).
+Eval showinstr in linearize (addfun stdcall).
+Eval showinstr in linearize (addfun fastcall).
 *)

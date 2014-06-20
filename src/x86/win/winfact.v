@@ -7,9 +7,9 @@ Unset Strict Implicit.
 Import Prenex Implicits.
 
 (*=bytes *)
-Definition winfact := 
-  IMPORTDLL "msvcrt.dll"; 
-  IMPORT "printf" as printfSlot; 
+Definition winfact :=
+  IMPORTDLL "msvcrt.dll";
+  IMPORT "printf" as printfSlot;
   SECTION CODE
     main printfSlot.
 

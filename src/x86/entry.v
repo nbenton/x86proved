@@ -4,7 +4,7 @@ Require Import program macros Ascii.
 
 Local Open Scope instr_scope.
 
-Definition sumEx := 
+Definition sumEx :=
   LOCAL loopBody;
       MOV EAX, 1;;
       MOV EBX, 10;;
@@ -46,7 +46,7 @@ Definition prettyEx :=
       MOV EAX, 31;;
       MOV EBX, 255;;
     loopBody:;;
-      MOV BYTE [EDI], #1;;                       
+      MOV BYTE [EDI], #1;;
       INC EDI;;
       MOV [EDI], AL;;
       INC EDI;;

@@ -2,8 +2,8 @@
     Single-step transition function and extension to multiple steps,
     with various lemmas
   ===========================================================================*)
-Require Import ssreflect ssrnat ssrbool eqtype tuple seq. 
-Require Import instr monad reader procstate procstatemonad exn eval instrcodec 
+Require Import ssreflect ssrnat ssrbool eqtype tuple seq.
+Require Import instr monad reader procstate procstatemonad exn eval instrcodec
                monadinst ioaction bitsrep bitsops.
 
 Set Implicit Arguments.
@@ -22,8 +22,8 @@ Qed.
 
 (* Decode instruction at EIP, move EIP to next instruction, execute instruction *)
 (*=step *)
-Definition step : ST unit := 
-  let! oldIP = getRegFromProcState EIP; 
+Definition step : ST unit :=
+  let! oldIP = getRegFromProcState EIP;
   let! (instr,newIP) = readFromProcState oldIP;
   do! setRegInProcState EIP newIP;
   evalInstr instr.

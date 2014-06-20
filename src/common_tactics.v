@@ -1,4 +1,7 @@
 (** * Various useful general purpose tactics *)
+(** Require [ssreflect] so notations like [_ : _] don't break. *)
+Ltac type_of x := type of x.
+Require Import Ssreflect.ssreflect.
 
 (** Coq's built in tactics don't work so well with things like [iff]
     so split them up into multiple hypotheses *)
@@ -43,18 +46,18 @@ Hint Extern 0 (make_apply_under_binders_in_helper_helper ?H ?lem)
            : typeclass_instances.
 
 Ltac make_apply_under_binders_in lem H :=
-  match type of H with
+  match type_of H with
     | forall x : ?T, @?P x
       => let ret := constr:(fun x' : T =>
                               let Hx := H x' in
                               _ : make_apply_under_binders_in_helper lem Hx) in
          let ret' := (eval cbv zeta beta delta [do_make_apply_under_binders_in_helper make_apply_under_binders_in_helper] in ret) in
-         let retT := type of ret' in
+         let retT := type_of ret' in
          let retT' := (eval cbv zeta beta delta [do_make_apply_under_binders_in_helper make_apply_under_binders_in_helper] in retT) in
          constr:(ret' : retT')
     | _ => let ret := constr:(_ : make_apply_under_binders_in_helper_helper H lem) in
            let ret' := (eval cbv beta zeta delta [make_apply_under_binders_in_helper_helper do_make_apply_under_binders_in_helper_helper] in ret) in
-           let retT := type of ret' in
+           let retT := type_of ret' in
            let retT' := (eval cbv beta zeta delta [make_apply_under_binders_in_helper_helper do_make_apply_under_binders_in_helper_helper] in retT) in
            constr:(ret' : retT')
   end.
@@ -142,7 +145,7 @@ Ltac destruct_all_matches_then matcher tac :=
            | [ H : ?T |- _ ] => matcher T; destruct H; tac
          end.
 
-Ltac destruct_all_matches matcher := destruct_all_matches_then matcher ltac:(simpl in *).
+Ltac destruct_all_matches matcher := destruct_all_matches_then matcher ltac:( simpl in * ).
 Ltac destruct_all_matches' matcher := destruct_all_matches_then matcher idtac.
 
 (** matches anything whose type has a [T] in it *)

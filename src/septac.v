@@ -137,7 +137,7 @@ Module Existentials.
     move: (@find_correct_pull t). destruct (find t) as [[A f]|]; last done.
     move=> Htf HG Ht. specialize (Htf _ Ht). destruct Htf as [a Htf]. eauto.
   Qed.
-  
+
   Ltac quote_term P :=
     match P with
     | ?P1 ** ?P2 =>
@@ -190,7 +190,7 @@ Module Existentials.
       sdestruct => a. sdestruct => H. sdestruct => b.
       Fail sdestruct. apply: ltrueR.
     Qed.
-    
+
     Example ex2: lfalse |-- P ** (Exists x1, 0 = 0 /\\ f x1) ** (Exists x2, f (1 + x2)).
     Proof.
       ssplit. ssplit; first done. ssplit. Fail ssplit.
@@ -227,13 +227,13 @@ Module Solving.
      name. *)
   Section Indexes.
     Definition idx := nat.
-    
+
     Definition eqn' (i j: idx) := Eval red in eqn i j.
 
     Lemma eqn'P i j : reflect (i = j) (eqn' i j).
     Proof. apply eqnP. Qed.
   End Indexes.
-  
+
   Inductive term :=
   | t_atom (i: idx)
   | t_star (t1 t2: term)
@@ -384,7 +384,7 @@ Module Solving.
     | t_emp => Some tP
     | t_false => None
     end.
-  
+
   Lemma remove_atom_correct e t i tR:
     remove_atom t i = Some tR ->
     eval e t |-- eval e (t_atom i) ** eval e tR.
@@ -400,7 +400,7 @@ Module Solving.
       move=> [<-]. rewrite ->IHt2; last reflexivity.
       rewrite -sepSPA [_ ** eval e (t_atom i)]sepSPC sepSPA. reflexivity.
   Qed.
-    
+
   Lemma remove_correct e tP tQ tR:
     remove tP tQ = Some tR ->
     eval e tP |-- eval e tQ ** eval e tR.
@@ -416,7 +416,7 @@ Module Solving.
 
       move=> tP tR /= [<-]. by rewrite empSPL.
 
-      move=> tP tR /=. done. 
+      move=> tP tR /=. done.
   Qed.
 
   Fixpoint simplify (tP tQ: term) : (term * term) :=
@@ -465,7 +465,7 @@ Module Solving.
     - move=> tP tP' tQ' /= [<- <-]. exists t_emp.
       rewrite !empSPR. split; reflexivity.
   Qed.
-  
+
   (* Weaker version of correctness theorem. *)
   Corollary simplify_sufficient e tP tQ tP' tQ' :
     simplify tP tQ = (tP', tQ') ->
@@ -495,7 +495,7 @@ Module Solving.
   Proof.
     induction t; try reflexivity; []. rewrite /=.
     destruct (clean t1); destruct (clean t2); rewrite -IHt1 -IHt2;
-      try rewrite empSPL; try rewrite empSPR; 
+      try rewrite empSPL; try rewrite empSPR;
       try rewrite sepSP_falseL; try rewrite sepSP_falseR; reflexivity.
   Qed.
 
@@ -571,7 +571,7 @@ Ltac sbazookaonealt_with PT :=
   | |- ?P /\\ lfalse |-- ?Q => (apply lpropandL => _; apply lfalseL)
   | _ => sbazookaone_with PT
   end.
-  
+
 (** Overpowered super-tactic *)
 Ltac sbazooka_with PT :=
     match goal with

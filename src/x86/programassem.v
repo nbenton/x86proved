@@ -19,10 +19,10 @@ Definition assemblerState := seq DWORD * PMAP DWORD 32 * seq AssemblerError : Ty
 Definition ST := @SMT WriterTm assemblerState.
 
 Definition getState: ST assemblerState := SMT_get _ (S:=_).
-Definition setState: assemblerState -> ST unit := SMT_set _ (S:=_). 
+Definition setState: assemblerState -> ST unit := SMT_set _ (S:=_).
 Coercion assemblerLift {X} (w: WriterTm X): ST X := SMT_lift _ w.
 
-Definition getPos: ST DWORD := 
+Definition getPos: ST DWORD :=
   let! pos = assemblerLift getWCursor;
   if pos is mkCursor c then retn c else writerFail.
 
@@ -48,7 +48,7 @@ Fixpoint onepass (p: program) : ST unit :=
   | prog_data _ _ _ _ c => writeNext c
   | prog_skip => retn tt
   | prog_seq p1 p2 =>
-      do! (onepass p1); 
+      do! (onepass p1);
       onepass p2
   | prog_declabel body =>
       let! (labels, m, errors) = getState;
@@ -56,7 +56,7 @@ Fixpoint onepass (p: program) : ST unit :=
       then do! setState (labels', m, errors); onepass (body addr)
       else setState (labels, m, OutOfLabels::errors)
     (* In fact l will have been passed in *)
-  | prog_label l =>    
+  | prog_label l =>
       let! pos = getPos;
       let! (labels, m, errors) = getState;
       setState (labels, m ! l := pos, errors)
@@ -73,18 +73,18 @@ Fixpoint finalpass (p: program) : ST unit :=
   | prog_declabel body =>
       let! (labels, m, errors) = getState;
       if labels is addr::labels'
-      then do! setState (labels', m, errors); 
+      then do! setState (labels', m, errors);
            finalpass (body addr)
       else writerFail
-  | prog_label l =>    
+  | prog_label l =>
       let! pos = getPos;
       if pos == l then retn tt else writerFail
   end.
 
-Inductive AssemblerResult R := 
-  AssemblerSuccess (r:R) | AssemblerFail (errors: seq AssemblerError). 
+Inductive AssemblerResult R :=
+  AssemblerSuccess (r:R) | AssemblerFail (errors: seq AssemblerError).
 
-Definition runOnePass (offset: DWORD) (addrs: seq DWORD) (p: program) : 
+Definition runOnePass (offset: DWORD) (addrs: seq DWORD) (p: program) :
   AssemblerResult (seq DWORD * seq BYTE) :=
   match runWriterTm true (onepass p (addrs,EmptyPMap _ _,nil)) offset with
   | Some ((_,m,nil,_),bytes) => AssemblerSuccess (pmap m addrs,bytes)
@@ -93,7 +93,7 @@ Definition runOnePass (offset: DWORD) (addrs: seq DWORD) (p: program) :
   end.
 
 Fixpoint runNPasses n offset addrs p :=
-  if n is n'.+1 then 
+  if n is n'.+1 then
     match runOnePass offset addrs p with
     | AssemblerSuccess (addrs', bytes)  =>
       if addrs == addrs' then AssemblerSuccess(n, addrs', bytes)
@@ -101,7 +101,7 @@ Fixpoint runNPasses n offset addrs p :=
     | AssemblerFail errors => AssemblerFail _ errors
     end
   else AssemblerFail _ nil.
-  
+
 Definition passes := 20.
 
 Definition runAssembler offset p :=

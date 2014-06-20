@@ -24,7 +24,7 @@ Section Compiler.
 (****************************************************************)
 
 (* Interface: [acc]eptance and [rej]ection continuations *)
-Variables 
+Variables
   (acc: DWORD)
   (rej: DWORD).
 
@@ -50,8 +50,8 @@ Definition dfa_state := 'I_dfa_size.
 (* Language of a DFA: *)
 
 (*=lang *)
-Fixpoint lang (s: dfa_state) (w: seq DWORD): bool := 
-  if w is a::w' 
+Fixpoint lang (s: dfa_state) (w: seq DWORD): bool :=
+  if w is a::w'
   then (a \in alphabet) && lang (trans s a) w'
   else accept s.
 (*=End *)
@@ -83,7 +83,7 @@ Hint Unfold runState : specapply.
 
 (* [runStates] specifies the invariants of all the states in
  * [DFA_state]: *)
-Definition runStates 
+Definition runStates
              (labels: dfa_size.-tuple DWORD): spec :=
   Forall k: 'I_dfa_size, runState labels k.
 Hint Unfold runStates : specapply.
@@ -94,7 +94,7 @@ Definition runAcc :=
   run acc
       @ (lang dfa_init str
      /\\ EAX?
-      ** EBX? 
+      ** EBX?
       ** buffer :-S> str).
 Hint Unfold runAcc: specapply.
 
@@ -104,7 +104,7 @@ Definition runRej :=
   run rej
       @ ((~~ (lang dfa_init str))
      /\\ EAX?
-      ** EBX? 
+      ** EBX?
       ** buffer :-S> str).
 Hint Unfold runRej: specapply.
 
@@ -116,14 +116,14 @@ Hint Unfold runRej: specapply.
  * Computation: jumpNext
  *
  * Compare a character [c] against [EBX] and jump to [next] if they
- * are equal. 
+ * are equal.
  *
  * Invariant: the point of this module is the specification
  * [jumpNext_logic] that reifies the invariant [c == v] for [EBX ~=
  * v].
  *
  *)
-  
+
 Section JumpNext.
 
 Variables (c: DWORD)
@@ -134,12 +134,12 @@ Definition jumpNext : program :=
   JE next.
 Hint Unfold jumpNext: specapply.
 
-Lemma jumpNext_logic 
+Lemma jumpNext_logic
         (i j: DWORD)(pd v : DWORD) :
 
  |-- (|> run next @ (v == c /\\ empSP)
   //\\   run j @ (v != c /\\ empSP)
- (* --------------------------------------- *)  -->> 
+ (* --------------------------------------- *)  -->>
         run i)
 
  (* Memory: *)
@@ -159,7 +159,7 @@ Proof.
   specapply JZ_rule; first by sbazooka.
   rewrite <-spec_reads_frame; autorewrite with push_at.
   apply limplValid; apply landR.
-  
+
     * (* FLOW: run [next] *)
     apply landL1.
     do 2 cancel1.
@@ -169,7 +169,7 @@ Proof.
 
     * (* FLOW: run [j] *)
     apply landL2.
-    cancel1. 
+    cancel1.
     sdestruct=> /eqP ->.
     rewrite /OSZCP_Any/stateIsAny.
     by sbazooka.
@@ -181,7 +181,7 @@ End JumpNext.
  * Computation: jumpTable
  *
  * Compute the lookup table for a state [s], over the entire
- * [alphabet]. 
+ * [alphabet].
  *
  * Invariant: a jump is made to state [k] iff the character [v] in
  * [EBX] is in the alphabet and the DFA specifies a transition from
@@ -195,21 +195,21 @@ Variables (labels:  dfa_size.-tuple DWORD)
           (s : dfa_state).
 
 Definition jumpTable :=
-    foldr prog_seq prog_skip 
+    foldr prog_seq prog_skip
           [seq jumpNext c (tnth labels (trans s c))
           | c <- alphabet].
 
 
 Lemma jumpTable_logic
-        (i j: DWORD)(pd: DWORD)(v: DWORD) : 
+        (i j: DWORD)(pd: DWORD)(v: DWORD) :
 
- |-- ( (|>  Forall k: 'I_dfa_size, 
-        run (tnth labels k) 
+ |-- ( (|>  Forall k: 'I_dfa_size,
+        run (tnth labels k)
             @ ((v \in alphabet)
             && (trans s v == k)
             /\\ empSP ))
     //\\ (run j @ (v \notin alphabet /\\ empSP))
- (* ------------------------------------------------ *) -->> 
+ (* ------------------------------------------------ *) -->>
     run i)
 
  (* Memory: *)
@@ -246,11 +246,11 @@ Proof.
       do 2 cancel1.
       sdestruct=> /eqP ->.
       sbazooka.
-      by apply/andP; split; 
-         [ apply mem_head 
+      by apply/andP; split;
+         [ apply mem_head
          | done].
 
-    - (* CASE: v == a: run [jumpTable] *)      
+    - (* CASE: v == a: run [jumpTable] *)
       autorewrite with push_at.
       specintros=> neq_v_a.
       specapply IH; first by sbazooka; move=> {IH}.
@@ -267,7 +267,7 @@ Proof.
         sbazooka; apply /andP; split; last by exact: q2.
         rewrite in_cons; apply/orP; apply or_intror.
         by exact: q1.
-                
+
       + (* CASE: |>safe @ (EIP~=exit) //\\ safe @ (EIP~=j) *)
         apply landL2.
         autorewrite with push_at; cancel1.
@@ -328,7 +328,7 @@ Lemma nextChar_logic
 (* -------------------------------------*) -->>
    run i @ (EAX ~= pd
          ** EBX?
-         ** buffer -- pd :-> l1 
+         ** buffer -- pd :-> l1
          ** pd -- hiBuff :-S> l2))
 
   (* Memory: *)
@@ -337,9 +337,9 @@ Lemma nextChar_logic
   (* Program: *)
     <@ (i -- j :-> nextChar).
 Proof.
-  rewrite /nextChar/run. 
+  rewrite /nextChar/run.
   unfold_program; specintros=> add jumpNext.
-  
+
   case: l2=> [|c l2].
 
   * (* CASE: l2 = [::] *)
@@ -354,25 +354,25 @@ Proof.
                sbazooka.
 
     (* RUN: ADD EAX, 4 *)
-    specapply ADD_RI_ruleNoFlags; 
+    specapply ADD_RI_ruleNoFlags;
       first by sbazooka.
-   
-    
+
+
     (* jumpNext #0 exit *)
-    specapply jumpNext_logic; 
-      first by rewrite /stateIsAny; 
+    specapply jumpNext_logic;
+      first by rewrite /stateIsAny;
                sbazooka.
- 
+
     specsplit;
-      rewrite <-spec_reads_frame; 
+      rewrite <-spec_reads_frame;
       autorewrite with push_at;
       apply limplValid.
-   
 
-    - (* CASE: end of string: run exit *)    
-      apply landL1; rewrite <-spec_later_weaken; 
+
+    - (* CASE: end of string: run exit *)
+      apply landL1; rewrite <-spec_later_weaken;
         cancel1; sdestruct=> _;
-        rewrite addB0; rewrite /stateIsAny; 
+        rewrite addB0; rewrite /stateIsAny;
         move/eqP: eq_pd=> ->;
         sbazooka.
       rewrite ->(emptyString l1_string).
@@ -383,7 +383,7 @@ Proof.
       cancel1.
       by sdestruct=> /eqP //.
 
-  * (* CASE: l2 =~ [:: c & cs ] *) 
+  * (* CASE: l2 =~ [:: c & cs ] *)
     rewrite ->caseString_cons.
     specintros=> c_neq_0.
 
@@ -405,21 +405,21 @@ Proof.
 
     - (* CASE: impossible: end of string *)
       apply landL1;
-        rewrite <-spec_later_weaken; 
+        rewrite <-spec_later_weaken;
         do 2 cancel1.
       sdestruct=> /eqP c_eq_0.
       by rewrite c_eq_0 // in c_neq_0.
 
     - (* CASE: run [j] *)
-      apply landL2; cancel1; 
+      apply landL2; cancel1;
       rewrite /stateIsAny  [pd +# 0] addB0;
         ssimpl;
         sdestruct=> _.
       sbazooka;
-        first by apply/andP; split; done || assumption. 
+        first by apply/andP; split; done || assumption.
       rewrite seqMemIsCat pairMemIsPair /pointsTo.
-      sdestruct=> q'; sbazooka. 
-      rewrite ->memIsFixed. sdestruct => H. apply apart_addBn_next in H. rewrite H. 
+      sdestruct=> q'; sbazooka.
+      rewrite ->memIsFixed. sdestruct => H. apply apart_addBn_next in H. rewrite H.
       rewrite ->seqMemIsCons; sbazooka.
       by rewrite seqMemIsNil; sbazooka.
 Qed.
@@ -428,18 +428,18 @@ End NextChar.
 
 (*
  * Computation: transitionState
- * 
+ *
  * The code generated by [transitionState] corresponds to the
  * transition function for a given state [s]. It is basically a jump
  * table, mapping over the alphabet and jumping to whichever state
  * matches. If none matches, it jumps to accept or reject, depending
  * on whether the state itself is accepting or not.
- * 
+ *
  * Invariant: a jump to [acc] (resp. [rej]) is made iff the word in
  * memory is accepted (resp. rejected). Otherwise, we maintain the
  * invariant that the currently processed input is accepted iff the
  * word is accepted.
- * 
+ *
  *)
 
 Section TransitionState.
@@ -451,7 +451,7 @@ Definition transitionState : program :=
   (tnth labels s):;;
     (* Increment but stay inside buffer *)
     nextChar (match accept s with
-                | true => acc 
+                | true => acc
                 | false => rej
               end);;
     (* Jump table: *)
@@ -459,7 +459,7 @@ Definition transitionState : program :=
     (* Char not in alphabet: *)
     JMP rej.
 
-Lemma transitionState_logic 
+Lemma transitionState_logic
         (i j: DWORD) :
 
   |--    (|> runStates labels
@@ -481,8 +481,8 @@ Proof.
 
   (* Get nextChar *)
   specapply nextChar_logic;
-    [ by sbazooka 
-    | 
+    [ by sbazooka
+    |
     | by assumption].
   specsplit.
 
@@ -499,7 +499,7 @@ Proof.
       + (* CASE: accepting state *)
         apply landL1.
         rewrite /runAcc/run/stateIsAny/pointsToS;
-          autorewrite with push_at; 
+          autorewrite with push_at;
           cancel1;
           sbazooka.
         rewrite eq_l2_nil cats0 in eq_str_l1_l2.
@@ -509,7 +509,7 @@ Proof.
       + (* CASE: rejecting state *)
         apply landL2.
         rewrite /runRej/run/stateIsAny/pointsToS;
-          autorewrite with push_at; 
+          autorewrite with push_at;
           cancel1; sbazooka.
         rewrite eq_l2_nil in eq_str_l1_l2.
         move/eqP: eq_str_l1_l2=> ->.
@@ -531,7 +531,7 @@ Proof.
       apply limplValid; apply landL1.
       rewrite ->spec_later_forall.
       rewrite /runStates.
-      specintros=> k; cancel1; 
+      specintros=> k; cancel1;
         autorewrite with push_at;
         apply lforallL with (x := k).
       rewrite /runState/run/stateIsAny.
@@ -563,7 +563,7 @@ Proof.
 
       * (* Same memory *)
         rewrite /pointsToS/memToS.
-        rewrite -> (@memIsNonTop _ _ l2' (next (pd +# 3)) hiBuff). 
+        rewrite -> (@memIsNonTop _ _ l2' (next (pd +# 3)) hiBuff).
         sdestructs=> l2'_is_string pd' eq_pd_4_pd'.
         rewrite eq_pd_4_pd'.
         apply nextIsInc in eq_pd_4_pd'.
@@ -594,19 +594,19 @@ Proof.
         by exact: c_notin_alphabet.
 
       - (* CASE: splitting of str *)
-        rewrite /pointsToS/memToS. 
-        rewrite ->(@memIsNonTop _ _ l2' (next (pd +# 3)) hiBuff). 
-        sdestructs=> l2'_is_string pd' eq_pd_4_pd'. 
+        rewrite /pointsToS/memToS.
+        rewrite ->(@memIsNonTop _ _ l2' (next (pd +# 3)) hiBuff).
+        sdestructs=> l2'_is_string pd' eq_pd_4_pd'.
         rewrite eq_pd_4_pd'.
         apply nextIsInc in eq_pd_4_pd'.
         rewrite -addB_addn in eq_pd_4_pd'.
         rewrite -eq_pd_4_pd'.
         sbazooka;
           move/eqP: eq_l1_c_l2' => ->.
-        
-        * (* CASE: CString str *)          
+
+        * (* CASE: CString str *)
           rewrite /CString;
-            do 2 rewrite all_cat; 
+            do 2 rewrite all_cat;
             rewrite all_seq1.
           by do 2 try (apply/andP; split);
             assumption.
@@ -635,7 +635,7 @@ Definition transition : program :=
     JE (if accept s then acc else rej);;
 
     (* Jump table: *)
-    foldr prog_seq prog_skip 
+    foldr prog_seq prog_skip
           [seq CMP EBX, (c: DWORD) ;;
                JE (tnth labels (trans s c))
           | c <- alphabet] ;;
@@ -645,7 +645,7 @@ Definition transition : program :=
 (*=End *)
 
 
-(* 
+(*
 
   We can therefore prove that the code given in the paper is
   (syntactically) equivalent to the one on which we did the proof:
@@ -660,26 +660,26 @@ Proof.
   case (accept s);
     do ! (apply progEqSeq; try apply progEqRefl).
 Qed.
-  
+
 End TransitionState.
 
 
 (*
  * Computation: compileDFA
- * 
+ *
  * Having compiled the transition function of a single state, we need
  * to iterate it over all states. We simply concatenate each
  * transition functions in (program) memory: during assembly, the
- * labels will resolve to the correct address. 
- * 
+ * labels will resolve to the correct address.
+ *
  * Invariant: the invariant is exactly the same as it was for a single
  * transition ([transitionState_logic]), excepted that, this time, the
  * memory does not contain one transition function but all the others
  * too.
- * 
+ *
  *)
 
-(* 
+(*
  * For convenience, we use the following helper function and lemma,
  * which are defined over an index [n]. This lets us proceed by
  * ordinal induction over an 'I_n instead of working directly over
@@ -695,12 +695,12 @@ Definition dfaProg n : ('I_n -> program) -> program :=
            n.
 
 Lemma dfaProg_logic n
-        (P: 'I_n -> spec) 
+        (P: 'I_n -> spec)
         (code: 'I_n -> program):
 
     (forall s: 'I_n,
      forall i j: DWORD, |-- P s <@ (i -- j :-> code s))
- (* ------------------------------------------------------ *)-> 
+ (* ------------------------------------------------------ *)->
     forall s: 'I_n,
       forall i j: DWORD, |-- P s <@ (i -- j :-> dfaProg code).
 
@@ -739,9 +739,9 @@ Lemma compileDFA_logic
     |-- ((|> runStates labels)
        //\\ runAcc
        //\\ runRej
- (* ------------------------------------------------*) -->> 
+ (* ------------------------------------------------*) -->>
        runState labels s)
-       
+
  (* Memory: *)
      @ OSZCP_Any
 
@@ -766,15 +766,15 @@ End  CompileDFA.
 
 (*
  * Logic: concatRuns
- * 
+ *
  * In [compileDFA_logic], we have shown that we can execute the
  * transition function for a given state [s] provided that the code of
  * all transitions is in memory. Now, we prove that we can execute
  * *any* transition function in such a configuration.
- * 
+ *
  * Invariant: we therefore generalize the post-condition to [runStates
  * labels].
- * 
+ *
  *)
 
 Section ConcatRuns.
@@ -788,7 +788,7 @@ Lemma concatRuns_logic (i j: DWORD) :
        //\\ runRej
  (* ------------------------------------------------*)
        -->> runStates labels)
-       
+
  (* Memory: *)
      @ OSZCP_Any
 
@@ -809,7 +809,7 @@ End ConcatRuns.
 
 (*
  * Logic: lobRuns
- * 
+ *
  * In [concatRuns], we prove that if *later* we can jump to any
  * transition function, then we can take any transition function
  * now. By generalizing the Löb rule, we can absorb the premise and
@@ -817,7 +817,7 @@ End ConcatRuns.
  *
  * Invariant: if we can take the [acc]epting or the [rej]ecting
  * continuations, then we can run any transition function.
- * 
+ *
  *)
 
 
@@ -829,24 +829,24 @@ Variables (labels: dfa_size.-tuple DWORD).
 Lemma lobRuns_logic (i j: DWORD) :
 
     |-- (runAcc
-    //\\ runRej 
+    //\\ runRej
  (* ------------------------------------------------*) -->>
          runStates labels)
-       
+
  (* Memory: *)
      @  OSZCP_Any
  (* Program: *)
     <@ (i -- j :-> compileDFA labels).
 
 Proof.
-  etransitivity; 
+  etransitivity;
     first by apply concatRuns_logic.
   cancel2; last (by reflexivity); cancel2.
   rewrite [(|> _) //\\ _]landC.
   apply limplAdj.
   apply spec_lob_context.
   do 2 rewrite landA.
-  apply limplL; 
+  apply limplL;
     [ | apply landL1];
     by reflexivity.
 Qed.
@@ -878,16 +878,16 @@ Definition start: program :=
   JMP (tnth labels dfa_init);;
   compileDFA labels.
 
-Lemma start_logic 
+Lemma start_logic
         (i j: DWORD):
 
     |-- (((run acc @ (lang dfa_init str
                   /\\ EAX?))
     //\\ (run rej @ (~~ (lang dfa_init str)
                   /\\ EAX?)))
- (* ------------------------------------------------*) -->> 
+ (* ------------------------------------------------*) -->>
          run i @ (EAX ~= buffer))
-       
+
  (* Memory: *)
      @ OSZCP_Any
      @ EBX?
@@ -904,7 +904,7 @@ Proof.
   specapply JMP_I_rule; first by sbazooka.
   rewrite <-spec_later_weaken.
 
-  (* Apply: correctness of compileDFA *)  
+  (* Apply: correctness of compileDFA *)
   rewrite [(_ -- _ :-> _) **( _ -- _:-> _)]sepSPC.
   rewrite <-spec_reads_merge.
   rewrite <-spec_reads_frame.
@@ -925,7 +925,7 @@ Proof.
         sdestruct=> q; ssplit; first by exact.
         by sbazooka.
 
-      - (* CASE: Rejecting is implied *)      
+      - (* CASE: Rejecting is implied *)
         apply landL2.
         autorewrite with push_at; cancel1.
         by sbazooka.
@@ -963,29 +963,29 @@ Definition DFA_to_x86: program :=
         | s < dfa_size].
 (*=End *)
 
-(* 
+(*
  * The two programs are (syntactically) equivalent, by
  * [equiv_DFA_to_x86] below:
  *)
 
-Lemma equiv_dfaProg_fold n (f: 'I_n -> program) : 
+Lemma equiv_dfaProg_fold n (f: 'I_n -> program) :
   progEq (dfaProg f)
-         (foldr prog_seq prog_skip [tuple (f s) | s < n]). 
+         (foldr prog_seq prog_skip [tuple (f s) | s < n]).
 Proof.
   rewrite /dfaProg.
   elim: n f=> [f|n IH f].
   * (* CASE: n ~ 0 *)
-    have-> : [tuple f s  | s < 0] = [tuple] 
-      by apply tuple0. 
+    have-> : [tuple f s  | s < 0] = [tuple]
+      by apply tuple0.
     by apply progEqRefl.
   * (* CASE: n ~ suc n *)
-    rewrite enum_eta. 
+    rewrite enum_eta.
     apply progEqSeq; try apply progEqRefl.
     apply IH.
 Qed.
 
 Lemma fold_equiv n (f g : 'I_n -> program)
-                 (H: forall k:'I_n, progEq (f k) (g k)): 
+                 (H: forall k:'I_n, progEq (f k) (g k)):
   progEq (foldr prog_seq prog_skip [tuple f s | s < n])
          (foldr prog_seq prog_skip [tuple g s | s < n]).
 Proof.
@@ -1027,11 +1027,11 @@ Lemma DFA_to_x86_correct :
 
     |-- Forall l: DWORD, Forall m: DWORD,
 
-    (   (safe @ (lang dfa_init str 
+    (   (safe @ (lang dfa_init str
                 /\\ EIP ~= acc) @ EAX?)
    //\\ (safe @ (~~ lang dfa_init str
                 /\\ EIP ~= rej) @ EAX?)
-   (* ----------------------------------*) 
+   (* ----------------------------------*)
     -->>  safe @ (EIP ~= l) @ (EAX ~= buffer) )
 
    (* Memory: *)
@@ -1045,7 +1045,7 @@ Lemma DFA_to_x86_correct :
 Proof.
   specintros=> l m.
   rewrite ->equiv_DFA_to_x86.
-  etransitivity; 
+  etransitivity;
     first by apply start_logic.
   rewrite /run.
   cancel2; last (by reflexivity); cancel2.
@@ -1060,7 +1060,7 @@ Qed.
 
 End StartDFA.
 
-(* 
+(*
  * We generate the program labels by iterated application
  * [prog_declabel]:
  *)
@@ -1069,13 +1069,13 @@ Fixpoint mkLabelsHelp
            (n : nat) : (n.-tuple DWORD -> program) -> program :=
   match n with
     | 0 => fun g => g [tuple]
-    | n.+1 => fun g => prog_declabel (fun a => 
+    | n.+1 => fun g => prog_declabel (fun a =>
                        mkLabelsHelp (fun ls =>
                        g [tuple of a :: ls]))
   end.
 
 Definition mkLabels
-             (body: dfa_size.-tuple DWORD -> program) 
+             (body: dfa_size.-tuple DWORD -> program)
            : program :=
   mkLabelsHelp (fun ls => body ls).
 

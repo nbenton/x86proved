@@ -1,6 +1,6 @@
 (*======================================================================================
-  TWIDDLE: 
-  A small, first-order, terminating, untyped CPS-based functional language with an easy 
+  TWIDDLE:
+  A small, first-order, terminating, untyped CPS-based functional language with an easy
   translation to machine code.
 
   Key design points:
@@ -53,12 +53,12 @@ Implicit Arguments IMM [V].
 
 (* Unfortunately we need a well-formedness relation, as in Chlipala, POPL'10 *)
 Inductive PreValEq V W (G: V -> W -> Prop) : PreVal V -> PreVal W -> Prop :=
-| VBINOP_EQ op v1 v2 w1 w2 : G v1 w1 -> G v2 w2 -> 
+| VBINOP_EQ op v1 v2 w1 w2 : G v1 w1 -> G v2 w2 ->
                              PreValEq G (VBINOP op v1 v2) (VBINOP op w1 w2)
 | VUOP_EQ op v w : G v w -> PreValEq G (VUOP op v) (VUOP op w)
-| IMM_EQ c : PreValEq G (IMM c) (IMM c). 
+| IMM_EQ c : PreValEq G (IMM c) (IMM c).
 
-(* For terms, V is again the type of value variables, K n is the type of 
+(* For terms, V is again the type of value variables, K n is the type of
    continuation variables of arity n *)
 Inductive PreTm V (K: nat -> Type)  :=
 | LET  (v: PreVal V) (e: V -> PreTm V K)
@@ -69,12 +69,12 @@ Inductive PreTm V (K: nat -> Type)  :=
 
 Coercion fromNary V : forall n, V^n -> n.-tuple V :=
   fix fromNaryAux n :=
-  if n is n.+1 return V^n -> n.-tuple V 
+  if n is n.+1 return V^n -> n.-tuple V
   then fun xs => cons_tuple xs.1 (fromNaryAux _ xs.2) else fun _ => @nil_tuple _.
 
-Program Definition appContTo V (K: nat -> Type) (args: seq V) k := 
+Program Definition appContTo V (K: nat -> Type) (args: seq V) k :=
   @APPCONT V K (size args) k (@Tuple (size args) V args _).
-Implicit Arguments appContTo [V K]. 
+Implicit Arguments appContTo [V K].
 
 (* A procedure taking n 32-bit arguments and returning one 32-bit result *)
 Inductive PreProc n V K :=
@@ -86,84 +86,84 @@ Definition Program := forall V K, PreProc 0 V K.
 (* Now some nice notation. Can almost write C-like syntax! *)
 Delimit Scope twiddle_scope with twiddle.
 
-Notation "'var' x = v ';' e" := 
-  (LET v (fun x => e)) 
+Notation "'var' x = v ';' e" :=
+  (LET v (fun x => e))
   (right associativity, at level 200, x ident, v, e at level 200) : twiddle_scope.
 
-Notation "'var' x = v '+' w ';' e" := 
-  (LET (VBINOP Add v w) (fun x => e)) 
+Notation "'var' x = v '+' w ';' e" :=
+  (LET (VBINOP Add v w) (fun x => e))
   (right associativity, at level 200, x ident, v, w, e at level 200) : twiddle_scope.
 
-Notation "'const' x = n ';' e" := 
-  (LET (IMM #n) (fun x => e)) 
+Notation "'const' x = n ';' e" :=
+  (LET (IMM #n) (fun x => e))
   (right associativity, at level 200, x ident, n at level 1, e at level 200) : twiddle_scope.
 
-Notation "'const' x = '0' 'x' h ';' e" := 
-  (LET (IMM (fromHex h)) (fun x => e)) 
+Notation "'const' x = '0' 'x' h ';' e" :=
+  (LET (IMM (fromHex h)) (fun x => e))
   (right associativity, at level 200, x ident, n at level 1, e at level 200) : twiddle_scope.
 
-Notation "'goto' k '(' x ',' y ')'" := 
-  (appContTo [::x;y] k) 
+Notation "'goto' k '(' x ',' y ')'" :=
+  (appContTo [::x;y] k)
   (right associativity, at level 100, k, x at level 1) : twiddle_scope.
-  
-Notation "'goto' k x" := 
-  (appContTo [::x] k) 
+
+Notation "'goto' k x" :=
+  (appContTo [::x] k)
   (right associativity, at level 100, k, x at level 1) : twiddle_scope.
-  
+
 Notation "'if' '(' x '==' y ')' 'then' e 'else' f" :=
-  (COND x Eq y e f) 
+  (COND x Eq y e f)
   (at level 200, e, f at level 200, x,y at level 1) : twiddle_scope.
 
 Notation "'if' '(' x '!=' y ')' 'then' e 'else' f" :=
-  (COND x Ne y e f) 
+  (COND x Ne y e f)
   (at level 200, e, f at level 200, x,y at level 1) : twiddle_scope.
 
 Notation "'if' '(' x '<' y ')' 'then' e 'else' f" :=
-  (COND x Lt y e f) 
+  (COND x Lt y e f)
   (at level 200, e, f at level 200, x,y at level 1) : twiddle_scope.
 
 Notation "'if' '(' x '>' y ')' 'then' e 'else' f" :=
-  (COND x Gt y e f) 
+  (COND x Gt y e f)
   (at level 200, e, f at level 200, x,y at level 1) : twiddle_scope.
 
 Notation "'if' '(' x '<=' y ')' 'then' e 'else' f" :=
-  (COND x Le y e f) 
+  (COND x Le y e f)
   (at level 200, e, f at level 200, x,y at level 1) : twiddle_scope.
 
 Notation "'if' '(' x '>=' y ')' 'then' e 'else' f" :=
-  (COND x Ge y e f) 
+  (COND x Ge y e f)
   (at level 200, e, f at level 200, x,y at level 1) : twiddle_scope.
 
-Notation "'proc' '(' k x ')'  e" := (PROC (fun k x => let k := k in e)) 
-  (at level 200, k ident, e at level 200) : twiddle_scope. 
+Notation "'proc' '(' k x ')'  e" := (PROC (fun k x => let k := k in e))
+  (at level 200, k ident, e at level 200) : twiddle_scope.
 
-Notation "'block' k x 'is' '(' e ')' f" := 
-  (LETCONT (fun x => let x := thead x in e) (fun k => let k := k in f)) 
+Notation "'block' k x 'is' '(' e ')' f" :=
+  (LETCONT (fun x => let x := thead x in e) (fun k => let k := k in f))
   (at level 200, k ident, x ident, e, f at level 200) : twiddle_scope.
 
-Notation "'block' k '(' x ',' y ')' 'is' '(' e ')' f" := 
-  (LETCONT (fun args:2.-tuple _ => let y := thead (behead_tuple args) in let x := thead args in e) (fun k => let k := k in f)) 
+Notation "'block' k '(' x ',' y ')' 'is' '(' e ')' f" :=
+  (LETCONT (fun args:2.-tuple _ => let y := thead (behead_tuple args) in let x := thead args in e) (fun k => let k := k in f))
   (at level 200, k ident, x ident, e, f at level 200) : twiddle_scope.
 
 
 (*
 Notation "'(' x ')'" := ([tuple x]) : arg_scope.
-Delimit Scope arg_scope with arg. 
+Delimit Scope arg_scope with arg.
 
-Notation "k '@' x" := (k x%arg) (at level 80). 
+Notation "k '@' x" := (k x%arg) (at level 80).
 *)
 
 Notation "a + b" := (VBINOP Add a b) : twiddle_scope.
 Notation "a - b" := (VBINOP Sub a b) : twiddle_scope.
 
 (* Some examples. *)
-Example ex : Program := 
+Example ex : Program :=
   fun _ _ =>
   (proc(k arg)
   const a = 5;
   const b = 8;
   var c = a+b;
-  goto k c)%twiddle. 
+  goto k c)%twiddle.
 
 Example ex2 : Program :=
   fun _ _ =>
@@ -202,22 +202,22 @@ Module Ev.
   (* Type of a continuation *)
   Definition KTy n := n.-tuple DWORD -> DWORD.
 
-  Fixpoint evalVal (v: PreVal VTy) := 
+  Fixpoint evalVal (v: PreVal VTy) :=
   match v with
   | VBINOP Add v w => addB v w
   | VBINOP Sub v w => subB v w
   | VBINOP And v w => andB v w
   | VBINOP Or v w => orB v w
   | VBINOP Xor v w => xorB v w
-  | VUOP Not v => invB v 
+  | VUOP Not v => invB v
   | VUOP Neg v => negB v
   | IMM n => n
-  end. 
+  end.
 
   Fixpoint evalTm (t: PreTm VTy KTy) :=
   match t with
   | APPCONT m k v => k v
-  | LETCONT m e f => evalTm (f (fun x => evalTm (e x))) 
+  | LETCONT m e f => evalTm (f (fun x => evalTm (e x)))
   | LET v e     => evalTm (e (evalVal v))
   | COND x Lt y e f => if ltB x y then evalTm e else evalTm f
   | COND x Gt y e f => if ltB y x then evalTm e else evalTm f
@@ -234,15 +234,15 @@ Module Ev.
 
 Check evalProc.
   Definition evalProgram (p: Program) :=
-  evalProc (p _ _) [tuple]. 
+  evalProc (p _ _) [tuple].
 
 
   (* We can execute programs inside Coq, as long as we convert to a nice type *)
-  Compute toNat (evalProgram ex). 
+  Compute toNat (evalProgram ex).
 
   (* Or we can do trivial proofs by computation *)
-  Lemma exIsFive : evalProgram ex = #13. 
-  Proof. by apply val_inj. Qed. 
+  Lemma exIsFive : evalProgram ex = #13.
+  Proof. by apply val_inj. Qed.
 End Ev.
 
 (*---------------------------------------------------------------------------
@@ -259,7 +259,7 @@ Module EnvEv.
 
   Definition evalVar (env: seq DWORD) (v: VTy) := List.nth (List.length env - v - 1) env #0.
 
-  Definition evalVal env (v: PreVal VTy) := 
+  Definition evalVal env (v: PreVal VTy) :=
   match v with
   | VBINOP Add v w => addB (evalVar env v) (evalVar env w)
   | VBINOP Sub v w => subB (evalVar env v) (evalVar env w)
@@ -269,7 +269,7 @@ Module EnvEv.
   | VUOP Not v => invB (evalVar env v)
   | VUOP Neg v => negB (evalVar env v)
   | IMM n => n
-  end. 
+  end.
 
   Fixpoint evalTm env (t: PreTm VTy KTy) :=
   match t with
@@ -290,14 +290,14 @@ Module EnvEv.
   end.
 
   Definition evalProgram (p: Program) :=
-  evalProc (p _ _) [tuple]. 
+  evalProc (p _ _) [tuple].
 
   (* We can execute programs inside Coq, as long as we convert to a nice type *)
-  Compute toNat (evalProgram ex). 
+  Compute toNat (evalProgram ex).
 
   (* Or we can do trivial proofs by computation *)
-  Lemma exIsFive : evalProgram ex = #13. 
-  Proof. by apply val_inj. Qed. 
+  Lemma exIsFive : evalProgram ex = #13.
+  Proof. by apply val_inj. Qed.
 End EnvEv.
 
 
@@ -316,9 +316,9 @@ Module Compile.
   Open Scope instr_scope.
 
   Definition compileVar (v: nat) : MemSpec :=
-    [EBP + (4*v)]. 
+    [EBP + (4*v)].
 
-  Fixpoint compileVal dst (v: PreVal nat) := 
+  Fixpoint compileVal dst (v: PreVal nat) :=
   match v with
   | VBINOP Add v w => MOV EAX, compileVar v;; ADD EAX, compileVar w;; MOV dst, EAX
   | VBINOP Sub v w => MOV EAX, compileVar v;; SUB EAX, compileVar w;; MOV dst, EAX
@@ -328,30 +328,30 @@ Module Compile.
   | VUOP Not v => MOV EAX, compileVar v;; MOV dst, EAX;; makeUOP OP_NOT dst
   | VUOP Neg v => MOV EAX, compileVar v;; MOV dst, EAX;; makeUOP OP_NEG dst
   | IMM n => MOV dst, n
-  end. 
+  end.
 
   Fixpoint localsP l ebp (env: seq DWORD) :=
-  if env is v::env then ebp +# 4*l :-> v ** localsP l.-1 ebp env 
+  if env is v::env then ebp +# 4*l :-> v ** localsP l.-1 ebp env
   else empSP.
-  
+
   Require Import septac spectac instrrules.
 
   Lemma compileVarCorrect l env (v:nat) ebp :
-    EBP ~= ebp ** localsP l ebp env |-- EBP ~= ebp ** localsP l ebp env /\\ EnvEv.evalVar v env = 
+    EBP ~= ebp ** localsP l ebp env |-- EBP ~= ebp ** localsP l ebp env /\\ EnvEv.evalVar v env =
   Lemma compileValCorrect l dst env (v:PreVal nat) :
-    |-- Forall ebp: DWORD, 
+    |-- Forall ebp: DWORD,
     basic (ebp +# 4*dst :-> ?:DWORD) (compileVal [EBP + (dst*4)] v)
-          (ebp +# 4*dst :-> EnvEv.evalVal  env v) @ 
+          (ebp +# 4*dst :-> EnvEv.evalVal  env v) @
           (EAX? ** EBP ~= ebp ** localsP l ebp env).
-  Proof. 
-  induction v; rewrite /compileVal-/compileVal/compileVar/EnvEv.evalVal-/EnvEv.evalVal. 
-  + destruct op. 
-    specintro => ebp. autorewrite with push_at. 
+  Proof.
+  induction v; rewrite /compileVal-/compileVal/compileVar/EnvEv.evalVal-/EnvEv.evalVal.
+  + destruct op.
+    specintro => ebp. autorewrite with push_at.
     basicapply MOV_RM_rule. ; last first.
-    basicapply ADD_RM_rule. ssimpl. 
-    
+    basicapply ADD_RM_rule. ssimpl.
+
   Fixpoint setArgs l m : (m.-tuple nat) -> program :=
-  if m is m.+1 
+  if m is m.+1
   then fun vs => MOV EAX, compileVar (thead vs);; MOV [EBP + (4*l)], EAX;; setArgs l.+1 (behead_tuple vs)
   else fun vs => prog_skip.
 
@@ -363,15 +363,15 @@ Module Compile.
   (* Compile a term. Must end with a jump or return *)
   Fixpoint compileTm l (t: PreTm VTy KTy) :=
   match t with
-  | APPCONT m k v => 
-    setArgs k.2 v;; 
+  | APPCONT m k v =>
+    setArgs k.2 v;;
     JMP (mkTgt k.1)
 
-  | LET v e     => 
-    compileVal [EBP + (4*l)] v;; 
+  | LET v e     =>
+    compileVal [EBP + (4*l)] v;;
     compileTm l.+1 (e [EBP + (4*l)])
 
-  | COND x c y e1 e2 => 
+  | COND x c y e1 e2 =>
     let f := match c with
     | Gt => ifthenelse CC_LE false
     | Le => ifthenelse CC_LE true
@@ -379,23 +379,23 @@ Module Compile.
     | Lt => ifthenelse CC_L true
     | Eq => ifthenelse CC_Z true
     | Ne => ifthenelse CC_Z false
-    end 
+    end
     in MOV EAX, x;; CMP EAX, y;; f (compileTm l e1) (compileTm l e2)
 
-  | LETCONT m e1 e2 => 
-    LOCAL CONT; 
-      compileTm l (e2 (CONT,l));; 
-    CONT:;; 
+  | LETCONT m e1 e2 =>
+    LOCAL CONT;
+      compileTm l (e2 (CONT,l));;
+    CONT:;;
       compileTm (m+l) (e1 (makeParams l m))
   end.
 
   Definition compileProc {n} (p: PreProc n VTy KTy) :=
   match p with
-  | PROC e => LOCAL FINISH; compileTm n.+1 (e (FINISH,0) (makeParams 0 n));; FINISH:;; MOV EAX, [EBP+0];; RET 0 
+  | PROC e => LOCAL FINISH; compileTm n.+1 (e (FINISH,0) (makeParams 0 n));; FINISH:;; MOV EAX, [EBP+0];; RET 0
   end.
 
   Definition compileProgram (p: Program) :=
-  compileProc (p _ _). 
+  compileProc (p _ _).
 
   Eval showinstr in linearize (compileProgram ex).
 
@@ -405,11 +405,11 @@ Check Ev.evalVal.
 
 Module Correctness.
 
-  Check Definition 
+  Check Definition
 
   Require Import programassem.
-  Definition bytes := 
+  Definition bytes :=
     assemble #x"C0000004" (Compile.compileProgram ex2).
-  Compute bytesToHex bytes. 
+  Compute bytesToHex bytes.
 
 End Compile.

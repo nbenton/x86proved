@@ -32,5 +32,5 @@ Definition prog : program :=
   ) (* ++ nseq (numCols*numRows*2) #0 *).
 
 
-Compute assembleToString codeAddr prog. 
+Compute assembleToString codeAddr prog.
 

@@ -1,17 +1,17 @@
 (*===========================================================================
     Instruction evaluator
   ===========================================================================*)
-Require Import ssreflect ssrnat ssrbool eqtype tuple. 
+Require Import ssreflect ssrnat ssrbool eqtype tuple.
 Require Import bitsops instr monad reader procstate procstatemonad exn.
 
-Definition updateZPS {n} (result: BITS n) :=  
+Definition updateZPS {n} (result: BITS n) :=
   do! updateFlagInProcState ZF (result == #0);
   do! updateFlagInProcState PF (lsb result);
   updateFlagInProcState SF (msb result).
 
 
 Definition evalArithOp {n}
-  (f : bool -> BITS _ -> BITS _ -> bool * BITS n) (arg1 arg2: BITS n)  :=
+  (f : bool -> BITS n -> BITS n -> bool * BITS n) (arg1 arg2: BITS n)  :=
   let! c = getFlagFromProcState CF;
   let (c,result) := f c arg1 arg2 in
   do! updateFlagInProcState CF c;
@@ -20,7 +20,7 @@ Definition evalArithOp {n}
   retn result.
 
 Definition evalArithOpNoCarry {n}
-  (f : bool -> BITS _ -> BITS _ -> bool * BITS n) (arg1 arg2: BITS n)  :=
+  (f : bool -> BITS n -> BITS n -> bool * BITS n) (arg1 arg2: BITS n)  :=
   let (c,result) := f false arg1 arg2 in
   do! updateFlagInProcState CF c;
   do! updateFlagInProcState OF (computeOverflow arg1 arg2 result);
@@ -34,7 +34,7 @@ Definition evalArithUnaryOp {n} (f : BITS n -> bool*BITS n) arg  :=
   do! updateZPS result;
   retn result.
 
-Definition evalArithUnaryOpNoCarry {n} (f : BITS n -> BITS n) arg  :=  
+Definition evalArithUnaryOpNoCarry {n} (f : BITS n -> BITS n) arg  :=
   let result := f arg in
   do! updateFlagInProcState OF (msb arg != msb result);
   do! updateZPS result;
@@ -42,10 +42,10 @@ Definition evalArithUnaryOpNoCarry {n} (f : BITS n -> BITS n) arg  :=
 
 Definition evalLogicalOp {n} (f : BITS n -> BITS n -> BITS n) arg1 arg2 :=
   let result := f arg1 arg2 in
-  do! updateFlagInProcState CF false; 
+  do! updateFlagInProcState CF false;
   do! updateFlagInProcState OF false;
   do! updateZPS result;
-  retn result. 
+  retn result.
 
 Definition evalBinOp {n} op : BITS n -> BITS n -> ST (BITS n) :=
   match op with
@@ -68,10 +68,10 @@ Definition evalShiftOp {n} (op: ShiftOp)(arg: BITS n.+1) (count:BYTE) : ST (BITS
   (* Otherwise we mess with the carry flag *)
   let! (o, c, res) =
     match op with
-    | OP_ROL => let res:= iter count rolB arg 
+    | OP_ROL => let res:= iter count rolB arg
                 in retn (xorb (lsb res) (msb res), lsb res, res)
 
-    | OP_ROR => let res:= iter count rorB arg 
+    | OP_ROR => let res:= iter count rorB arg
                 in retn (xorb (msb res) (msb (dropmsb res)), msb res, res)
 
     | OP_RCL => let! carry = getFlagFromProcState CF;
@@ -141,7 +141,7 @@ Definition evalBYTEReg (r: BYTEReg) :=
   | DH => let! d = getRegFromProcState EDX; retn (low 8 (@high 24 8 d))
   end.
 
-Definition evalDWORDorBYTEReg (dword:bool) : DWORDorBYTEReg dword -> ST (DWORDorBYTE dword) := 
+Definition evalDWORDorBYTEReg (dword:bool) : DWORDorBYTEReg dword -> ST (DWORDorBYTE dword) :=
   if dword as dword return DWORDorBYTEReg dword -> ST (DWORDorBYTE dword)
   then evalReg else evalBYTEReg.
 
@@ -150,10 +150,10 @@ Definition evalMemSpec m :=
     mkMemSpec optSIB offset =>
     if optSIB is Some(base,ixopt)
     then
-      let! baseval = getRegFromProcState base;    
+      let! baseval = getRegFromProcState base;
       let p := addB baseval offset in
       if ixopt is Some(index,sc)
-      then 
+      then
         let! indexval = getRegFromProcState index;
         retn (addB p (scaleBy sc indexval))
       else retn p
@@ -164,37 +164,37 @@ Definition evalSrc src :=
   match src with
   | SrcI c => retn c
   | SrcR r => evalReg r
-  | SrcM m =>  
-    let! p = evalMemSpec m; 
+  | SrcM m =>
+    let! p = evalMemSpec m;
     getDWORDFromProcState p
   end.
 
 Definition evalJmpTgt tgt :=
   match tgt with
-  | JmpTgtI (mkTgt r) => 
+  | JmpTgtI (mkTgt r) =>
     let! nextIP = getRegFromProcState EIP;
     retn (addB nextIP r)
   | JmpTgtR r => evalReg r
-  | JmpTgtM m =>  
-    let! p = evalMemSpec m; 
+  | JmpTgtM m =>
+    let! p = evalMemSpec m;
     getDWORDFromProcState p
   end.
 
 Definition setBYTERegInProcState (r: BYTEReg) (b: BYTE) :=
   match r with
-  | AL => 
+  | AL =>
     let! r = getRegFromProcState EAX;
     setRegInProcState EAX (@high 24 8 r ## b)
 
-  | BL => 
+  | BL =>
     let! r = getRegFromProcState EBX;
     setRegInProcState EBX (@high 24 8 r ## b)
 
-  | CL => 
+  | CL =>
     let! r = getRegFromProcState ECX;
     setRegInProcState ECX (@high 24 8 r ## b)
 
-  | DL => 
+  | DL =>
     let! r = getRegFromProcState EDX;
     setRegInProcState EDX (@high 24 8 r ## b)
 
@@ -215,9 +215,9 @@ Definition setBYTERegInProcState (r: BYTEReg) (b: BYTE) :=
     setRegInProcState EDX (@high 16 16 r ## b ## low 8 r)
   end.
 
-Definition setDWORDorBYTERegInProcState (dword:bool) : 
+Definition setDWORDorBYTERegInProcState (dword:bool) :
   DWORDorBYTEReg dword -> DWORDorBYTE dword -> _ :=
-  if dword as dword return DWORDorBYTEReg dword -> DWORDorBYTE dword -> _ 
+  if dword as dword return DWORDorBYTEReg dword -> DWORDorBYTE dword -> _
   then setRegInProcState else setBYTERegInProcState.
 
 Definition evalDstR (dword:bool) (drop: bool) (r:DWORDorBYTEReg dword) :=
@@ -226,20 +226,20 @@ Definition evalDstR (dword:bool) (drop: bool) (r:DWORDorBYTEReg dword) :=
     let! result = op rval;
     if drop then retn tt else setDWORDorBYTERegInProcState dword r result.
 
-Definition evalDstM (dword:bool) (drop: bool) m 
+Definition evalDstM (dword:bool) (drop: bool) m
   (op: DWORDorBYTE dword -> ST (DWORDorBYTE dword)) :=
-    let! a = evalMemSpec m;  
+    let! a = evalMemSpec m;
     let! v = getDWORDorBYTEFromProcState dword a;
     let! result = op v;
-    if drop then retn tt 
+    if drop then retn tt
     else setDWORDorBYTEInProcState (dword:=dword) a result.
 
-Definition evalDst dword drop (dst: RegMem dword) 
+Definition evalDst dword drop (dst: RegMem dword)
   (op: DWORDorBYTE dword -> ST (DWORDorBYTE dword)) :=
   match dst with
   | RegMemR r => evalDstR dword drop r op
   | RegMemM m => evalDstM dword drop m op
-  end.    
+  end.
 
 Definition evalRegMem dword (rm: RegMem dword) :=
   match rm with
@@ -271,49 +271,49 @@ Definition evalShiftCount (c: ShiftCount) :=
   | ShiftCountCL => evalBYTEReg CL
   | ShiftCountI c => retn c
   end.
-  
-Definition evalDstSrc {dword} (drop: bool) (ds: DstSrc dword) 
+
+Definition evalDstSrc {dword} (drop: bool) (ds: DstSrc dword)
   (op: DWORDorBYTE dword -> DWORDorBYTE dword -> ST (DWORDorBYTE dword)) :=
   match ds with
-  | DstSrcRR dst src => 
+  | DstSrcRR dst src =>
     evalDstR dword drop dst (fun a => let! rval = evalDWORDorBYTEReg dword src; op a rval)
 
-  | DstSrcRM dst src => 
-    evalDstR dword drop dst (fun v1 => let! a = evalMemSpec src; 
+  | DstSrcRM dst src =>
+    evalDstR dword drop dst (fun v1 => let! a = evalMemSpec src;
                                        let! v2 = getDWORDorBYTEFromProcState _ a; op v1 v2)
 
-  | DstSrcMR dst src => 
+  | DstSrcMR dst src =>
     evalDstM _ drop dst (fun a => let! rval = evalDWORDorBYTEReg dword src; op a rval)
 
-  | DstSrcRI dst c   => 
+  | DstSrcRI dst c   =>
     evalDstR dword drop dst (fun a => op a c)
 
-  | DstSrcMI dst c   => 
-    evalDstM _ drop dst (fun a => op a c) 
+  | DstSrcMI dst c   =>
+    evalDstM _ drop dst (fun a => op a c)
   end.
 
 
 Definition evalMOV {dword} (ds: DstSrc dword) :=
   match ds with
-  | DstSrcRR dst src => 
-    let! v = evalDWORDorBYTEReg dword src; 
+  | DstSrcRR dst src =>
+    let! v = evalDWORDorBYTEReg dword src;
     setDWORDorBYTERegInProcState dword dst v
 
-  | DstSrcRM dst src => 
-    let! a = evalMemSpec src; 
-    let! v = getDWORDorBYTEFromProcState _ a; 
+  | DstSrcRM dst src =>
+    let! a = evalMemSpec src;
+    let! v = getDWORDorBYTEFromProcState _ a;
     setDWORDorBYTERegInProcState dword dst v
 
-  | DstSrcMR dst src => 
-    let! v = evalDWORDorBYTEReg dword src; 
-    let! a = evalMemSpec dst; 
+  | DstSrcMR dst src =>
+    let! v = evalDWORDorBYTEReg dword src;
+    let! a = evalMemSpec dst;
     setDWORDorBYTEInProcState a v
 
-  | DstSrcRI dst v   => 
+  | DstSrcRI dst v   =>
     setDWORDorBYTERegInProcState dword dst v
 
-  | DstSrcMI dst v   => 
-    let! a = evalMemSpec dst; 
+  | DstSrcMI dst v   =>
+    let! a = evalMemSpec dst;
     setDWORDorBYTEInProcState a v
   end.
 
@@ -325,66 +325,66 @@ Definition evalPush (v: DWORD) : ST unit :=
 
 Definition evalInstr instr : ST unit :=
   match instr with
-  | POP dst =>    
+  | POP dst =>
     let! oldSP = getRegFromProcState ESP;
     do! evalDst true false dst (fun d => getDWORDFromProcState oldSP);
     setRegInProcState ESP (oldSP+#4)
 
-  | UOP dword op dst => 
+  | UOP dword op dst =>
     evalDst dword false dst (evalUnaryOp op)
 
-  | MOVOP dword ds => 
+  | MOVOP dword ds =>
     evalMOV ds
 
   | MOVX signextend false dst src =>
     let! v = evalRegMemBYTE src;
-    setRegInProcState dst (if signextend then signExtend 24 v else zeroExtend 24 v)
+    setRegInProcState dst (if signextend then signExtend n24 v else zeroExtend n24 v)
 
   | MOVX signextend true dst src =>
     let! v = evalRegMemWORD src;
-    setRegInProcState dst (if signextend then signExtend 16 v else zeroExtend 16 v)
+    setRegInProcState dst (if signextend then signExtend n16 v else zeroExtend n16 v)
 
     (* @todo akenn: implement bit operations *)
   | BITOP op dst b =>
     raiseExn ExnUD
 
-  | BOP dword op ds => 
-    evalDstSrc (match op with OP_CMP => true | _ => false end) ds 
+  | BOP dword op ds =>
+    evalDstSrc (match op with OP_CMP => true | _ => false end) ds
     (fun d s => evalBinOp op d s)
 
   | TESTOP dword dst src =>
-    evalDst dword true dst 
+    evalDst dword true dst
     (fun d => let! s = evalRegImm src; evalBinOp OP_AND d s)
 
   | SHIFTOP true op dst count =>
-    evalDst true false dst 
-    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=31) op d c)
+    evalDst true false dst
+    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=n31) op d c)
 
   | SHIFTOP false op dst count =>
-    evalDst false false dst 
-    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=7) op d c)
+    evalDst false false dst
+    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=n7) op d c)
 
   | IMUL dst src =>
     raiseExn ExnUD
 
   | MUL true src =>
-    let! v1 = getRegFromProcState EAX;      
+    let! v1 = getRegFromProcState EAX;
     let! v2 = evalRegMem true src;
     let res := fullmulB v1 v2 in
-    let cfof := high 32 res == #0 in
-    do! setRegInProcState EAX (low 32 res);
-    do! setRegInProcState EDX (high 32 res);
+    let cfof := high n32 res == #0 in
+    do! setRegInProcState EAX (low n32 res);
+    do! setRegInProcState EDX (high n32 res);
     do! updateFlagInProcState CF cfof;
     do! updateFlagInProcState OF cfof;
     do! forgetFlagInProcState SF;
     do! forgetFlagInProcState PF;
-    forgetFlagInProcState ZF    
-    
-  | LEA r (RegMemM m) => 
+    forgetFlagInProcState ZF
+
+  | LEA r (RegMemM m) =>
     let! a = evalMemSpec m;
     setRegInProcState r a
 
-  | LEA r (RegMemR _) => 
+  | LEA r (RegMemR _) =>
     raiseExn ExnUD
 
   | XCHG d r1 (RegMemR r2) =>
@@ -406,10 +406,10 @@ Definition evalInstr instr : ST unit :=
 
   | JCCrel cc cv (mkTgt tgt) =>
     let! b = evalCondition cc;
-    if b == cv then 
+    if b == cv then
       let! oldIP = getRegFromProcState EIP;
       setRegInProcState EIP (addB oldIP tgt)
-    else 
+    else
       retn tt
 
   | CLC =>
@@ -419,7 +419,7 @@ Definition evalInstr instr : ST unit :=
   | STC =>
     updateFlagInProcState CF true
 
-  | CMC => 
+  | CMC =>
     let! c = getFlagFromProcState CF;
     updateFlagInProcState CF (negb c)
 
@@ -437,14 +437,14 @@ Definition evalInstr instr : ST unit :=
   | CALLrel src =>
     let! oldIP = getRegFromProcState EIP;
     let! newIP = evalJmpTgt src;
-    do! setRegInProcState EIP newIP; 
+    do! setRegInProcState EIP newIP;
     evalPush oldIP
 (*=evalRET *)
   | RETOP offset =>
     let! oldSP = getRegFromProcState ESP;
     let! IP' = getDWORDFromProcState oldSP;
-    do! setRegInProcState ESP 
-      (addB (oldSP+#4) (zeroExtend 16 offset));
+    do! setRegInProcState ESP
+      (addB (oldSP+#n4) (zeroExtend n16 offset));
     setRegInProcState EIP IP'
 (*=End *)
 
@@ -462,4 +462,3 @@ Definition evalInstr instr : ST unit :=
     raiseUnspecified
 
   end.
-

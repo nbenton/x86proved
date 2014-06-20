@@ -152,7 +152,7 @@ Section IndexedProducts.
 
   Program Definition mprojI (i : I) : (forall i, P i) -s> P i :=
     mkMorph (fun X => X i) _.
-  Next Obligation. 
+  Next Obligation.
     intros X Y HXY; apply HXY.
   Qed.
 

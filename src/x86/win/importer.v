@@ -9,7 +9,7 @@ Import Prenex Implicits.
 Open Scope instr_scope.
 Open Scope string_scope.
 
-Definition call_cdecl2 f arg1 arg2 := 
+Definition call_cdecl2 f arg1 arg2 :=
   PUSH arg2;; PUSH arg1;; CALL f;; ADD ESP, 8.
 
 (*=main *)

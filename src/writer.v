@@ -3,18 +3,18 @@
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple.
 Require Import bitsrep bitsops bitsopsprops cursor monad monadinst.
-Require Import FunctionalExtensionality String cstring.
+Require Import FunctionalExtensionality Coq.Strings.String cstring.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
 (*=WriterTm *)
-Inductive WriterTm A := 
+Inductive WriterTm A :=
 | writerRetn (x: A)
 | writerNext (b: BYTE) (w: WriterTm A)
 | writerSkip (w: WriterTm A)
-| writerCursor (w: Cursor 32 -> WriterTm A)
+| writerCursor (w: DWORDCursor -> WriterTm A)
 | writerFail.
 Class Writer T := getWriterTm: T -> WriterTm unit.
 (*=End *)
@@ -26,7 +26,7 @@ Fixpoint writerTmBind X Y (w: WriterTm X) (f: X -> WriterTm Y) : WriterTm Y :=
   | writerNext b w' => writerNext b (writerTmBind w' f)
   | writerSkip w' => writerSkip (writerTmBind w' f)
   | writerCursor w' => writerCursor (fun p => writerTmBind (w' p) f)
-  | writerFail => writerFail 
+  | writerFail => writerFail
   end.
 
 Fixpoint writerTmSkipFree X (w: WriterTm X) :=
@@ -41,52 +41,52 @@ Instance writerTmMonadOps : MonadOps WriterTm :=
 { retn := @writerRetn
 ; bind := writerTmBind }.
 
-Instance writerTmMonad : Monad WriterTm. 
-Proof. apply Build_Monad. 
+Instance writerTmMonad : Monad WriterTm.
+Proof. apply Build_Monad.
 (* id_l *)
-  move => X Y x f. done. 
+  move => X Y x f. done.
 (* id_r *)
-  move => X. elim => //=. 
+  move => X. elim => //=.
   - by move => b w' /= ->.
-  - move => w' /= IH. by apply f_equal. 
-  - move => w' /= IH. apply f_equal. apply functional_extensionality => p. by rewrite IH.  
+  - move => w' /= IH. by apply f_equal.
+  - move => w' /= IH. apply f_equal. apply functional_extensionality => p. by rewrite IH.
 (* assoc *)
-  move => X Y Z. elim => //. 
+  move => X Y Z. elim => //.
   - move => b w' /= IH f g. by rewrite IH.
   - move => w' /= IH f g.
-    by apply f_equal. 
-  - move => w' /= IH f g. apply f_equal. apply functional_extensionality => p. 
-    by rewrite IH. 
-Qed. 
+    by apply f_equal.
+  - move => w' /= IH f g. apply f_equal. apply functional_extensionality => p.
+    by rewrite IH.
+Qed.
 
-Definition getWCursor : WriterTm (Cursor 32) := writerCursor (fun p => writerRetn p).
+Definition getWCursor : WriterTm (DWORDCursor) := writerCursor (fun p => writerRetn p).
 Definition writeNext {T} {W: Writer T}: Writer T := W.
 
 (* Functional interpretation of writer on sequences *)
-Fixpoint runWriterTm padSkip X (w: WriterTm X) (c: Cursor 32) : option (X * seq BYTE) :=
+Fixpoint runWriterTm padSkip X (w: WriterTm X) (c: DWORDCursor) : option (X * seq BYTE) :=
   match w with
   | writerRetn x => Some (x, nil)
   | writerNext byte w =>
     if c is mkCursor p
-    then 
+    then
       if runWriterTm padSkip w (next p) is Some (x, bytes) then Some (x, byte::bytes) else None
     else None
-  | writerSkip w => 
+  | writerSkip w =>
     if c is mkCursor p
-    then 
-      if padSkip 
-      then if runWriterTm padSkip w (next p) is Some (x, bytes) 
+    then
+      if padSkip
+      then if runWriterTm padSkip w (next p) is Some (x, bytes)
            then Some (x, #0::bytes) else None
-      else runWriterTm padSkip w (next p) 
+      else runWriterTm padSkip w (next p)
     else None
   | writerFail => None
-  | writerCursor w => runWriterTm padSkip (w c) c 
+  | writerCursor w => runWriterTm padSkip (w c) c
   end.
 
-Lemma runWriterTm_bindCursor padSkip X (w: Cursor 32 -> WriterTm X) (p: DWORD) :
+Lemma runWriterTm_bindCursor padSkip X (w: DWORDCursor -> WriterTm X) (p: DWORD) :
   runWriterTm padSkip (let! c = getWCursor; w c) p =
   runWriterTm padSkip (w p) p.
-Proof. done. Qed. 
+Proof. done. Qed.
 
 Lemma runWriterTm_bind padSkip X Y (w1: WriterTm X) (w2: X -> WriterTm Y) p y bytes:
   runWriterTm padSkip (let! x = w1; w2 x) p = Some (y, bytes) ->
@@ -106,22 +106,22 @@ Proof.
     case: IH => Hw1 [Hw2 Hbytes'] => {IHw1}.
     do 4 eexists. rewrite Hw1. split; first done. split; first eassumption.
     rewrite Hbytes'. done.
-  - simpl in Hrun. destruct p => //. 
-    destruct padSkip.  
-    * case Hrun': (runWriterTm true (writerTmBind w1 w2) (next p)) => [[y' bytes']|]. 
-      rewrite Hrun' in Hrun. injection Hrun => [H1 H2]. subst.  
-      specialize (IHw1 (next p) _ Hrun'). 
-      destruct IHw1 as [x [p' [bytes1 [bytes2 [H1 [H2 H3]]]]]]. 
-      do 4 eexists. rewrite H1. split; first done. split; first eassumption. by subst. 
-      by rewrite Hrun' in Hrun. 
-    * by apply: IHw1. 
+  - simpl in Hrun. destruct p => //.
+    destruct padSkip.
+    * case Hrun': (runWriterTm true (writerTmBind w1 w2) (next p)) => [[y' bytes']|].
+      rewrite Hrun' in Hrun. injection Hrun => [H1 H2]. subst.
+      specialize (IHw1 (next p) _ Hrun').
+      destruct IHw1 as [x [p' [bytes1 [bytes2 [H1 [H2 H3]]]]]].
+      do 4 eexists. rewrite H1. split; first done. split; first eassumption. by subst.
+      by rewrite Hrun' in Hrun.
+    * by apply: IHw1.
   - simpl in Hrun.
     apply H in Hrun as [x [p' [bytes1 [bytes2 IH]]]].
     case: IH => Hw1 [Hw2 Hbytes'] => {H}.
     eauto 10.
 Qed.
 
-Definition runWriter padSkip T (w: Writer T) (c: Cursor 32) (x: T): option (seq BYTE) :=
+Definition runWriter padSkip T (w: Writer T) (c: DWORDCursor) (x: T): option (seq BYTE) :=
   let! (_, bytes) = runWriterTm padSkip (w x) c;
   retn bytes.
 
@@ -130,7 +130,7 @@ Definition runWriter padSkip T (w: Writer T) (c: Cursor 32) (x: T): option (seq 
   ---------------------------------------------------------------------------*)
 
 (*=writeDWORD *)
-Instance writeBYTE : Writer BYTE := 
+Instance writeBYTE : Writer BYTE :=
   fun b => writerNext b (writerRetn tt).
 Instance writeDWORD : Writer DWORD := fun d =>
   let: (b3,b2,b1,b0) := split4 8 8 8 8 d in
@@ -147,28 +147,28 @@ Instance writeWORD : Writer WORD := fun w =>
   do! writeNext b1;
   retn tt.
 
-Instance writeDWORDorBYTE dw : Writer (DWORDorBYTE dw) := 
-  if dw as dw return Writer (DWORDorBYTE dw) then writeDWORD else writeBYTE. 
+Instance writeDWORDorBYTE dw : Writer (DWORDorBYTE dw) :=
+  if dw as dw return Writer (DWORDorBYTE dw) then writeDWORD else writeBYTE.
 Implicit Arguments writeDWORDorBYTE [].
 
 Instance writeSkipBYTE : Writer unit :=
-  fun _ => writerSkip (writerRetn tt). 
+  fun _ => writerSkip (writerRetn tt).
 
-Fixpoint writePadWith (b: BYTE) m : Writer unit := 
+Fixpoint writePadWith (b: BYTE) m : Writer unit :=
   fun _ =>
-  if m is m'.+1 
-  then do! writeBYTE b; writePadWith b m' tt 
+  if m is m'.+1
+  then do! writeBYTE b; writePadWith b m' tt
   else retn tt.
 
-Fixpoint writeSkipBy m : Writer unit := 
+Fixpoint writeSkipBy m : Writer unit :=
   fun _ =>
-  if m is m'.+1 
+  if m is m'.+1
   then do! writeSkipBYTE tt; writeSkipBy m' tt
   else retn tt.
 
 Definition writePad := writePadWith #0.
 
-Definition writeAlignWith b (m:nat) : Writer unit := fun _ => 
+Definition writeAlignWith b (m:nat) : Writer unit := fun _ =>
   let! c = getWCursor;
   if c is mkCursor pos
   then writePadWith b (toNat (negB (lowWithZeroExtend m pos))) tt
@@ -176,14 +176,14 @@ Definition writeAlignWith b (m:nat) : Writer unit := fun _ =>
 
 Definition writeAlign := writeAlignWith #0.
 
-Definition writeSkipAlign (m:nat) : Writer unit := fun _ => 
+Definition writeSkipAlign (m:nat) : Writer unit := fun _ =>
   let! c = getWCursor;
   if c is mkCursor pos
   then writeSkipBy (toNat (negB (lowWithZeroExtend m pos))) tt
   else retn tt.
 
 
-Fixpoint writeTupleBYTE (m:nat) : Writer (m.-tuple BYTE) := 
+Fixpoint writeTupleBYTE (m:nat) : Writer (m.-tuple BYTE) :=
   if m is m'.+1
   then fun tup => do! writeBYTE (thead tup); writeTupleBYTE (behead_tuple tup)
   else fun tup => retn tt.
@@ -192,17 +192,15 @@ Global Existing Instance writeTupleBYTE.
 
 Fixpoint writeString (n:nat) : Writer string := fun s =>
   if n is n'.+1
-  then if s is String c s' 
+  then if s is String c s'
        then do! writeBYTE (fromNat (Ascii.nat_of_ascii c)); writeString n' s'
        else do! writeBYTE #0; writeString n' s
   else retn tt.
 
 Definition writeCString : Writer cstring := fun cs =>
   (fix WS (s:string) :=
-  if s is String c s' 
+  if s is String c s'
   then do! writeBYTE (fromNat (Ascii.nat_of_ascii c)); WS s'
-  else writeBYTE #0) cs.  
+  else writeBYTE #0) cs.
 
-Global Existing Instance writeCString. 
-
-
+Global Existing Instance writeCString.

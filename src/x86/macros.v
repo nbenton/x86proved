@@ -71,15 +71,15 @@ Lemma JCC_rule a cc cv (b:bool) (p q: DWORD) :
     ) <@ (p -- q :-> JCC cc cv a).
 Proof.
 rewrite /JCC/relToAbs.
-unfold_program. specintros => i1 i2 H1 H2.  
-rewrite -H2. rewrite H1. specapply JCCrel_rule. by ssimpl. 
+unfold_program. specintros => i1 i2 H1 H2.
+rewrite -H2. rewrite H1. specapply JCCrel_rule. by ssimpl.
 rewrite addB_subBK.
 rewrite <-spec_reads_frame. apply: limplAdj.
-apply: landL2. autorewrite with push_at. 
+apply: landL2. autorewrite with push_at.
 specsplit.
-- apply: landL1. cancel1. cancel1. sbazooka. 
-- apply: landL2. cancel1. sbazooka. 
-Qed. 
+- apply: landL1. cancel1. cancel1. sbazooka.
+- apply: landL2. cancel1. sbazooka.
+Qed.
 
 Lemma JZ_rule a (b:bool) (p q: DWORD) :
   |-- (
@@ -108,12 +108,12 @@ Lemma JMP_I_rule (a: DWORD) (p q: DWORD) :
         (p -- q :-> JMP a).
 Proof.
 rewrite /JMP/relToAbs.
-unfold_program. specintros => i1 i2 H1 H2. 
-rewrite -H2 H1. specapply JMPrel_I_rule. by ssimpl. 
+unfold_program. specintros => i1 i2 H1 H2.
+rewrite -H2 H1. specapply JMPrel_I_rule. by ssimpl.
 rewrite addB_subBK. rewrite <-spec_reads_frame.
-apply: limplAdj. apply: landL2. autorewrite with push_at. 
-cancel1. cancel1. sbazooka. 
-Qed. 
+apply: limplAdj. apply: landL2. autorewrite with push_at.
+cancel1. cancel1. sbazooka.
+Qed.
 
 
 Lemma JMP_R_rule (r:Reg) addr (p q: DWORD) :
@@ -121,7 +121,7 @@ Lemma JMP_R_rule (r:Reg) addr (p q: DWORD) :
         (p -- q :-> JMP (JmpTgtR r)).
 Proof.
   rewrite /JMP. apply JMPrel_R_rule.
-Qed.   
+Qed.
 
 Lemma CALL_I_rule (a:DWORD) (p q: DWORD) :
   |-- Forall w: DWORD, Forall sp:DWORD, (
@@ -129,10 +129,10 @@ Lemma CALL_I_rule (a:DWORD) (p q: DWORD) :
          safe @ (EIP ~= p  ** ESP~=sp    ** sp-#4 :-> w)
     ) <@ (p -- q :-> CALL a).
 Proof.
-specintros => w sp. 
+specintros => w sp.
 rewrite /CALL/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2 H1. specapply CALLrel_I_rule. by ssimpl. 
+rewrite -H2 H1. specapply CALLrel_I_rule. by ssimpl.
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 autorewrite with push_at.
 apply: limplAdj. apply: landL2. cancel1. cancel1.
@@ -141,7 +141,7 @@ Qed.
 
 Section If.
 (*=ifthenelse *)
-Definition ifthenelse (cond: Condition) (value: bool) 
+Definition ifthenelse (cond: Condition) (value: bool)
   (pthen pelse: program) : program :=
   LOCAL THEN; LOCAL END;
     JCC cond value THEN;;
@@ -159,25 +159,25 @@ Definition ifthenelse (cond: Condition) (value: bool)
   Proof.
     move=> Hthen Helse. apply basic_local => THEN. apply basic_local => END.
     rewrite /basic. specintros => i j b.
-    unfold_program. 
+    unfold_program.
     specintros => i1 i2 i3 i4 <- -> i5 -> ->.
 
     (* JCC cond value THEN *)
-    specapply JCC_rule. by ssimpl. 
+    specapply JCC_rule. by ssimpl.
 
     specsplit.
     - (* THEN branch *)
       rewrite <-spec_later_weaken. specintro. move/eqP => ->.
-      specapply Hthen. by ssimpl. 
+      specapply Hthen. by ssimpl.
        rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
        apply: landL2. cancel1. by ssimpl.
 
     (* ELSE branch *)
     specintro. move/eqP => ->.
-    specapply Helse. by ssimpl. 
+    specapply Helse. by ssimpl.
 
     (* JMP END *)
-    specapply JMP_I_rule. by ssimpl. 
+    specapply JMP_I_rule. by ssimpl.
     rewrite <-spec_later_weaken.
     rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
     apply: landL2. by (cancel1; reflexivity).
@@ -192,7 +192,7 @@ Section While.
      - pbody: the loop body
    *)
 (*=while *)
-Definition while (ptest: program) 
+Definition while (ptest: program)
   (cond: Condition) (value: bool)
   (pbody: program) : program :=
   LOCAL BODY; LOCAL test;
@@ -245,7 +245,7 @@ Definition while (ptest: program)
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
       specapply Hbody.
-      - sdestruct. move/eqP => ->. by ssimpl. 
+      - sdestruct. move/eqP => ->. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
 
@@ -254,7 +254,7 @@ Definition while (ptest: program)
     apply: landL2. apply: landL1. autorewrite with push_at.
     cancel1. sdestruct. move/eqP => ->. by ssimpl.
   Qed.
-  
+
   (* Special case if the test is read-only *)
   Lemma while_rule_ro ptest cond (value:bool) pbody (I:bool->_) S:
     let P := (Exists b, I b) ** (Exists b, ConditionIs cond b) in
@@ -264,7 +264,7 @@ Definition while (ptest: program)
                 (I (~~value) ** ConditionIs cond (~~value)).
   Proof. apply while_rule. Qed.
 
-  Definition whileWithExit (ptest: program) 
+  Definition whileWithExit (ptest: program)
       (cond: Condition) (value: bool)
       (pbody: DWORD -> program) (pcoda: program) : program :=
     LOCAL BODY;
@@ -321,18 +321,18 @@ Definition while (ptest: program)
     - autorewrite with push_at. rewrite ->landL2; last reflexivity.
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
-      specapply (Hbody SKIP). 
+      specapply (Hbody SKIP).
       - sdestruct. move/eqP => ->. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
 
     (* End of loop *)
-    specapply Hcoda. sdestructs => EQ. rewrite (eqP EQ). sbazooka. 
+    specapply Hcoda. sdestructs => EQ. rewrite (eqP EQ). sbazooka.
     rewrite <-spec_reads_frame. apply: limplAdj.
-    apply: landL2. apply: landL1. autorewrite with push_at. 
-    cancel1. by ssimpl. 
+    apply: landL2. apply: landL1. autorewrite with push_at.
+    cancel1. by ssimpl.
   Qed.
-  
+
 
 
 End While.

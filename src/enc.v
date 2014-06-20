@@ -11,7 +11,7 @@ Import Prenex Implicits.
 Class Encoder X := encode: X -> seq BYTE.
 
 (* The basic encoders for bytes and DWORDs *)
-Instance encodeBYTE : Encoder BYTE := fun b => [::b]. 
+Instance encodeBYTE : Encoder BYTE := fun b => [::b].
 Instance encodeDWORD : Encoder DWORD := fun d =>
     let: (b3,b2,b1,b0) := split4 8 8 8 8 d in
     encode b0 ++

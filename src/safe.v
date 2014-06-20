@@ -10,12 +10,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Local Obligation Tactic := idtac.
-
-Local Existing Instance ILFun_Ops.
-Local Existing Instance ILFun_ILogic.
-Local Existing Instance SABIOps.
-Local Existing Instance SABILogic.
+(*Local Obligation Tactic := idtac.*)
 
 Program Definition safe := 
   mkspec (fun k P => forall (s: ProcState), (P ** ltrue) s -> runsFor k s) _ _.
@@ -49,7 +44,7 @@ Proof. rewrite 2!safeAtState. by apply runsTo_runsForever. Qed.
 
 Instance AtEx_safe: AtEx safe.
 Proof.
-  move=> A f. 
+  move=> A f.
   move=> k P Hf.
   move=> s Hs.
   sdestruct: Hs => a Hs.

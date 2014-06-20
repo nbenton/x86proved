@@ -21,20 +21,20 @@ Definition tmpSwapImpl (r1 r2 rt: Reg) : program :=
 
 (* Spec that is "common" between the two implementations *)
 (* We use "@" to conjoin implementation-specific scratch usage *)
-Definition basicSwap (r1 r2: Reg) c := 
-  Forall v, Forall w, 
-  basic 
-  (r1 ~= v ** r2 ~= w) 
-  c 
+Definition basicSwap (r1 r2: Reg) c :=
+  Forall v, Forall w,
+  basic
+  (r1 ~= v ** r2 ~= w)
+  c
   (r1 ~= w ** r2 ~= v).
 
-Lemma xorSwapCorrect (r1 r2: Reg) : 
+Lemma xorSwapCorrect (r1 r2: Reg) :
   |-- basicSwap r1 r2 (xorSwapImpl r1 r2) @ OSZCP?.
-Proof. 
+Proof.
   rewrite /xorSwapImpl/basicSwap. specintros => v w. autorewrite with push_at.
 
   (* XOR r1, r2 *)
-  basicapply XOR_RR_rule. 
+  basicapply XOR_RR_rule.
 
   (* XOR r2, r1 *)
   basicapply XOR_RR_rule; rewrite /stateIsAny/OSZCP; sbazooka.
@@ -42,27 +42,27 @@ Proof.
   (* XOR r1, r2 *)
   basicapply XOR_RR_rule; rewrite /stateIsAny/OSZCP; sbazooka.
 
-  (* Now we're left reasoning about XOR *)  
-  rewrite {2}[X in xorB w X]xorBC. 
+  (* Now we're left reasoning about XOR *)
+  rewrite {2}[X in xorB w X]xorBC.
   rewrite [X in r2~=X]xorBA.
-  autorewrite with bitsHints.  
-  rewrite [X in xorB _ X]xorBC xorBA. 
-  by autorewrite with bitsHints. 
-Qed. 
+  autorewrite with bitsHints.
+  rewrite [X in xorB _ X]xorBC xorBA.
+  by autorewrite with bitsHints.
+Qed.
 
-Lemma tmpSwapCorrect (r1 r2 rt: Reg) : 
-  |-- basicSwap r1 r2 (tmpSwapImpl r1 r2 rt) @ rt?. 
-Proof. 
-  rewrite /tmpSwapImpl/basicSwap. specintros => v w. autorewrite with push_at. 
+Lemma tmpSwapCorrect (r1 r2 rt: Reg) :
+  |-- basicSwap r1 r2 (tmpSwapImpl r1 r2 rt) @ rt?.
+Proof.
+  rewrite /tmpSwapImpl/basicSwap. specintros => v w. autorewrite with push_at.
 
   (* Good example where automatic opening and pulling out of existentials would be helpful *)
   (* MOV rt, r1 *)
-  basicapply MOV_RanyR_rule. 
+  basicapply MOV_RanyR_rule.
 
   (* MOV r1, r2 *)
   basicapply MOV_RR_rule.
- 
+
   (* MOV r2, r1 *)
   basicapply MOV_RR_rule. rewrite /stateIsAny. sbazooka.
-Qed. 
+Qed.
 

@@ -21,9 +21,9 @@ Open Scope char_scope.
 (* Floating point regexp          *)
 (**********************************)
 
-Definition alphabet: seq DWORD := 
-cat [seq (# c) | c <- iota (Ascii.nat_of_ascii "0") 10 ] 
-    [:: #(Ascii.nat_of_ascii "-") 
+Definition alphabet: seq DWORD :=
+cat [seq (# c) | c <- iota (Ascii.nat_of_ascii "0") 10 ]
+    [:: #(Ascii.nat_of_ascii "-")
       ; #(Ascii.nat_of_ascii "+")
       ; #(Ascii.nat_of_ascii "e")
       ; #(Ascii.nat_of_ascii ".")].
@@ -31,8 +31,8 @@ cat [seq (# c) | c <- iota (Ascii.nat_of_ascii "0") 10 ]
 
 (* ^[-+]?[0-9]*\.?[0-9]+([e][-+]?[0-9]+)?$ *)
 (*=FP *)
-Definition FP: regex :=  
-  [[ "-" , "+"]]? ' 
+Definition FP: regex :=
+  [[ "-" , "+"]]? '
   [{ "0" , "9" }]* ' $"." ? '
   [{ "0" , "9" }]+ '
   ($"e" ' [[ "-" , "+"]]? ' [{ "0" , "9" }]+)?.
@@ -43,7 +43,7 @@ Definition FP: regex :=
 (**********************************)
 
 (*=FP_code*)
-Definition FP_x86 (acc rej: DWORD): program := 
+Definition FP_x86 (acc rej: DWORD): program :=
     X_to_x86 FP alphabet acc rej.
 (*=End*)
 

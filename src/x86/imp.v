@@ -115,7 +115,7 @@ Section LogicDefinitions.
 
   Global Instance asn_ops : ILogicOps asn := _.
   Global Instance asn_logic : ILogic asn := _.
-  
+
   Definition mkAsn (P : stack -> Prop) := mkILFunFrm stack Prop P.
   Global Implicit Arguments mkAsn [].
 
@@ -205,10 +205,10 @@ Section LogicLemmas.
   Lemma sepSPwand P Q:
     P ** (P -* Q) |-- Q.
   Proof. rewrite sepSPC. exact: sepSPAdj. Qed.
-  
+
   Lemma lt_irreflexive x: (x < x) = false.
   Proof. by elim: x. Qed.
-  
+
   Lemma leBltB_neg {n} (x y: BITS n): ltB x y = ~~leB y x.
   Proof. by rewrite ltB_nat leB_nat ltnNge. Qed.
 
@@ -228,12 +228,12 @@ Section LogicLemmas.
       - eapply basic_basic; first apply MOV_RanyR_rule.
         + rewrite ->regs_read_var. by ssimpl.
         done.
-      eapply basic_basic; first apply SUB_RR_rule. 
+      eapply basic_basic; first apply SUB_RR_rule.
       - ssimpl. rewrite ->sepSPwand. rewrite ->regs_read_var. by ssimpl.
       elim E: (sbbB false (s x) (s y)) => [carry res].
       rewrite /OSZCP /stateIsAny. sbazooka.
-      rewrite sepSPA. rewrite ->sepSPwand. cancel2. rewrite /eeval. 
-      by rewrite /subB E/snd. 
+      rewrite sepSPA. rewrite ->sepSPwand. cancel2. rewrite /eeval.
+      by rewrite /subB E/snd.
     - move=> x y. rewrite /compile_expr.
       case Hxy: (x == y).
       - move/eqP: Hxy => <-.
@@ -256,18 +256,18 @@ Section LogicLemmas.
       - eassumption.
       - rewrite E /natAsDWORD. by ssimpl.
       rewrite [X in X ** (_ -* _)]sepSPC. rewrite ->sepSPwand.
-      rewrite /OSZCP /stateIsAny. sbazooka. 
+      rewrite /OSZCP /stateIsAny. sbazooka.
       rewrite /eeval.
       have Hless := sbbB_ltB_leB (s x) (s y).
       rewrite E /fst in Hless.
       destruct carry.
       - rewrite Hless.
-        rewrite /adcB in E'. 
+        rewrite /adcB in E'.
         rewrite adcBmain_nat in E'.
         rewrite splitmsb_fromNat in E'.
         rewrite toNat_fromNat0 in E'.
         rewrite [X in #(X)]/= in E'. rewrite !addn0 in E'.
-        rewrite /nat_of_bool in E'. by injection E' => -> _.  
+        rewrite /nat_of_bool in E'. by injection E' => -> _.
       - rewrite leBltB_neg Hless.
         rewrite /adcB adcBmain_nat in E'.
         rewrite splitmsb_fromNat in E'.
@@ -379,7 +379,7 @@ Section LogicRules.
       rewrite /I /ConditionIs /stateIsAny. by sbazooka.
     - rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.
   Qed.
-  
+
   Theorem triple_if S P e C1 C2 Q:
     S |-- triple ((blurb e false) //\\ P) C1 Q ->
     S |-- triple ((blurb e true) //\\ P) C2 Q ->
@@ -404,7 +404,7 @@ Section LogicRules.
     - eapply basic_roc_pre; last apply HC2.
       rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.
   Qed.
-  
+
   Local Transparent ILFun_Ops.
   Lemma subst_true_special_case (e : expr) (x: var): |-- (asn_subst (subst1 e x) (ltrue:asn)).
   Proof. move=> s _. apply I. Qed.

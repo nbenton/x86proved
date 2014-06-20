@@ -38,30 +38,30 @@ Proof.
   apply lexistsR with (x := pd).
   rewrite ->seqMemIsCons.
   ssimpl. rewrite /pointsTo; apply lexistsL => q.
-  rewrite -> memIsFixed. sdestruct => AP. sbazooka. 
-  rewrite ->seqMemIsNil. apply apart_addBn_next in AP. 
- sbazooka. 
-Qed. 
+  rewrite -> memIsFixed. sdestruct => AP. sbazooka.
+  rewrite ->seqMemIsNil. apply apart_addBn_next in AP.
+ sbazooka.
+Qed.
 
 Lemma catCString (l1: seq DWORD) (H1: CString l1) l2 (H2: CString l2):
-  CString (l1 ++ l2). 
-Proof. 
+  CString (l1 ++ l2).
+Proof.
    rewrite /CString.
-   rewrite /CString in H1, H2. 
-   by rewrite all_cat H1 H2. 
-Qed. 
+   rewrite /CString in H1, H2.
+   by rewrite all_cat H1 H2.
+Qed.
 
-Definition memToS {R} {_:MemIs R} p q (s: seq DWORD) := 
-    CString s 
+Definition memToS {R} {_:MemIs R} p q (s: seq DWORD) :=
+    CString s
 /\\ p -- q :-> s
  ** q :-> (#0: DWORD).
 
-Definition pointsToS {R} {_:MemIs R} p (s: seq DWORD) := 
+Definition pointsToS {R} {_:MemIs R} p (s: seq DWORD) :=
   Exists q: DWORD, memToS p q s.
 
 Notation "p '--' q ':-S>' x" := (memToS p q x)
     (at level 50, q at next level,  no associativity).
-Notation "p ':-S>' x" := (pointsToS p x) 
+Notation "p ':-S>' x" := (pointsToS p x)
     (at level 50,  no associativity).
 
 Lemma caseString_nil (q r: DWORD):
@@ -71,7 +71,7 @@ Proof.
   rewrite seqMemIsNil.
   sdestruct=> /eqP eq.
   sbazooka.
-Qed. 
+Qed.
 
 Lemma caseString_cons (q r: DWORD)(c: DWORD)(cs: seq DWORD) :
   q -- r :-S> [:: c & cs] |-- (c != #0) /\\ q :-> c ** next (q +# 3) -- r :-S> cs.
@@ -83,8 +83,8 @@ Proof.
   sdestruct=> q'.
   ssplit.
     * exact: cn0.
-    * sbazooka.      
-      rewrite ->memIsFixed; sdestruct=> H. apply apart_addBn_next in H. rewrite H. 
+    * sbazooka.
+      rewrite ->memIsFixed; sdestruct=> H. apply apart_addBn_next in H. rewrite H.
       rewrite /pointsTo.
       sbazooka.
 Qed.
@@ -108,7 +108,7 @@ Proof.
   * (* CASE: l2 =~ [:: c & cs ] *)
     move=> c cs.
     apply lorR2.
-    apply lexistsR with (x := c); 
+    apply lexistsR with (x := c);
       apply lexistsR with (x := cs).
     rewrite ->caseString_cons.
     sbazooka.
@@ -125,7 +125,7 @@ Qed.
 
 
 Lemma catString (lo hi pd: DWORD)(l1 l2: seq DWORD)(_: CString l1):
-  lo -- pd :-> l1 ** pd -- hi :-S> l2 
+  lo -- pd :-> l1 ** pd -- hi :-S> l2
      |-- lo -- hi :-S> (cat l1 l2).
 Proof.
   rewrite /memToS.
@@ -138,9 +138,9 @@ Qed.
 Lemma memIsNextS (p q q' : DWORD) l : next p = mkCursor q' ->
   next p -- q :-S> l |-- p+#1 -- q :-S> l.
 Proof. move => H0.
-destruct l. 
-+ rewrite /memToS !seqMemIsNil. 
-  sdestructs => H H'. sbazooka. by rewrite (nextIsInc H'). 
+destruct l.
++ rewrite /memToS !seqMemIsNil.
+  sdestructs => H H'. sbazooka. by rewrite (nextIsInc H').
 + rewrite /memToS !seqMemIsCons.
-  sdestructs => H H'. sbazooka. have H1 := nextIsInc H0. by  rewrite H0 -H1. 
-Qed. 
+  sdestructs => H H'. sbazooka. have H1 := nextIsInc H0. by  rewrite H0 -H1.
+Qed.
