@@ -976,12 +976,6 @@ Proof.
   move => w. apply TRIPLE_basic => R. repeat autounfold with eval.
   rewrite /evalDst/evalDstR.
   triple_apply evalReg_rule.
-  assert (HH := subB_equiv_addB_negB #0 v). rewrite /subB in HH.
-  assert (CARRY := sbb0B_carry v).
-  case E: (sbbB false #0 v) => [carry res].
-  rewrite E in HH. rewrite E in CARRY. simpl snd in HH. simpl fst in CARRY.
-  rewrite add0B in HH. rewrite HH.
-  rewrite CARRY.
   triple_apply triple_pre_introFlags => o s z c p. rewrite /OSZCP.
   triple_apply triple_doSetFlagSep.
   triple_apply triple_doSetFlagSep.
