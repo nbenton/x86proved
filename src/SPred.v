@@ -3,7 +3,7 @@
     processor state, in order to define separating conjunction nicely.
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype fintype finfun seq tuple.
-Require Import bitsrep pfun reg mem flags ioaction.
+Require Import bitsrep pfun reg mem flags.
 Require Import pmap pmapprops.
 Require Import Setoid CSetoid Morphisms.
 
@@ -25,16 +25,14 @@ Require Import FunctionalExtensionality.
     - a partial register file
     - a partial memory map
     - a partial flag file
-    - trace of actions
   ---------------------------------------------------------------------------*)
 
-Inductive Frag := Registers | Memory | Flags | Traces.
+Inductive Frag := Registers | Memory | Flags.
 Definition fragDom d :=
   match d with 
   | Registers => AnyReg
   | Memory => PTR
   | Flags => Flag
-  | Traces => Chan
   end.
 
 Definition fragTgt d :=
@@ -47,7 +45,6 @@ Definition fragTgt d :=
     (* FlagUnspecified = "unspecified", and might not even be stable
        (e.g. two reads of the flag won't necessarily be consistent) *)
   | Flags => FlagVal
-  | Traces => seq (bool * BYTE)
   end.
 
 (* None = "not described" for the purposes of separation logic *)
@@ -69,7 +66,6 @@ Definition addRegToPState (s:PState) (r:AnyReg) (v:DWORD) : PState :=
   | Registers => fun r' => if r == r' then Some v else s Registers r'
   | Flags => s Flags
   | Memory => s Memory
-  | Traces => s Traces
   end.
 
 Definition addFlagToPState (s:PState) f v : PState := 
@@ -78,7 +74,6 @@ Definition addFlagToPState (s:PState) f v : PState :=
   | Registers => s Registers
   | Flags => fun f' => if f == f' then Some v else s Flags f'
   | Memory => s Memory
-  | Traces => s Traces
   end.
 
 Definition addBYTEToPState (s:PState) (p:PTR) b : PState := 
@@ -87,7 +82,6 @@ Definition addBYTEToPState (s:PState) (p:PTR) b : PState :=
   | Memory => fun p' => if p == p' then Some (Some b) else s Memory p'
   | Registers => s Registers
   | Flags => s Flags
-  | Traces => s Traces
   end.
 
 (*
@@ -96,7 +90,6 @@ Definition addToPState (f:Frag) (s: PState) : fragDom f -> fragTgt f -> PState :
   | Registers => fun r v => addRegToPState s r v
   | Flags => fun f v => addFlagToPState s f v
   | Memory => fun p v => addBYTEToPState s p v
-  | Traces => fun t v => s
   end.
 
 Definition genericAddToPState (f:StateFrag) (s: PState) (x: carrier f) (v: fragTgt (frag f)) := @addToPState (frag f) s x v.
@@ -365,7 +358,7 @@ Qed.
 
 Instance PStateSepAlgOps: SepAlgOps PState := {
   sa_unit := emptyPState;
-  sa_mul s1 s2 s := forall f, splitsAs (s f) (s1 f) (s2 f)
+  sa_mul s1 s2 s := stateSplitsAs s s1 s2 
 }.
 
 Instance PStateSepAlg : SepAlg PState.
@@ -445,6 +438,67 @@ Proof.
   - simpl; intros; firstorder.
 Qed.
 
+
+(* Need lemma about splitting involving a total (e.g. toPState) "partial" store.
+   e.g. sa_mul (toPState s) s0 s1 -> s1 = s /\ s0 = emptyPState *)
+Definition isTotal T U (f: T -> option U) := forall x, f x <> None.
+Definition isTotalPState (s: PState) := forall f:Frag, isTotal (s f).
+
+Lemma splitsTotal T U (s s0 s1: T -> option U) : isTotal s0 -> splitsAs s s0 s1 -> s =1 s0.
+Proof. move => TOT SPLITS. rewrite /splitsAs in SPLITS. 
+move => x. unfold isTotal in TOT.  
+specialize (SPLITS x). specialize (TOT x). 
+destruct (s0 x) => //. destruct (s x) => //. 
+elim SPLITS => [[H1 H2] | [H1 H2]]. done. done. by destruct SPLITS. 
+Qed. 
+
+Lemma stateSplitsTotal (s s0 s1: PState) : isTotalPState s0 -> stateSplitsAs s s0 s1 -> s === s0.
+Proof. move => TOT SPLITS. unfold stateSplitsAs in SPLITS. unfold isTotalPState in TOT. 
+move => f. apply: splitsTotal => //. Qed. 
+
+Instance stateSplitsAs_m :
+  Proper (CSetoid.equiv ==> CSetoid.equiv ==> CSetoid.equiv ==> iff) stateSplitsAs.
+Proof. move => s1 s2 EQ s1' s2' EQ' s1'' s2'' EQ''.
+split => SPLIT f x. 
+specialize (SPLIT f x). specialize (EQ f x). specialize (EQ' f x). specialize (EQ'' f x). 
+destruct (s1 f x); destruct (s2 f x); congruence. 
+specialize (SPLIT f x). specialize (EQ f x). specialize (EQ' f x). specialize (EQ'' f x). 
+destruct (s1 f x); destruct (s2 f x); congruence. 
+Qed. 
+
+Local Transparent ILFun_Ops SABIOps.
+
+Lemma emp_unit : empSP -|- eq_pred sa_unit.
+  split; simpl; move => x H.
+  + destruct H as [H _]; assumption.
+  + exists H; tauto.
+Qed.
+
+Lemma eqPredTotal_sepSP_trueR s :
+  isTotalPState s ->
+  eq_pred s -|- eq_pred s ** ltrue.
+Proof. 
+move => TOT. 
+split => s'. 
+- apply lentails_eq. exists s, emptyPState. split => //; first apply stateSplitsAs_s_s_emp.
+- move => /= [s1 [s2 [H1 [H2 H3]]]]. setoid_rewrite <- H2 in H1. 
+  apply (stateSplitsTotal TOT) in H1. by rewrite H1. 
+Qed. 
+
+Lemma eqPredTotal_sepSP s1 s2 R: 
+  isTotalPState s2 ->
+  eq_pred s1 |-- eq_pred s2 ** R ->
+  empSP |-- R.
+Proof. move => TOT H.
+apply lentails_eq in H. destruct H as [s3 [s4 [H1 [H2 H3]]]]. 
+simpl in H2. rewrite <-H2 in H1. 
+simpl in H1.
+rewrite -> (stateSplitsTotal TOT H1) in H1.
+apply stateSplitsAs_s_s_t in H1. 
+subst. rewrite emp_unit. by apply lentails_eq. 
+Qed. 
+
+Local Opaque SABIOps.
 
 Global Coercion lbool (b:bool) := lpropand b ltrue.
 

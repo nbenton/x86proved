@@ -3,43 +3,54 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrfun ssrnat eqtype tuple seq fintype.
 Require Import bitsrep procstate procstatemonad SPred septac spec.
-Require Import instr eval monad monadinst reader pointsto step cursor.
-Require Import triple (* for toPState *).
+Require Import ioaction step bilogic CSetoid.
+Require Import triple (* for toPState etc. *).
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import Setoid RelationClasses Morphisms.
 Local Obligation Tactic := idtac.
 
-Program Definition safe := mkspec (fun k P =>
-    forall s: ProcState, (P ** ltrue) (toPState s) ->
-    exists s', exists o, 
-    doMany k step s = (o, Success _ (s',tt))
-  ) _ _.
-Next Obligation.
-  move=> k.
-  have ->: k.+1 = (k + 1)%coq_nat by omega.
-  move => P Hsafe s Hs.
-  have [s'' [o'' Hs'']] := Hsafe s Hs. move: Hs''.
-  rewrite doManyAdd /=. 
-  case: (doMany k step s) => [o' u]. 
-  case: u => //. elim => [s' u]. exists s'. exists o'. by destruct u. 
-Qed.
-Next Obligation.
-  move=> k P P' [R HR] Hsafe s Hs. 
-  edestruct (Hsafe s); last by eauto.
+Local Existing Instance ILFun_Ops.
+Local Existing Instance ILFun_ILogic.
+Local Existing Instance SABIOps.
+Local Existing Instance SABILogic.
+
+Program Definition safe := 
+  mkspec (fun k P => forall (s: ProcState), (P ** ltrue) s -> runsFor k s) _ _.
+Next Obligation. move=> k P Hsafe s Hs. by apply: runsForLe (Hsafe _ _). Qed.
+Next Obligation. move=> k P P' [R HR] Hsafe s Hs. 
+  apply Hsafe.
   rewrite ->lentails_eq in Hs. rewrite <-HR in Hs.
-  rewrite lentails_eq. rewrite ->Hs. by ssimpl.
+  apply lentails_eq. rewrite ->Hs. by ssimpl.
 Qed.
 
-Transparent ILPre_Ops.
+Local Transparent ILFun_Ops ILPre_Ops.
+
+Lemma safeAtState (s: ProcState) : 
+  |-- safe @ eq_pred s <-> runsForever s. 
+Proof. 
+split => H. 
++ move => k. 
+  specialize (H k empSP I). simpl in H. 
+  apply H. apply lentails_eq. by ssimpl. 
++ move => k R _ s' H0. 
+  apply lentails_eq in H0. rewrite -> sepSPA in H0. 
+  rewrite -> eqPredProcState_sepSP in H0. 
+  apply lentails_eq in H0. simpl in H0. apply toPState_inj in H0. by subst. 
+Qed. 
+
+Lemma runsTo_safeClosed s s':
+  runsTo s s' ->
+  |-- safe @ eq_pred s' -> 
+  |-- safe @ eq_pred s.
+Proof. rewrite 2!safeAtState. by apply runsTo_runsForever. Qed. 
+
 Instance AtEx_safe: AtEx safe.
 Proof.
   move=> A f. 
   move=> k P Hf.
-  unfold safe, spec_at, mkspec, spec_fun in *; simpl in *.
   move=> s Hs.
   sdestruct: Hs => a Hs.
   eapply Hf; eassumption.
@@ -48,8 +59,62 @@ Qed.
 Instance AtContra_safe: AtContra safe.
 Proof.
   move=> R R' HR. move=> k P HP.
-  unfold safe, spec_at, mkspec, spec_fun, ILPreFrm_pred in *.
   move=> s Hs. apply HP.
   rewrite lentails_eq. rewrite <-HR. by rewrite -lentails_eq.
 Qed.
 
+Lemma runsTo_safe s s':
+  runsTo s s' ->
+  safe @ eq_pred s' |-- safe @ eq_pred s.
+Proof. move => RED. 
+
+move => k0 R /=H. 
+case E: k0 => [| k0']. move => ? ?. by apply runsFor0.
+
+subst.
+
+move => s0 H0. 
+specialize (H s').
+have: runsFor k0'.+1 s'.  
+apply H.
+apply lentails_eq. ssimpl.
+apply lentails_eq in H0. 
+rewrite -> sepSPC in H0. rewrite<-sepSPA in H0. rewrite ->(sepSPC ltrue) in H0. 
+rewrite <- (eqPredTotal_sepSP_trueR) in H0; last by apply totalProcState.
+apply eqPredTotal_sepSP in H0; last by apply totalProcState.  
+rewrite -> H0. by ssimpl.
+
+apply runsTo_runsFor. 
+apply lentails_eq in H0.
+rewrite -> sepSPA in H0. 
+rewrite -> eqPredProcState_sepSP in H0. 
+apply lentails_eq in H0. simpl in H0. 
+apply toPState_inj in H0. by subst. 
+Qed. 
+
+Lemma properRunsTo_safe s s':
+  properRunsTo s s' ->
+  |> safe @ eq_pred s' |-- safe @ eq_pred s.
+Proof. move => RED k0 R H. 
+
+case E: k0 => [| k0']. move => ? ?. by apply runsFor0.
+
+subst.
+
+move => s0 H0.
+
+Local Transparent ILLaterPreOps.
+ 
+have LT: (k0' < k0'.+1)%coq_nat by done. specialize (H _ LT s'). clear LT.
+apply lentails_eq in H0. 
+rewrite -> sepSPC in H0. rewrite<-sepSPA in H0. rewrite ->(sepSPC ltrue) in H0. 
+rewrite <- (eqPredTotal_sepSP_trueR) in H0; last by apply totalProcState.
+have H0' := H0.
+apply eqPredTotal_sepSP in H0; last by apply totalProcState.
+rewrite -> eqPredProcState_sepSP in H0'.  
+apply lentails_eq in H0'. simpl in H0'. 
+apply toPState_inj in H0'. subst. 
+apply: (properRunsTo_runsFor RED). 
+apply: H. 
+apply lentails_eq. rewrite <-H0. by ssimpl. 
+Qed. 

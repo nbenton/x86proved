@@ -5,7 +5,7 @@ Ltac type_of t := type of t (* ssreflect bug workaround *).
 Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
 Require Import spec SPred septac spec safe triple basic basicprog spectac.
-Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
+Require Import instr instrcodec eval step monad monadinst reader pointsto cursor.
 Require Import Setoid RelationClasses Morphisms.
 
 Set Implicit Arguments.
@@ -20,7 +20,7 @@ Local Open Scope instr_scope.
 (* TODO: needed now? *)
 Lemma TRIPLE_nopost P (c: ST unit):
   TRIPLE (P ** ltrue) c ltrue ->
-  forall s: ProcState, (P ** ltrue) (toPState s) ->
+  forall s: ProcState, (P ** ltrue) s -> 
     exists s', exists o, c s = (o, Success _ (s', tt)).
 Proof.
   move=> HTRIPLE s Hs. move/(_ s Hs): HTRIPLE => [s' [o [Hs' _]]].
@@ -37,23 +37,18 @@ Section UnfoldSpec.
             (Q ** R)) ->
     |> safe @ Q |-- safe @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
-    move => Hsij HTRIPLE k R HQ. rewrite /spec_fun /= in HQ. move=> s Hs.
-    destruct k. (* everything's safe in 0 steps *)
-    - exists s. exists nil. reflexivity.
-    rewrite /doMany -/doMany.
-    (* TODO: This is clumsy. Make it more like in attic/instrrules.v. *)
-    move: s Hs. apply: TRIPLE_nopost.
-    rewrite assoc. eapply triple_letGetReg. 
-    - by ssimpl.
-    rewrite assoc.
-    eapply triple_letReadSep.
-    - rewrite ->Hsij. by ssimpl.
-    rewrite assoc. eapply triple_seq.
-    - eapply triple_setRegSepGen. by ssimpl.
-    eapply triple_seq.
-    - triple_apply HTRIPLE.
+    move => Hsij HTRIPLE k R HQ. move=> s Hs.
+    destruct k; first apply runsFor0. (* everything's safe in 0 steps *)
+    rewrite /runsFor. 
+
+    move: s Hs. apply: TRIPLE_nopost. rewrite /doMany-/doMany.
+    rewrite assoc. triple_apply triple_letGetRegSep. 
+    rewrite assoc. triple_apply triple_letReadSep. rewrite ->Hsij. by ssimpl.
+    rewrite assoc. eapply triple_seq. triple_apply triple_setRegSepGen. by ssimpl.
+    eapply triple_seq. triple_apply HTRIPLE.
+
     move=> s Hs.
-    edestruct (HQ k) as [f [o Hf]]; first omega.
+    edestruct (HQ k) as [f [o Hf]] => //. 
     - rewrite ->lentails_eq. rewrite ->sepSPA, <-lentails_eq.
       eassumption.
     exists f. exists o. by split.
@@ -342,6 +337,36 @@ destruct r; apply triple_pre_existsSep => d; apply triple_pre_existsSep => _;
 + rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite LOWLEMMA.  
 + rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite LOWLEMMA.  
 Qed.
+
+Lemma triple_doSetDWORDSep (p:PTR) (v w: DWORD) c Q S :
+  TRIPLE (p:->w ** S) c Q ->  
+  TRIPLE (p:->v ** S) (do! setDWORDInProcState p w; c) Q.
+Proof. move => T s pre. 
+destruct (triple_setDWORDSep w pre) as [f [o [H1 H2]]]. 
+specialize (T _ H2). 
+destruct T as [f' [o' H3]]. exists f'. rewrite /= H1.
+eexists _.  
+destruct (c f). destruct H3.  split; last done. by injection H => -> ->. 
+Qed. 
+
+Lemma triple_doSetBYTESep (p:PTR) (v w: BYTE) c Q S :
+  TRIPLE (p:->w ** S) c Q ->  
+  TRIPLE (p:->v ** S) (do! setBYTEInProcState p w; c) Q.
+Proof. move => T s pre. 
+destruct (triple_setBYTESep w pre) as [f [o [H1 H2]]]. 
+specialize (T _ H2). 
+destruct T as [f' [o' H3]]. exists f'. rewrite /= H1.
+eexists _.  
+destruct (c f). destruct H3.  split; last done. by injection H => -> ->. 
+Qed. 
+
+Lemma triple_doSetBYTERegSep (r:BYTEReg) (v w:BYTE) c Q :
+  forall S, 
+  TRIPLE (BYTEregIs r w ** S) c Q ->  
+  TRIPLE (BYTEregIs r v ** S) (do! setBYTERegInProcState r w; c) Q.
+Proof. move => S. 
+eapply triple_seq. apply triple_setBYTERegSep. Qed. 
+
 
 Lemma triple_setDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w :
   forall S, TRIPLE (DWORDorBYTEregIs r v ** S) (setDWORDorBYTERegInProcState _ r w) 

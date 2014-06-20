@@ -20,8 +20,25 @@ Definition toPState (s:ProcState) : PState :=
   | Registers => fun r => Some (registers s r)
   | Flags => fun f => Some (flags s f)
   | Memory => fun p => Some (memory s p)
-  | Traces => fun ch => None
   end. 
+
+Coercion toPState : ProcState >-> PState.
+
+Lemma totalProcState (s: ProcState) : isTotalPState s.
+Proof. move => f x. destruct f; destruct x => //.  Qed. 
+
+Require Import FunctionalExtensionality CSetoid.
+Lemma toPState_inj s1 s2 : toPState s1 === toPState s2 -> s1 = s2. 
+Proof. move => H. 
+destruct s1 as [s1r s1f s1m]. 
+destruct s2 as [s2r s2f s2m].
+unfold "===", toPState in H.
+simpl in H. 
+Admitted.
+
+Lemma eqPredProcState_sepSP (s: ProcState) R :
+  eq_pred s ** R |-- eq_pred s. 
+Proof. rewrite (eqPredTotal_sepSP_trueR _); last by apply totalProcState. by ssimpl. Qed. 
 
 (* Hoare triple for machine state monad *)
 Definition TRIPLE (P:SPred) (c:ST unit) (Q:SPred) := 

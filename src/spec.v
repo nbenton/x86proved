@@ -594,12 +594,6 @@ Proof.
   rewrite spec_reads_alt_meta. rewrite ->(ILFun_exists_eq R).
   specintros => s Hs. apply lforallL with s. by apply: lpropimplL.
 Qed.
-Local Transparent ILFun_Ops SABIOps.
-Lemma emp_unit : empSP -|- eq_pred sa_unit.
-  split; simpl; move => x H.
-  + destruct H as [H _]; assumption.
-  + exists H; tauto.
-Qed.
 
 Lemma spec_at_entails_reads S {HContra: AtContra S} R:
   S @ R |-- S <@ R.
