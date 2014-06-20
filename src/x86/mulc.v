@@ -53,14 +53,14 @@ Proof.
   (* ADD r1, r2 *)
   basicapply ADD_RR_ruleNoFlags.
   basicapply SHL_RI_rule => //.
-  basicapply IHnbits => //.
+  try_basicapply IHnbits => //.
 
   rewrite /iter -addBA shlB_asMul -mulB_muln mul2n.
   rewrite -{2}(odd_double_half m).
   by rewrite ODD mulB_addn mulB1.
 
   basicapply SHL_RI_rule => //.
-  basicapply IHnbits => //.
+  try_basicapply IHnbits => //.
 
   by rewrite /iter shlB_asMul -mulB_muln mul2n -{2}(odd_double_half m) ODD add0n.
 Qed.
@@ -194,7 +194,7 @@ basicapply LEA_ruleSameBase => //.
 rewrite /eval.scaleBy !shlB_asMul addB0 /stateIsAny (eqP EQ8) -!mulB_muln.
 replace (2*_) with 8 by done. sbazooka.
 
-basicapply add_mulcAuxCorrect => //.
+try_basicapply add_mulcAuxCorrect => //.
 by rewrite expn0 muln1.
 Qed.
 
@@ -256,7 +256,7 @@ Proof.
 
   basicapply ADD_RR_ruleNoFlags.
 
-  basicapply IHnbits => //.
+  try_basicapply IHnbits => //.
   rewrite expn0 muln1 expn1.
   rewrite muln2. rewrite -{2}(odd_double_half m) ODD. by rewrite mulB_addn mulB1 addBA.
 
@@ -266,7 +266,7 @@ Proof.
   basicapply LEA_ruleSameBase.
   rewrite addB0  /eval.scaleBy shlB_asMul.
 
-  basicapply IHnbits => //.
+  try_basicapply IHnbits => //.
   rewrite expn1 -{2}(odd_double_half m) ODD. rewrite muln2. rewrite -addBA.
   replace (2^2) with (2*2) by done. rewrite mulnA. rewrite -mulB_addn. rewrite !muln2.
   rewrite -(odd_double_half m). by rewrite ODD mulB_addn.
@@ -277,7 +277,7 @@ Proof.
   basicapply LEA_ruleSameBase.
   rewrite addB0 /eval.scaleBy shlB_asMul.
 
-  basicapply IHnbits => //.
+  try_basicapply IHnbits => //.
   rewrite shlB_asMul.
   rewrite -addBA. rewrite <-mulBA. rewrite <- (mulBDr w).
   rewrite 3!expnS expn0 muln1 mulnA.
@@ -293,7 +293,7 @@ Proof.
   basicapply LEA_ruleSameBase.
   rewrite addB0 /eval.scaleBy !shlB_asMul.
 
-  basicapply IHnbits => //.
+  try_basicapply IHnbits => //.
   rewrite -addBA. rewrite <-!mulBA. rewrite <- (mulBDr w).
   rewrite 4!expnS expn0 muln1 mulnA.
   rewrite 2!fromNat_mulBn. rewrite fromNat_addBn. rewrite 2!mulnA. rewrite -mulnDl.
@@ -312,7 +312,7 @@ Proof.
   (* ADD r1, r2 *)
   basicapply ADD_RR_ruleNoFlags.
 
-  basicapply IHnbits => //.
+  try_basicapply IHnbits => //.
   rewrite expn1 -{2}(odd_double_half m) ODD. rewrite muln2. rewrite -addBA.
   rewrite mulnDl mul1n. rewrite mulB_addn. rewrite mulnC.
   by rewrite shlB_mul2exp mulB_muln.
@@ -345,9 +345,8 @@ specintros => v w.
 
 have LT: toNat d < 2^32 by apply toNatBounded.
 autorewrite with push_at.
-basicapply genCorrect => //. by rewrite expn0 muln1 toNatK.
+try_basicapply genCorrect => //. by rewrite expn0 muln1 toNatK.
 Qed.
 
 Definition screenWidth:DWORD := Eval compute in #160.
 Eval showinstr in linearize (add_mulcFast EDI EDX screenWidth).
-

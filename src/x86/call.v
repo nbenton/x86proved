@@ -101,8 +101,8 @@ Proof.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
-  basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
+  try_basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
+  try_basicapply INC_R_rule; rewrite /OSZCP; sbazooka.
   rewrite addIsIterInc /OSZCP /iter; sbazooka.
 Qed.
 
@@ -110,6 +110,8 @@ Qed.
    toyfun_example_callee_correct guarantees: we ask for a function that does
    not have OSZCP? in its footprint. But thanks to the higher-order frame
    rule, it will still be possible to compose the caller and the callee. *)
+(** TODO(t-jagro): Find a better way of doing this, or a better place for this. *)
+Local Opaque spec_at.
 Example toyfun_example_caller_correct a (f:DWORD):
   Forall a', toyfun f (EAX ~= a') (EAX ~= a' +# 2)
   |-- basic (EAX ~= a) (toyfun_example_caller f) (EAX ~= a +# 4) @ retreg?.
@@ -188,4 +190,3 @@ Proof.
   rewrite /toyfun. eapply lforallL. rewrite <-spec_later_weaken.
   rewrite /stateIsAny. cancel2; cancel1; by sbazooka.
 Qed.
-

@@ -71,25 +71,32 @@ Proof. done. Qed.
 
 
   (* This is all very sensitive to use of "e" versions of apply/exact. Beware! *)
-  Ltac basicatom R :=
-  match goal with
+  (* We ensure that we leave at most one goal remaining. *)
+  Ltac basicatom R tacfin :=
+  lazymatch goal with
     | |- |-- basic ?P (prog_instr ?i) ?Q =>
-          (eapply basic_basic; first eapply basic_instr; first eexact R; autounfold with spred; sbazooka)
+          (eapply basic_basic; first eapply basic_instr; [ eexact R | tacfin .. | try tacfin ])
 
-    | _ => eapply basic_basic; first eexact R; autounfold with spred; sbazooka
+    | _ => eapply basic_basic; [ eexact R | tacfin .. | try tacfin ]
     end.
 
-  Ltac  basicseq R :=
-  match goal with
-    | |- |-- basic ?P (prog_seq ?p1 ?p2) ?Q => (eapply basic_seq; first basicatom R)
-    | _ => basicatom R
+  Ltac  basicseq R tacfin :=
+  lazymatch goal with
+    | |- |-- basic ?P (prog_seq ?p1 ?p2) ?Q => (eapply basic_seq; first basicatom R tacfin)
+    | _ => basicatom R tacfin
     end.
 
-  Ltac basicapply R :=
-    let Hlem := fresh in
+  Ltac basicapply R tac tacfin :=
+    let Hlem := fresh "Hlem" in
     instRule R Hlem;
-    repeat (autorewrite with basicapply in Hlem);
-    first basicseq Hlem;
+    tac Hlem;
+    first basicseq Hlem tacfin;
     clear Hlem.
 
-
+  Tactic Notation "basicapply" open_constr(R) "using" tactic3(tac) "side" "conditions" tactic(tacfin) := basicapply R tac tacfin.
+  Tactic Notation "basicapply" open_constr(R) "using" tactic3(tac) := basicapply R using (tac) side conditions by autounfold with spred; sbazooka.
+  Tactic Notation "basicapply" open_constr(R) "side" "conditions" tactic(tacfin) := basicapply R using (fun Hlem => autorewrite with basicapply in Hlem) side conditions tacfin.
+  Tactic Notation "basicapply" open_constr(R) := basicapply R using (fun Hlem => autorewrite with basicapply in Hlem).
+  (** Variant of [basicapply] that doesn't require that the side conditions be fully solved. *)
+  Tactic Notation "try_basicapply" open_constr(R) "using" tactic3(tac) := basicapply R using (tac) side conditions autounfold with spred; sbazooka.
+  Tactic Notation "try_basicapply" open_constr(R) := try_basicapply R using (fun Hlem => autorewrite with basicapply in Hlem).

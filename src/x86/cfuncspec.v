@@ -161,7 +161,7 @@ specintro => esp. specintro => v.
 autorewrite with push_at. specintro => old.
 basicapply PUSH_R_rule.
 basicapply H.
-basicapply POP_R_rule.
+try_basicapply POP_R_rule.
 autorewrite with bitsHints.
 reflexivity.
 Qed.
@@ -176,10 +176,10 @@ move => H.
 
 autorewrite with push_at. specintro => old.
 basicapply PUSH_R_rule.
-basicapply MOV_RanyR_rule. rewrite /stateIsAny. sbazooka.
+try_basicapply MOV_RanyR_rule. rewrite /stateIsAny. sbazooka.
 basicapply H.
 unhideReg EBP => oldebp.
-basicapply POP_R_rule.
+try_basicapply POP_R_rule.
 autorewrite with bitsHints. reflexivity.
 Qed.
 

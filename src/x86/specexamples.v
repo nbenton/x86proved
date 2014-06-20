@@ -40,9 +40,9 @@ Example basic_inc3 x:
 Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
-  basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
-  basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
+  try_basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
+  try_basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
+  try_basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
   rewrite /OSZCP addIsIterInc/iter; sbazooka.
 Qed.
 
@@ -79,7 +79,7 @@ Proof.
     + eapply basic_basic; first eapply DEC_R_rule.
       * rewrite /OSZCP/ConditionIs. by ssimpl.
       done.
-    basicapply INC_R_rule.
+    try_basicapply INC_R_rule.
     by rewrite addB_decB_incB.
     rewrite /OSZCP/ConditionIs.
     sbazooka.
