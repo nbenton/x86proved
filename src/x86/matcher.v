@@ -367,7 +367,8 @@ setoid_rewrite memIsBYTE_next_entails.
 specintro => ->.
 autorewrite with push_at.
 (* here we know the crucial fact that last :-> #0 which means that cursor.next q can't be top
-   This important information is, by default, thrown away by just using basicapply here :-(
+   This important information is, by default, thrown away by just using try_basicapply here :-(
+   Addendum: This is no longer the case for [basicapply], so we should use that instead.
 *)
 setoid_rewrite (@pointsToBYTE_NonTop last #0).
 specintros => lastbits lasteqn.
