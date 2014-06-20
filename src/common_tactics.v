@@ -1,10 +1,8 @@
 (** * Various useful general purpose tactics *)
 (** Require [ssreflect] so notations like [_ : _] don't break. *)
-(** SSReflect breaks [type of] and overrides [rewrite].  Sometimes we want the original one. *)
+(** SSReflect breaks [type of].  It also overrides [rewrite], but we
+    can get that back via [rewrite -> ] and [rewrite <- ]. *)
 Ltac type_of x := type of x.
-Tactic Notation "coq_rewrite" open_constr(H) := rewrite H.
-Tactic Notation "coq_rewrite" "->" open_constr(H) := rewrite -> H.
-Tactic Notation "coq_rewrite" "<-" open_constr(H) := rewrite <- H.
 
 Require Import Ssreflect.ssreflect.
 
