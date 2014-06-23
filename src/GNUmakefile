@@ -46,12 +46,12 @@ STDTIME=
 endif
 TIMER=\$$(if \$$(TIMED), $(STDTIME), $(TIMECMD))
 
-.PHONY: default all
+.PHONY: all
 
 %.dll %.exe: %.v
 	./buildexe.sh $< $@ $(COQLIBS)
 
-default: all .dir-locals.el
+all: .dir-locals.el
 
 Makefile.coq: GNUmakefile Makefile.common
 	@(which time >/dev/null 2>&1) || echo "WARNING: Timing will be unavailable; please install /usr/bin/time."
