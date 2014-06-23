@@ -4,6 +4,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple.
 Require Import bitsrep.
+Require Import common_definitions.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -15,13 +16,13 @@ Import Prenex Implicits.
 
 Fixpoint incB {n} : BITS n -> BITS n :=
   if n is n.+1
-  then fun p => let (p,b) := splitlsb p in
+  then fun p => let (p,b) := eta_expand (splitlsb p) in
                 if b then joinlsb (incB p, false) else joinlsb (p, true)
   else fun _ => nilB.
 
 Fixpoint decB {n} : BITS n -> BITS n :=
   if n is _.+1
-  then fun p => let (p,b) := splitlsb p in
+  then fun p => let (p,b) := eta_expand (splitlsb p) in
                 if b then joinlsb (p, false) else joinlsb (decB p, true)
   else fun _ => nilB.
 
@@ -59,7 +60,7 @@ Definition fullAdder carry b1 b2 : bool * bool :=
 (* Add with carry, producing a word one bit larger than the inputs *)
 Fixpoint adcBmain n carry : BITS n -> BITS n -> BITS n.+1 :=
   if n is _.+1 then
-    fun p1 p2 => let (p1,b1) := splitlsb p1 in let (p2,b2) := splitlsb p2 in
+    fun p1 p2 => let (p1,b1) := eta_expand (splitlsb p1) in let (p2,b2) := eta_expand (splitlsb p2) in
            let (carry',b) := fullAdder carry b1 b2 in
            joinlsb (adcBmain carry' p1 p2, b)
   else fun _ _ => singleBit carry.
@@ -67,12 +68,20 @@ Fixpoint adcBmain n carry : BITS n -> BITS n -> BITS n.+1 :=
 Definition adcB {n} carry (p1 p2: BITS n) := splitmsb (adcBmain carry p1 p2).
 
 (* Add with carry=0 and ignore carry out *)
-Definition addB {n} (p1 p2: BITS n) := (adcB false p1 p2).2.
+Notation carry_addB p1 p2 := (adcB false p1 p2).1.
+Notation addB p1 p2 := (adcB false p1 p2).2.
+(* Take a page from ssreflect's book of ssrfun *)
+Notation "@ 'addB' n" := (fun p1 p2 : BITS n => addB p1 p2)
+  (at level 10, n at level 8, only parsing) : fun_scope.
+
+(*(** Don't simpl unless everything is a constructor. *)
+Global Arguments adcB {!n} !carry !p1 !p2 / .*)
+(** Don't ever simpl adcB *)
+Global Opaque adcB.
 
 (* Add with carry=0 and return None on overflow *)
 Definition addBovf n (p1 p2: BITS n) :=
-  let: (c,r) := adcB false p1 p2 in
-  if c then None else Some r.
+  if carry_addB p1 p2 then None else Some (addB p1 p2).
 
 Definition computeOverflow n (arg1 arg2 res: BITS n) :=
   match (msb arg1,msb arg2,msb res) with
@@ -87,9 +96,16 @@ Notation "b +# n" := (addB b #n) (at level 50, left associativity).
   ---------------------------------------------------------------------------*)
 
 Definition sbbB {n} borrow (arg1 arg2: BITS n) :=
-  let (carry,res) := adcB (~~borrow) arg1 (invB arg2)
-  in (~~carry,res).
-Definition subB {n} (p1 p2: BITS n) := (sbbB false p1 p2).2.
+  let (carry, res) := eta_expand (adcB (~~borrow) arg1 (invB arg2)) in
+  (~~carry, res).
+Notation carry_subB p1 p2 := (sbbB false p1 p2).1.
+Notation subB p1 p2 := (sbbB false p1 p2).2.
+Notation "@ 'subB' n" := (fun p1 p2 : BITS n => subB p1 p2)
+  (at level 10, n at level 8, only parsing) : fun_scope.
+
+(** Don't ever simpl [sbbB]. *)
+(*Global Arguments sbbB {!n} !borrow !arg1 !arg2 / .*)
+Global Opaque sbbB.
 
 Notation "b -# n" := (subB b #n) (at level 50, left associativity).
 
@@ -98,8 +114,8 @@ Notation "b -# n" := (subB b #n) (at level 50, left associativity).
   ---------------------------------------------------------------------------*)
 Fixpoint ltB {n} : BITS n -> BITS n -> bool :=
   if n is n.+1
-  then fun p1 p2 => let (q1,b1) := splitlsb p1 in
-                    let (q2,b2) := splitlsb p2 in
+  then fun p1 p2 => let (q1,b1) := eta_expand (splitlsb p1) in
+                    let (q2,b2) := eta_expand (splitlsb p2) in
                     (ltB q1 q2 || ((q1 == q2) && (~~b1) && b2))
   else fun p1 p2 => false.
 
@@ -110,7 +126,7 @@ Definition leB {n} (p1 p2: BITS n) := ltB p1 p2 || (p1 == p2).
   ---------------------------------------------------------------------------*)
 Fixpoint fullmulB n1 n2 : BITS n1 -> BITS n2 -> BITS (n1+n2) :=
   if n1 is n.+1 return BITS n1 -> BITS n2 -> BITS (n1+n2)
-  then (fun p1 p2 => let (p,b) := splitlsb p1 in
+  then (fun p1 p2 => let (p,b) := eta_expand (splitlsb p1) in
        if b then addB (joinlsb (fullmulB p p2, false)) (zeroExtendAux n.+1 p2)
             else joinlsb (fullmulB p p2, false))
   else (fun p1 p2 => #0).
@@ -125,10 +141,10 @@ Notation "b *# n" := (mulB b #n) (at level 40, left associativity).
   ---------------------------------------------------------------------------*)
 
 (* Rotate right: lsb goes into msb, everything else gets shifted right *)
-Definition rorB {n} (p: BITS n.+1) : BITS n.+1 := let (p,b) := splitlsb p in joinmsb (b, p).
+Definition rorB {n} (p: BITS n.+1) : BITS n.+1 := let (p, b) := eta_expand (splitlsb p) in joinmsb (b, p).
 
 (* Rotate left: msb goes into lsb, everything else gets shifted left *)
-Definition rolB {n} (p: BITS n.+1) := let (b,p) := splitmsb p in joinlsb (p, b).
+Definition rolB {n} (p: BITS n.+1) := let (b, p) := eta_expand (splitmsb p) in joinlsb (p, b).
 
 (* Shift right: shift everything right and put 0 in msb *)
 Definition shrB {n} : BITS n -> BITS n :=
@@ -151,7 +167,7 @@ Definition shlB {n} (p: BITS n)  := dropmsb (shlBaux p).
 Fixpoint bIter {n A} : BITS n -> (A -> A) -> A -> A :=
   if n is m.+1
   then fun p f x => if p == zero _ then x
-                    else let (p,b) := splitlsb p in
+                    else let (p,b) := eta_expand (splitlsb p) in
                     if b then let r := bIter p f (f x) in bIter p f r
                     else let r := bIter p f x in bIter p f r
   else fun p f x => x.

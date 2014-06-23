@@ -51,12 +51,12 @@ specsplit.
 (* Success case *)
 specintros => pb.
 rewrite (memAnySplitAdd pb (m1:=4)) => //.
-rewrite addB_addn.
-setoid_rewrite memAny_entails_pointsToDWORD. specintros => d1 d2.
+rewrite -> addB_addn.
+do 2 rewrite -> memAny_entails_pointsToDWORD. specintros => d1 d2.
 
 elim E0:(sbbB false (pb+#8) #8) => [carry0 res0].
-assert (H:= subB_equiv_addB_negB (pb+#8) #8). rewrite /subB in H.
-rewrite E0 /snd addB_negBn in H.
+assert (H:= subB_equiv_addB_negB (pb+#8) #8).
+rewrite E0 addB_negBn /snd in H.
 rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.
 
 specapply SUB_RI_rule. sbazooka.

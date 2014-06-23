@@ -49,7 +49,7 @@ Proof.
   rewrite -5!mulB_muln.
   rewrite -mulB_muln.
   rewrite !fromNat_mulBn.
-  rewrite -2!addB_addn.
+  do 2 rewrite <- addB_addn.
   rewrite addnA -mulnDr addnC.
   rewrite addB_addn.
   reflexivity.

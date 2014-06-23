@@ -426,7 +426,7 @@ Lemma sbbB_ZC n (r : BITS n) carry (v1 v: BITS n) :
   sbbB false v1 v = (carry, r) ->
    ZF~=(r == #(0)) ** CF~=carry |-- CF~=ltB v1 v ** ZF~=(v1 == v).
 Proof. move => E.
-  have S0 := subB_eq0 v1 v. rewrite /subB E/snd in S0. rewrite S0.
+  have S0 := subB_eq0 v1 v. rewrite E/snd in S0. rewrite S0.
   have HH := (sbbB_ltB_leB v1 v). rewrite E/fst in HH.
   destruct carry. + rewrite HH. by ssimpl. + rewrite ltBNle HH /negb. by ssimpl.
 Qed.

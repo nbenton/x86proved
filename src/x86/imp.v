@@ -233,7 +233,7 @@ Section LogicLemmas.
       elim E: (sbbB false (s x) (s y)) => [carry res].
       rewrite /OSZCP /stateIsAny. sbazooka.
       rewrite sepSPA. rewrite ->sepSPwand. cancel2. rewrite /eeval.
-      by rewrite /subB E/snd.
+      by rewrite E/snd.
     - move=> x y. rewrite /compile_expr.
       case Hxy: (x == y).
       - move/eqP: Hxy => <-.
@@ -410,4 +410,3 @@ Section LogicRules.
   Proof. move=> s _. apply I. Qed.
 
 End LogicRules.
-

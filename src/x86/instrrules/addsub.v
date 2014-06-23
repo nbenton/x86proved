@@ -184,7 +184,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false _ _) => [carry v];
+    (elim: (_ false v1 _) => [carry v];
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -197,7 +197,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false _ _) => [carry v];
+    (elim: (_ false v1 _) => [carry v];
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -209,7 +209,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false _ _) => [carry v];
+    (elim: (_ false v1 _) => [carry v];
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -249,7 +249,7 @@ Corollary ADD_RR_ruleNoFlags (r1 r2:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** r2~=v2 ** OSZCP?) (ADD r1, r2)
             (r1~=addB v1 v2 ** r2~=v2 ** OSZCP?).
 Proof.
-rewrite /addB/dropmsb.
+rewrite /dropmsb.
 basicADDSUB.
 elim: (adcB _) => [carry v].
 rewrite /OSZCP/stateIsAny. simpl snd. sbazooka.
@@ -269,7 +269,7 @@ Corollary ADD_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
 Proof.
 autorewrite with push_at.
 basicADDSUB.
-rewrite /OSZCP/stateIsAny/addB/dropmsb/snd.
+rewrite /OSZCP/stateIsAny/dropmsb/snd.
 elim: (adcB _) => [carry v].
 sbazooka.
 Qed.
@@ -286,7 +286,7 @@ Corollary SUB_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (SUB r1, [r2 + offset]) (r1~=subB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof.
-autorewrite with push_at. rewrite /subB.
+autorewrite with push_at.
 elim E: (sbbB _ _ _) => [carry v].
 basicADDSUB.
 rewrite /OSZCP/stateIsAny/snd E. sbazooka.

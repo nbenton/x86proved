@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple zmodp fintype.
 Require Import tuplehelp bitsrep bitsprops bitsops div nathelp.
-Require Import common_tactics.
+Require Import common_tactics common_definitions.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -519,9 +519,7 @@ apply: leq_ltn_trans BOUND. rewrite -addnA. apply leq_addr.
 Qed.
 
 Corollary toNat_addB n (p1 p2: BITS n) : toNat (addB p1 p2) = (toNat p1 + toNat p2) %% 2^n.
-Proof. rewrite /addB. rewrite toNat_dropmsb toNat_adcBmain.
-by rewrite add0n.
-Qed.
+Proof. by rewrite toNat_dropmsb toNat_adcBmain add0n. Qed.
 
 Corollary toZp_addB n (p1 p2: BITS n.+1) : toZp (addB p1 p2) = (toZp p1 + toZp p2)%R.
 Proof. apply val_inj. rewrite /toZp. rewrite toNat_addB.
@@ -636,14 +634,14 @@ Qed.
 
 
 Corollary addIsIterInc n (p:BITS n) m : p +# m = iter m incB p.
-Proof. apply adcIsIterInc. Qed.
+Proof. rewrite /adcB. apply adcIsIterInc. Qed.
 
 (*---------------------------------------------------------------------------
     Properties of subtraction
   ---------------------------------------------------------------------------*)
 
 Lemma subB_is_dropmsb_adcB_invB  n (p q: BITS n) : subB p q = dropmsb (adcBmain true p (invB q)).
-Proof. rewrite /subB/dropmsb/sbbB/adcB. simpl (~~false).
+Proof. rewrite /dropmsb/sbbB/adcB. simpl (~~false).
 case (splitmsb (adcBmain true p (invB q))) => //.
 Qed.
 
@@ -719,7 +717,7 @@ Qed.
 
 Lemma toNat_addBn n : forall (p: BITS n) m, toNat (p +# m) = (toNat p + m) %% 2^n.
 Proof. move => p m.
-rewrite /addB /adcB adcBmain_nat add0n. rewrite splitmsb_fromNat.
+rewrite /adcB adcBmain_nat add0n. rewrite splitmsb_fromNat.
 rewrite !toNat_fromNat.
 by rewrite modnDmr.
 Qed.
@@ -736,7 +734,7 @@ Lemma toNat_addBn_wrap n : forall (p: BITS n) m,
   m<2^n -> toNat p + m >= 2^n -> toNat (p +# m) + 2^n = toNat p + m.
 Proof.
 move => p m BOUND H.
-rewrite /addB/adcB adcBmain_nat splitmsb_fromNat add0n.
+rewrite /adcB adcBmain_nat splitmsb_fromNat add0n.
 rewrite toNat_fromNat. rewrite toNat_fromNat.
 rewrite modnDmr. apply modn_sub.
 + apply expn_gt0. + apply toNatBounded. + done. + done.
@@ -939,7 +937,7 @@ Lemma leB_bounded_weaken {n} : forall (p:BITS n) m1 m2 m3,
 Proof.
 move => p m1 m2 m3 BOUND LE1 LE2. move => H.
 assert (H1 := leB_bounded BOUND H).
-rewrite leB_nat. rewrite /addB /adcB !adcBmain_nat add0n 2!splitmsb_fromNat.
+rewrite leB_nat. rewrite /adcB !adcBmain_nat add0n 2!splitmsb_fromNat.
 assert (m2 < 2^n) by apply (leq_ltn_trans LE2 BOUND).
 rewrite (toNat_fromNatBounded H0).
 assert (m1 < 2^n) by apply (leq_ltn_trans (leq_trans LE1 LE2) BOUND).
@@ -1225,8 +1223,7 @@ Qed.
 
 Lemma toNat_rolB n (p: BITS n.+1) : toNat (rolB p) = (toNat p %% 2^n).*2 + toNat p %/ 2^n.
 Proof.
-rewrite /rolB. rewrite -{1}(toNatK p).
-rewrite splitmsb_fromNat.
+rewrite /rolB. rewrite -(toNatK p) splitmsb_fromNat (toNatK p).
 rewrite toNatCons toNat_fromNat.
 rewrite addnC.
 have H:= toNatBounded p.
@@ -1559,7 +1556,7 @@ Notation "''B_' n" := (BITS_comRingType (BITSn_trunc n).+1)
     Definitions for ring tactics on DWORDs and BYTEs
   ---------------------------------------------------------------------------*)
 Definition BITSring (n:nat) :=
-  @mk_rt (BITS n) #0 #1 addB mulB subB negB eq
+  @mk_rt (BITS n) #0 #1 (@addB n) mulB (@subB n) negB eq
   (@add0B n) (@addBC n) (@addBA n)
   (@mul1B n) (@mulBC n) (@mulBA n)
   (@mulBDl n) (@subB_equiv_addB_negB n) (@addNB n).
@@ -1567,18 +1564,7 @@ Definition BITSring (n:nat) :=
 Definition xorInvB n (p q: BITS n) := xorB p (invB q).
 
 Lemma andBDl n : left_distributive (@andB n) (@xorB n).
-Proof. rewrite /left_distributive.
-induction n. move => x y z. apply trivialBits.
-case/tupleP => [x xx].
-case/tupleP => [y yy].
-case/tupleP => [z zz].
-rewrite /andB/xorB/liftBinOp. rewrite !zipCons !mapCons !zipCons !mapCons.
-rewrite /andB/xorB/liftBinOp in IHn.
-rewrite IHn. simpl.
-set X := (_ && z). set Y := (xorb _ _).
-have: X = Y. rewrite /X/Y.
-by elim x; elim y; elim z. by move ->.
-Qed.
+Proof. by rewrite /xorB/andB; lift_op_t n. Qed.
 
 Definition BITSbooleanring (n:nat) :=
   @mk_rt (BITS n) #0 (ones _) xorB andB xorB id eq

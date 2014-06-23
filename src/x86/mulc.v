@@ -116,7 +116,7 @@ Proof.
 
   basicapply IHnbits => //.
   rewrite (eqP ZERO).  rewrite expn0 muln1 expn1.
-  rewrite muln2. rewrite -{2}(odd_double_half m) ODD.  rewrite mulB_addn mulB1 addBA.
+  rewrite muln2. rewrite -{2}(odd_double_half m) ODD.  rewrite mulB_addn mulB1. rewrite -> addBA.
   sbazooka.
 
   rewrite (eqP ZERO) add0n in LT1. by rewrite add1n.
@@ -180,18 +180,18 @@ autorewrite with push_at.
 case EQ2: (m == 2).
 
 basicapply LEA_ruleSameBase => //.
-rewrite /eval.scaleBy shlB_asMul addB0 /stateIsAny (eqP EQ2).
+rewrite /eval.scaleBy shlB_asMul. rewrite -> addB0. rewrite /stateIsAny (eqP EQ2).
 sbazooka.
 
 case EQ4: (m == 4).
 
 basicapply LEA_ruleSameBase => //.
-rewrite /eval.scaleBy !shlB_asMul addB0 /stateIsAny (eqP EQ4) -mulB_muln.
+rewrite /eval.scaleBy !shlB_asMul. rewrite -> addB0. rewrite /stateIsAny (eqP EQ4) -mulB_muln.
 replace (2*2) with 4 by done. sbazooka.
 
 case EQ8: (m == 8).
 basicapply LEA_ruleSameBase => //.
-rewrite /eval.scaleBy !shlB_asMul addB0 /stateIsAny (eqP EQ8) -!mulB_muln.
+rewrite /eval.scaleBy !shlB_asMul. rewrite -> addB0. rewrite /stateIsAny (eqP EQ8) -!mulB_muln.
 replace (2*_) with 8 by done. sbazooka.
 
 try_basicapply add_mulcAuxCorrect => //.
@@ -258,13 +258,13 @@ Proof.
 
   try_basicapply IHnbits => //.
   rewrite expn0 muln1 expn1.
-  rewrite muln2. rewrite -{2}(odd_double_half m) ODD. by rewrite mulB_addn mulB1 addBA.
+  rewrite muln2. rewrite -{2}(odd_double_half m) ODD. by rewrite mulB_addn mulB1; rewrite -> addBA.
 
   destruct c.
 
   (* c is 1 *)
   basicapply LEA_ruleSameBase.
-  rewrite addB0  /eval.scaleBy shlB_asMul.
+  rewrite -> addB0. rewrite /eval.scaleBy shlB_asMul.
 
   try_basicapply IHnbits => //.
   rewrite expn1 -{2}(odd_double_half m) ODD. rewrite muln2. rewrite -addBA.
@@ -275,7 +275,7 @@ Proof.
 
   (* c is 2 *)
   basicapply LEA_ruleSameBase.
-  rewrite addB0 /eval.scaleBy shlB_asMul.
+  rewrite -> addB0. rewrite /eval.scaleBy shlB_asMul.
 
   try_basicapply IHnbits => //.
   rewrite shlB_asMul.
@@ -291,7 +291,7 @@ Proof.
 
   (* c is 3 *)
   basicapply LEA_ruleSameBase.
-  rewrite addB0 /eval.scaleBy !shlB_asMul.
+  rewrite -> addB0. rewrite /eval.scaleBy !shlB_asMul.
 
   try_basicapply IHnbits => //.
   rewrite -addBA. rewrite <-!mulBA. rewrite <- (mulBDr w).

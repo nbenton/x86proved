@@ -155,7 +155,7 @@ Proof.
   triple_apply evalDWORDorBYTEReg_rule.
   triple_apply triple_pre_introFlags => o sf zf cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
-    (elim: (_ false _ _) => [carry v];
+    (elim: (_ false v1 _) => [carry v];
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -174,7 +174,7 @@ Proof.
     triple_apply triple_letGetDWORDorBYTESep.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
-    (elim: (_ false _ _) => [carry v];
+    (elim: (_ false v1 _) => [carry v];
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -186,7 +186,7 @@ Proof.
     triple_apply triple_letGetDWORDorBYTESep.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
-    (elim: (_ false _ _) => [carry v];
+    (elim: (_ false v1 _) => [carry v];
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -197,7 +197,7 @@ Proof.
     triple_apply triple_letGetDWORDorBYTESep.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
-    (elim: (_ false _ _) => [carry v];
+    (elim: (_ false v1 _) => [carry v];
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;

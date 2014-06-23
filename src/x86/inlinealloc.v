@@ -56,7 +56,7 @@ Corollary ADD_RI_ruleAux (r:Reg) v1 (v2:DWORD):
             (let v := addB v1 v2 in
              r~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) (fst (adcB false v1 v2)) (lsb v)).
-Proof. unfold addB. apply ADD_RI_rule. Qed.
+Proof. generalize (@ADD_RI_rule r v1 v2). by elim (adcB false v1 _). Qed.
 
 Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).
 Proof.
@@ -100,7 +100,7 @@ Proof.
     rewrite /allocInv. ssplits.
     rewrite /stateIsAny/natAsDWORD. sbazooka.
     apply memAnySplit.
-    { apply: addB_leB. rewrite /addB.
+    { apply: addB_leB.
       apply injective_projections; [ by rewrite Hcarry
                                    | by generalize @adcB ]. }
     { simpl. rewrite ltBNle eqb_negLR /negb /natAsDWORD in LT. by rewrite (eqP LT). } }

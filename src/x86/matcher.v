@@ -183,7 +183,7 @@ specapply MOV_RanyM0_rule.
 by ssimpl.
 
 elim E: (sbbB false v b) => [carry res].
-have E': subB v b = res by rewrite /subB E.
+have E': subB v b = res by rewrite E.
 specapply CMP_RI_rule. sbazooka.
 
 rewrite E -E' subB_eq0.
