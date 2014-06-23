@@ -37,10 +37,10 @@ Proof.
   basicapply XOR_RR_rule.
 
   (* XOR r2, r1 *)
-  basicapply XOR_RR_rule; rewrite /stateIsAny/OSZCP; sbazooka.
+  try_basicapply XOR_RR_rule; rewrite /stateIsAny/OSZCP; sbazooka.
 
   (* XOR r1, r2 *)
-  basicapply XOR_RR_rule; rewrite /stateIsAny/OSZCP; sbazooka.
+  try_basicapply XOR_RR_rule; rewrite /stateIsAny/OSZCP; sbazooka.
 
   (* Now we're left reasoning about XOR *)
   rewrite {2}[X in xorB w X]xorBC.
@@ -65,4 +65,3 @@ Proof.
   (* MOV r2, r1 *)
   basicapply MOV_RR_rule. rewrite /stateIsAny. sbazooka.
 Qed.
-

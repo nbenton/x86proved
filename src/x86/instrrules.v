@@ -268,7 +268,7 @@ Lemma triple_preEq (T: eqType) (v w:T) P c Q :
   TRIPLE (v == w /\\ P) (c w) Q ->
   TRIPLE (v == w /\\ P) (c v) Q.
 Proof. move => S. apply: triple_pre_exists => H. rewrite -(eqP H) eq_refl in S.
-triple_apply S; sbazooka. Qed.
+try_triple_apply S; sbazooka. Qed.
 
 Lemma evalBYTERegAux_rule (r: BYTEReg) d v c Q :
   forall S,
@@ -277,23 +277,23 @@ Lemma evalBYTERegAux_rule (r: BYTEReg) d v c Q :
 Proof.
 rewrite /evalBYTEReg/BYTEregIsAux.
 move => S T.
-destruct r; triple_apply triple_letGetReg; sbazooka.
-+ triple_apply (@triple_preEq _ (low 8 d) v (EAX~=d ** S)); sbazooka.
-  triple_apply T; sbazooka.
-+ triple_apply (@triple_preEq _ (low 8 d) v (EBX~=d ** S)); sbazooka.
-  triple_apply T; sbazooka.
-+ triple_apply (@triple_preEq _ (low 8 d) v (ECX~=d ** S)); sbazooka.
-  triple_apply T; sbazooka.
-+ triple_apply (@triple_preEq _ (low 8 d) v (EDX~=d ** S)); sbazooka.
-  triple_apply T; sbazooka.
-+ triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EAX~=d ** S)); sbazooka.
-  triple_apply T; sbazooka.
-+ triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EBX~=d ** S)); sbazooka.
-  triple_apply T; sbazooka.
-+ triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (ECX~=d ** S)); sbazooka.
-  triple_apply T; sbazooka.
-+ triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EDX~=d ** S)); sbazooka.
-  triple_apply T; sbazooka.
+destruct r; try_triple_apply triple_letGetReg; sbazooka.
++ try_triple_apply (@triple_preEq _ (low 8 d) v (EAX~=d ** S)); sbazooka.
+  try_triple_apply T; sbazooka.
++ try_triple_apply (@triple_preEq _ (low 8 d) v (EBX~=d ** S)); sbazooka.
+  try_triple_apply T; sbazooka.
++ try_triple_apply (@triple_preEq _ (low 8 d) v (ECX~=d ** S)); sbazooka.
+  try_triple_apply T; sbazooka.
++ try_triple_apply (@triple_preEq _ (low 8 d) v (EDX~=d ** S)); sbazooka.
+  try_triple_apply T; sbazooka.
++ try_triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EAX~=d ** S)); sbazooka.
+  try_triple_apply T; sbazooka.
++ try_triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EBX~=d ** S)); sbazooka.
+  try_triple_apply T; sbazooka.
++ try_triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (ECX~=d ** S)); sbazooka.
+  try_triple_apply T; sbazooka.
++ try_triple_apply (@triple_preEq _ (low 8 (@high 24 8 d)) v (EDX~=d ** S)); sbazooka.
+  try_triple_apply T; sbazooka.
 Qed.
 
 Lemma evalBYTEReg_rule (r: BYTEReg) v c Q :
@@ -304,7 +304,7 @@ Proof.
 move => S T.
 apply triple_pre_existsSep => d.
 triple_apply evalBYTERegAux_rule. rewrite /BYTEregIs in T.
-triple_apply T; sbazooka.
+try_triple_apply T; sbazooka.
 Qed.
 
 Lemma evalDWORDorBYTEReg_rule d(r: DWORDorBYTEReg d) v c Q :
@@ -327,7 +327,7 @@ Proof.
 move => S.
 rewrite /BYTEregIsAux/setBYTERegInProcState.
 destruct r; apply triple_pre_existsSep => d; apply triple_pre_existsSep => _;
-  triple_apply triple_letGetRegSep; triple_apply triple_setRegSep.
+  triple_apply triple_letGetRegSep; try_triple_apply triple_setRegSep.
 + rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite low_catB.
 + rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite low_catB.
 + rewrite /BYTEregIs/BYTEregIsAux. sbazooka. by rewrite low_catB.
@@ -479,7 +479,7 @@ Qed.
 
 Ltac basicPUSH :=
   match goal with
-  | |- |-- basic ?p (PUSH ?a) ?q => basicapply (PUSH_rule a)
+  | |- |-- basic ?p (PUSH ?a) ?q => try_basicapply (PUSH_rule a)
   end.
 
 (* PUSH r *)
@@ -564,7 +564,7 @@ Qed.
 
 Ltac basicPOP :=
   match goal with
-  | |- |-- basic ?p (POP ?a) ?q => basicapply (POP_rule a)
+  | |- |-- basic ?p (POP ?a) ?q => try_basicapply (POP_rule a)
   end.
 
 
@@ -676,7 +676,7 @@ Qed.
 Ltac basicMOV :=
   try unfold makeMOV;
   match goal with
-  | |- |-- basic ?p (@MOVOP ?d ?a) ?q => basicapply (@MOV_rule d a)
+  | |- |-- basic ?p (@MOVOP ?d ?a) ?q => try_basicapply (@MOV_rule d a)
   end.
 
 (* Register to register *)
@@ -890,8 +890,8 @@ Definition DEC_rule := Eval hnf in @INCDEC_rule true false.
 Ltac basicINCDEC :=
   try unfold makeUOP;
   match goal with
-  | |- |-- basic ?p (@UOP ?d OP_INC ?a) ?q => basicapply (@INCDEC_rule d true a)
-  | |- |-- basic ?p (@UOP ?d OP_DEC ?a) ?q => basicapply (@INCDEC_rule d false a)
+  | |- |-- basic ?p (@UOP ?d OP_INC ?a) ?q => try_basicapply (@INCDEC_rule d true a)
+  | |- |-- basic ?p (@UOP ?d OP_DEC ?a) ?q => try_basicapply (@INCDEC_rule d false a)
   end.
 
 (* Special case for increment register *)
@@ -977,7 +977,7 @@ Qed.
 Ltac basicNOT :=
   try unfold makeUOP;
   match goal with
-  | |- |-- basic ?p (@UOP ?d OP_NOT ?a) ?q => basicapply (@NOT_rule d a)
+  | |- |-- basic ?p (@UOP ?d OP_NOT ?a) ?q => try_basicapply (@NOT_rule d a)
   end.
 
 
@@ -1001,12 +1001,6 @@ Proof.
   move => w. apply TRIPLE_basic => R. repeat autounfold with eval.
   rewrite /evalDst/evalDstR.
   triple_apply evalReg_rule.
-  assert (HH := subB_equiv_addB_negB #0 v). rewrite /subB in HH.
-  assert (CARRY := sbb0B_carry v).
-  case E: (sbbB false #0 v) => [carry res].
-  rewrite E in HH. rewrite E in CARRY. simpl snd in HH. simpl fst in CARRY.
-  rewrite add0B in HH. rewrite HH.
-  rewrite CARRY.
   triple_apply triple_pre_introFlags => o s z c p. rewrite /OSZCP.
   triple_apply triple_doSetFlagSep.
   triple_apply triple_doSetFlagSep.
@@ -1195,8 +1189,8 @@ Qed.
 Ltac basicADDSUB :=
   try unfold makeBOP;
   match goal with
-  | |- |-- basic ?p (@BOP ?d OP_ADD ?a) ?q => basicapply (@ADDSUB_rule false d a)
-  | |- |-- basic ?p (@BOP ?d OP_SUB ?a) ?q => basicapply (@ADDSUB_rule true d a)
+  | |- |-- basic ?p (@BOP ?d OP_ADD ?a) ?q => try_basicapply (@ADDSUB_rule false d a)
+  | |- |-- basic ?p (@BOP ?d OP_SUB ?a) ?q => try_basicapply (@ADDSUB_rule true d a)
   | _ => idtac
   end.
 
@@ -1540,14 +1534,14 @@ Qed.
 Ltac basicCMP :=
   try unfold makeBOP;
   match goal with
-  | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?q => basicapply (@CMP_rule d a)
+  | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?q => try_basicapply (@CMP_rule d a)
   | _ => idtac
   end.
 
 Ltac basicCMP_ZC :=
   try unfold makeBOP;
   match goal with
-  | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?q => basicapply (@CMP_ruleZC d a)
+  | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?q => try_basicapply (@CMP_ruleZC d a)
   | _ => idtac
   end.
 
@@ -1663,7 +1657,6 @@ Proof.
   triple_apply evalReg_rule.
   rewrite /OSZCP.
   triple_apply triple_letGetFlag.
-  - by ssimpl.
   rewrite E.
   triple_apply triple_doSetFlagSep.
   triple_apply triple_doSetFlagSep.
@@ -1960,10 +1953,10 @@ Proof.
   triple_apply triple_doSetFlagSep.
   case E': count' => [| count''].
   + triple_apply triple_doSetFlagSep.
-    triple_apply triple_setRegSep. rewrite dropmsb_iter_shlB.
+    try_triple_apply triple_setRegSep. rewrite dropmsb_iter_shlB.
     sbazooka.
   + triple_apply triple_doForgetFlagSep.
-    triple_apply triple_setRegSep.
+    try_triple_apply triple_setRegSep.
     rewrite dropmsb_iter_shlB.
     rewrite /stateIsAny. sbazooka.
 Qed.
@@ -1989,10 +1982,10 @@ Proof.
   triple_apply triple_doSetFlagSep.
   case E': count' => [| count''].
   + triple_apply triple_doSetFlagSep.
-    triple_apply triple_setRegSep. rewrite droplsb_iter_shrB.
+    try_triple_apply triple_setRegSep. rewrite droplsb_iter_shrB.
     sbazooka.
   + triple_apply triple_doForgetFlagSep.
-    triple_apply triple_setRegSep.
+    try_triple_apply triple_setRegSep.
     rewrite droplsb_iter_shrB.
     rewrite /stateIsAny. sbazooka.
 Qed.
@@ -2025,33 +2018,33 @@ Proof.
   - (* CC_Z *)
     triple_apply triple_letGetFlag; by [ssimpl|].
   - (* CC_BE *)
-    apply triple_pre_existsSep => fc. triple_apply triple_letGetFlag.
+    apply triple_pre_existsSep => fc. try_triple_apply triple_letGetFlag.
     - by sbazooka.
-    apply triple_pre_existsSep => fz. triple_apply triple_letGetFlag.
+    apply triple_pre_existsSep => fz. try_triple_apply triple_letGetFlag.
     - by sbazooka.
     rewrite /lpropand. apply triple_pre_existsSep => Hv. inversion Hv.
     subst v.
-    triple_apply H; sbazooka.
+    try_triple_apply H; sbazooka.
   - (* CC_S *)
     triple_apply triple_letGetFlag; by [ssimpl|].
   - (* CC_P *)
     triple_apply triple_letGetFlag; by [ssimpl|].
   - (* CC_L *)
-    apply triple_pre_existsSep => fs. triple_apply triple_letGetFlag.
+    apply triple_pre_existsSep => fs. try_triple_apply triple_letGetFlag.
     - by sbazooka.
-    apply triple_pre_existsSep => fo. triple_apply triple_letGetFlag.
+    apply triple_pre_existsSep => fo. try_triple_apply triple_letGetFlag.
     - by sbazooka.
     rewrite /lpropand. apply triple_pre_existsSep => Hv. inversion Hv. subst v.
-    triple_apply H; sbazooka.
+    try_triple_apply H; sbazooka.
   - (* CC_LE *)
-    apply triple_pre_existsSep => fs. triple_apply triple_letGetFlag.
+    apply triple_pre_existsSep => fs. try_triple_apply triple_letGetFlag.
     - by sbazooka.
-    apply triple_pre_existsSep => fo. triple_apply triple_letGetFlag.
+    apply triple_pre_existsSep => fo. try_triple_apply triple_letGetFlag.
     - by sbazooka.
-    apply triple_pre_existsSep => fz. triple_apply triple_letGetFlag.
+    apply triple_pre_existsSep => fz. try_triple_apply triple_letGetFlag.
     - by sbazooka.
     rewrite /lpropand. apply triple_pre_existsSep => Hv. inversion Hv. subst v.
-    triple_apply H; sbazooka.
+    try_triple_apply H; sbazooka.
 Qed.
 
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) :
@@ -2119,9 +2112,9 @@ Proof.
   - case: b; case: cv; reflexivity.
   case: (b == cv).
   - triple_apply triple_letGetRegSep.
-    triple_apply triple_setRegSep.
+    try_triple_apply triple_setRegSep.
     apply: lorR1. ssplit => //.
-  - triple_apply triple_skip.
+  - try_triple_apply triple_skip.
     apply: lorR2. by sbazooka.
 Qed.
 

@@ -19,6 +19,7 @@ Section Basic.
   Definition basic P (c:T) Q : spec :=
     Forall i j:DWORD,
     (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> c).
+  Global Strategy 10000 [basic].
 
   (* Push spec through basic *)
   Lemma spec_at_basic P c Q R :
@@ -82,7 +83,7 @@ Section Basic.
   Proof. rewrite /basic => H. specintros => i j a. eforalls H. simple apply H. Qed.
 
   Global Instance AtEx_basic P c Q : AtEx (basic P c Q).
-  Proof. apply _. Qed.
+  Proof. rewrite /basic. apply _. Qed.
 
   Lemma basic_basic_context R S' P' Q' S P c Q:
     S' |-- basic P' c Q' ->
@@ -127,5 +128,3 @@ Module Export Existentials_basic.
     apply (@pq_basic M HM t c Q) : pullquant.
 
 End Existentials_basic.
-
-

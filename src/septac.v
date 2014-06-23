@@ -573,12 +573,14 @@ Ltac sbazookaonealt_with PT :=
   end.
 
 (** Overpowered super-tactic *)
+(** Include [idtac;] so that if we pass [sbazooka] as an argument to a
+    tactical, it doesn't immediately evaluate the [match] and complain
+    that there are no matching goals. *)
 Ltac sbazooka_with PT :=
+    idtac;
     match goal with
     | |- ?P -|- ?Q => (split; sbazookaonealt_with PT)
     | |- _ => sbazookaonealt_with PT
     end.
 
 Ltac sbazooka := sbazooka_with Solving.cheap_unify.
-
-

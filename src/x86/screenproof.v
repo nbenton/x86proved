@@ -69,13 +69,13 @@ Proof.
 
   have ICCP := inlineComputeCharPos_correct NC NR.
   rewrite /inlineComputeCharPos_spec in ICCP.
-  basicapply ICCP.
+  try_basicapply ICCP.
 
   rewrite /stateIsAny.
   sbazooka.
 
   (* MOV BYTE [EDI + 0], EAX *)
-  basicapply MOV_MbR_rule.
+  try_basicapply MOV_MbR_rule.
   rewrite -> addB0.
   sbazooka.
 
@@ -100,7 +100,7 @@ Proof.
   basicapply ICCP.
 
   (* MOV EAX, BYTE [EDI + 0] *)
-  basicapply MOV_RMb_rule.
+  try_basicapply MOV_RMb_rule.
   rewrite -> addB0. rewrite /BYTEregIs/BYTEregIsAux. sbazooka.
 
   rewrite /stateIsAny addB0.

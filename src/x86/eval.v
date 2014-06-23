@@ -100,8 +100,7 @@ Definition evalUnaryOp {n} op : BITS n -> ST (BITS n) :=
   | OP_INC => evalArithUnaryOpNoCarry incB
   | OP_DEC => evalArithUnaryOpNoCarry decB
   | OP_NOT => fun arg => retn (invB arg)
-(* @todo akenn: Check this, especially carry flag *)
-  | OP_NEG => evalArithUnaryOp (fun arg => sbbB false #0 arg)
+  | OP_NEG => evalArithUnaryOp (fun arg => (arg != #0, negB arg))
   end.
 
 Definition evalCondition cc : ST bool :=

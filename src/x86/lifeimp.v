@@ -110,13 +110,13 @@ Proof.
   by apply (ltn_trans LT2).
 
   specintros => /eqP->.
-  basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny; sbazooka.
+  try_basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny; sbazooka.
   rewrite /stateIsAny. rewrite /ConditionIs/natAsDWORD. rewrite add0n modn_small.
   sbazooka.
   destruct n => //.
 
   simpl (~~ _). specintros => H.
-  basicapply DEC_R_ruleNoFlags.
+  try_basicapply DEC_R_ruleNoFlags.
   rewrite /stateIsAny/ConditionIs. sbazooka.
   destruct m => //.
   rewrite decB_fromSuccNat.
@@ -151,12 +151,12 @@ move => LT1 LT2.
   rewrite /stateIsAny. sbazooka.
 
   specintros => /eqP->.
-  basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny. sbazooka.
+  try_basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny. sbazooka.
   rewrite /stateIsAny. rewrite /ConditionIs/natAsDWORD.
   rewrite (ltn_predK LT2). sbazooka. by rewrite modnn.
 
   simpl (~~ _). specintros => H.
-  basicapply  INC_R_ruleNoFlags.
+  try_basicapply  INC_R_ruleNoFlags.
   rewrite /stateIsAny/ConditionIs. sbazooka.
   sbazooka.
   rewrite incB_fromNat. rewrite modn_small => //.
@@ -345,5 +345,3 @@ Definition makePulsar := makeFigure
       "*    * *    *";
       "             ";
       "  ***   ***  "].
-
-

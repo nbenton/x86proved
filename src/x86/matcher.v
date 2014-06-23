@@ -298,7 +298,7 @@ Lemma bytecurnil : forall s1,
    |-- basic (bytevalany ** byteseqsplit s1 [::]) bytecurrent (bytevalis None ** byteseqsplit s1 [::]).
 move =>s; rewrite /bytevalany /byteseqsplit /bytecurrent /bytevalis.
 specintros => v q last.
-basicapply MOV_RMb_rule.
+try_basicapply MOV_RMb_rule.
 rewrite seqMemIsNil.
 rewrite addB0.
 sdestruct => ->.
@@ -316,7 +316,7 @@ specintros => p'.
 setoid_rewrite memIsBYTE_next_entails.
 specintro => H.
 rewrite H.
-basicapply MOV_RMb_rule; rewrite addB0.
+try_basicapply MOV_RMb_rule; rewrite addB0.
 (* rewrite {3}/memIs. *)
 rewrite {2}/pointsTo.
 by sbazooka.
@@ -367,7 +367,8 @@ setoid_rewrite memIsBYTE_next_entails.
 specintro => ->.
 autorewrite with push_at.
 (* here we know the crucial fact that last :-> #0 which means that cursor.next q can't be top
-   This important information is, by default, thrown away by just using basicapply here :-(
+   This important information is, by default, thrown away by just using try_basicapply here :-(
+   Addendum: This is no longer the case for [basicapply], so we should use that instead.
 *)
 setoid_rewrite (@pointsToBYTE_NonTop last #0).
 specintros => lastbits lasteqn.
@@ -375,7 +376,7 @@ rewrite lasteqn.
 
 setoid_rewrite (@memIsNonTop _ _ _ (cursor.next q)).
 specintros => q' Hseq.
-basicapply (@INC_R_ruleNoFlags EAX q).
+try_basicapply (@INC_R_ruleNoFlags EAX q).
 rewrite /cursor.next.
 (* So now we know that last is not top, so q can't be ones 32 (note s2 might be empty so inc q == last) *)
 elim: (q == ones _).
