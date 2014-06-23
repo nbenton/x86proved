@@ -50,7 +50,6 @@ obs.vo \
 spectac.vo \
 pointsto.vo \
 triple.vo \
-otriple.vo \
 enc.vo \
 emb.vo \
 cursor.vo \
