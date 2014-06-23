@@ -17,8 +17,8 @@ Example useCounterCode :=
   IMPORT "Inc" as incSlot; IMPORT "Get" as getSlot;
   SECTION CODE
     LOCAL formatString;
-    MOV EDI, incSlot;;    call_toyfun [EDI];;
-    MOV EDI, getSlot;;    call_toyfun [EDI];;
+    MOV EDI, incSlot;;    call_toyfun [EDI]%ms;;
+    MOV EDI, getSlot;;    call_toyfun [EDI]%ms;;
     PUSH EAX;;
     MOV EBX, formatString;; PUSH EBX;;
     MOV EDI, printfSlot;; CALL [EDI];;
