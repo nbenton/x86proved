@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec safe triple basic basicprog spectac.
+Require Import spec SPred SPredTotal septac spec safe triple basic basicprog spectac.
 Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
 Require Import Setoid RelationClasses Morphisms.
 
@@ -41,7 +41,7 @@ Section UnfoldSpec.
     - exists s. exists nil. reflexivity.
     rewrite /doMany -/doMany.
     (* TODO: This is clumsy. Make it more like in attic/instrrules.v. *)
-    move: s Hs. apply: TRIPLE_nopost.
+    move: s Hs. apply: TRIPLE_nopost. rewrite /doMany-/doMany.
     rewrite assoc. eapply triple_letGetReg.
     - by ssimpl.
     rewrite assoc.
