@@ -1,7 +1,6 @@
 ARCH = x86
 
-# Separate each directory with a semicolon
-INCLUDES = .;charge;$(ARCH);$(ARCH)/lib/regexp;x86/win
+LIBNAME = x86proved
 
 TARGETS = \
 charge\CSetoid.vo \
