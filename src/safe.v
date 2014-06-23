@@ -2,15 +2,14 @@
     "safe" predicate
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrfun ssrnat eqtype tuple seq fintype.
-Require Import bitsrep procstate procstatemonad SPred septac spec.
+Require Import bitsrep procstate procstatemonad SPred SPredTotal septac spec.
 Require Import ioaction step bilogic CSetoid.
-Require Import triple (* for toPState etc. *).
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-(*Local Obligation Tactic := idtac.*)
+Local Obligation Tactic := idtac.
 
 Program Definition safe := 
   mkspec (fun k P => forall (s: ProcState), (P ** ltrue) s -> runsFor k s) _ _.

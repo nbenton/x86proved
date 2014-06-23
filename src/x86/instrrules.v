@@ -4,7 +4,7 @@ Ltac type_of t := type of t (* ssreflect bug workaround *).
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec safe triple basic basicprog spectac.
+Require Import spec SPred SPredTotal septac spec safe triple basic basicprog spectac.
 Require Import instr instrcodec eval step monad monadinst reader pointsto cursor.
 Require Import Setoid RelationClasses Morphisms.
 
@@ -42,16 +42,15 @@ Section UnfoldSpec.
     rewrite /runsFor. 
 
     move: s Hs. apply: TRIPLE_nopost. rewrite /doMany-/doMany.
-    rewrite assoc. triple_apply triple_letGetRegSep. 
-    rewrite assoc. triple_apply triple_letReadSep. rewrite ->Hsij. by ssimpl.
-    rewrite assoc. eapply triple_seq. triple_apply triple_setRegSepGen. by ssimpl.
-    eapply triple_seq. triple_apply HTRIPLE.
-
+    rewrite assoc. eapply triple_letGetReg. - by ssimpl. 
+    rewrite assoc. eapply triple_letReadSep. - rewrite ->Hsij. by ssimpl.
+    rewrite assoc. eapply triple_seq. - eapply triple_setRegSepGen. by ssimpl.
+    eapply triple_seq. - triple_apply HTRIPLE.
     move=> s Hs.
-    edestruct (HQ k) as [f [o Hf]] => //. 
-    - rewrite ->lentails_eq. rewrite ->sepSPA, <-lentails_eq.
-      eassumption.
-    exists f. exists o. by split.
+    edestruct (HQ k) as [f [o Hf]]; first done. 
+   - rewrite ->lentails_eq. rewrite ->sepSPA, <-lentails_eq.
+     eassumption.
+   exists f, o. by intuition.  
   Qed.
 End UnfoldSpec.
 
@@ -342,22 +341,22 @@ Lemma triple_doSetDWORDSep (p:PTR) (v w: DWORD) c Q S :
   TRIPLE (p:->w ** S) c Q ->  
   TRIPLE (p:->v ** S) (do! setDWORDInProcState p w; c) Q.
 Proof. move => T s pre. 
-destruct (triple_setDWORDSep w pre) as [f [o [H1 H2]]]. 
-specialize (T _ H2). 
-destruct T as [f' [o' H3]]. exists f'. rewrite /= H1.
+destruct (triple_setDWORDSep w pre) as [f [o [H1 [H2 H3]]]]. 
+specialize (T _ H3). 
+destruct T as [f' [o' H4]]. exists f'. rewrite /= H1.
 eexists _.  
-destruct (c f). destruct H3.  split; last done. by injection H => -> ->. 
+destruct (c f). destruct H4.  split; last done. by injection H => -> ->. 
 Qed. 
 
 Lemma triple_doSetBYTESep (p:PTR) (v w: BYTE) c Q S :
   TRIPLE (p:->w ** S) c Q ->  
   TRIPLE (p:->v ** S) (do! setBYTEInProcState p w; c) Q.
 Proof. move => T s pre. 
-destruct (triple_setBYTESep w pre) as [f [o [H1 H2]]]. 
-specialize (T _ H2). 
-destruct T as [f' [o' H3]]. exists f'. rewrite /= H1.
+destruct (triple_setBYTESep w pre) as [f [o [H1 [H2 H3]]]]. 
+specialize (T _ H3). 
+destruct T as [f' [o' H4]]. exists f'. rewrite /= H1.
 eexists _.  
-destruct (c f). destruct H3.  split; last done. by injection H => -> ->. 
+destruct (c f). destruct H4.  split; last done. by injection H => -> ->. 
 Qed. 
 
 Lemma triple_doSetBYTERegSep (r:BYTEReg) (v w:BYTE) c Q :

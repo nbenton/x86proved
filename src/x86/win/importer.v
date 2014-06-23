@@ -27,7 +27,7 @@ LOCAL answer;
   MOV EBX, 23;;
   CALL [EDI];;
   MOV EDI, printf;;
-  call_cdecl2 [EDI] answer EAX;;
+  call_cdecl2 ([EDI]%ms) answer EAX;;
   RET 0;;
 greeting:;;
   ds "Hello!";; db #10;; db #0;;

@@ -10,16 +10,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Definition Obs := seq (Chan * Data).
-Definition preObs (o1 o2: Obs) := exists o', o2 = o1 ++ o'.
-
-Require Import RelationClasses Program.Basics.
-Instance preObs_Pre: PreOrder preObs.
-Proof. repeat constructor; hnf.
-move => o. exists nil. by rewrite cats0.
-move => x y z [o1 H1] [o2 H2]. subst. exists (o1++o2). by rewrite catA. 
-Qed. 
-
 (* Decode instruction at EIP, move EIP to next instruction, execute instruction *)
 (*=step *)
 Definition step : ST unit :=

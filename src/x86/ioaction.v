@@ -1,7 +1,7 @@
 (*===========================================================================
     I/O actions
   ===========================================================================*)
-Require Import ssreflect ssrbool eqtype tuple.
+Require Import ssreflect ssrbool eqtype tuple seq.
 Require Import bitsrep bitsops bitsprops.
 
 Definition Chan := BYTE.
@@ -42,4 +42,14 @@ Qed.
 
 Canonical action_eqMixin := EqMixin action_eqP.
 Canonical action_eqType := Eval hnf in EqType _ action_eqMixin.
+
+Definition Obs := seq (Chan*Data).
+Definition preObs (o1 o2: Obs) := exists o', o2 = o1 ++ o'.
+
+Require Import RelationClasses Program.Basics.
+Instance preObs_Pre: PreOrder preObs.
+Proof. repeat constructor; hnf.
+move => o. exists nil. by rewrite cats0.
+move => x y z [o1 H1] [o2 H2]. subst. exists (o1++o2). by rewrite catA. 
+Qed. 
 
