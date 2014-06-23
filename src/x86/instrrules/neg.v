@@ -54,7 +54,7 @@ Proof.
   triple_apply triple_pre_introFlags => o s z c p. rewrite /OSZCP.
   triple_apply triple_doSetFlagSep.
   triple_apply triple_doSetFlagSep.
-  triple_apply triple_doUpdateZPS. rewrite /w.
+  triple_apply triple_doUpdateZPS. rewrite /w. simpl fst. simpl snd.
   triple_apply triple_setRegSep.
 Qed.
 End InstrRules.

@@ -59,7 +59,7 @@ Proof.
   rewrite /evalBinOp/evalArithOpNoCarry.
   triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
   destruct isSUB;
-    (elim: (_ false v1 v2) => [carry v];
+    (elim: (_ false v1 v2) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -78,7 +78,7 @@ Proof.
     rewrite /evalBinOp/evalArithOpNoCarry.
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
   destruct isSUB;
-    (elim: (_ false v1 v2) => [carry v];
+    (elim: (_ false v1 v2) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -92,7 +92,7 @@ Proof.
     triple_apply triple_letGetDWORDorBYTESep.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false v1 v2) => [carry v];
+    (elim: (_ false v1 v2) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -105,7 +105,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false v1 v2) => [carry v];
+    (elim: (_ false v1 v2) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -125,7 +125,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false v1 v2) => [carry v];
+    (elim: (_ false v1 v2) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -139,7 +139,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false v1 v2) => [carry v];
+    (elim: (_ false v1 v2) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -152,7 +152,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z c pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false v1 v2) => [carry v];
+    (elim: (_ false v1 v2) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -164,7 +164,7 @@ Proof.
   triple_apply triple_pre_introFlags => o sf zf cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false _ _) => [carry v];
+    (elim: (_ false _ _) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -184,7 +184,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false v1 _) => [carry v];
+    (elim: (_ false v1 _) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -197,7 +197,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false v1 _) => [carry v];
+    (elim: (_ false v1 _) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;
@@ -209,7 +209,7 @@ Proof.
     triple_apply triple_pre_introFlags => o s z cf pf. rewrite /OSZCP.
     rewrite /evalBinOp/evalArithOpNoCarry.
   destruct isSUB;
-    (elim: (_ false v1 _) => [carry v];
+    (elim: (_ false v1 _) => [carry v]; simpl fst; simpl snd;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doSetFlagSep;
     triple_apply triple_doUpdateZPS;

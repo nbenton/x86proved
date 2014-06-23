@@ -52,7 +52,7 @@ Proof.
   triple_apply evalReg_rule.
   rewrite /OSZCP.
   triple_apply triple_letGetFlag.
-  rewrite E.
+  rewrite E. simpl fst. simpl snd.
   triple_apply triple_doSetFlagSep.
   triple_apply triple_doSetFlagSep.
   triple_apply triple_doUpdateZPS.
