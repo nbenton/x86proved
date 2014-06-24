@@ -53,3 +53,6 @@ move => o. exists nil. by rewrite cats0.
 move => x y z [o1 H1] [o2 H2]. subst. exists (o1++o2). by rewrite catA. 
 Qed. 
 
+Lemma cat_preObs o : forall o1 o2, preObs o1 o2 -> preObs (o++o1) (o++o2). 
+Proof. induction o => // o1 o2 [o' PO]. subst. exists o'. by rewrite catA. Qed.
+

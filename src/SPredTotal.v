@@ -51,3 +51,22 @@ Proof.
   - rewrite <-empSPR at 1. cancel2.
 Qed.
 
+Lemma eq_pred_aux (s1 s2 s3: ProcState) R :
+  ((eq_pred s1 ** R) ** ltrue) s2 ->
+  ((eq_pred s3 ** R) ** ltrue) s3.
+Proof. move => H0. 
+apply lentails_eq. ssimpl.
+apply lentails_eq in H0. 
+rewrite -> sepSPC in H0. rewrite <-sepSPA in H0. rewrite ->(sepSPC ltrue) in H0. 
+rewrite <- (eqPredTotal_sepSP_trueR) in H0; last by apply totalProcState.
+apply eqPredTotal_sepSP in H0; last by apply totalProcState.  
+rewrite -> H0. by ssimpl.
+Qed. 
+
+Lemma eq_pred_aux2 (s1 s2: ProcState) R :
+  ((eq_pred s1 ** R) ** ltrue) s2 -> s1 = s2.
+Proof. move => H0.
+apply lentails_eq in H0. rewrite -> sepSPA in H0.
+  rewrite -> eqPredProcState_sepSP in H0. 
+  apply lentails_eq in H0. simpl in H0. by apply toPState_inj in H0. 
+Qed. 

@@ -107,3 +107,15 @@ Lemma catOP_land P Q R : catOP P (Q//\\R) |-- (catOP P Q) //\\ (catOP P R).
 Proof. apply landR. apply catOP_entails_m. reflexivity. apply landL1. reflexivity. 
                     apply catOP_entails_m. reflexivity. apply landL2. reflexivity.
 Qed.
+
+Lemma catOP_ltrueL P : P |-- catOP ltrue P.
+Proof. move => s H/=. by exists nil, s. Qed.
+
+Lemma catOP_ltrueR P : P |-- catOP P ltrue.
+Proof. move => s H/=. exists s, nil. by rewrite cats0. Qed.
+
+Lemma catOP_lfalseL P : catOP lfalse P -|- lfalse.
+Proof. split => //. by move => s [s1 [s2 [H1 [H2 H3]]]]/=. Qed. 
+
+Lemma catOP_lfalseR P : catOP P lfalse -|- lfalse.
+Proof. split => //. by move => s [s1 [s2 [H1 [H2 H3]]]]/=. Qed. 
