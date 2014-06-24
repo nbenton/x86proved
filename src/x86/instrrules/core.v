@@ -7,15 +7,23 @@ Require Import spec SPred septac spec safe triple basic basicprog spectac.
 Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
 Require Import common_tactics common_definitions.
 Require Import Setoid RelationClasses Morphisms.
+Require Import Relations.
+Require Import instrsyntax.
+
+Module Import instrruleconfig.
+  Export ssreflect.
+
+  Export procstate bitsops.
+  Export spec SPred basic basicprog.
+  Export instr pointsto cursor.
+  Export instrsyntax.
+
+  Open Scope instr_scope.
+End instrruleconfig.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
-
-Require Import Relations.
-Require Import instrsyntax.
-
-Local Open Scope instr_scope.
 
 (* TODO: needed now? *)
 Lemma TRIPLE_nopost P (c: ST unit):
@@ -609,3 +617,39 @@ Ltac do_instrrule_using tac :=
 (** Make a [Tactic Notation] so we don't need [ltac:()] *)
 Tactic Notation "do_instrrule" tactic3(tac) := do_instrrule_using tac.
 Ltac do_instrrule_triple := do_instrrule instrrule_triple_bazooka.
+
+(** Some convenience macros for dealing with basicapply. *)
+Hint Unfold
+  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
+  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
+  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
+  makeMOV makeBOP makeUOP
+  : instrrules_basicapply.
+
+(** Allow us to unfold with a database inside of a term *)
+Class instrrules_unfold_helper {T} (A : T) := do_instrrules_unfold_helper : T.
+
+Hint Extern 0 (instrrules_unfold_helper ?A)
+=> let H := fresh in
+   (pose A as H);
+     do ?(autounfold with basicapply instrrules_basicapply in H);
+     let B := (eval unfold H in H) in
+     clear H;
+       exact B
+     : typeclass_instances.
+Ltac eval_repeat_autounfold_with_basicapply_instrrules_basicapply_in H :=
+  let ret := constr:(_ : instrrules_unfold_helper H) in
+  let ret' := (eval cbv zeta in ret) in
+  ret'.
+
+Ltac instrrules_unfold H :=
+  let T := type_of H in
+  let T' := eval_repeat_autounfold_with_basicapply_instrrules_basicapply_in T in
+  constr:(H : T').
+
+Hint Rewrite
+     addB0 low_catB : instrrules_basicapply.
+
+Ltac instrrules_basicapply R :=
+  let R' := instrrules_unfold R in
+  basicapply R' using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem).
