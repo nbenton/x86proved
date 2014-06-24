@@ -232,3 +232,15 @@ Ltac elim_atomic_in_match' :=
   match goal with
     | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; elim E
   end.
+
+(** Run [elim] on anything that's being discriminated inside a [match] which is also atomic *)
+Ltac generalize_case_atomic_in_match' :=
+  match goal with
+    | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; generalize dependent E; case
+  end.
+
+(** Run [destruct] on anything that's being discriminated inside a [match] which is also atomic *)
+Ltac destruct_atomic_in_match' :=
+  match goal with
+    | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; destruct E
+  end.

@@ -1,28 +1,32 @@
 (*===========================================================================
     Rules for x86 instructions in terms of [safe]
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec safe triple basic basicprog spectac.
-Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
-Require Import common_tactics common_definitions.
-Require Import Setoid RelationClasses Morphisms.
-Require Import Relations.
-Require Import instrsyntax.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq (* for [catA] *) Ssreflect.tuple.
+Require Import x86.procstate bitsops.
+Require Import spec SPred x86.basic x86.basicprog.
+Require Import x86.instr pointsto cursor.
+Require Import x86.instrsyntax.
+Require Import x86.procstatemonad (* for [ST] *) bitsprops (* for [high_catB] *) bitsopsprops (* for [subB_eq0] *).
+Require Import septac (* for [sdestruct] *) safe (* for [safe] *) triple (* for [TRIPLE] *).
+Require Import x86.eval (* for [evalInstr] *) monad (* for [doMany] *) monadinst (* for [Success] *).
+Require Import common_definitions (* for [eta_expand] *) common_tactics (* for [elim_atomic_in_match'] *).
 
 Module Import instrruleconfig.
-  Export ssreflect.
+  Export Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple.
 
-  Export procstate bitsops.
-  Export spec SPred basic basicprog.
-  Export instr pointsto cursor.
-  Export instrsyntax.
+  Export x86.procstate bitsops.
+  Export spec SPred x86.basic x86.basicprog.
+  Export x86.instr pointsto cursor.
+  Export x86.instrsyntax.
+
+  Export common_definitions (* for [eta_expand] *).
 
   Open Scope instr_scope.
+
+  Global Set Implicit Arguments.
+  Global Unset Strict Implicit.
 End instrruleconfig.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
 Import Prenex Implicits.
 
 (* TODO: needed now? *)
@@ -505,9 +509,9 @@ Proof.
   rewrite /evalCondition/ConditionIs; elim cc;
   triple_op_bazooka_using ltac:(idtac;
                                 match goal with
-                                  | [ |- TRIPLE (lexists _ ** _) _ _ ] => apply triple_pre_existsSep => ?
+                                  | [ |- TRIPLE (lexists _ ** _) _ _ ]    => apply triple_pre_existsSep => ?
                                   | [ |- TRIPLE (lpropand _ _ ** _) _ _ ] => apply triple_pre_existsSep => ?
-                                  | [ H : mkFlag _ = mkFlag _ |- _ ] => (inversion H; try clear H)
+                                  | [ H : mkFlag _ = mkFlag _ |- _ ]      => (inversion H; try clear H)
                                   | _ => progress subst
                                   | _ => progress triple_op_helper
                                   | [ H : TRIPLE _ _ _ |- _ ] => triple_apply H using sbazooka
@@ -650,6 +654,11 @@ Ltac instrrules_unfold H :=
 Hint Rewrite
      addB0 low_catB : instrrules_basicapply.
 
-Ltac instrrules_basicapply R :=
+Hint Unfold
+     OSZCP stateIsAny scaleBy : instrrules_spred.
+
+Tactic Notation "instrrules_basicapply" open_constr(R) "using" tactic3(tac) :=
   let R' := instrrules_unfold R in
-  basicapply R' using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem).
+  basicapply R' using (tac) side conditions by autounfold with spred instrrules_spred; sbazooka.
+Tactic Notation "instrrules_basicapply" open_constr(R) :=
+  instrrules_basicapply R using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem).

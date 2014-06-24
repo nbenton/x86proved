@@ -1,21 +1,9 @@
 (** * CMP instruction *)
-Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec safe triple basic basicprog spectac.
-Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
-Require Import common_definitions.
-Require Import Setoid RelationClasses Morphisms.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
-
-Require Import Relations.
-Require Import instrsyntax.
-
-Local Open Scope instr_scope.
-
+(** * CMP instruction *)
 Require Import x86.instrrules.core.
+Import x86.instrrules.core.instrruleconfig.
+
+Require Import spectac (* for [eforalls] *) bitsprops (* for [low_catB] *).
 
 (** ** Generic rule *)
 Lemma CMP_rule d (ds:DstSrc d) v1 :
@@ -25,16 +13,6 @@ Lemma CMP_rule d (ds:DstSrc d) v1 :
              (let: (carry,v) := eta_expand (sbbB false v1 v2) in
               D v1 ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
-
-Lemma sbbB_ZC n (r : BITS n) carry (v1 v: BITS n) :
-  sbbB false v1 v = (carry, r) ->
-   ZF~=(r == #(0)) ** CF~=carry |-- CF~=ltB v1 v ** ZF~=(v1 == v).
-Proof. move => E.
-  have S0 := subB_eq0 v1 v. rewrite E/snd in S0. rewrite S0.
-  have HH := (sbbB_ltB_leB v1 v). rewrite E/fst in HH.
-  destruct carry. + rewrite HH. by ssimpl. + rewrite ltBNle HH /negb. by ssimpl.
-Qed.
-
 
 (** TODO(t-jagro): Figure out a more systematic way to do this. *)
 Local Ltac CMP_ruleZC_t v1 :=
@@ -48,7 +26,8 @@ Local Ltac CMP_ruleZC_t v1 :=
   rewrite /OSZCP/stateIsAny; sbazooka;
     by apply sbbB_ZC.
 
-(* Generic rule with C and Z flags determining ltB and equality respectively *)
+(** ** Generic rule with C and Z flags determining ltB and equality respectively *)
+(** TODO(t-jagro): speed this up by proving that entailment of the result from basic plays well with [specAtDstSrc] *)
 Lemma CMP_ruleZC d (ds:DstSrc d) v1 :
    |-- specAtDstSrc ds (fun D v2 =>
        basic (D v1 ** OSZCP?)
@@ -64,30 +43,15 @@ Ltac basicCMP :=
   let R := lazymatch goal with
              | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?q => constr:(@CMP_rule d a)
            end in
-  basicapply R.
+  instrrules_basicapply R.
 
 Ltac basicCMP_ZC :=
   rewrite /makeBOP;
   let R := lazymatch goal with
              | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?q => constr:(@CMP_ruleZC d a)
            end in
-  basicapply R.
+  instrrules_basicapply R.
 
-
-(** We open a section in order to localize the hints *)
-Section InstrRules.
-
-Hint Unfold
-  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
-  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
-  makeMOV makeBOP makeUOP
-  : basicapply.
-Hint Rewrite
-  addB0 low_catB : basicapply.
-
-(** TODO(t-jagro): Find a better place to put this *)
-Hint Unfold scaleBy : spred.
 
 (** ** Special cases *)
 Lemma CMP_RI_rule (r1:Reg) v1 (v2:DWORD):
@@ -165,4 +129,3 @@ Lemma CMP_RbI_ZC_rule (r1:BYTEReg) (v1 v2:BYTE):
             (BYTEregIs r1 v1 ** OF? ** SF? ** PF? **
                          CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed.
-End InstrRules.
