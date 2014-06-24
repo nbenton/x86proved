@@ -16,7 +16,21 @@ Local Open Scope instr_scope.
 
 Require Import x86.instrrules.core.
 
-(* We open a section in order to localize the hints *)
+(** ** Generic rule *)
+Lemma MOV_rule d ds oldv:
+  |-- specAtDstSrc ds (fun V v =>
+      basic (V oldv) (MOVOP d ds) (V v)).
+Proof. do_instrrule_triple. Qed.
+
+Ltac basicMOV :=
+  rewrite /makeMOV;
+  let R := lazymatch goal with
+             | |- |-- basic ?p (@MOVOP ?d ?a) ?q => constr:(@MOV_rule d a)
+           end in
+  basicapply R.
+
+
+(** We open a section in order to localize the hints *)
 Section InstrRules.
 
 Hint Unfold
@@ -28,101 +42,7 @@ Hint Unfold
 Hint Rewrite
   addB0 low_catB : basicapply.
 
-(*---------------------------------------------------------------------------
-    Helpers for pieces of evaluation (adapted from spechelpers and
-    triplehelpers)
-  ---------------------------------------------------------------------------*)
-
-Hint Unfold
-  evalInstr
-  evalArithOp evalArithOpNoCarry evalArithUnaryOp evalArithUnaryOpNoCarry
-  evalLogicalOp evalBinOp evalShiftOp evalUnaryOp evalCondition
-  evalMOV evalDst evalDstR evalDstM evalSrc evalMemSpec evalBYTEReg : eval.
-
-Hint Unfold interpJmpTgt : specapply.
-
-(** ** Generic rule *)
-Lemma MOV_rule d ds oldv:
-  |-- specAtDstSrc ds (fun V v =>
-      basic (V oldv) (MOVOP d ds) (V v)).
-Proof.
-rewrite /specAtDstSrc.
-destruct ds.
-
-+ specintros => v. autorewrite with push_at. apply TRIPLE_basic => R.
-  rewrite /evalInstr/evalMOV.
-  triple_apply evalDWORDorBYTEReg_rule.
-  triple_apply triple_setDWORDorBYTERegSep.
-
-+ rewrite /specAtMemSpec.
-  elim: src => [optSIB offset].
-  case: optSIB => [[base indexopt] |].
-  case: indexopt => [[ixreg sc] |].
-  - specintros => v pbase ixval. autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV.
-    triple_apply evalMemSpec_rule.
-    triple_apply triple_letGetDWORDorBYTESep.
-    triple_apply triple_setDWORDorBYTERegSep.
-  - specintros => v pbase. autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV.
-    triple_apply evalMemSpecNone_rule.
-    triple_apply triple_letGetDWORDorBYTESep.
-    triple_apply triple_setDWORDorBYTERegSep.
-  - specintros => v. autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV/evalMemSpec.
-    triple_apply triple_letGetDWORDorBYTESep.
-    triple_apply triple_setDWORDorBYTERegSep.
-
-+ rewrite /specAtMemSpecDst.
-  specintros => v.
-  elim: dst => [optSIB offset].
-  elim: optSIB => [[base indexopt] |].
-  case: indexopt => [[ixreg sc] |].
-  - autorewrite with push_at. specintros => pbase ixval.
-    autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV.
-    triple_apply evalDWORDorBYTEReg_rule.
-    triple_apply evalMemSpec_rule.
-    triple_apply triple_setDWORDorBYTESep.
-  - specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV.
-    triple_apply evalDWORDorBYTEReg_rule.
-    triple_apply evalMemSpecNone_rule.
-    triple_apply triple_setDWORDorBYTESep.
-  - autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV/evalMemSpec.
-    triple_apply evalDWORDorBYTEReg_rule.
-    triple_apply triple_setDWORDorBYTESep.
-
-+ apply TRIPLE_basic => R.
-  rewrite /evalInstr/evalMOV.
-  triple_apply triple_setDWORDorBYTERegSep.
-
-+ rewrite /specAtMemSpecDst.
-  elim: dst => [optSIB offset].
-  elim: optSIB => [[base indexopt] |].
-  case: indexopt => [[ixreg sc] |].
-  - specintros => pbase ixval.
-    autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV.
-    triple_apply evalMemSpec_rule.
-    triple_apply triple_setDWORDorBYTESep.
-  - specintros => pbase. autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV.
-    triple_apply evalMemSpecNone_rule.
-    triple_apply triple_setDWORDorBYTESep.
-  - autorewrite with push_at. apply TRIPLE_basic => R.
-    rewrite /evalInstr/evalMOV/evalMemSpec.
-    triple_apply triple_setDWORDorBYTESep.
-Qed.
-
-Ltac basicMOV :=
-  try unfold makeMOV;
-  match goal with
-  | |- |-- basic ?p (@MOVOP ?d ?a) ?q => try_basicapply (@MOV_rule d a)
-  end.
-
-(* Register to register *)
+(** ** Register to register *)
 Lemma MOV_RR_rule (r1 r2:Reg) v1 v2:
   |-- basic (r1 ~= v1 ** r2 ~= v2) (MOV r1, r2) (r1 ~= v2 ** r2 ~= v2).
 Proof. basicMOV. Qed.
@@ -131,7 +51,7 @@ Lemma MOV_RanyR_rule (r1 r2:Reg) v2:
   |-- basic (r1? ** r2 ~= v2) (MOV r1, r2) (r1 ~= v2 ** r2 ~= v2).
 Proof. unhideReg r1 => old. basicMOV. Qed.
 
-(* Immediate to register *)
+(** ** Immediate to register *)
 Lemma MOV_RI_rule (r:Reg) (v1 v2:DWORD) :
   |-- basic (r ~= v1) (MOV r, v2) (r ~= v2).
 Proof. basicMOV. Qed.
@@ -140,7 +60,7 @@ Lemma MOV_RanyI_rule (r:Reg) (v2:DWORD) :
   |-- basic r? (MOV r, v2) (r ~= v2).
 Proof. unhideReg r => old. basicMOV. Qed.
 
-(* Memory to register *)
+(** ** Memory to register *)
 Lemma MOV_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2: DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2)
             (MOV r1, [r2 + offset])
@@ -165,14 +85,14 @@ Lemma MOV_RanyM0_rule (pd:DWORD) (r1 r2:Reg) (v2: DWORD) :
             (r1 ~= v2 ** r2 ~= pd ** pd :-> v2).
 Proof. unhideReg r1 => old. basicMOV. Qed.
 
-(* Register to memory *)
+(** ** Register to memory *)
 Lemma MOV_MR_rule (p: DWORD) (r1 r2: Reg) offset (v1 v2:DWORD) :
   |-- basic (r1~=p ** p +# offset :-> v1 ** r2~=v2)
             (MOV [r1 + offset], r2)
             (r1~=p ** p +# offset :-> v2 ** r2~=v2).
 Proof. basicMOV. Qed.
 
-(* Immediate to memory *)
+(** ** Immediate to memory *)
 Lemma MOV_MI_rule dword (pd:DWORD) (r:Reg) offset (v w:DWORDorBYTE dword) :
   |-- basic (r ~= pd ** pd +# offset :-> v)
             (MOVOP _ (DstSrcMI dword (mkMemSpec (Some(r, None)) #offset) w))
@@ -198,8 +118,8 @@ Lemma MOV_MbR_ruleGen d (p: DWORD) (r1:Reg) (r2: DWORDorBYTEReg d) offset (v1 v2
             (r1 ~= p ** p +# offset :-> v2 ** DWORDorBYTEregIs r2 v2).
 Proof.
   destruct d.
-  apply MOV_MR_rule.
-  apply MOV_MbR_rule.
+  { apply MOV_MR_rule. }
+  { apply MOV_MbR_rule. }
 Qed.
 
 Lemma MOV_RMb_rule (p: DWORD) (r1:Reg) (r2:BYTEReg) offset (v1:BYTE) (v2:BYTE) :

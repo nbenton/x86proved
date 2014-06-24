@@ -233,7 +233,7 @@ Section LogicLemmas.
       elim E: (sbbB false (s x) (s y)) => [carry res].
       rewrite /OSZCP /stateIsAny. sbazooka.
       rewrite sepSPA. rewrite ->sepSPwand. cancel2. rewrite /eeval.
-      by rewrite /subB E/snd.
+      by rewrite E/snd.
     - move=> x y. rewrite /compile_expr.
       case Hxy: (x == y).
       - move/eqP: Hxy => <-.
@@ -254,7 +254,7 @@ Section LogicLemmas.
       elim E': (adcB carry (#0: DWORD) #0) => [carry' res'].
       eapply basic_basic; first apply ADC_RI_rule.
       - eassumption.
-      - rewrite E /natAsDWORD. by ssimpl.
+      - rewrite E /natAsDWORD/fst/snd. by ssimpl.
       rewrite [X in X ** (_ -* _)]sepSPC. rewrite ->sepSPwand.
       rewrite /OSZCP /stateIsAny. sbazooka.
       rewrite /eeval.
@@ -410,4 +410,3 @@ Section LogicRules.
   Proof. move=> s _. apply I. Qed.
 
 End LogicRules.
-

@@ -147,7 +147,7 @@ specapply RET_rule. sbazooka.
 rewrite <-spec_reads_frame. autorewrite with push_at.
 rewrite <-spec_later_weaken. apply: limplAdj. apply: landL2. cancel1. sbazooka.
 rewrite subB_equiv_addB_negB. rewrite <-(addBA sp). rewrite (addBC (negB _)).
-rewrite ->(addBA sp).  rewrite addB_negBn. rewrite -(toNatK (zeroExtend _ _)).
+rewrite ->(addBA sp).  rewrite -> addB_negBn. rewrite -(toNatK (zeroExtend _ _)).
 by rewrite toNat_zeroExtend addB0.
 Qed.
 
@@ -232,15 +232,15 @@ Qed.
 Example incImpCorrect :
   |-- stacked_nonvoid1_impMeetsSpec incSpec incBody.
 Proof.
-rewrite /incSpec/incBody/stacked_nonvoid1_impMeetsSpec/pre/post/fst/snd.
+rewrite /incSpec/incBody/stacked_nonvoid1_impMeetsSpec/pre/post.
 specintros => arg ebp.
 autorewrite with push_at.
-basicapply MOV_RanyM_rule.
+try_basicapply MOV_RanyM_rule.
 rewrite /OSZCP{3 4 5 6 7}/stateIsAny.
 specintros => f1 f2 f3 f4 f5.
 eapply basic_basic.  apply INC_R_rule.
 rewrite /OSZCP. sbazooka.
-rewrite /OSZCP/stateIsAny.
+rewrite /OSZCP/stateIsAny/fst/snd.
 sbazooka.
 Qed.
 

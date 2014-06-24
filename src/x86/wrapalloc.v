@@ -63,7 +63,7 @@ specintros => pb.
 
 (* Subtraction arithmetic *)
 elim E0:(sbbB false (pb+#bytes) (# bytes)) => [carry0 res0].
-assert (H:= subB_equiv_addB_negB (pb+#bytes) # bytes). rewrite /subB in H.
+assert (H:= subB_equiv_addB_negB (pb+#bytes) # bytes).
 rewrite E0 in H. simpl (snd _) in H. rewrite addB_negBn in H.
 rewrite H in E0.
 
@@ -80,5 +80,6 @@ apply: limplAdj. autorewrite with push_at.
 apply: landL2. cancel1.
 rewrite /OSZCP/stateIsAny. sbazooka. apply: lorR1.
 
+simpl snd.
 sbazooka.
 Qed.

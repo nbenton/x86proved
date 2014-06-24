@@ -698,7 +698,8 @@ Proof.
   (* unfold *)
   autorewrite with tuple.
   rewrite theadCons.
-  rewrite / readFrameAtom / applyNary / evenSpec / programMemIs / evenEntry / fst / snd.
+  rewrite / readFrameAtom / applyNary / evenSpec / programMemIs / evenEntry.
+  simpl fst. simpl snd.
   specintros => evenEnd n sp ret.
   unfold_program.
   specintros => c1.
@@ -779,7 +780,8 @@ Proof.
   (* unfold *)
   autorewrite with tuple.
   rewrite theadCons.
-  rewrite / readFrameAtom / applyNary / oddSpec / programMemIs / oddEntry / fst / snd.
+  rewrite / readFrameAtom / applyNary / oddSpec / programMemIs / oddEntry.
+  simpl fst. simpl snd.
   specintros => oddEnd n sp ret.
   unfold_program.
   specintros => c1.

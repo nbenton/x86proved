@@ -3,6 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrnat ssrbool eqtype tuple.
 Require Import bitsops instr monad reader procstate procstatemonad exn.
+Require Import common_definitions.
 
 Definition updateZPS {n} (result: BITS n) :=
   do! updateFlagInProcState ZF (result == #0);
@@ -13,7 +14,7 @@ Definition updateZPS {n} (result: BITS n) :=
 Definition evalArithOp {n}
   (f : bool -> BITS n -> BITS n -> bool * BITS n) (arg1 arg2: BITS n)  :=
   let! c = getFlagFromProcState CF;
-  let (c,result) := f c arg1 arg2 in
+  let (c, result) := eta_expand (f c arg1 arg2) in
   do! updateFlagInProcState CF c;
   do! updateFlagInProcState OF (computeOverflow arg1 arg2 result);
   do! updateZPS result;
@@ -21,14 +22,14 @@ Definition evalArithOp {n}
 
 Definition evalArithOpNoCarry {n}
   (f : bool -> BITS n -> BITS n -> bool * BITS n) (arg1 arg2: BITS n)  :=
-  let (c,result) := f false arg1 arg2 in
+  let (c,result) := eta_expand (f false arg1 arg2) in
   do! updateFlagInProcState CF c;
   do! updateFlagInProcState OF (computeOverflow arg1 arg2 result);
   do! updateZPS result;
   retn result.
 
 Definition evalArithUnaryOp {n} (f : BITS n -> bool*BITS n) arg  :=
-  let (c,result) := f arg in
+  let (c,result) := eta_expand (f arg) in
   do! updateFlagInProcState CF c;
   do! updateFlagInProcState OF (msb arg != msb result);
   do! updateZPS result;

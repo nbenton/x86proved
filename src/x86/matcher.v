@@ -182,11 +182,9 @@ unfold_program. specintros => i1 i2.
 specapply MOV_RanyM0_rule.
 by ssimpl.
 
-elim E: (sbbB false v b) => [carry res].
-have E': subB v b = res by rewrite /subB E.
 specapply CMP_RI_rule. sbazooka.
 
-rewrite E -E' subB_eq0.
+rewrite subB_eq0.
 
 specapply JZ_rule.
 rewrite /OSZCP.

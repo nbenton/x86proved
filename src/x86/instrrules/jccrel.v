@@ -31,11 +31,8 @@ Proof.
   apply TRIPLE_safe => R. rewrite /evalInstr.
   triple_apply triple_letGetCondition.
   replace (b == (~~cv)) with (~~(b == cv)); last first.
-  - case: b; case: cv; reflexivity.
+  { case: b; case: cv; reflexivity. }
   case: (b == cv).
-  - triple_apply triple_letGetRegSep.
-    try_triple_apply triple_setRegSep.
-    apply: lorR1. ssplit => //.
-  - try_triple_apply triple_skip.
-    apply: lorR2. by sbazooka.
+  { instrrule_triple_bazooka using do [ progress sbazooka | apply: lorR1 ]. }
+  { instrrule_triple_bazooka using do [ progress sbazooka | apply: lorR2 ]. }
 Qed.
