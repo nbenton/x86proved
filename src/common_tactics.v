@@ -148,6 +148,31 @@ Tactic Notation "hyp_rewrite" "!*" := progress hyp_rewrite ?*.
 Tactic Notation "hyp_rewrite" "->" "!*" := progress hyp_rewrite -> ?*.
 Tactic Notation "hyp_rewrite" "<-" "!*" := progress hyp_rewrite <- ?*.
 
+Tactic Notation "hyp_setoid_rewrite" "*" := do_with_hyp' ltac:(fun H => setoid_rewrite H).
+Tactic Notation "hyp_setoid_rewrite" "->" "*" := do_with_hyp' ltac:(fun H => setoid_rewrite -> H).
+Tactic Notation "hyp_setoid_rewrite" "<-" "*" := do_with_hyp' ltac:(fun H => setoid_rewrite <- H).
+Tactic Notation "hyp_setoid_rewrite" "?*" := repeat do_with_hyp' ltac:(fun H => setoid_rewrite H).
+Tactic Notation "hyp_setoid_rewrite" "->" "?*" := repeat do_with_hyp' ltac:(fun H => setoid_rewrite -> H).
+Tactic Notation "hyp_setoid_rewrite" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => setoid_rewrite <- H).
+Tactic Notation "hyp_setoid_rewrite" "!*" := progress hyp_setoid_rewrite ?*.
+Tactic Notation "hyp_setoid_rewrite" "->" "!*" := progress hyp_setoid_rewrite -> ?*.
+Tactic Notation "hyp_setoid_rewrite" "<-" "!*" := progress hyp_setoid_rewrite <- ?*.
+
+Tactic Notation "hyp_apply" "*" := do_with_hyp' ltac:(fun H => apply H).
+Tactic Notation "hyp_apply" "->" "*" := do_with_hyp' ltac:(fun H => apply -> H).
+Tactic Notation "hyp_apply" "<-" "*" := do_with_hyp' ltac:(fun H => apply <- H).
+Tactic Notation "hyp_apply" "?*" := repeat do_with_hyp' ltac:(fun H => apply H).
+Tactic Notation "hyp_apply" "->" "?*" := repeat do_with_hyp' ltac:(fun H => apply -> H).
+Tactic Notation "hyp_apply" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => apply <- H).
+Tactic Notation "hyp_apply" "!*" := progress hyp_apply ?*.
+Tactic Notation "hyp_apply" "->" "!*" := progress hyp_apply -> ?*.
+Tactic Notation "hyp_apply" "<-" "!*" := progress hyp_apply <- ?*.
+
+Tactic Notation "hyp_eapply" "*" := do_with_hyp' ltac:(fun H => eapply H).
+Tactic Notation "hyp_eapply" "?*" := repeat do_with_hyp' ltac:(fun H => eapply H).
+Tactic Notation "hyp_eapply" "!*" := progress hyp_eapply ?*.
+
+
 (** Revert all hypotheses *)
 Ltac reverse := repeat do_with_hyp' ltac:(fun H => revert H).
 

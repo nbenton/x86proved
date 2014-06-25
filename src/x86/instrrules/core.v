@@ -10,6 +10,7 @@ Require Import x86.procstatemonad (* for [ST] *) bitsprops (* for [high_catB] *)
 Require Import septac (* for [sdestruct] *) safe (* for [safe] *) triple (* for [TRIPLE] *).
 Require Import x86.eval (* for [evalInstr] *) monad (* for [doMany] *) monadinst (* for [Success] *).
 Require Import common_definitions (* for [eta_expand] *) common_tactics (* for [elim_atomic_in_match'] *).
+Require Import Coq.Classes.Morphisms (* for [Parametric Morphism] and [signature_scope] *).
 
 Module Import instrruleconfig.
   Export Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple.
@@ -142,35 +143,7 @@ Definition specAtMemSpecDst dword ms (f: (DWORDorBYTE dword -> SPred) -> spec) :
           @ (regToAnyReg r ~= pbase)
     else f (fun v => offset :-> v) @ empSP.
 
-(*
-Definition lentails1 {T} (f g:T -> SPred):= forall x , f x |-- g x.
-Definition lentails2 {T} (f g: (T -> SPred) -> spec) := forall x y, lentails1 x y ->
-lentails (f x) (f y).
-Global Instance specAtMemSpecDst_entails_m dword :
-    Proper (eq --> lentails2 --> lentails) (@specAtMemSpecDst dword).
-Proof.
-  move => ms1 ms2 msE.
-  rewrite /Basics.flip in msE. subst.
-  move => f1 f2 fE.
-  rewrite /Basics.flip/lentails2 in fE.
-  rewrite /specAtMemSpecDst.
-  destruct ms1.
-  destruct sib.
-  destruct p.
-  destruct o.
-  destruct p.
-  specintros => pbase1 ixval1.
-  rewrite /lentails1 in fE.
-  specsplit.
-  autorewrite with push_at.
-  sbazooka. ssimpl.
-  simpl. specintros.
-  autorewrite with push_at. specintros => pbase2 ixval2.
-  simpl. g fg.
-  move => P P' HP c _ <- Q Q' HQ. apply: basic_roc; try eassumption.
-    done.
-  Qed.
-*)
+Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 
 Definition specAtMemSpec dword ms (f: DWORDorBYTE dword -> spec) :=
     let: mkMemSpec optSIB offset := ms in
@@ -246,6 +219,51 @@ Definition specAtDstSrc dword (ds: DstSrc dword) (f: (DWORDorBYTE dword -> SPred
   | DstSrcRM dst src =>
     specAtMemSpec src (fun v => f (fun w => DWORDorBYTEregIs dst w) v)
   end.
+
+Local Ltac specAt_morphism_step :=
+  idtac;
+  do [ progress move => *
+     | hyp_setoid_rewrite -> *; reflexivity
+     | progress destruct_head DstSrc
+     | progress destruct_head MemSpec
+     | progress destruct_head option
+     | progress destruct_head prod
+     | progress specintros => *
+     | do !eapply lforallL
+     | progress autorewrite with push_at ].
+
+Local Ltac specAt_morphism_t :=
+  rewrite /pointwise_relation => *; do !specAt_morphism_step.
+
+Add Parametric Morphism dword ms : (@specAtMemSpecDst dword ms)
+with signature pointwise_relation _ lentails ++> lentails
+  as specAtMemSpecDst_entails_m.
+Proof. rewrite /specAtMemSpecDst. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtMemSpecDst dword ms)
+with signature pointwise_relation _ (Basics.flip lentails) ++> Basics.flip lentails
+  as specAtMemSpecDst_flip_entails_m.
+Proof. rewrite /specAtMemSpecDst. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtMemSpec dword ms)
+with signature pointwise_relation _ lentails ++> lentails
+  as specAtMemSpec_entails_m.
+Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtMemSpec dword ms)
+with signature pointwise_relation _ (Basics.flip lentails) ++> Basics.flip lentails
+  as specAtMemSpec_flip_entails_m.
+Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtDstSrc dword ms)
+with signature pointwise_relation _ (pointwise_relation _ lentails) ++> lentails
+  as specAtDstSrc_entails_m.
+Proof. rewrite /specAtDstSrc. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtDstSrc dword ms)
+with signature pointwise_relation _ (pointwise_relation _ (Basics.flip lentails)) ++> Basics.flip lentails
+  as specAtDstSrc_flip_entails_m.
+Proof. rewrite /specAtDstSrc. specAt_morphism_t. Qed.
 
 Notation "OSZCP?" := (OF? ** SF? ** ZF? ** CF? ** PF?).
 Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= p.
