@@ -1,5 +1,4 @@
 (** * CMP instruction *)
-(** * CMP instruction *)
 Require Import x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 

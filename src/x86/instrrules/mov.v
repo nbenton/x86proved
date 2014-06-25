@@ -1,20 +1,8 @@
 (** * MOV instruction *)
-Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec safe triple basic basicprog spectac.
-Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
-Require Import Setoid RelationClasses Morphisms.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
-
-Require Import Relations.
-Require Import instrsyntax.
-
-Local Open Scope instr_scope.
-
 Require Import x86.instrrules.core.
+Import x86.instrrules.core.instrruleconfig.
+
+Require Import spectac (* for [unhideReg] *).
 
 (** ** Generic rule *)
 Lemma MOV_rule d ds oldv:
@@ -27,20 +15,8 @@ Ltac basicMOV :=
   let R := lazymatch goal with
              | |- |-- basic ?p (@MOVOP ?d ?a) ?q => constr:(@MOV_rule d a)
            end in
-  basicapply R.
+  instrrules_basicapply R.
 
-
-(** We open a section in order to localize the hints *)
-Section InstrRules.
-
-Hint Unfold
-  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
-  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
-  makeMOV makeBOP makeUOP
-  : basicapply.
-Hint Rewrite
-  addB0 low_catB : basicapply.
 
 (** ** Register to register *)
 Lemma MOV_RR_rule (r1 r2:Reg) v1 v2:
@@ -133,4 +109,3 @@ Lemma MOV_MbI_rule (pd:DWORD) (r1:Reg) offset (v1 v2:BYTE) :
             (MOV BYTE [r1 + offset], v2)
             (r1 ~= pd ** pd +# offset :-> v2).
 Proof. basicMOV. Qed.
-End InstrRules.

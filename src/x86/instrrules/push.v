@@ -2,12 +2,7 @@
 Require Import x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
-
-(** Generic rule *)
-
+(** ** Generic rule *)
 Lemma PUSH_rule src sp (v:DWORD) :
   |-- specAtSrc src (fun w =>
       basic    (ESP ~= sp    ** sp-#4 :-> v) (PUSH src)
