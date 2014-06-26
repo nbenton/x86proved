@@ -22,17 +22,12 @@ Qed.
 
 Local Transparent ILFun_Ops ILPre_Ops.
 
-Lemma safeAtState (s: ProcState) : 
+Lemma safeAtState (s: ProcState): 
   |-- safe @ eq_pred s <-> runsForever s. 
 Proof. 
 split => H. 
-+ move => k. 
-  specialize (H k empSP I). simpl in H. 
-  apply H. apply lentails_eq. by ssimpl. 
-+ move => k R _ s' H0. 
-  apply lentails_eq in H0. rewrite -> sepSPA in H0. 
-  rewrite -> eqPredProcState_sepSP in H0. 
-  apply lentails_eq in H0. simpl in H0. apply toPState_inj in H0. by subst. 
++ move => k. apply (H k empSP I). apply lentails_eq. by ssimpl. 
++ move => k R _ s' H0. apply eq_pred_aux2 in H0. by subst.
 Qed. 
 
 Lemma runsTo_safeClosed s s':
@@ -43,72 +38,34 @@ Proof. rewrite 2!safeAtState. by apply runsTo_runsForever. Qed.
 
 Instance AtEx_safe: AtEx safe.
 Proof.
-  move=> A f.
-  move=> k P Hf.
-  move=> s Hs.
+  move=> A f. move=> k P Hf. move=> s Hs.
   sdestruct: Hs => a Hs.
-  eapply Hf; eassumption.
+  apply: Hf; eassumption.
 Qed.
 
 Instance AtContra_safe: AtContra safe.
 Proof.
-  move=> R R' HR. move=> k P HP.
-  move=> s Hs. apply HP.
-  rewrite lentails_eq. rewrite <-HR. by rewrite -lentails_eq.
+  move=> R R' HR. move=> k P HP. move=> s Hs.
+  apply HP. rewrite lentails_eq. rewrite <-HR. by rewrite -lentails_eq.
 Qed.
 
 Lemma runsTo_safe s s':
   runsTo s s' ->
   safe @ eq_pred s' |-- safe @ eq_pred s.
-Proof. move => RED. 
-
-move => k0 R /=H. 
-case E: k0 => [| k0']. move => ? ?. by apply runsFor0.
-
-subst.
-
-move => s0 H0. 
-specialize (H s').
-have: runsFor k0'.+1 s'.  
-apply H.
-apply lentails_eq. ssimpl.
-apply lentails_eq in H0. 
-rewrite -> sepSPC in H0. rewrite<-sepSPA in H0. rewrite ->(sepSPC ltrue) in H0. 
-rewrite <- (eqPredTotal_sepSP_trueR) in H0; last by apply totalProcState.
-apply eqPredTotal_sepSP in H0; last by apply totalProcState.  
-rewrite -> H0. by ssimpl.
-
-apply runsTo_runsFor. 
-apply lentails_eq in H0.
-rewrite -> sepSPA in H0. 
-rewrite -> eqPredProcState_sepSP in H0. 
-apply lentails_eq in H0. simpl in H0. 
-apply toPState_inj in H0. by subst. 
+Proof. move => RED k0 R /=H s0 H0. 
+have H1 := eq_pred_aux s' H0. 
+rewrite -(eq_pred_aux2 H0).
+apply: runsTo_runsFor RED (H _ H1).  
 Qed. 
 
+Local Transparent ILLaterPreOps.
 Lemma properRunsTo_safe s s':
   properRunsTo s s' ->
   |> safe @ eq_pred s' |-- safe @ eq_pred s.
-Proof. move => RED k0 R H. 
-
-case E: k0 => [| k0']. move => ? ?. by apply runsFor0.
-
-subst.
-
-move => s0 H0.
-
-Local Transparent ILLaterPreOps.
- 
-have LT: (k0' < k0'.+1)%coq_nat by done. specialize (H _ LT s'). clear LT.
-apply lentails_eq in H0. 
-rewrite -> sepSPC in H0. rewrite<-sepSPA in H0. rewrite ->(sepSPC ltrue) in H0. 
-rewrite <- (eqPredTotal_sepSP_trueR) in H0; last by apply totalProcState.
-have H0' := H0.
-apply eqPredTotal_sepSP in H0; last by apply totalProcState.
-rewrite -> eqPredProcState_sepSP in H0'.  
-apply lentails_eq in H0'. simpl in H0'. 
-apply toPState_inj in H0'. subst. 
-apply: (properRunsTo_runsFor RED). 
-apply: H. 
-apply lentails_eq. rewrite <-H0. by ssimpl. 
+Proof. move => RED k0 R /=H s0 H0. 
+have H1 := eq_pred_aux s' H0.
+rewrite -(eq_pred_aux2 H0). 
+destruct k0.
+- by apply: runsFor0.
+- by apply: properRunsTo_runsFor RED (H k0 _ _ H1). 
 Qed. 

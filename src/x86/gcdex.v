@@ -1,8 +1,8 @@
 Require Import ssreflect ssrbool ssrnat eqtype seq finfun tuple fintype.
 Require Import bitsrep ilogic.
 Require Import program programassem programassemcorrect imp call.
-Require Import reader SPred septac pointsto spec spectac basic reg.
-Require Import cursor safe instrrules.
+Require Import reader SPred OPred septac pointsto spec spectac basic reg.
+Require Import cursor obs instrrules.
 Require Import instr instrsyntax macros Ascii bitsops bitsprops bitsopsprops.
 Require Import screenspec screenimp lifeimp.
 
@@ -66,11 +66,11 @@ Definition showOctal_program : program :=
       ).
 
 Theorem gcd_safe: forall endAddr: DWORD,
-  |-- (safe @ (EIP ~= endAddr) -->> safe @ (EIP ~= codeAddr))
+  |-- Forall O, (obs O @ (EIP ~= endAddr) -->> obs O @ (EIP ~= codeAddr))
         @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
        <@ (codeAddr -- endAddr :-> gcd_bytes).
 Proof.
-  move=> endAddr. rewrite /gcd_bytes.
+  move=> endAddr. specintros => O. rewrite /gcd_bytes.
   rewrite ->assemble_correct; last first. by vm_compute.
   rewrite /gcd_program.
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.

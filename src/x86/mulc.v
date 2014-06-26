@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic basicprog program.
+Require Import SPred septac spec spectac OPred basic basicprog program.
 Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor basic macros.
 
 Set Implicit Arguments.
@@ -26,7 +26,7 @@ Lemma add_mulcCorrect nbits : forall (r1 r2: Reg) m, m < 2^nbits ->
   |-- Forall v, Forall w,
       basic
       (r1 ~= v ** r2 ~= w ** OSZCP?)
-      (add_mulc nbits r1 r2 m)
+      (add_mulc nbits r1 r2 m) empOP
       (r1 ~= addB v (mulB w (fromNat m)) ** r2? ** OSZCP?).
 (*=End *)
 Proof.
@@ -83,7 +83,7 @@ Lemma add_mulcAuxCorrect nbits : forall (c:nat) (r1 r2: Reg) (m:nat),
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  (add_mulcAux nbits c r1 r2 m)
+  (add_mulcAux nbits c r1 r2 m) empOP
   (r1 ~= addB v (w *# (m*2^c)) ** r2?) @ OSZCP?.
 Proof.
   induction nbits => c r1 r2 m LT1 LT3;
@@ -170,7 +170,7 @@ Lemma add_mulcOptCorrect (r1 r2: NonSPReg) (m:nat):
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  (add_mulcOpt r1 r2 m)
+  (add_mulcOpt r1 r2 m) empOP
   (r1 ~= addB v (w *# m) ** r2?) @ OSZCP?.
 Proof.
 rewrite /add_mulcOpt.
@@ -223,7 +223,7 @@ Lemma genCorrect nbits : forall (c:nat) (r1:Reg) (r2:NonSPReg) (m:nat),
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  (gen nbits c r1 r2 m)
+  (gen nbits c r1 r2 m) empOP
   (r1 ~= addB v (w *# (m*2^c)) ** r2?) @ OSZCP?.
 Proof.
   induction nbits => c r1 r2 m LT1 LT3;
@@ -337,7 +337,7 @@ Lemma add_mulcFastCorrect (r1 r2: NonSPReg) (d:DWORD):
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  (add_mulcFast r1 r2 d)
+  (add_mulcFast r1 r2 d) empOP
   (r1 ~= addB v (mulB w d) ** r2?) @ OSZCP?.
 Proof.
 rewrite /add_mulcFast.

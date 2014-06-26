@@ -4,7 +4,7 @@
   registers, flags and memory.
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool ssrnat eqtype tuple seq fintype.
-Require Import bitsrep bitsprops bitsops bitsopsprops procstate procstatemonad pmapprops.
+Require Import bitsrep bitsprops bitsops bitsopsprops procstate procstatemonad pmapprops ioaction.
 Require Import monad monadinst reader SPred OPred SPredTotal septac pointsto pfun cursor writer.
 
 Set Implicit Arguments.
@@ -12,30 +12,23 @@ Unset Strict Implicit.
 Import Prenex Implicits.
 
 (* Hoare triple for machine state monad *)
-Definition OTRIPLE (P:SPred) (c:ST unit) (O:OPred) (Q:SPred) :=
+Definition TRIPLE (P:SPred) (c:ST unit) (O:OPred) (Q:SPred) :=
   forall s:ProcState, P s ->
-    exists f o, c s = (o, Success _ (f,tt)) /\ O o /\ Q f.
-
-(* This is the old definition: we don't care about output *)
-Definition TRIPLE P c Q := OTRIPLE P c ltrue Q.
+    exists f o, c s = (o, Success _ (f,tt)) /\ O (outputToActions o) /\ Q f.
 
 Require Import Setoid Program.Basics.
 
 (* Triples behave contravariantly in the precondition and covariantly in the postcondition wrt
    entailment *)
-Add Morphism (@OTRIPLE) with signature lentails --> eq ==> lentails ==> lentails ==> impl as OTRIPLE_mor2.
+Add Morphism (@TRIPLE) with signature lentails --> eq ==> lentails ==> lentails ==> impl as TRIPLE_mor2.
 Proof. move => P P' PP' c O O' OO' Q Q' QQ' H.
 move => s H'. assert (H'' : P s) by firstorder.
 specialize (H _ H''). destruct H as [f [o [H1 [H2 H3]]]].
 exists f, o. firstorder. 
 Qed.
 
-Add Morphism (@TRIPLE) with signature lentails --> eq ==> lentails ==> impl as TRIPLE_mor2.
-Proof. move => P P' PP' c Q Q' QQ' H. unfold TRIPLE. rewrite -> PP'. rewrite <- QQ'.
-apply H. Qed. 
-
 (* Unfortunately we need special case for equivalence *)
-Add Morphism (@OTRIPLE) with signature lequiv ==> eq ==> lequiv ==> lequiv ==> iff as OTRIPLE_mor.
+Add Morphism (@TRIPLE) with signature lequiv ==> eq ==> lequiv ==> lequiv ==> iff as TRIPLE_mor.
 Proof. move => P P' PP' c O O' OO' Q Q' QQ'.
 split => H.
 move => s H'. assert (H'' : P s) by firstorder.
@@ -47,58 +40,47 @@ specialize (H _ H''). destruct H as [f [o [H1 [H2 H3]]]].
 exists f, o. firstorder. 
 Qed.
 
-Add Morphism (@TRIPLE) with signature lequiv --> eq ==> lequiv ==> iff as TRIPLE_mor.
-Proof. move => P P' PP' c Q Q' QQ'. unfold TRIPLE. rewrite -> PP'. rewrite <- QQ'. done. 
-Qed. 
-
-
-Lemma otriple_roc P' Q' O' P c O Q:
-  P |-- P' -> O' |-- O -> Q' |-- Q -> OTRIPLE P' c O' Q' -> OTRIPLE P c O Q.
+Lemma triple_roc P' Q' O' P c O Q:
+  P |-- P' -> O' |-- O -> Q' |-- Q -> TRIPLE P' c O' Q' -> TRIPLE P c O Q.
 Proof. move=> HP HO HQ H. by rewrite ->HP, <-HQ, <-HO. Qed.
 
-Lemma triple_roc P' Q' P c Q:
-  P |-- P' -> Q' |-- Q -> TRIPLE P' c Q' -> TRIPLE P c Q.
-Proof. move => HP HO. by apply otriple_roc. Qed.
-
-Lemma otriple_roc_pre P' P c O Q:
-  P |-- P' -> OTRIPLE P' c O Q -> OTRIPLE P c O Q.
+Lemma triple_roc_pre P' P c O Q:
+  P |-- P' -> TRIPLE P' c O Q -> TRIPLE P c O Q.
 Proof. move=> HP H. by rewrite ->HP. Qed.
 
-Lemma otriple_roc_post Q' P c O Q:
-  Q' |-- Q -> OTRIPLE P c O Q' -> OTRIPLE P c O Q.
+Lemma triple_roc_post Q' P c O Q:
+  Q' |-- Q -> TRIPLE P c O Q' -> TRIPLE P c O Q.
 Proof. move=> HQ H. by rewrite <-HQ. Qed.
 
-Lemma triple_skip P : TRIPLE P (retn tt) P.
+Lemma triple_skip P : TRIPLE P (retn tt) empOP P.
 Proof.  move => s pre; exists s, nil; intuition. done. Qed.
 
 Lemma triple_pre_exists T (Pf: T -> SPred) c O Q :
-  (forall t:T, OTRIPLE (Pf t) c O Q) -> OTRIPLE (Exists t, Pf t) c O Q.
+  (forall t:T, TRIPLE (Pf t) c O Q) -> TRIPLE (Exists t, Pf t) c O Q.
 Proof. move => TR.
 move => s [t' H]. by apply (TR t' s H).
 Qed.
 
 Lemma triple_pre_existsOp T (Pf: T -> _) c O Q :
-  OTRIPLE (Exists t, Pf t) c O Q -> (forall t:T, OTRIPLE (Pf t) c O Q).
-Proof. move => TR t s pre.
-apply (TR s). by exists t.
-Qed.
+  TRIPLE (Exists t, Pf t) c O Q -> (forall t:T, TRIPLE (Pf t) c O Q).
+Proof. move => TR t s pre. apply (TR s). by exists t. Qed.
 
 Lemma triple_pre_existsSep T (Pf: T -> _) c O Q S :
-  (forall t, OTRIPLE (Pf t ** S) c O Q) -> OTRIPLE ((Exists t, Pf t) ** S) c O Q.
+  (forall t, TRIPLE (Pf t ** S) c O Q) -> TRIPLE ((Exists t, Pf t) ** S) c O Q.
 Proof.
-  move => TR. apply otriple_roc_pre with (Exists t, Pf t ** S).
+  move => TR. apply triple_roc_pre with (Exists t, Pf t ** S).
   - sbazooka.
   move => s [t H]. apply (TR t s H).
 Qed.
 
 Lemma triple_pre_existsSepOp T (Pf: T -> _) c O Q S :
-  OTRIPLE ((Exists t, Pf t) ** S) c O Q -> (forall t, OTRIPLE (Pf t ** S) c O Q).
+  TRIPLE ((Exists t, Pf t) ** S) c O Q -> (forall t, TRIPLE (Pf t ** S) c O Q).
 Proof.
-  move=> TR t. eapply otriple_roc_pre; [|eassumption]. ssplit; reflexivity.
+  move=> TR t. eapply triple_roc_pre; [|eassumption]. ssplit; reflexivity.
 Qed.
 
 Lemma triple_post_disjL P c O Q1 Q2 :
-   OTRIPLE P c O Q1 -> OTRIPLE P c O (Q1 \\// Q2).
+   TRIPLE P c O Q1 -> TRIPLE P c O (Q1 \\// Q2).
 Proof. move => TR s H.
 specialize (TR s H).
 destruct TR as [f [o [EQ HH]]].
@@ -106,7 +88,7 @@ exists f, o. firstorder. by left.
 Qed.
 
 Lemma triple_post_disjR P c O Q1 Q2 :
-   OTRIPLE P c O Q2 -> OTRIPLE P c O (Q1 \\// Q2).
+   TRIPLE P c O Q2 -> TRIPLE P c O (Q1 \\// Q2).
 Proof. move => TR s H.
 specialize (TR s H).
 destruct TR as [f [o [EQ [HO HH]]]].
@@ -114,51 +96,47 @@ exists f, o. split => //. split => //. by right.
 Qed.
 
 Lemma triple_post_existsSep T (t:T) P (Qf: T -> _) c O S :
-  OTRIPLE P c O (Qf t ** S) -> OTRIPLE P c O ((Exists t, Qf t) ** S).
+  TRIPLE P c O (Qf t ** S) -> TRIPLE P c O ((Exists t, Qf t) ** S).
 Proof.
-  move=> TR. eapply otriple_roc_post; [|eassumption]. ssplit; reflexivity.
+  move=> TR. eapply triple_roc_post; [|eassumption]. ssplit; reflexivity.
 Qed.
 
 Lemma triple_pre_hideFlag (f:Flag) v P c O Q :
-  OTRIPLE (f? ** P) c O Q ->
-  OTRIPLE (f ~= v ** P) c O Q.
-Proof. move => H. by apply (triple_pre_existsSepOp). Qed.
+  TRIPLE (f? ** P) c O Q ->
+  TRIPLE (f ~= v ** P) c O Q.
+Proof. move => H. by apply triple_pre_existsSepOp. Qed.
 
 
 Lemma triple_pre_instFlag (f:Flag) P c O Q :
-  (forall v, OTRIPLE (f ~= v ** P) c O Q) ->
-  OTRIPLE (f? ** P) c O Q.
+  (forall v, TRIPLE (f ~= v ** P) c O Q) ->
+  TRIPLE (f? ** P) c O Q.
 Proof. move => TR. apply triple_pre_existsSep => v. apply TR. Qed.
 
-Lemma otriple_seq P P' P'' O1 O2 c1 c2 :
-  OTRIPLE P c1 O1 P' ->
-  OTRIPLE P' c2 O2 P'' ->
-  OTRIPLE P (do! c1; c2) (catOP O1 O2) P''.
-Proof. move => T1 T2.
-move => s H. rewrite /OTRIPLE in T1, T2.
+Lemma triple_seqcat P P' P'' O1 O2 c1 c2 O :
+  catOP O1 O2 |-- O ->
+  TRIPLE P c1 O1 P' ->
+  TRIPLE P' c2 O2 P'' ->
+  TRIPLE P (do! c1; c2) O P''.
+Proof. move => HO T1 T2. rewrite <- HO. 
+move => s H. rewrite /TRIPLE in T1, T2.
 destruct (T1 _ H) as [s' [o [e [OH H']]]].
 destruct (T2 _ H') as [s'' [o' [e' [OH' H'']]]].
 exists s''. exists (o++o'). rewrite /= e e'. split => //. 
-split => //. exists o, o'. firstorder.
+split => //. exists (outputToActions o), (outputToActions o'). 
+rewrite /outputToActions map_cat. firstorder.
 Qed.
 
-Lemma triple_seq P P' P'' c1 c2 :
-  TRIPLE P c1 P' ->
-  TRIPLE P' c2 P'' ->
-  TRIPLE P (do! c1; c2) P''.
-Proof. move => T1 T2.
-move => s H. 
-destruct (T1 _ H) as [s' [o [e [OH H']]]].
-destruct (T2 _ H') as [s'' [o' [e' [OH' H'']]]].
-exists s''. exists (o++o'). rewrite /= e e'.
-firstorder.  
-Qed.
+Lemma triple_seq P P' P'' c1 c2 O :
+  TRIPLE P c1 empOP P' ->
+  TRIPLE P' c2 O P'' ->
+  TRIPLE P (do! c1; c2) O P''.
+Proof. move => T1 T2. by apply: triple_seqcat T1 T2. Qed.
 
 (* Set and get registers *)
 Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) O c:
   (P |-- r ~= v ** ltrue) ->
-  OTRIPLE P (c v) O Q ->
-  OTRIPLE P (bind (getRegFromProcState r) c) O Q.
+  TRIPLE P (c v) O Q ->
+  TRIPLE P (bind (getRegFromProcState r) c) O Q.
 Proof.
   move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f, o.
   rewrite /=. rewrite <-eq. split; last done.
@@ -166,13 +144,13 @@ Proof.
   case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
   specialize (Hs Registers r v). rewrite /= in Hs.
   injection Hs. move => ->. by destruct (c v s).
-  rewrite -Hs1 /=. by rewrite (eq_refl).
+  by rewrite -Hs1 /= eq_refl.
 Qed.
 
 Lemma triple_letGetFlag (fl:Flag) (v:bool) (P Q: SPred) O c:
   (P |-- fl ~= v ** ltrue) ->
-  OTRIPLE P (c v) O Q ->
-  OTRIPLE P (bind (getFlagFromProcState fl) c) O Q.
+  TRIPLE P (c v) O Q ->
+  TRIPLE P (bind (getFlagFromProcState fl) c) O Q.
 Proof.
   move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f.
   eexists o.
@@ -182,7 +160,7 @@ Proof.
   case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
   specialize (Hs Flags fl v). rewrite /= in Hs.
   injection Hs. move => ->. simpl. by destruct (c v s).
-  rewrite -Hs1 /=. by rewrite eq_refl.
+  by rewrite -Hs1 /= eq_refl.
 Qed.
 
 Local Transparent PStateSepAlgOps.
@@ -372,7 +350,7 @@ Qed.
 *)
 
 Lemma triple_setRegSep (r:AnyReg) v w :
-  forall S, TRIPLE (r~=v ** S) (setRegInProcState r w) (r~=w ** S).
+  forall S, TRIPLE (r~=v ** S) (setRegInProcState r w) empOP (r~=w ** S).
 Proof.
 move => S s pre. eexists _, _. split => //. split => //. apply: separateSetReg pre.
 Qed.
@@ -397,32 +375,32 @@ Qed.
 
 Lemma triple_setRegSepGen (r:AnyReg) v w P R:
   P |-- r~=v ** R ->
-  TRIPLE P (setRegInProcState r w) (r~=w ** R).
+  TRIPLE P (setRegInProcState r w) empOP (r~=w ** R).
 Proof. move=> HP. rewrite ->HP. apply: triple_setRegSep. Qed.
 
-Lemma triple_doSetRegSep (r:AnyReg) (v w:DWORD) c Q :
+Lemma triple_doSetRegSep (r:AnyReg) (v w:DWORD) c O Q :
   forall S,
-  TRIPLE (r~=w ** S) c Q ->
-  TRIPLE (r~=v ** S) (do! setRegInProcState r w; c) Q.
+  TRIPLE (r~=w ** S) c O Q ->
+  TRIPLE (r~=v ** S) (do! setRegInProcState r w; c) O Q.
 Proof. move => S T s pre. rewrite /TRIPLE in T.
 simpl. have H:= separateSetReg w pre.  specialize (T _ H).
 destruct T as [f [o [T]]]. exists f, o.
 by destruct (c _).
 Qed.
 
-Lemma triple_doSetFlagSep (f:Flag) v (w:bool) c Q :
+Lemma triple_doSetFlagSep (f:Flag) v (w:bool) c O Q :
   forall S,
-  TRIPLE (f~=w ** S) c Q ->
-  TRIPLE (f~=v ** S) (do! updateFlagInProcState f w; c) Q.
+  TRIPLE (f~=w ** S) c O Q ->
+  TRIPLE (f~=v ** S) (do! updateFlagInProcState f w; c) O Q.
 Proof. move => S T s pre. rewrite /TRIPLE in T.
 simpl. have H:= separateSetFlag w pre. specialize (T _ H).
 destruct T as [fs [o T]]. exists fs, o.
 by destruct (c _). Qed.
 
-Lemma triple_doForgetFlagSep (f:Flag) v c Q :
+Lemma triple_doForgetFlagSep (f:Flag) v c O Q :
   forall S,
-  TRIPLE (f? ** S) c Q ->
-  TRIPLE (f~=v ** S) (do! forgetFlagInProcState f; c) Q.
+  TRIPLE (f? ** S) c O Q ->
+  TRIPLE (f~=v ** S) (do! forgetFlagInProcState f; c) O Q.
 Proof. move => S T s pre. rewrite /TRIPLE in T.
 simpl. have H:=separateForgetFlag pre. specialize (T _ H).
 destruct T as [fs [o T]]. exists fs, o.
@@ -439,35 +417,35 @@ apply: separateDrop. apply H.
 Qed.
 *)
 
-Lemma triple_letGetRegSep (r:AnyReg) v c Q :
+Lemma triple_letGetRegSep (r:AnyReg) v c O Q :
  forall S,
- TRIPLE (r~=v ** S) (c v) Q ->
- TRIPLE (r~=v ** S) (bind (getRegFromProcState r) c) Q.
+ TRIPLE (r~=v ** S) (c v) O Q ->
+ TRIPLE (r~=v ** S) (bind (getRegFromProcState r) c) O Q.
 Proof. move => S T. apply: triple_letGetReg. cancel2. reflexivity. done. Qed.
 
-Lemma triple_letGetFlagSep (fl:Flag) (v:bool) c Q :
+Lemma triple_letGetFlagSep (fl:Flag) (v:bool) c O Q :
   forall S,
-  TRIPLE (fl~=v ** S) (c v) Q ->
-  TRIPLE (fl~=v ** S) (bind (getFlagFromProcState fl) c) Q.
+  TRIPLE (fl~=v ** S) (c v) O Q ->
+  TRIPLE (fl~=v ** S) (bind (getFlagFromProcState fl) c) O Q.
 Proof. move => S T. apply: triple_letGetFlag. cancel2. reflexivity. done. Qed.
 
-Lemma triple_doGetReg (r:AnyReg) (P Q: SPred) c :
-  TRIPLE P c Q ->
-  TRIPLE P (do! getRegFromProcState r; c) Q.
+Lemma triple_doGetReg (r:AnyReg) (P Q: SPred) O c :
+  TRIPLE P c O Q ->
+  TRIPLE P (do! getRegFromProcState r; c) O Q.
 Proof. move => T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f. eexists o.
 simpl. by destruct (c s). Qed.
 
-Lemma triple_doGetFlag (f:Flag) (v:bool) (Q: SPred) c :
+Lemma triple_doGetFlag (f:Flag) (v:bool) (Q: SPred) O c :
   forall S,
-  TRIPLE (f~=v ** S) c Q ->
-  TRIPLE (f~=v ** S) (do! getFlagFromProcState f; c) Q.
+  TRIPLE (f~=v ** S) c O Q ->
+  TRIPLE (f~=v ** S) (do! getFlagFromProcState f; c) O Q.
 Proof. apply (triple_letGetFlagSep (c:=fun _ => c)). Qed.
 
 (* Set and get readables from memory *)
-Lemma triple_letGetSepGen R {r:Reader R} (p:PTR) (v:R) P c Q :
+Lemma triple_letGetSepGen R {r:Reader R} (p:PTR) (v:R) P c O Q :
   P |-- p:->v ** ltrue ->
-  TRIPLE P (c v) Q ->
-  TRIPLE P (bind (getFromProcState p) c) Q.
+  TRIPLE P (c v) O Q ->
+  TRIPLE P (bind (getFromProcState p) c) O Q.
 Proof. move => PTIS T s pre.
 destruct (T _ pre) as [f [o [H1 H2]]].
 exists f.
@@ -479,16 +457,16 @@ have Hread := pointsto_read Hs1 _. rewrite Hread. by destruct (c v s).
 by edestruct stateSplitsAsIncludes.
 Qed.
 
-Lemma triple_letGetSep R {r:Reader R} (p:PTR) (v:R) c Q :
+Lemma triple_letGetSep R {r:Reader R} (p:PTR) (v:R) c O Q :
   forall S,
-  TRIPLE (p:->v ** S) (c v) Q ->
-  TRIPLE (p:->v ** S) (bind (getFromProcState p) c) Q.
+  TRIPLE (p:->v ** S) (c v) O Q ->
+  TRIPLE (p:->v ** S) (bind (getFromProcState p) c) O Q.
 Proof. move => S. apply triple_letGetSepGen. by cancel2. Qed.
 
-Lemma triple_letReadSep R {r:Reader R} (p q:PTR) (v:R) c (P:SPred) Q :
+Lemma triple_letReadSep R {r:Reader R} (p q:PTR) (v:R) c (P:SPred) O Q :
   P |-- p -- q :-> v ** ltrue ->
-  TRIPLE P (c (v,q)) Q ->
-  TRIPLE P (bind (readFromProcState p) c) Q.
+  TRIPLE P (c (v,q)) O Q ->
+  TRIPLE P (bind (readFromProcState p) c) O Q.
 Proof. move => PTIS T s pre.
 specialize (T _ pre).
 destruct T as [f [o [H1 H2]]].
@@ -503,22 +481,22 @@ edestruct stateSplitsAsIncludes; [apply Hs | eassumption].
 Qed.
 
 (* Set and get DWORDs from memory *)
-Lemma triple_letGetDWORDSep (p:PTR) (v:DWORD) c Q :
+Lemma triple_letGetDWORDSep (p:PTR) (v:DWORD) c O Q :
   forall S,
-  TRIPLE (p:->v ** S) (c v) Q ->
-  TRIPLE (p:->v ** S) (bind (getDWORDFromProcState p) c) Q.
+  TRIPLE (p:->v ** S) (c v) O Q ->
+  TRIPLE (p:->v ** S) (bind (getDWORDFromProcState p) c) O Q.
 Proof. apply triple_letGetSep. Qed.
 
-Lemma triple_letGetDWORDSepGen (p:PTR) (v:DWORD) P c Q :
+Lemma triple_letGetDWORDSepGen (p:PTR) (v:DWORD) P c O Q :
   P |-- p:->v ** ltrue ->
-  TRIPLE P (c v) Q ->
-  TRIPLE P (bind (getDWORDFromProcState p) c) Q.
+  TRIPLE P (c v) O Q ->
+  TRIPLE P (bind (getDWORDFromProcState p) c) O Q.
 Proof. apply triple_letGetSepGen. Qed.
 
-Lemma triple_letGetBYTESep (p:PTR) (v:BYTE) c Q :
+Lemma triple_letGetBYTESep (p:PTR) (v:BYTE) c O Q :
   forall S,
-  TRIPLE (p:->v ** S) (c v) Q ->
-  TRIPLE (p:->v ** S) (bind (getBYTEFromProcState p) c) Q.
+  TRIPLE (p:->v ** S) (c v) O Q ->
+  TRIPLE (p:->v ** S) (bind (getBYTEFromProcState p) c) O Q.
 Proof. apply triple_letGetSep. Qed.
 
 Lemma byteIsMapped (p:PTR) (v: BYTE) S s :
@@ -535,7 +513,7 @@ Qed.
 
 Lemma triple_setBYTESep (p:PTR) (v w:BYTE) :
   forall S,
-  TRIPLE (p:->v ** S) (setBYTEInProcState p w) (p:->w ** S).
+  TRIPLE (p:->v ** S) (setBYTEInProcState p w) empOP (p:->w ** S).
 Proof.
 move => S.
 rewrite 2!pointsToBYTE_byteIs.
@@ -552,14 +530,14 @@ Lemma triple_setBYTEbind (v w: BYTE) (p: DWORD) Q (W: WriterTm unit) Q' :
   (let!s = getProcState;
    if writeMemTm W s (next p) is Some(_, m')
    then setProcState {| registers := s; flags := s; memory := m' |}
-   else raiseUnspecified)
+   else raiseUnspecified) empOP
   (p :-> w ** Q') ->
  TRIPLE
  (p :-> v ** Q)
   (let!s = getProcState;
    if writeMemTm (do! writeNext w; W) s p is Some(_, m')
    then setProcState {| registers := s; flags := s; memory := m' |}
-   else raiseUnspecified)
+   else raiseUnspecified) empOP
   (p :-> w ** Q').
 Proof.
 rewrite 2!pointsToBYTE_byteIs.
@@ -575,7 +553,7 @@ by case E: (writeMemTm W _ _) => [[p' m] |]; rewrite E in H.
 Qed.
 
 Lemma triple_setDWORDSep (p:PTR) (v w:DWORD) S:
-  TRIPLE (p:->v ** S) (setDWORDInProcState p w) (p:->w ** S).
+  TRIPLE (p:->v ** S) (setDWORDInProcState p w) empOP (p:->w ** S).
 Proof.
 elim Ev: (@split4 8 8 8 8 v) => [[[v3 v2] v1] v0].
 elim Ew: (@split4 8 8 8 8 w) => [[[w3 w2] w1] w0].
@@ -593,42 +571,44 @@ apply triple_setBYTEbind.
 
 destruct (next _).
 rewrite [in X in TRIPLE X _ _]sepSPC sepSPA pointsTo_consBYTE sepSPA.
-rewrite [in X in TRIPLE _ _ X]sepSPC sepSPA pointsTo_consBYTE sepSPA.
+rewrite [in X in TRIPLE _ _ _ X]sepSPC sepSPA pointsTo_consBYTE sepSPA.
 apply triple_setBYTEbind.
 
 destruct (next _).
 rewrite [in X in TRIPLE X _ _]sepSPC sepSPA pointsTo_consBYTE !sepSPA.
-rewrite [in X in TRIPLE _ _ X]sepSPC sepSPA pointsTo_consBYTE !sepSPA.
+rewrite [in X in TRIPLE _ _ _ X]sepSPC sepSPA pointsTo_consBYTE !sepSPA.
 apply triple_setBYTEbind.
 
 destruct (next _).
 rewrite [in X in TRIPLE X _ _]sepSPC sepSPA pointsTo_consBYTE !sepSPA.
-rewrite [in X in TRIPLE _ _ X]sepSPC sepSPA pointsTo_consBYTE !sepSPA.
+rewrite [in X in TRIPLE _ _ _ X]sepSPC sepSPA pointsTo_consBYTE !sepSPA.
 apply triple_setBYTEbind.
 
 rewrite ->seqPointsToNil.
 rewrite /writeMem !empSPL.
 move => s pre. exists s. eexists _. by destruct s.
 
-rewrite topPointsTo_consBYTE. eapply otriple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
-rewrite topPointsTo_consBYTE. eapply otriple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
-rewrite topPointsTo_consBYTE. eapply otriple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
+rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
+rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
+rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
 Qed.
 
 Lemma triple_setDWORDorBYTESep dword (p:PTR) (v w: DWORDorBYTE dword) S :
-  TRIPLE (p:->v ** S) (setDWORDorBYTEInProcState p w) (p:->w ** S).
+  TRIPLE (p:->v ** S) (setDWORDorBYTEInProcState p w) empOP (p:->w ** S).
 Proof. destruct dword. apply triple_setDWORDSep. apply triple_setBYTESep. Qed.
 
-Lemma triple_doSetDWORDSep (p:PTR) (v w: DWORD) c Q S :
-  TRIPLE (p:->w ** S) c Q ->
-  TRIPLE (p:->v ** S) (do! setDWORDInProcState p w; c) Q.
+Lemma triple_doSetDWORDSep (p:PTR) (v w: DWORD) c O Q S :
+  TRIPLE (p:->w ** S) c O Q ->
+  TRIPLE (p:->v ** S) (do! setDWORDInProcState p w; c) O Q.
 Proof. move => T s pre.
 destruct (triple_setDWORDSep w pre) as [f [o [H1 [H3 H2]]]].
 specialize (T _ H2).
 destruct T as [f' [o' [H4 H5]]]. exists f'. rewrite /= H1.
 eexists _.
 destruct (c f). destruct H5. split => //. injection H4 => -> ->. 
-simpl in H, H3. subst. done.
+simpl in H, H3. subst. done. intuition. 
+rewrite /=/outputToActions in H, H3. 
+by rewrite /outputToActions map_cat H3. 
 Qed.
 
 Hint Rewrite -> (@assoc ST _ _) (@id_l ST _ _) : triple.
@@ -636,7 +616,7 @@ Hint Rewrite -> (@assoc ST _ _) (@id_l ST _ _) : triple.
 Ltac triple_apply lemma tac :=
  autounfold with spred;
  autorewrite with triple;
- eapply triple_roc; [| |eapply lemma];
+ eapply triple_roc; [| | |eapply lemma];
  do ?(instantiate;
       match goal with
         | [ |- _ |-- _ ] => reflexivity

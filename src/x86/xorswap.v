@@ -1,6 +1,6 @@
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic basicprog program.
+Require Import SPred septac spec spectac basic basicprog program.
 Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor basic macros.
 
 Set Implicit Arguments.
@@ -25,7 +25,7 @@ Definition basicSwap (r1 r2: Reg) c :=
   Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  c
+  c empOP
   (r1 ~= w ** r2 ~= v).
 
 Lemma xorSwapCorrect (r1 r2: Reg) :
@@ -43,6 +43,7 @@ Proof.
       [?1] should be [true].  This is because we don't properly handle
       [DWORDorBYTE] in [InstrArg], and use the hackish
       [InstrArg_of_DWORDorBYTEReg] *)
+  eapply basic_seq; [try done | |].
   basicapply (@XOR_RR_rule true).
 
   (* XOR r2, r1 *)

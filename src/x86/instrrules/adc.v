@@ -1,7 +1,7 @@
 (** * ADC instruction *)
 Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec safe triple basic basicprog spectac.
+Require Import spec SPred OPred septac spec triple basic basicprog spectac.
 Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
 Require Import Setoid RelationClasses Morphisms.
 
@@ -18,7 +18,7 @@ Require Import x86.instrrules.core.
 
 Lemma ADC_RI_rule (r1:Reg) v1 (v2:DWORD) carry v o s z c p:
   adcB c v1 v2 = (carry,v) ->
-  |-- basic (r1~=v1 ** OSZCP o s z c p) (ADC r1, v2)
+  |-- basic (r1~=v1 ** OSZCP o s z c p) (ADC r1, v2) empOP
             (r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) carry (lsb v)).
 Proof.

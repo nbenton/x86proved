@@ -2,7 +2,7 @@
     Single-step transition function and extension to multiple steps,
     with various lemmas
   ===========================================================================*)
-Require Import ssreflect ssrnat ssrbool eqtype tuple seq.
+Require Import ssreflect ssrnat ssrbool ssrfun eqtype tuple seq.
 Require Import instr monad reader procstate procstatemonad exn eval instrcodec
                monadinst ioaction bitsrep bitsops.
 
@@ -19,15 +19,33 @@ Definition step : ST unit :=
   evalInstr instr.
 (*=End *)
 
-(* Takes one step from s to s' with output o *)
-Definition oneStep s o s' := step s = (o, Success _ (s', tt)). 
+(* Labelled transition from s to s' with actions o *)
+Definition oneStep s o s' := 
+  exists output, o = outputToActions output /\ step s = (output, Success _ (s', tt)).
 
-(* Takes k steps from s to s' with output o *)
-Definition manyStep k s o s' := doMany k step s = (o, Success _ (s', tt)).
+(* Takes k steps from s to s' with events o *)
+Fixpoint manyStep k s o s' := 
+  if k is k'.+1
+  then exists s'' o1 o2, o = o1 ++ o2 /\ oneStep s o1 s'' /\ manyStep k' s'' o2 s'
+  else o = nil /\ s = s'. 
+
+Lemma manyStepLe k : forall k', k' <= k -> 
+  forall s o s', manyStep k s o s' -> exists o' s'', preActions o' o /\ manyStep k' s o' s''.
+Proof. induction k => k' LE s o s' /=R1. 
++ destruct k' => //. elim R1 => [-> ->]. exists nil, s'. split => //. reflexivity. 
++ destruct R1 as [s'' [o1 [o2 [EQ [ONE MANY]]]]]. subst.
+  destruct k'. rewrite /manyStep. exists nil, s. intuition. by exists (o1++o2). 
+  specialize (IHk _ LE _ _ _ MANY). 
+  destruct IHk as [o' [s2 [[o3 EQ] MANY']]]. 
+  subst.   
+  exists (o1 ++ o'), s2. split. exists o3. by rewrite catA. 
+  simpl. 
+  by exists s'', o1, o'. 
+Qed. 
 
 (* Takes at least k steps from s *)
-Definition runsFor k s := exists s' o, manyStep k s o s'.
-Definition runsForWith k o s := exists s', manyStep k o s s'. 
+Definition runsFor k s := exists s' o', manyStep k s o' s'.
+Definition runsForWithPrefixOf k s o := exists s' o', preActions o' o /\ manyStep k s o' s'. 
 
 (* Runs forever from s without failing *)
 Definition runsForever s := forall k, runsFor k s.
@@ -44,59 +62,47 @@ Lemma seqManyStep k1 : forall k2 s s' s'' o1 o2,
   manyStep k1 s o1 s' -> 
   manyStep k2 s' o2 s'' ->
   manyStep (k1+k2) s (o1++o2) s''.
-Proof. induction k1 => k2 s s' s'' o1 o2 R1 R2.
-+ rewrite add0n. injection R1 => [E1 E2]. by subst. 
-+ rewrite /manyStep/= in R1, R2. 
-  elim E1: (step s) => [o'' r]. rewrite E1 in R1. 
-  elim E2: r => [e| [s''' []]]. by rewrite E2 in R1. 
-  rewrite E2 in R1. 
-  elim E3: (doMany k1 step s''') => [o''' r']. rewrite E3 in R1. 
-  injection R1 => [R1a R2b]. subst.   
-  specialize (IHk1 _ _ _ _ _ _ E3 R2). rewrite /manyStep/=. by rewrite E1 IHk1 catA.  
+Proof. induction k1 => k2 s s' s'' o1 o2 /= R1 R2.
++ rewrite add0n. destruct R1 as [E1 E2]. by subst. 
++ destruct R1 as [s0 [o3 [o4 [E1 [STEP R1]]]]]. subst. 
+  specialize (IHk1 _ _ _ _ _ _ R1 R2).
+  exists s0, o3, (o4 ++ o2). split. by rewrite catA. 
+  intuition. 
 Qed. 
 
 Lemma runsFor0 s : runsFor 0 s.
 Proof. by exists s, nil. Qed. 
 
-Lemma runsForWith0 s : runsForWith 0 s nil.
-Proof. by exists s. Qed. 
+Lemma runsForWithPrefixOf0 s o : runsForWithPrefixOf 0 s o.
+Proof. exists s, nil. split. unfold preActions. by exists o. done. Qed. 
 
 Lemma runsForSinv s k : runsFor k.+1 s ->
   exists s' o, (oneStep s o s' /\ runsFor k s').
 Proof. rewrite /runsFor. move => [s' [o RED]]. 
-rewrite /manyStep/= in RED. 
-case E1: (step s) => [o'' r]. rewrite E1 in RED. 
-elim E2: r => [e| [s''' []]]. by rewrite E2 in RED. 
-rewrite E2 in RED. 
-exists s''', o''. split. by rewrite /oneStep E1 E2. 
-elim E3: (doMany k step s''') => [o''' r']. rewrite E3 in RED. 
-injection RED => [EQ1 EQ2]. subst.
-rewrite /manyStep E3. by eexists _, _. Qed. 
+rewrite /manyStep-/manyStep in RED.
+destruct RED as [s'' [o1 [o2 [H1 [ONE MANY]]]]].  
+exists s'', o1. split => //.
+by exists s', o2.  
+Qed. 
 
-Lemma runsForWithSinv s k o : runsForWith k.+1 s o ->
-  exists s' o1 o2, (oneStep s o1 s' /\ runsForWith k s' o2 /\ o = o1++o2).
-Proof. rewrite /runsForWith. move => [s' RED]. 
-rewrite /manyStep/= in RED. 
-case E1: (step s) => [o1 r]. rewrite E1 in RED. 
-elim E2: r => [e| [s''' []]]. by rewrite E2 in RED. 
-rewrite E2 in RED. 
-elim E3: (doMany k step s''') => [o''' r']. rewrite E3 in RED.
-exists s''', o1, o'''. split. by rewrite /oneStep E1 E2. 
-injection RED => [EQ1 EQ2]. subst.
-rewrite /manyStep E3. split => //. by eexists. 
+Lemma runsForWithPrefixOfSinv s k o : runsForWithPrefixOf k.+1 s o ->
+  exists s' o1 o2, (oneStep s o1 s' /\ runsForWithPrefixOf k s' o2 /\ o = o1++o2).
+Proof. rewrite /runsForWithPrefixOf. move => [s' [o' [PRE RED]]].
+rewrite /manyStep-/manyStep in RED. 
+destruct RED as [s'' [o1 [o2 [H [ONE MANY]]]]]. 
+subst. destruct PRE as [o' PRE]. subst.
+exists s'', o1, (o2++o'). split => //. 
+split; last by rewrite catA. 
+exists s', o2. split => //. by exists o'. 
 Qed. 
 
 Lemma runsForS k s o s' : oneStep s o s' -> runsFor k s' -> runsFor k.+1 s.
-Proof. move => RED1 RED2. rewrite /oneStep in RED1. 
-destruct RED2 as [s'' [o'' RED2]]. rewrite /runsFor.
-rewrite /manyStep/=. rewrite RED1 RED2. by eexists _, _. 
-Qed. 
+Proof. move => ONE [s1 [o1 MANY]]. exists s1, (o++o1). by exists s', o, o1. Qed. 
 
-Lemma runsForWithS k s o s' o' : 
-  oneStep s o s' -> runsForWith k s' o' -> runsForWith k.+1 s (o++o').
-Proof. move => RED1 [s'' RED2]. rewrite /oneStep in RED1. 
-rewrite /runsForWith.
-rewrite /manyStep/=. rewrite RED1 RED2. by eexists _. 
+Lemma runsForWithPrefixOfS k s o s' o' : 
+  oneStep s o s' -> runsForWithPrefixOf k s' o' -> runsForWithPrefixOf k.+1 s (o++o').
+Proof. move => ONE [s1 [o1 [PRE MANY]]]. exists s1, (o++o1). 
+split. by apply cat_preActions. by exists s', o, o1. 
 Qed. 
 
 Lemma runsForLe k : forall k', k' <= k -> forall s, runsFor k s -> runsFor k' s.
@@ -105,22 +111,18 @@ Proof. induction k => k' LT s RED => //.
 + destruct k' => //. apply runsFor0. 
 + specialize (IHk _ LT). 
 apply runsForSinv in RED. destruct RED as [s' [o [R1 RED]]]. 
-apply: runsForS. apply R1. by apply IHk. 
+apply: runsForS.  apply R1. apply IHk => //. 
 Qed. 
 
-Lemma cat_preObs o : forall o1 o2, preObs o1 o2 -> preObs (o++o1) (o++o2). 
-Proof. induction o => // o1 o2 [o' PO]. subst. exists o'. by rewrite catA. Qed.
 
-Lemma runsForWithLe k : forall o k', k' <= k -> forall s, runsForWith k s o -> 
-  exists o', preObs o' o /\ runsForWith k' s o'.
-Proof. induction k => o k' LT s RED => //.
-+ destruct k' => //. exists o. split => //. reflexivity. 
-+ destruct k' => //. exists nil. split => //. by exists o. apply runsForWith0. 
-+ apply runsForWithSinv in RED. destruct RED as [s' [o' [o'' [R1 [RED E]]]]].
-subst. 
-destruct (IHk o'' _ LT _ RED) as [o0 [OBS RUNS]]. 
-exists (o'++o0). split. by apply cat_preObs. 
-apply: runsForWithS. apply R1. done. 
+Lemma runsForWithPrefixOfLe k : 
+  forall k' s o, k' <= k -> runsForWithPrefixOf k s o -> runsForWithPrefixOf k' s o.
+Proof. induction k => k' s o LE RED => //.
++ by destruct k' => //. 
++ destruct k' => //. apply runsForWithPrefixOf0.
+  apply runsForWithPrefixOfSinv in RED. 
+  destruct RED as [s' [o' [o'' [ONE [RED EQ]]]]]. subst.
+  apply: runsForWithPrefixOfS. apply ONE. apply IHk => //.  
 Qed. 
 
 Lemma runsTo_runsForever s s' :runsTo s s' -> runsForever s' -> runsForever s.
@@ -140,6 +142,23 @@ have REDS:= seqManyStep R2 R1.
 apply: runsForLe; last first.
 eexists _, _. apply REDS. 
 rewrite addnC. apply leq_addr. 
+Qed. 
+
+Lemma runsToWith_runsForWithPrefixOf k : forall s o s' o', 
+  runsToWith s o s' -> runsForWithPrefixOf k s' o' -> 
+  runsForWithPrefixOf k s (o++o'). 
+Proof. move => s o s' o' R1 R2. 
+destruct R1 as [k1 R1].
+destruct R2 as [s2 [o2 [PRE R2]]].
+have R3 := seqManyStep R1 R2. 
+rewrite /runsForWithPrefixOf.
+have LE: k <= k1 + k. rewrite addnC. by apply leq_addr. 
+have MSLE:= manyStepLe LE R3. 
+destruct MSLE as [o3 [s3 [PRE' MANY]]].  
+exists s3, o3. split => //.
+destruct PRE' as [o4 PRE']. 
+destruct PRE as [o5 PRE]. subst.  
+exists (o4++o5). rewrite catA. rewrite PRE'. by rewrite catA. 
 Qed. 
 
 Lemma properRunsTo_runsFor k : forall s s', properRunsTo s s' -> runsFor k s' -> runsFor k.+1 s. 

@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrfun ssrnat eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec safe basic program basicprog macros call.
+Require Import SPred septac spec OPred basic program basicprog macros call.
 Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor screenspec.
 
 Set Implicit Arguments.
@@ -22,7 +22,7 @@ Definition inlineComputeLinePos: program :=
      SHR EDX, 7.
 
 Definition inlineComputeLine_spec (row:nat) (base:DWORD) (instrs: program) :=
-  basic (EDX ~= #row ** EDI ~= base) instrs
+  basic (EDX ~= #row ** EDI ~= base) instrs empOP
         (EDX ~= #row ** EDI ~= base +# row*160) @ OSZCP?.
 
 Lemma inlineComputeLinePos_correct row base :
@@ -89,7 +89,7 @@ Definition incModN (r: Reg) n : program :=
 
 Require Import div.
 Lemma decModN_correct (r:Reg) n m : n < 2^32 -> m < n ->
-  |-- basic (r ~= #m) (decModN r n) (r ~= #((m + n.-1) %% n)) @ OSZCP?.
+  |-- basic (r ~= #m) (decModN r n) empOP (r ~= #((m + n.-1) %% n)) @ OSZCP?.
 Proof.
   move => LT1 LT2.
 
@@ -127,7 +127,7 @@ Proof.
 Qed.
 
 Definition incModN_correct (r:Reg) n m : n < 2^32 -> m < n ->
-  |-- basic (r ~= #m) (incModN r n) (r ~= #((m.+1) %% n)) @ OSZCP?.
+  |-- basic (r ~= #m) (incModN r n) empOP (r ~= #((m.+1) %% n)) @ OSZCP?.
 Proof.
 move => LT1 LT2.
 
@@ -169,28 +169,28 @@ Qed.
 Definition goLeft: program := decModN ECX numCols.
 
 Lemma goLeftCorrect col : col < numCols ->
-  |-- basic (ECX ~= # col) goLeft (ECX ~= #((col + numCols.-1) %% numCols))@ OSZCP?.
+  |-- basic (ECX ~= # col) goLeft empOP (ECX ~= #((col + numCols.-1) %% numCols))@ OSZCP?.
 Proof. apply decModN_correct => //. Qed.
 
 (* Move ECX one column right, wrapping around if necessary *)
 Definition goRight: program := incModN ECX numCols.
 
 Lemma goRightCorrect col : col < numCols ->
-  |-- basic (ECX ~= # col) goRight (ECX ~= #((col.+1) %% numCols)) @ OSZCP?.
+  |-- basic (ECX ~= # col) goRight empOP (ECX ~= #((col.+1) %% numCols)) @ OSZCP?.
 Proof. apply incModN_correct => //. Qed.
 
 (* Move EDX one row up, wrapping around if necessary *)
 Definition goUp: program := decModN EDX numRows.
 
 Lemma goUpCorrect row : row < numRows ->
-  |-- basic (EDX ~= # row) goUp (EDX ~= #((row + numRows.-1) %% numRows)) @ OSZCP?.
+  |-- basic (EDX ~= # row) goUp empOP (EDX ~= #((row + numRows.-1) %% numRows)) @ OSZCP?.
 Proof. apply decModN_correct => //. Qed.
 
 (* Move EDX one row down, wrapping around if necessary *)
 Definition goDown: program := incModN EDX numRows.
 
 Lemma goDownCorrect row : row < numRows ->
-  |-- basic (EDX ~= # row) goDown (EDX ~= #((row.+1) %% numRows)) @ OSZCP?.
+  |-- basic (EDX ~= # row) goDown empOP (EDX ~= #((row.+1) %% numRows)) @ OSZCP?.
 Proof. apply incModN_correct => //. Qed.
 
 (* Given a character at buf[ECX, EDX], return its neighbour count in ESI *)

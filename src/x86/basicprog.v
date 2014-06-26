@@ -3,58 +3,59 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe pointsto cursor instr reader instrcodec.
+Require Import SPred OPred septac spec spectac obs pointsto cursor instr reader instrcodec.
 Require Import Setoid RelationClasses Morphisms.
 Require Import program basic.
 
 (* Morphism for program equivalence *)
 Global Instance basic_progEq_m:
-Proper (lequiv ==> progEq ==> lequiv ==> lequiv) basic.
+Proper (lequiv ==> progEq ==> lequiv ==> lequiv ==> lequiv) basic.
   Proof.
-    move => P P' HP c c' Hc Q Q' HQ. rewrite {1}/basic.
-    setoid_rewrite HQ. setoid_rewrite HP. setoid_rewrite Hc. reflexivity.
+    move => P P' HP c c' Hc O O' HO Q Q' HQ.
+    setoid_rewrite HQ. setoid_rewrite HP. setoid_rewrite HO. 
+    unfold basic. by setoid_rewrite Hc. 
   Qed.
 
 (* Skip rule *)
-Lemma basic_skip P: |-- basic P prog_skip P.
+Lemma basic_skip P: |-- basic P prog_skip empOP P.
 Proof.
-  rewrite /basic. specintros => i j.
-  unfold_program.
-  specintro => H.
-  rewrite emp_unit spec_reads_eq_at; rewrite <- emp_unit.
-  rewrite spec_at_emp. inversion H. subst. by apply limplValid.
+  rewrite /basic. specintros => i j O'. unfold_program.
+  specintro => ->. 
+  rewrite empOPL emp_unit spec_reads_eq_at; rewrite <- emp_unit.
+  rewrite spec_at_emp. by apply limplValid. 
 Qed.
 
 (* Sequencing rule *)
-Lemma basic_seq (c1 c2: program) S P Q R:
-  S |-- basic P c1 Q ->
-  S |-- basic Q c2 R ->
-  S |-- basic P (c1;; c2) R.
+Lemma basic_seq (c1 c2: program) S P O1 Q O2 R O:
+  catOP O1 O2 |-- O ->
+  S |-- basic P c1 O1 Q ->
+  S |-- basic Q c2 O2 R ->
+  S |-- basic P (c1;; c2) O R.
 Proof.
-  rewrite /basic. move=> Hc1 Hc2. specintros => i j.
-  unfold_program.
-  specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst.
-  specapply Hc1. by ssimpl.
-  specapply Hc2. by ssimpl.
+  rewrite /basic. move=> HO Hc1 Hc2. specintros => i j O'. unfold_program.
+  specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst. 
+  rewrite <- HO. rewrite catOPA. 
+  specapply Hc1. reflexivity. by ssimpl. 
+  specapply Hc2. reflexivity. by ssimpl. 
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
   by rewrite spec_at_emp.
 Qed.
-
+ 
 (* Scoped label rule *)
-Lemma basic_local S P c Q:
-  (forall l, S |-- basic P (c l) Q) ->
-  S |-- basic P (prog_declabel c) Q.
+Lemma basic_local S P c O Q:
+  (forall l, S |-- basic P (c l) O Q) ->
+  S |-- basic P (prog_declabel c) O Q.
 Proof.
-  move=> H. rewrite /basic. rewrite /memIs /=. specintros => i j l.
+  move=> H. rewrite /basic. rewrite /memIs /=. specintros => i j O' l.
   specialize (H l). lforwardR H.
-  - apply lforallL with i. apply lforallL with j. reflexivity.
+  - apply lforallL with i. apply lforallL with j. apply lforallL with O'. reflexivity.
   apply H.
 Qed.
 
 (* Needed to avoid problems with coercions *)
-Lemma basic_instr S P i Q :
-  S |-- basic P i Q ->
-  S |-- basic P (prog_instr i) Q.
+Lemma basic_instr S P i O Q :
+  S |-- basic P i O Q ->
+  S |-- basic P (prog_instr i) O Q.
 Proof. done. Qed.
 
 (* Attempts to apply "basic" lemma on a single command (basic_basic) or
@@ -74,7 +75,7 @@ Proof. done. Qed.
   (* We ensure that we leave at most one goal remaining. *)
   Ltac basicatom R tacfin :=
   lazymatch goal with
-    | |- |-- basic ?P (prog_instr ?i) ?Q =>
+    | |- |-- basic ?P (prog_instr ?i) ?O ?Q =>
           (eapply basic_basic; first eapply basic_instr; [ eexact R | tacfin .. | try tacfin ])
 
     | _ => eapply basic_basic; [ eexact R | tacfin .. | try tacfin ]
@@ -82,7 +83,7 @@ Proof. done. Qed.
 
   Ltac  basicseq R tacfin :=
   lazymatch goal with
-    | |- |-- basic ?P (prog_seq ?p1 ?p2) ?Q => (eapply basic_seq; first basicatom R tacfin)
+    | |- |-- basic ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply basic_seq; [ try done | basicatom R tacfin |])
     | _ => basicatom R tacfin
     end.
 

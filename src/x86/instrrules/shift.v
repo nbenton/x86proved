@@ -1,7 +1,7 @@
 (** * SHL and SHR instructions *)
 Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec safe triple basic basicprog spectac.
+Require Import spec SPred septac spec OPred triple basic basicprog spectac.
 Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
 Require Import Setoid RelationClasses Morphisms.
 
@@ -23,7 +23,7 @@ Qed.
 
 Lemma SHL_RI_rule (r:Reg) (v:DWORD) (count:nat):
   count < 32 ->
-  |-- basic (r~=v ** OSZCP?) (SHL r, count)
+  |-- basic (r~=v ** OSZCP?) (SHL r, count) empOP
             (r~=iter count shlB v ** OSZCP?).
 Proof.
   change (stateIs r) with (@DWORDorBYTEregIs true r).
@@ -39,7 +39,7 @@ Qed.
 
 Lemma SHR_RI_rule (r:Reg) (v:DWORD) (count:nat):
   count < 32 ->
-  |-- basic (r~=v ** OSZCP?) (SHR r, count)
+  |-- basic (r~=v ** OSZCP?) (SHR r, count) empOP
             (r~=iter count shrB v ** OSZCP?).
 Proof.
   change (stateIs r) with (@DWORDorBYTEregIs true r).

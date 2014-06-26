@@ -9,112 +9,140 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe pointsto cursor instr reader instrcodec.
+Require Import SPred OPred septac spec spectac safe obs pointsto cursor instr reader instrcodec.
 Require Import Setoid RelationClasses Morphisms.
 
 Section Basic.
   Context {T} `{MI: MemIs T}.
 
   (** Basic block of position-independent code *)
-  Definition basic P (c:T) Q : spec :=
-    Forall i j:DWORD,
-    (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> c).
+  Definition basic P (c:T) (O: OPred) Q : spec :=
+    Forall i j:DWORD, Forall O': OPred, 
+    (obs O' @ (EIP ~= j ** Q) -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> c).
   Global Strategy 10000 [basic].
 
   (* Push spec through basic *)
-  Lemma spec_at_basic P c Q R :
-    basic P c Q @ R -|- basic (P ** R) c (Q ** R).
+  Lemma spec_at_basic P c O Q R :
+    basic P c O Q @ R -|- basic (P ** R) c O (Q ** R).
   Proof.
     rewrite /basic.
     autorewrite with push_at. cancel1 => i.
     autorewrite with push_at. cancel1 => j.
-    autorewrite with push_at. rewrite !sepSPA. reflexivity.
+    autorewrite with push_at. cancel1 => O'. 
+    autorewrite with push_at. rewrite -2!sepSPA. 
+    reflexivity.
   Qed.
 
   (* Frame rule for Hoare triples *)
-  Lemma basic_frame R S P c Q :
-    S |-- basic P c Q ->
-    S |-- basic (P ** R) c (Q ** R).
+  Lemma basic_frame R S P c O Q :
+    S |-- basic P c O Q ->
+    S |-- basic (P ** R) c O (Q ** R).
   Proof. by rewrite <-spec_at_basic, <-spec_frame. Qed.
 
   (* Rule of consequence *)
-  Lemma basic_roc P' Q' S P c Q:
+  Lemma basic_roc P' O' Q' S P c O Q:
     P |-- P' ->
     Q' |-- Q ->
-    S |-- basic P' c Q' ->
-    S |-- basic P c Q.
+    O' |-- O ->
+    S |-- basic P' c O' Q' ->
+    S |-- basic P c O Q.
   Proof.
-    move=> HP HQ H. rewrite /basic in H.
-    setoid_rewrite <-HP in H. setoid_rewrite ->HQ in H. apply H.
+    move=> HP HQ HO H. rewrite /basic in H.
+    setoid_rewrite <-HP in H. setoid_rewrite ->HQ in H. setoid_rewrite ->HO in H. 
+    apply H.
   Qed.
 
   (* Morphisms for triples *)
   Global Instance basic_entails_m:
-    Proper (lentails --> eq ==> lentails ++> lentails) basic.
+    Proper (lentails --> eq ==> lentails ++> lentails ++> lentails) basic.
   Proof.
-    move => P P' HP c _ <- Q Q' HQ. apply: basic_roc; try eassumption.
+    move => P P' HP c _ <- O O' HO Q Q' HQ. apply: basic_roc; try eassumption.
     done.
   Qed.
 
-  Global Instance basic_equiv_m:
-    Proper (lequiv ==> eq ==> lequiv ==> lequiv) basic.
+  (* Annoying extra instances to work around a bug with setoid rewriting on the 
+     fourth argument in the general morphism above *)
+  Global Instance basic_entails_m' P c:
+    Proper (eq ==> lentails ++> lentails) (basic P c).
   Proof.
-    move => P P' HP c _ <- Q Q' HQ. rewrite {1}/basic.
-    setoid_rewrite HQ. setoid_rewrite HP. reflexivity.
+    repeat move => *. subst; apply: basic_roc; try eassumption. done. done. done. 
   Qed.
 
+  Global Instance basic_entails_m'' P c :
+    Proper (eq ==> Basics.flip lentails ++> Basics.flip lentails) (basic P c).
+  Proof.
+    repeat move => *. subst; apply: basic_roc; repeat by (instantiate; try eassumption).
+  Qed.
+
+  Global Instance basic_equiv_m:
+    Proper (lequiv ==> eq ==> lequiv ==> lequiv ==> lequiv) basic.
+  Proof.
+    move => P P' HP c _ <- O O' HO Q Q' HQ. 
+    split. setoid_rewrite HQ. setoid_rewrite HP. setoid_rewrite HO. reflexivity.
+    setoid_rewrite <-HQ. setoid_rewrite <-HP. setoid_rewrite <-HO. reflexivity.
+  Qed.
+
+  Global Instance basic_equiv_m' P c:
+    Proper (lequiv ==> lequiv ==> lequiv) (basic P c).
+  Proof.
+    move => O O' HO Q Q' HQ. setoid_rewrite HQ. by setoid_rewrite HO. 
+  Qed. 
+
   (* Special case of consequence for precondition *)
-  Lemma basic_roc_pre P' S P c Q:
+  Lemma basic_roc_pre P' S P c O Q:
     P |-- P' ->
-    S |-- basic P' c Q ->
-    S |-- basic P c Q.
+    S |-- basic P' c O Q ->
+    S |-- basic P c O Q.
   Proof. move=> HP H. by rewrite ->HP. Qed.
 
   (* Special case of consequence for postcondition *)
-  Lemma basic_roc_post Q' S P c Q:
-    Q' |-- Q ->
-    S |-- basic P c Q' ->
-    S |-- basic P c Q.
-  Proof. move=> HQ H. by rewrite <-HQ. Qed.
+  Lemma basic_roc_post Q' S P c O Q:
+    Q' |-- Q -> 
+    S |-- basic P c O Q' ->
+    S |-- basic P c O Q.
+  Proof. move=> HQ H. by rewrite <- HQ. Qed. 
 
-  Lemma basic_exists A S P c Q:
-    (forall a:A, S |-- basic (P a) c Q) ->
-    S |-- basic (lexists P) c Q.
-  Proof. rewrite /basic => H. specintros => i j a. eforalls H. simple apply H. Qed.
+  Lemma basic_exists A S P c O Q:
+    (forall a:A, S |-- basic (P a) c O Q) ->
+    S |-- basic (lexists P) c O Q.
+  Proof. rewrite /basic => H. specintros => i j O' a. eforalls H. simple apply H. Qed.
 
-  Global Instance AtEx_basic P c Q : AtEx (basic P c Q).
-  Proof. rewrite /basic. apply _. Qed.
+  Global Instance AtEx_basic P c O Q : AtEx (basic P c O Q).
+  Proof. rewrite /basic. apply AtEx_forall => i. 
+  apply AtEx_forall => j. apply AtEx_forall => O'. apply _. Qed. 
 
-  Lemma basic_basic_context R S' P' Q' S P c Q:
-    S' |-- basic P' c Q' ->
+  Lemma basic_basic_context R S' P' O' Q' S P c O Q:
+    S' |-- basic P' c O' Q' ->
     S |-- S' ->
     P |-- P' ** R ->
+    O' |-- O -> 
     Q' ** R |-- Q ->
-    S |-- basic P c Q.
-  Proof. move=> Hc HS HP HQ. rewrite ->HS, ->HP, <-HQ. exact: basic_frame. Qed.
+    S |-- basic P c O Q.
+  Proof. move=> Hc HS HP HO HQ. apply: basic_roc. apply HP. apply HQ. apply HO.
+  rewrite -> HS. exact: basic_frame. Qed.
 
   (* Combine rule of consequence and frame *)
-  Lemma basic_basic R P' Q' S P c Q:
-    |-- basic P' c Q' ->
+  Lemma basic_basic R P' Q' O S P c Q:
+    |-- basic P' c O Q' ->
     P |-- P' ** R ->
     Q' ** R |-- Q ->
-    S |-- basic P c Q.
+    S |-- basic P c O Q.
   Proof.
-    move=> Hc HP HQ. apply: basic_basic_context; try eassumption. done.
+    move=> Hc HP HQ. apply: basic_basic_context; try eassumption. done. done.
   Qed.
 End Basic.
 
-Hint Rewrite @spec_at_basic : push_at.
+Hint Rewrite @spec_at_basic @spec_at_basic : push_at.
 
 Hint Unfold basic : specapply.
 
 Module Export Existentials_basic.
   Import Existentials.
 
-  Lemma pq_basic {M} {HM: MemIs M} t c Q:
+  Lemma pq_basic {M} {HM: MemIs M} t c O Q:
     match find t with
     | Some (mkf _ f) =>
-        PullQuant (basic (eval t) c Q) (fun a => basic (f a) c Q)
+        PullQuant (basic (eval t) c O Q) (fun a => basic (f a) c O Q)
     | None => True
     end.
   Proof.
@@ -123,8 +151,8 @@ Module Export Existentials_basic.
     apply basic_exists => a. by apply lforallL with a.
   Qed.
 
-  Hint Extern 0 (PullQuant (@basic ?M ?HM ?P ?c ?Q) _) =>
+  Hint Extern 0 (PullQuant (@basic ?M ?HM ?P ?c ?O ?Q) _) =>
     let t := quote_term P in
-    apply (@pq_basic M HM t c Q) : pullquant.
+    apply (@pq_basic M HM t c O Q) : pullquant.
 
 End Existentials_basic.

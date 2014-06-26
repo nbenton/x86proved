@@ -1,6 +1,6 @@
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic program macros.
+Require Import SPred OPred septac spec spectac obs basic program macros.
 Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor.
 
 Set Implicit Arguments.
@@ -37,11 +37,11 @@ Definition allocImp infoBlock (n: nat) (failed: DWORD) : program :=
   MOV [ESI], EDI.
 
 Definition allocSpec n (fail:DWORD) inv code :=
-  Forall i j : DWORD, (
-      safe @ (EIP ~= fail ** EDI?) //\\
-      safe @ (EIP ~= j ** Exists p, EDI ~= p +# n ** memAny p (p +# n))
+  Forall i j : DWORD, Forall O, (
+      obs O @ (EIP ~= fail ** EDI?) //\\
+      obs O @ (EIP ~= j ** Exists p, EDI ~= p +# n ** memAny p (p +# n))
     -->>
-      safe @ (EIP ~= i ** EDI?)
+      obs O @ (EIP ~= i ** EDI?)
     )
     @ (ESI? ** OSZCP? ** inv)
     <@ (i -- j :-> code).
@@ -55,8 +55,8 @@ Proof.
   rewrite /allocSpec/allocImp.
   specintros => *. unfold_program. specintros => *.
 
-  (* MOV ESI, infoBlock *)
-  specapply MOV_RanyI_rule; first by ssimpl.
+  (* MOV ESI, infoBlock *)  
+  specapply MOV_RanyI_rule; first by ssimpl. 
 
   (* MOV EDI, [ESI] *)
   rewrite {2}/allocInv. specintros => base limit.

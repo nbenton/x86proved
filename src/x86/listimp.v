@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec safe basic program macros.
+Require Import SPred septac spec basic program macros.
 Require Import instr instrsyntax instrcodec reader pointsto cursor inlinealloc.
 
 Set Implicit Arguments.

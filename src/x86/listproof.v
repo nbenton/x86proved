@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic program.
+Require Import SPred septac spec spectac OPred obs basic program.
 Require Import call instr instrsyntax instrcodec instrrules reader pointsto cursor inlinealloc
                listspec listimp triple.
 Require Import macros.
@@ -18,7 +18,7 @@ Lemma inlineHead_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
   inlineHead_spec r1 r2 i j p e v vs (inlineHead r1 r2).
 Proof.
 rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. unfold_program.
-rewrite /stateIsAny.
+specintro => O. rewrite /stateIsAny.
 specintros => q old.
 specapply MOV_RM0_rule. sbazooka.
 rewrite <-spec_reads_frame. autorewrite with push_at.
@@ -29,7 +29,7 @@ Lemma inlineTail_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
   inlineTail_spec r1 r2 i j p e v vs (inlineTail r1 r2).
 Proof.
 rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. unfold_program.
-rewrite /stateIsAny.
+specintro => O. rewrite /stateIsAny.
 specintros => q old. specapply MOV_RM_rule. by ssimpl.
 rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. cancel1. by sbazooka.
@@ -39,7 +39,7 @@ Lemma inlineCons_correct (r1 r2: Reg) heapInfo failAddr (i j h t e: DWORD) vs :
   inlineCons_spec r1 r2 heapInfo failAddr i j h t e vs (inlineCons r1 r2 heapInfo failAddr).
 Proof.
 rewrite /inlineCons_spec/inlineCons/updateCons. unfold_program.
-specintros => i1 i2 i3.
+specintro => O. specintros => i1 i2 i3.
 
 specapply inlineAlloc_correct. by ssimpl.
 
@@ -81,7 +81,7 @@ autorewrite with push_at.
 etransitivity; [|apply toyfun_mkbody]. specintro => iret.
 
 (* Now unfold the control-flow logic *)
-rewrite /callCons/basic. specintros => i1 i2. unfold_program.
+rewrite /callCons/basic. specintros => i1 i2 O. unfold_program.
 specintros => i3 i4 i5 i6 i7 -> -> i8 -> ->.
 
 specapply inlineCons_correct. by ssimpl.
@@ -109,7 +109,7 @@ specapply JMP_I_rule. by ssimpl.
 rewrite <-spec_later_weaken.
 rewrite <-spec_reads_frame.
 apply: limplAdj. autorewrite with push_at.
-apply: landL2. cancel1.
+apply: landL2. rewrite empOPL. cancel1.
 rewrite /OSZCP/stateIsAny. sbazooka.
 apply: lorR2. sbazooka.
 Qed.

@@ -14,12 +14,12 @@ Require Import Setoid RelationClasses Morphisms.
 Local Obligation Tactic := idtac.
 
 Program Definition obs (O: OPred) := mkspec (fun k P =>
-    forall (s: ProcState), (P ** ltrue) s -> exists o1 o2, preObs o1 o2 /\ O o2 /\ runsForWith k s o1) _ _.
+  forall (s: ProcState), (P ** ltrue) s -> exists o, O o /\ runsForWithPrefixOf k s o) _ _.
 Next Obligation. move=> O k P Hsafe s Hs. 
-destruct (Hsafe _ Hs) as [o1 [o2 [PRE [OH RUNS]]]]. 
+destruct (Hsafe _ Hs) as [o [OH RUNS]]. 
 have LE: k <= k.+1 by done.
-destruct (runsForWithLe LE RUNS) as [o' [PRE' RUNS']]. 
-exists o', o2. split => //. by rewrite -> PRE'. Qed.
+exists o. split; [done | by apply: runsForWithPrefixOfLe]. 
+Qed. 
 Next Obligation. move=> O k P P' [R HR] Hsafe s Hs. 
   apply Hsafe.
   rewrite ->lentails_eq in Hs. rewrite <-HR in Hs.
@@ -28,35 +28,48 @@ Qed.
 
 Local Transparent ILFun_Ops ILPre_Ops.
 
-
 (* Morphism for obs *)
 Instance obs_entails_m: Proper (lentails ==> lentails) obs.
 Proof.
-move => O O' HO. move => k R. 
-move => H1 s H2.  
-specialize (H1 s H2). 
-destruct H1 as [o1 [o2 [H3 [H4 H5]]]]. 
-exists o1, o2. split => //. split => //. 
-by apply: HO. 
+move => O O' HO k R H1 s H2.  
+destruct (H1 s H2) as [o1 [H3 H5]]. 
+exists o1. by split; [apply: HO |].
 Qed. 
 
 Instance obs_equiv_m: Proper (lequiv ==> lequiv) obs.
-Proof.
-move => O O' HO. split. by rewrite HO. by rewrite <-HO. 
-Qed. 
-
+Proof. move => O O' HO. split; [by rewrite HO | by rewrite <-HO]. Qed. 
 
 Lemma safeAsObs : safe -|- obs ltrue. 
 Proof. 
 apply spec_equiv => k R. 
 rewrite /safe/obs/mkspec/spec_fun/=.  
-rewrite /runsFor/runsForWith. split => H1 s H2.
+rewrite /runsFor/runsForWithPrefixOf. split => H1 s H2.
 specialize (H1 _ H2). 
 destruct H1 as [s' [o STEPS]]. 
-exists o, o. split. reflexivity. split => //. by exists s'. 
+exists o. split => //. exists s', o. split => //. reflexivity.
 specialize (H1 _ H2). 
-destruct H1 as [o1 [o2 [H1 [_ [s' STEPS]]]]]. 
-by exists s', o1. 
+destruct H1 as [o1 [_ [s1 [o2 [H STEPS]]]]]. 
+by exists s1, o2. 
+Qed. 
+
+Lemma catOP_eq_opred (O: OPred) o1 o2 :
+  O o2 ->
+  catOP (eq_opred o1) O (o1++o2).
+Proof. move => H. 
+exists o1, o2. firstorder.  reflexivity. 
+Qed. 
+
+
+Lemma runsToWithObs s o s':
+  runsToWith s o s' ->
+  forall O, obs O @ eq_pred s' |-- obs (catOP (eq_opred o) O) @ eq_pred s.
+Proof. move => RED O k0 R /=H s0 H0.
+have H1 := eq_pred_aux s' H0. 
+rewrite -(eq_pred_aux2 H0). 
+specialize (H _ H1). clear H0 H1.
+destruct H as [o1 [H4 H5]]. 
+exists (o++o1). split. by apply catOP_eq_opred. 
+apply: runsToWith_runsForWithPrefixOf. apply RED. done. 
 Qed. 
 
 Instance AtEx_obs O: AtEx (obs O).

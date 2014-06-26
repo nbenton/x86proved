@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic program.
+Require Import SPred septac spec spectac OPred basic program.
 Require Import call instr instrsyntax instrrules instrcodec reader pointsto cursor inlinealloc
                listspec listimp triple macros.
 
@@ -24,7 +24,7 @@ Definition wrappedAlloc bytes (r1 r2:Reg) heapInfo: program :=
 
 Lemma wrappedAlloc_correct bytes (r1 r2: Reg) heapInfo :
   |-- Forall i j: DWORD,
-  toyfun i EDI? ((Exists p:DWORD, EDI ~= p ** memAny p (p +# bytes)) \\// EDI ~= #0)
+  toyfun i EDI? empOP ((Exists p:DWORD, EDI ~= p ** memAny p (p +# bytes)) \\// EDI ~= #0)
 
   @  (ESI? ** OSZCP? ** allocInv heapInfo)
   <@ (i -- j :-> mkbody_toyfun (wrappedAlloc bytes r1 r2 heapInfo)).
@@ -36,7 +36,7 @@ autorewrite with push_at.
 etransitivity; [|apply toyfun_mkbody]. specintro => iret.
 
 (* Now unfold the control-flow logic *)
-rewrite /wrappedAlloc/basic. specintros => i1 i2. unfold_program.
+rewrite /wrappedAlloc/basic. specintros => i1 i2 O. unfold_program.
 specintros => i3 i4 i5 i6 i7 i8 -> -> i9 -> ->.
 
 (* Deal with the allocator spec itself *)

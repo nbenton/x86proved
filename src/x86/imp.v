@@ -1,6 +1,6 @@
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad tuple bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec safe basic basicprog program macros.
+Require Import SPred septac spec OPred basic basicprog program macros.
 Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor.
 Require Import Setoid RelationClasses Morphisms CSetoid.
 
@@ -128,7 +128,7 @@ Section LogicDefinitions.
   (* The high-level triple for the imp language. It lives in the low-level spec
      logic, which is maybe not really appropriate, but it works. *)
   Definition triple (P: asn) (C: cmd) (Q: asn) : spec :=
-    basic (asn_denot P) (compile_cmd C) (asn_denot Q) @ (EDX? ** OSZCP?).
+    basic (asn_denot P) (compile_cmd C) empOP (asn_denot Q) @ (EDX? ** OSZCP?).
 
   (* Expression evaluation *)
   Definition eeval (e: expr) (s: stack) : DWORD :=
@@ -213,25 +213,25 @@ Section LogicLemmas.
   Proof. by rewrite ltB_nat leB_nat ltnNge. Qed.
 
   Lemma compile_expr_correct s e:
-    |-- basic EDX? (compile_expr e) (EDX ~= eeval e s)
+    |-- basic EDX? (compile_expr e) empOP (EDX ~= eeval e s)
         @ (stack_denot s ** OSZCP?).
   Proof.
     autorewrite with push_at. case: e.
     - move=> x.
       eapply basic_basic; first apply MOV_RanyR_rule.
-      - rewrite ->regs_read_var. by ssimpl.
+      - rewrite ->regs_read_var. by ssimpl. 
       rewrite /eeval. ssimpl. exact: sepSPwand.
     - move=> value.
       eapply basic_basic; first apply MOV_RanyI_rule; reflexivity.
     - move=> x y.
-      eapply basic_seq.
+      eapply basic_seq; first try done.
       - eapply basic_basic; first apply MOV_RanyR_rule.
         + rewrite ->regs_read_var. by ssimpl.
-        done.
+        done. 
       eapply basic_basic; first apply SUB_RR_rule.
-      - ssimpl. rewrite ->sepSPwand. rewrite ->regs_read_var. by ssimpl.
+      - ssimpl. rewrite ->sepSPwand. rewrite ->regs_read_var. by ssimpl. 
       elim E: (sbbB false (s x) (s y)) => [carry res].
-      rewrite /OSZCP /stateIsAny. sbazooka.
+      rewrite /OSZCP /stateIsAny. sbazooka. 
       rewrite sepSPA. rewrite ->sepSPwand. cancel2. rewrite /eeval.
       by rewrite E/snd.
     - move=> x y. rewrite /compile_expr.
@@ -242,12 +242,12 @@ Section LogicLemmas.
         rewrite /eeval. rewrite ltB_nat.
         rewrite lt_irreflexive. reflexivity.
       elim E: (sbbB false (s x) (s y)) => [carry res].
-      eapply basic_seq.
+      eapply basic_seq; first try done.
       - eapply basic_basic; first apply CMP_RR_rule.
         + rewrite ->regs_read_vars. by ssimpl.
         + by move/eqP: Hxy.
         reflexivity.
-      eapply basic_seq.
+      eapply basic_seq; first try done.
       - eapply basic_basic; first apply MOV_RanyI_rule.
         + ssimpl. reflexivity.
         reflexivity.
@@ -277,17 +277,18 @@ Section LogicLemmas.
   Qed.
 
   Lemma compile_condition_correct s e:
-    |-- basic (EDX? ** OSZCP?) (compile_condition e)
+    |-- basic (EDX? ** OSZCP?) (compile_condition e) empOP
               (EDX? ** ZF ~= (eeval e s == zero _) **
                OF? ** SF? ** CF? ** PF?)
           @ (stack_denot s).
   Proof.
     rewrite /compile_condition. autorewrite with push_at.
-    apply: basic_seq. have He := (@compile_expr_correct s e).
+    apply: basic_seq; first try done. have He := (@compile_expr_correct s e).
     autorewrite with push_at in He.
     eapply (basic_basic_context (T:=program)); first apply He.
     - done.
     - by ssimpl.
+    - done.
     - reflexivity.
     eapply basic_basic; first apply TEST_self_rule.
     - by ssimpl.
@@ -301,12 +302,13 @@ Section LogicRules.
   Proof.
     rewrite /triple /=. autorewrite with push_at. rewrite {1}/asn_denot.
     specintros => s Hsubst.
-    eapply basic_seq.
+    eapply basic_seq; first done.
     - have He := (@compile_expr_correct s e).
       autorewrite with push_at in He. eapply (basic_basic_context (T:=program)).
       - apply He.
       - done.
       - by ssimpl.
+      - done.
       reflexivity.
     - eapply basic_basic; first apply MOV_RanyR_rule.
       - rewrite ->var_assign_subst with (e:=e) (x:=x).
@@ -347,7 +349,7 @@ Section LogicRules.
   Proof.
     rewrite /triple. autorewrite with push_at.
     move=> H1 H2. simpl compile_cmd.
-    eapply basic_seq; rewrite -/compile_cmd -/interpProgram.
+    eapply basic_seq; first try done. rewrite -/compile_cmd -/interpProgram.
     - apply H1.
     - apply H2.
   Qed.
@@ -374,6 +376,7 @@ Section LogicRules.
       eapply (basic_basic_context (T:=program)); first apply He.
       + done.
       + by ssimpl.
+      + done.
       rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC.
       rewrite /I /ConditionIs /stateIsAny. by sbazooka.
@@ -387,12 +390,13 @@ Section LogicRules.
   Proof.
     rewrite /triple. autorewrite with push_at. move=> HC1 HC2 /=.
     rewrite [_ P]/asn_denot. specintros => s HP.
-    apply: basic_seq.
+    apply: basic_seq; first done.
     - have He := (@compile_condition_correct s e).
       autorewrite with push_at in He.
       eapply (basic_basic_context (T:=program)); first apply He.
       + done.
       + by ssimpl.
+      + done.
       reflexivity.
     set (I := fun b:bool =>
       asn_denot ((blurb e b) //\\ P) **

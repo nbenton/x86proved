@@ -3,8 +3,8 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic basicprog program.
-Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor basic flags macros.
+Require Import SPred septac spec spectac OPred basic basicprog program.
+Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor flags macros.
 Require Import Coq.Strings.String cstring Ascii.
 
 Set Implicit Arguments.
@@ -73,7 +73,7 @@ Definition strlen : program :=
 (* Correctness of strlen *)
 Lemma strlen_correct p s :
   zeroFree s ->
-  |-- basic ECX? strlen (ECX ~= #(length s))
+  |-- basic ECX? strlen empOP (ECX ~= #(length s))
     @ (OSZCP? ** EDI ~= p ** pointsToCString p s).
 Proof.
   move => ISZF. rewrite /strlen.
@@ -114,7 +114,7 @@ Proof.
   eapply basic_basic; first eapply CMP_MbxI_ZC_rule.
   rewrite /stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString.
-  sbazooka.
+  sbazooka. 
   sbazooka.
     red. destruct (zeroFree_append ISZF) as [_ [ZFM _]].
     by rewrite eq_sym eqbF_neg.

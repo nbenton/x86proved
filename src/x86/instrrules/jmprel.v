@@ -1,7 +1,7 @@
 (** * JMP (rel) instruction *)
 Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec safe triple basic basicprog spectac.
+Require Import spec SPred OPred septac spec obs triple basic basicprog spectac.
 Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
 Require Import Setoid RelationClasses Morphisms.
 
@@ -18,7 +18,7 @@ Require Import x86.instrrules.core.
 
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) :
   |-- interpJmpTgt tgt q (fun P addr =>
-     (|> safe @ (EIP ~= addr ** P) -->> safe @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt)).
+     Forall O, (|> obs O @ (EIP ~= addr ** P) -->> obs O @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt)).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
   do_instrrule
@@ -30,21 +30,22 @@ Qed.
 Section specapply_hint.
 Local Hint Unfold interpJmpTgt : specapply.
 
-Lemma JMPrel_I_rule rel (p q: DWORD) :
-  |-- (|> safe @ (EIP ~= addB q rel) -->> safe @ (EIP ~= p)) <@
+Lemma JMPrel_I_rule rel (p q: DWORD):
+  |-- Forall O, (|> obs O @ (EIP ~= addB q rel) -->> obs O @ (EIP ~= p)) <@
         (p -- q :-> JMPrel (mkTgt rel)).
 Proof.
-  specapply (JMPrel_rule (JmpTgtI (mkTgt rel))). by ssimpl.
+  specintros => O. specapply (JMPrel_rule (JmpTgtI (mkTgt rel))). by ssimpl.
 
   autorewrite with push_at. rewrite <-spec_reads_frame. apply limplValid.
   cancel1. cancel1. sbazooka.
 Qed.
 
 Lemma JMPrel_R_rule (r:Reg) addr (p q: DWORD) :
-  |-- (|> safe @ (EIP ~= addr ** r ~= addr) -->> safe @ (EIP ~= p ** r ~= addr)) <@
+  |-- Forall O, 
+      (|> obs O @ (EIP ~= addr ** r ~= addr) -->> obs O @ (EIP ~= p ** r ~= addr)) <@
         (p -- q :-> JMPrel (JmpTgtR r)).
 Proof.
-  specapply (JMPrel_rule (JmpTgtR r)). by ssimpl.
+  specintros => O. specapply (JMPrel_rule (JmpTgtR r)). by ssimpl.
 
   rewrite <-spec_reads_frame. autorewrite with push_at. rewrite limplValid.
   cancel1. cancel1. sbazooka.

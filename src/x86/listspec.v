@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype tuple.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec safe basic program.
+Require Import SPred septac spec OPred obs basic program.
 Require Import call instr instrsyntax instrcodec instrrules reader pointsto cursor inlinealloc.
 
 Set Implicit Arguments.
@@ -18,32 +18,32 @@ Fixpoint listSeg (p e:DWORD) (vs: seq DWORD) :SPred :=
   else p == e /\\ empSP.
 
 Definition inlineHead_spec (r1 r2:Reg) (i j p e: DWORD) v vs (instrs: program) :=
-  |--
-  (safe @ (EIP ~= j ** r1~=v) -->>
-   safe @ (EIP ~= i ** r1?)) @
+  |-- Forall O,
+  (obs O @ (EIP ~= j ** r1~=v) -->>
+   obs O @ (EIP ~= i ** r1?)) @
   (listSeg p e (v::vs) ** r2~=p) <@ (i -- j :-> instrs).
 Implicit Arguments inlineHead_spec [].
 
 Definition inlineTail_spec (r1 r2:Reg) (i j p e: DWORD) v vs (instrs: program) :=
-  |--
-  (safe @ (Exists q, EIP ~= j ** r1~=q ** listSeg p q (v::nil) ** listSeg q e vs) -->>
-   safe @ (EIP ~= i ** r1? ** listSeg p e (v::vs))) @
+  |-- Forall O,
+  (obs O @ (Exists q, EIP ~= j ** r1~=q ** listSeg p q (v::nil) ** listSeg q e vs) -->>
+   obs O @ (EIP ~= i ** r1? ** listSeg p e (v::vs))) @
   (r2~=p) <@ (i -- j :-> instrs).
 Implicit Arguments inlineTail_spec [].
 
 (* Head is in EAX, tail is in EDI, result in EDI, ESI trashed *)
 Definition inlineCons_spec (r1 r2:Reg) heapInfo (failLabel:DWORD) (i j h t e: DWORD) vs (instrs: program):=
-  |-- (
-      safe @ (EIP ~= failLabel ** r1? ** r2? ** EDI?) //\\
-      safe @ (EIP ~= j ** Exists pb, r1? ** r2? ** EDI ~= pb ** listSeg pb t [::h])
+  |-- Forall O, (
+      obs O @ (EIP ~= failLabel ** r1? ** r2? ** EDI?) //\\
+      obs O @ (EIP ~= j ** Exists pb, r1? ** r2? ** EDI ~= pb ** listSeg pb t [::h])
     -->>
-      safe @ (EIP ~= i ** r1~=h ** r2~=t ** EDI?)
+      obs O @ (EIP ~= i ** r1~=h ** r2~=t ** EDI?)
     ) @
     (ESI? ** OSZCP? ** allocInv heapInfo ** listSeg t e vs)
     <@ (i -- j :-> instrs).
 
 Definition callCons_spec (r1 r2: Reg) heapInfo (i j h t e: DWORD) vs (instrs: program):=
-  (toyfun i (r1~=h ** r2~=t ** EDI?)
+  (toyfun i (r1~=h ** r2~=t ** EDI?) empOP
             (r1? ** r2? ** (EDI ~= #0 \\// (Exists pb, EDI ~= pb ** listSeg pb t [::h])))) @
   (ESI? ** OSZCP? ** allocInv heapInfo ** listSeg t e vs)
   <@ (i -- j :-> mkbody_toyfun instrs).

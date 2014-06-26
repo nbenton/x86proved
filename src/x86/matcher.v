@@ -1,6 +1,6 @@
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic basicprog program.
+Require Import SPred septac spec spectac OPred obs basic basicprog program.
 Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor macros.
 Require Import tuple.
 
@@ -36,11 +36,11 @@ Variable valuepred : paramtype -> valuetype -> SPred.
    paramtype, which in general could be any type
 *)
 Definition condbrspec (b:valuetype) dest :=
-    Forall p, Forall v, Forall i j:DWORD,
-     (safe @ ( (v:valuetype) == b /\\ EIP ~= dest) //\\
-      safe @ (((v != b)) /\\ EIP ~= j)
+    Forall p, Forall v, Forall i j:DWORD, Forall O',
+     (obs O' @ ( (v:valuetype) == b /\\ EIP ~= dest) //\\
+      obs O' @ (((v != b)) /\\ EIP ~= j)
       -->>
-     safe @ (EIP ~= i))
+     obs O' @ (EIP ~= i))
       @  (valuepred p v)
      <@ (i -- j :-> testcode b dest).
 
@@ -58,18 +58,18 @@ if vsbrs is (v,br)::rest then testcode v br ;; switch rest else prog_skip.
 (* This is the precondition associated with such a table, saying for a
    value x that it's safe to jump to label br_i if x = v_i
 *)
-Fixpoint table_precond (vsbrs : list (valuetype * DWORD)) (x: valuetype) : spec :=
-if vsbrs is (v,br)::rest then (safe @ (x == v /\\ EIP ~= br)) //\\ table_precond rest x
+Fixpoint table_precond (vsbrs : list (valuetype * DWORD)) (x: valuetype) O : spec :=
+if vsbrs is (v,br)::rest then (obs O @ (x == v /\\ EIP ~= br)) //\\ table_precond rest x O
 else ltrue.
 
 (* And here's the spec for a full switch statement, including the
    requirement that it be safe to fall through if the value is not in the list
 *)
-Definition table_precond_all (vsbrs : seq (valuetype*DWORD)) (x:valuetype) :=
+Definition table_precond_all (vsbrs : seq (valuetype*DWORD)) (x:valuetype) O :=
 Forall p, Forall x, Forall i j: DWORD,
- (table_precond vsbrs x //\\ safe @ (x \notin [seq fst i | i<-vsbrs] /\\ EIP ~=j)
+ (table_precond vsbrs x O //\\ obs O @ (x \notin [seq fst i | i<-vsbrs] /\\ EIP ~=j)
   -->>
- safe @ (EIP ~= i))
+ obs O @ (EIP ~= i))
  @ (valuepred p x) (* was (EAX ~= p ** EDI? ** p :-> x ** OSZCP?) *)
  <@ (i -- j :-> switch vsbrs).
 
@@ -263,11 +263,11 @@ Structure iter := mkiter {
  valany : SPred;
  valisisany : forall v, valis v |-- valany;
  curnil : forall s1,
-   |-- basic (valany ** seqsplit s1 [::]) current (valis None ** seqsplit s1 [::]);
+   |-- basic (valany ** seqsplit s1 [::]) current empOP (valis None ** seqsplit s1 [::]);
  curcons : forall s1 v s2,
-   |-- basic (valany ** seqsplit s1 (v::s2)) current (valis (Some v) ** seqsplit s1 (v::s2));
+   |-- basic (valany ** seqsplit s1 (v::s2)) current empOP (valis (Some v) ** seqsplit s1 (v::s2));
  nextcons : forall s1 v s2,
-   |-- basic (seqsplit s1 (v::s2)) next (seqsplit (s1 ++ [:: v]) s2) (* frame on valis/any of course *)
+   |-- basic (seqsplit s1 (v::s2)) next empOP (seqsplit (s1 ++ [:: v]) s2) (* frame on valis/any of course *)
 }.
 
 Definition NZBYTE := {x : BYTE | x != #0}.

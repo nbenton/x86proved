@@ -1,5 +1,5 @@
 (*===========================================================================
-    Predicates over observations
+    Predicates over observations (sequences of actions)
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype fintype finfun seq tuple.
 Require Import bitsrep ioaction ilogic.
@@ -11,20 +11,7 @@ Import Prenex Implicits.
 
 Local Obligation Tactic := idtac.
 
-Instance OEquiv : Equiv Obs := {
-   equiv o1 o2 := o1 = o2
-}.
-
-Instance OType : type Obs.
-Proof.
-  split.
-  move => x; by reflexivity.
-  move => x y H; by symmetry. 
-  move => x y z H1 H2; by rewrite H1 H2. 
-Qed.
-
-
-Definition OPred := ILFunFrm Obs Prop. 
+Definition OPred := ILFunFrm Actions Prop. 
 
 Local Existing Instance ILFun_Ops.
 Local Existing Instance ILFun_ILogic.
@@ -34,9 +21,8 @@ Instance OLogic : ILogic OPred := _.
 
 Implicit Arguments mkILFunFrm [[e] [ILOps]].
 
-Definition mkOPred (P : Obs -> Prop) 
-        (f : forall t t', t === t' -> P t |-- P t') : OPred :=
-  mkILFunFrm (seq (Chan*Data)) Prop P f.
+Definition mkOPred (P : Actions -> Prop) 
+        (f : forall t t', t === t' -> P t |-- P t') : OPred := mkILFunFrm _ _ P f.
 
 Implicit Arguments mkOPred [].
 
@@ -44,7 +30,7 @@ Program Definition eq_opred s := mkOPred (fun s' => s === s') _.
 Next Obligation. move => s t t' EQ. by rewrite EQ. Qed.
 
 Program Definition catOP (P Q: OPred) : OPred
- := @mkILFunFrm Obs _ Prop _ (fun o => exists o1 o2, o = o1++o2 /\ P o1 /\ Q o2) _.
+ := @mkILFunFrm _ _ Prop _ (fun o => exists o1 o2, o = o1++o2 /\ P o1 /\ Q o2) _.
 Next Obligation.
 move => P Q o o' EQ [o1 [o2 [H1 [H2 H3]]]]. 
 exists o1, o2. by subst.
@@ -55,6 +41,7 @@ Program Definition empOP : OPred :=
 Next Obligation.
 move => o o' EQ. by setoid_rewrite EQ. 
 Qed. 
+
 
 Local Transparent ILFun_Ops ILPre_Ops.
 
@@ -72,40 +59,40 @@ Proof.
 Qed.
 
 
-Definition outOP (c:Chan) (d:Data) : OPred := eq_opred [::(c,d)]. 
-Definition seqOP (o:Obs) : OPred := eq_opred o.
+Definition outOP (c:Chan) (d:Data) : OPred := eq_opred [::Out c d]. 
+Definition seqOP (o:Actions) : OPred := eq_opred o.
 
 Lemma empOPR P : catOP P empOP -|- P.
 Proof.
 split.
-move => o [s1 [s2 [H1 [H2 /=H3]]]]. subst. by rewrite cats0. 
-move => o H. simpl. exists o, nil. by rewrite cats0. 
+move => o [s1 [s2 [-> [H2 ->]]]]. by rewrite cats0. 
+move => o H. exists o, nil. by rewrite cats0. 
 Qed. 
 
 Lemma empOPL P : catOP empOP P -|- P.
 Proof.
 split.
-move => o [s1 [s2 [H1 [/=H2 H3]]]]. by subst. 
-move => o H. simpl. by exists nil, o. 
+by move => o [s1 [s2 [-> [-> H]]]]. 
+move => o H. by exists nil, o. 
 Qed.
 
 Lemma catOPA (P Q R : OPred) : catOP (catOP P Q) R -|- catOP P (catOP Q R).
 Proof.
 split. 
-+ move => o [s1 [s2 [H1 [[s3 [s4 [H2 [H3 H4]]]] H5]]]]. subst. simpl.
++ move => o [s1 [s2 [-> [[s3 [s4 [-> [H3 H4]]]] H5]]]]. simpl.
   exists s3, (s4++s2). rewrite catA. split => //. split => //. by exists s4, s2. 
-+ move => o [s1 [s2 [H1 [H2 [s3 [s4 [H3 [H4 H5]]]]]]]]. subst. simpl. 
++ move => o [s1 [s2 [-> [H2 [s3 [s4 [-> [H4 H5]]]]]]]]. simpl. 
   exists (s1++s3), s4. rewrite catA. split => //. split => //. by exists s1, s3. 
 Qed. 
 
 Lemma land_catOP P Q R : catOP (P//\\Q) R |-- (catOP P R) //\\ (catOP Q R).
-Proof. apply landR. apply catOP_entails_m. apply landL1. reflexivity. reflexivity.
-                    apply catOP_entails_m. apply landL2. reflexivity. reflexivity.
+Proof. apply landR. apply catOP_entails_m => //. by apply landL1. 
+                    apply catOP_entails_m => //. by apply landL2. 
 Qed.
 
 Lemma catOP_land P Q R : catOP P (Q//\\R) |-- (catOP P Q) //\\ (catOP P R).
-Proof. apply landR. apply catOP_entails_m. reflexivity. apply landL1. reflexivity. 
-                    apply catOP_entails_m. reflexivity. apply landL2. reflexivity.
+Proof. apply landR. apply catOP_entails_m => //. by apply landL1. 
+                    apply catOP_entails_m => //. by apply landL2. 
 Qed.
 
 Lemma catOP_ltrueL P : P |-- catOP ltrue P.
@@ -119,3 +106,6 @@ Proof. split => //. by move => s [s1 [s2 [H1 [H2 H3]]]]/=. Qed.
 
 Lemma catOP_lfalseR P : catOP P lfalse -|- lfalse.
 Proof. split => //. by move => s [s1 [s2 [H1 [H2 H3]]]]/=. Qed. 
+
+Hint Extern 0 (catOP empOP ?O |-- ?P) => by rewrite -> empOPL.  
+Hint Extern 0 (catOP ?O ?empOP |-- ?P) => by rewrite -> empOPR.  
