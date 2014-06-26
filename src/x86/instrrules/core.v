@@ -1,28 +1,33 @@
 (*===========================================================================
     Rules for x86 instructions in terms of [safe]
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred OPred SPredTotal septac spec obs step triple basic basicprog spectac.
-Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
-Require Import common_tactics common_definitions.
-Require Import Setoid RelationClasses Morphisms.
-Require Import Relations.
-Require Import instrsyntax.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq (* for [catA] *) Ssreflect.tuple.
+Require Import x86.procstate bitsops.
+Require Import spec SPred SPredTotal OPred x86.basic x86.basicprog spectac.
+Require Import x86.instr pointsto cursor.
+Require Import x86.instrsyntax.
+Require Import x86.procstatemonad (* for [ST] *) bitsprops (* for [high_catB] *) bitsopsprops (* for [subB_eq0] *).
+Require Import septac (* for [sdestruct] *) obs (* for [obs] *) triple (* for [TRIPLE] *).
+Require Import x86.eval (* for [evalInstr] *) monad (* for [doMany] *) monadinst (* for [Success] *).
+Require Import common_definitions (* for [eta_expand] *) common_tactics (* for [elim_atomic_in_match'] *).
+Require Import Coq.Classes.Morphisms (* for [Parametric Morphism] and [signature_scope] *).
 
 Module Import instrruleconfig.
-  Export ssreflect.
+  Export Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple.
 
-  Export procstate bitsops.
-  Export spec SPred OPred basic basicprog.
-  Export instr pointsto cursor.
-  Export instrsyntax.
+  Export x86.procstate bitsops.
+  Export spec SPred OPred obs x86.basic x86.basicprog.
+  Export x86.instr pointsto cursor.
+  Export x86.instrsyntax.
+
+  Export common_definitions (* for [eta_expand] *).
 
   Open Scope instr_scope.
+
+  Global Set Implicit Arguments.
+  Global Unset Strict Implicit.
 End instrruleconfig.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
 Import Prenex Implicits.
 
 (* TODO: needed now? *)
@@ -155,35 +160,7 @@ Definition specAtMemSpecDst dword ms (f: (DWORDorBYTE dword -> SPred) -> spec) :
           @ (regToAnyReg r ~= pbase)
     else f (fun v => offset :-> v) @ empSP.
 
-(*
-Definition lentails1 {T} (f g:T -> SPred):= forall x , f x |-- g x.
-Definition lentails2 {T} (f g: (T -> SPred) -> spec) := forall x y, lentails1 x y ->
-lentails (f x) (f y).
-Global Instance specAtMemSpecDst_entails_m dword :
-    Proper (eq --> lentails2 --> lentails) (@specAtMemSpecDst dword).
-Proof.
-  move => ms1 ms2 msE.
-  rewrite /Basics.flip in msE. subst.
-  move => f1 f2 fE.
-  rewrite /Basics.flip/lentails2 in fE.
-  rewrite /specAtMemSpecDst.
-  destruct ms1.
-  destruct sib.
-  destruct p.
-  destruct o.
-  destruct p.
-  specintros => pbase1 ixval1.
-  rewrite /lentails1 in fE.
-  specsplit.
-  autorewrite with push_at.
-  sbazooka. ssimpl.
-  simpl. specintros.
-  autorewrite with push_at. specintros => pbase2 ixval2.
-  simpl. g fg.
-  move => P P' HP c _ <- Q Q' HQ. apply: basic_roc; try eassumption.
-    done.
-  Qed.
-*)
+Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 
 Definition specAtMemSpec dword ms (f: DWORDorBYTE dword -> spec) :=
     let: mkMemSpec optSIB offset := ms in
@@ -259,6 +236,51 @@ Definition specAtDstSrc dword (ds: DstSrc dword) (f: (DWORDorBYTE dword -> SPred
   | DstSrcRM dst src =>
     specAtMemSpec src (fun v => f (fun w => DWORDorBYTEregIs dst w) v)
   end.
+
+Local Ltac specAt_morphism_step :=
+  idtac;
+  do [ progress move => *
+     | hyp_setoid_rewrite -> *; reflexivity
+     | progress destruct_head DstSrc
+     | progress destruct_head MemSpec
+     | progress destruct_head option
+     | progress destruct_head prod
+     | progress specintros => *
+     | do !eapply lforallL
+     | progress autorewrite with push_at ].
+
+Local Ltac specAt_morphism_t :=
+  rewrite /pointwise_relation => *; do !specAt_morphism_step.
+
+Add Parametric Morphism dword ms : (@specAtMemSpecDst dword ms)
+with signature pointwise_relation _ lentails ++> lentails
+  as specAtMemSpecDst_entails_m.
+Proof. rewrite /specAtMemSpecDst. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtMemSpecDst dword ms)
+with signature pointwise_relation _ (Basics.flip lentails) ++> Basics.flip lentails
+  as specAtMemSpecDst_flip_entails_m.
+Proof. rewrite /specAtMemSpecDst. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtMemSpec dword ms)
+with signature pointwise_relation _ lentails ++> lentails
+  as specAtMemSpec_entails_m.
+Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtMemSpec dword ms)
+with signature pointwise_relation _ (Basics.flip lentails) ++> Basics.flip lentails
+  as specAtMemSpec_flip_entails_m.
+Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtDstSrc dword ms)
+with signature pointwise_relation _ (pointwise_relation _ lentails) ++> lentails
+  as specAtDstSrc_entails_m.
+Proof. rewrite /specAtDstSrc. specAt_morphism_t. Qed.
+
+Add Parametric Morphism dword ms : (@specAtDstSrc dword ms)
+with signature pointwise_relation _ (pointwise_relation _ (Basics.flip lentails)) ++> Basics.flip lentails
+  as specAtDstSrc_flip_entails_m.
+Proof. rewrite /specAtDstSrc. specAt_morphism_t. Qed.
 
 Notation "OSZCP?" := (OF? ** SF? ** ZF? ** CF? ** PF?).
 Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= p.
@@ -522,9 +544,9 @@ Proof.
   rewrite /evalCondition/ConditionIs; elim cc;
   triple_op_bazooka_using ltac:(idtac;
                                 match goal with
-                                  | [ |- TRIPLE (lexists _ ** _) _ _ _ ] => apply triple_pre_existsSep => ?
+                                  | [ |- TRIPLE (lexists _ ** _) _ _ _ ]    => apply triple_pre_existsSep => ?
                                   | [ |- TRIPLE (lpropand _ _ ** _) _ _ _ ] => apply triple_pre_existsSep => ?
-                                  | [ H : mkFlag _ = mkFlag _ |- _ ] => (inversion H; try clear H)
+                                  | [ H : mkFlag _ = mkFlag _ |- _ ]      => (inversion H; try clear H)
                                   | _ => progress subst
                                   | _ => progress triple_op_helper
                                   | [ H : TRIPLE _ _ _ _ |- _ ] => triple_apply H using sbazooka
@@ -667,6 +689,11 @@ Ltac instrrules_unfold H :=
 Hint Rewrite
      addB0 low_catB : instrrules_basicapply.
 
-Ltac instrrules_basicapply R :=
+Hint Unfold
+     OSZCP stateIsAny scaleBy : instrrules_spred.
+
+Tactic Notation "instrrules_basicapply" open_constr(R) "using" tactic3(tac) :=
   let R' := instrrules_unfold R in
-  basicapply R' using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem).
+  basicapply R' using (tac) side conditions by autounfold with spred instrrules_spred; sbazooka.
+Tactic Notation "instrrules_basicapply" open_constr(R) :=
+  instrrules_basicapply R using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem).

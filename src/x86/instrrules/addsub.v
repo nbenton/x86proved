@@ -1,21 +1,6 @@
 (** * ADD and SUB instructions *)
-Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec OPred triple basic basicprog spectac.
-Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
-Require Import common_definitions.
-Require Import Setoid RelationClasses Morphisms.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
-
-Require Import Relations.
-Require Import instrsyntax.
-
-Local Open Scope instr_scope.
-
 Require Import x86.instrrules.core.
+Import x86.instrrules.core.instrruleconfig.
 
 (** ** Generic ADD/SUB rule *)
 Lemma ADDSUB_rule isSUB d (ds:DstSrc d) v1 :
@@ -34,24 +19,9 @@ Ltac basicADDSUB :=
               | |- |-- basic ?p (@BOP ?d OP_ADD ?a) ?O ?q => constr:(@ADDSUB_rule false d a)
               | |- |-- basic ?p (@BOP ?d OP_SUB ?a) ?O ?q => constr:(@ADDSUB_rule true d a)
             end) in
-  first [ basicapply R using (fun H => idtac)
-        | basicapply R ].
+  first [ instrrules_basicapply R using (fun H => idtac)
+        | instrrules_basicapply R ].
 
-
-(** We open a section in order to localize the hints *)
-Section InstrRules.
-
-Hint Unfold
-  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
-  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
-  makeMOV makeBOP makeUOP
-  : basicapply.
-Hint Rewrite
-  addB0 low_catB : basicapply.
-
-
-Hint Unfold OSZCP stateIsAny : spred.
 
 (** ** Special cases *)
 (** *** ADD r, v2 *)
@@ -116,4 +86,3 @@ Lemma SUB_RI_rule (r1:Reg) v1 (v2:DWORD):
             (let: (carry,v) := eta_expand (sbbB false v1 v2) in
              r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
 Proof. basicADDSUB. Qed.
-End InstrRules.

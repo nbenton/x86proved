@@ -148,6 +148,31 @@ Tactic Notation "hyp_rewrite" "!*" := progress hyp_rewrite ?*.
 Tactic Notation "hyp_rewrite" "->" "!*" := progress hyp_rewrite -> ?*.
 Tactic Notation "hyp_rewrite" "<-" "!*" := progress hyp_rewrite <- ?*.
 
+Tactic Notation "hyp_setoid_rewrite" "*" := do_with_hyp' ltac:(fun H => setoid_rewrite H).
+Tactic Notation "hyp_setoid_rewrite" "->" "*" := do_with_hyp' ltac:(fun H => setoid_rewrite -> H).
+Tactic Notation "hyp_setoid_rewrite" "<-" "*" := do_with_hyp' ltac:(fun H => setoid_rewrite <- H).
+Tactic Notation "hyp_setoid_rewrite" "?*" := repeat do_with_hyp' ltac:(fun H => setoid_rewrite H).
+Tactic Notation "hyp_setoid_rewrite" "->" "?*" := repeat do_with_hyp' ltac:(fun H => setoid_rewrite -> H).
+Tactic Notation "hyp_setoid_rewrite" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => setoid_rewrite <- H).
+Tactic Notation "hyp_setoid_rewrite" "!*" := progress hyp_setoid_rewrite ?*.
+Tactic Notation "hyp_setoid_rewrite" "->" "!*" := progress hyp_setoid_rewrite -> ?*.
+Tactic Notation "hyp_setoid_rewrite" "<-" "!*" := progress hyp_setoid_rewrite <- ?*.
+
+Tactic Notation "hyp_apply" "*" := do_with_hyp' ltac:(fun H => apply H).
+Tactic Notation "hyp_apply" "->" "*" := do_with_hyp' ltac:(fun H => apply -> H).
+Tactic Notation "hyp_apply" "<-" "*" := do_with_hyp' ltac:(fun H => apply <- H).
+Tactic Notation "hyp_apply" "?*" := repeat do_with_hyp' ltac:(fun H => apply H).
+Tactic Notation "hyp_apply" "->" "?*" := repeat do_with_hyp' ltac:(fun H => apply -> H).
+Tactic Notation "hyp_apply" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => apply <- H).
+Tactic Notation "hyp_apply" "!*" := progress hyp_apply ?*.
+Tactic Notation "hyp_apply" "->" "!*" := progress hyp_apply -> ?*.
+Tactic Notation "hyp_apply" "<-" "!*" := progress hyp_apply <- ?*.
+
+Tactic Notation "hyp_eapply" "*" := do_with_hyp' ltac:(fun H => eapply H).
+Tactic Notation "hyp_eapply" "?*" := repeat do_with_hyp' ltac:(fun H => eapply H).
+Tactic Notation "hyp_eapply" "!*" := progress hyp_eapply ?*.
+
+
 (** Revert all hypotheses *)
 Ltac reverse := repeat do_with_hyp' ltac:(fun H => revert H).
 
@@ -231,4 +256,16 @@ Ltac destruct_exists := destruct_head_hnf @sigT;
 Ltac elim_atomic_in_match' :=
   match goal with
     | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; elim E
+  end.
+
+(** Run [elim] on anything that's being discriminated inside a [match] which is also atomic *)
+Ltac generalize_case_atomic_in_match' :=
+  match goal with
+    | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; generalize dependent E; case
+  end.
+
+(** Run [destruct] on anything that's being discriminated inside a [match] which is also atomic *)
+Ltac destruct_atomic_in_match' :=
+  match goal with
+    | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; destruct E
   end.

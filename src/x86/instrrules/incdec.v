@@ -1,20 +1,6 @@
 (** * INC and DEC instructions *)
-Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import spec SPred septac spec OPred triple basic basicprog spectac.
-Require Import instr instrcodec eval monad monadinst reader pointsto cursor.
-Require Import Setoid RelationClasses Morphisms.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
-
-Require Import Relations.
-Require Import instrsyntax.
-
-Local Open Scope instr_scope.
-
 Require Import x86.instrrules.core.
+Import x86.instrrules.core.instrruleconfig.
 
 (** ** Generic increment/decrement rule *)
 Lemma INCDEC_rule d (dir: bool) (src:RegMem d) oldv o s z c pf:
@@ -34,22 +20,7 @@ Ltac basicINCDEC :=
              | |- |-- basic ?p (@UOP ?d OP_INC ?a) ?O ?q => constr:(@INCDEC_rule d true a)
              | |- |-- basic ?p (@UOP ?d OP_DEC ?a) ?O ?q => constr:(@INCDEC_rule d false a)
            end in
-  basicapply R.
-
-
-(** We open a section in order to localize the hints *)
-Section InstrRules.
-
-Hint Unfold
-  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
-  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
-  makeMOV makeBOP makeUOP
-  : basicapply.
-Hint Rewrite
-  addB0 low_catB : basicapply.
-
-Hint Unfold OSZCP : spred.
+  instrrules_basicapply R.
 
 (** Special case for increment register *)
 Corollary INC_R_rule (r:Reg) (v:DWORD) o s z c pf:
@@ -67,7 +38,7 @@ Proof. basicINCDEC. Qed.
 Lemma INC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (INC r) empOP (r~=incB v) @ OSZCP?.
 Proof.
-  autorewrite with push_at. rewrite /stateIsAny. specintros => o s z c p.
+  autorewrite with push_at. rewrite /stateIsAny. specintros => *.
   basicINCDEC.
 Qed.
 
@@ -81,7 +52,6 @@ Proof. basicINCDEC. Qed.
 Lemma DEC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (DEC r) empOP (r~=decB v) @ OSZCP?.
 Proof.
-  autorewrite with push_at. rewrite /stateIsAny. specintros => o s z c p.
+  autorewrite with push_at. rewrite /stateIsAny. specintros => *.
   basicINCDEC.
 Qed.
-End InstrRules.
