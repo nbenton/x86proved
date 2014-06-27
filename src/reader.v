@@ -105,7 +105,7 @@ Qed.
   ---------------------------------------------------------------------------*)
 
 (*=readBYTE *)
-Instance readBYTE : Reader BYTE :=
+Instance readBYTE : Reader BYTE | 0 :=
   readerNext (fun b => readerRetn b).
 (*=End *)
 
@@ -120,7 +120,7 @@ Definition readSkip : Reader unit :=
 (*=readDWORD *)
 Definition bytesToDWORD (b3 b2 b1 b0: BYTE) : DWORD :=
   b3 ## b2 ## b1 ## b0.
-Instance readDWORD : Reader DWORD :=
+Instance readDWORD : Reader DWORD | 0 :=
   let! b0 = readNext;
   let! b1 = readNext;
   let! b2 = readNext;
@@ -134,7 +134,8 @@ Instance readWORD: Reader WORD :=
   let! b1 = readNext;
   retn (bytesToWORD b1 b0).
 
-Instance readDWORDorBYTE dw : Reader (DWORDorBYTE dw) :=
+(** This must go at a lower level/priority than [readDWORD] and [readBYTE] so it is picked up less eagerly. *)
+Instance readDWORDorBYTE dw : Reader (DWORDorBYTE dw) | 1 :=
   if dw as dw return Reader (DWORDorBYTE dw) then readDWORD else readBYTE.
 
 Fixpoint readPad (n:nat) : Reader unit :=
