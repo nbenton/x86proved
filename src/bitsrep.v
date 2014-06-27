@@ -51,10 +51,6 @@ Identity Coercion DWORDtoDWORDorBYTE : DWORD >-> DWORDorBYTE.
 Identity Coercion BYTEtoDWORDorBYTE : BYTE >-> DWORDorBYTE.
 Identity Coercion WORDtoBITS16 : WORD >-> BITS.
 
-Arguments DWORDorBYTEtoBITS / .
-Arguments DWORDtoDWORDorBYTE / .
-Arguments BYTEtoDWORDorBYTE / .
-
 (* Construction *)
 Notation "'nilB'" := (nil_tuple _).
 Definition consB {n} (b:bool) (p: BITS n) : BITS n.+1 := cons_tuple b p.
