@@ -577,10 +577,32 @@ Global Opaque evalLogicalOp.
 (** TODO(t-jagro): Find a better place for this opacity control *)
 Global Opaque setRegInProcState getDWORDFromProcState updateFlagInProcState forgetFlagInProcState.
 
+Local Ltac make_un_do lem :=
+  let c := match goal with |- TRIPLE _ ?c _ => constr:(c) end in
+  rewrite -(@doRet _ _ _ c);
+  apply lem;
+  apply triple_skip.
+
+Lemma triple_setFlagSep (f : Flag) v w S
+: TRIPLE (f ~= v ** S) (updateFlagInProcState f w) (f ~= w ** S).
+Proof. make_un_do triple_doSetFlagSep. Qed.
+
+Lemma triple_updateZPS n (v: BITS n) z p s P
+: TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (updateZPS v) (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P).
+Proof. make_un_do triple_doUpdateZPS. Qed.
+
+Lemma triple_forgetFlagSep (f : Flag) v S
+: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) (f? ** S).
+Proof. make_un_do triple_doForgetFlagSep. Qed.
+
+Lemma triple_forgetFlagSep' (f : Flag) v S
+: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) ((Exists v, f ~= v) ** S).
+Proof. exact (@triple_forgetFlagSep f v S). Qed.
+
 Ltac instrrule_triple_bazooka_step tac :=
   idtac;
   let tapply H := triple_apply H using tac in
-  match goal with
+  lazymatch goal with
     | [ |- TRIPLE _ (bind (evalDWORDorBYTEReg ?d ?r) _) _ ]                                     => tapply (@evalDWORDorBYTEReg_rule d)
     | [ |- TRIPLE _ (bind (evalReg ?r) _) _ ]                                                   => tapply evalReg_rule
     | [ |- TRIPLE _ (bind (evalBYTEReg ?r) _) _ ]                                               => tapply evalBYTEReg_rule
@@ -593,24 +615,24 @@ Ltac instrrule_triple_bazooka_step tac :=
     | [ |- TRIPLE _ (bind (evalArithOp ?f ?arg1 ?arg2) _) _ ]                                   => tapply evalArithOp_rule
     | [ |- TRIPLE _ (bind (evalLogicalOp ?f ?arg1 ?arg2) _) _ ]                                 => tapply evalLogicalOp_rule
     | [ |- TRIPLE _ (bind (evalCondition ?cc) _) _ ]                                            => tapply triple_letGetCondition
-    | [ |- TRIPLE _ (do!updateFlagInProcState ?f ?w; _) _ ]                                     => tapply triple_doSetFlagSep
-    | [ |- TRIPLE _ (do!updateZPS ?v; _) _ ]                                                    => tapply triple_doUpdateZPS
-    | [ |- TRIPLE _ (do!forgetFlagInProcState ?f; _) _ ]                                        => tapply triple_doForgetFlagSep
-    | [ |- TRIPLE _ (setDWORDorBYTERegInProcState _ ?d ?p) _ ]                                  => tapply triple_setDWORDorBYTERegSep
-    | [ |- TRIPLE _ (setDWORDorBYTEInProcState ?p ?w) _ ]                                       => tapply triple_setDWORDorBYTESep
+    | [ |- TRIPLE _ (updateFlagInProcState ?f ?w) _ ]                                           => tapply triple_setFlagSep
+    | [ |- TRIPLE _ (updateZPS ?v) _ ]                                                          => tapply triple_updateZPS
+    | [ |- TRIPLE _ (forgetFlagInProcState ?f) _ ]                                              => do [ tapply triple_forgetFlagSep | tapply triple_forgetFlagSep' ]
+    | [ |- TRIPLE _ (setDWORDorBYTERegInProcState ?b ?d ?p) _ ]                                 => tapply (@triple_setDWORDorBYTERegSep b)
+    | [ |- TRIPLE _ (@setDWORDorBYTEInProcState ?b ?p ?w) _ ]                                   => tapply (@triple_setDWORDorBYTESep b)
     | [ |- TRIPLE _ (setRegInProcState ?d ?p) _ ]                                               => tapply triple_setRegSep
     | [ |- TRIPLE _ (retn tt) _ ]                                                               => tapply triple_skip
-    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ ]                                      => tapply triple_letGetFlagSep
-    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ ]                                      => tapply triple_letGetFlag
+    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ ]                                      => do [ tapply triple_letGetFlagSep | tapply triple_letGetFlag ]
     | [ |- TRIPLE _ (bind (getRegFromProcState ?r) _) _ ]                                       => tapply triple_letGetRegSep
     | [ |- TRIPLE _ (bind (getDWORDorBYTEFromProcState ?d ?p) _) _ ]                            => tapply (@triple_letGetDWORDorBYTESep d)
     | [ |- TRIPLE _ (bind (getDWORDFromProcState ?p) _) _ ]                                     => tapply triple_letGetDWORDSep
     | [ |- TRIPLE _ (evalPush ?p) _ ]                                                           => tapply evalPush_rule
-    | [ |- TRIPLE _ (do! ?f; ?g) _ ] => eapply triple_seq; [ by do !instrrule_triple_bazooka_step tac | ]
-    | _ => apply TRIPLE_basic => *
-    | _ => triple_apply triple_pre_introFlags => *; rewrite /OSZCP
-    | _ => progress autorewrite with triple
-    | _ => progress autounfold with instrrules_eval
+    (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
+    | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ ] => eapply triple_seq
+    | _ => do [ apply TRIPLE_basic => *
+              | triple_apply triple_pre_introFlags => *; rewrite /OSZCP
+              | progress autorewrite with triple
+              | progress autounfold with instrrules_eval ]
   end.
 
 Ltac instrrule_triple_bazooka tac :=
