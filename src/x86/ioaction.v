@@ -44,12 +44,35 @@ Canonical action_eqMixin := EqMixin action_eqP.
 Canonical action_eqType := Eval hnf in EqType _ action_eqMixin.
 
 Definition Actions := seq Action.
+
 Definition preActions (a1 a2: Actions) := exists a', a2 = a1 ++ a'.
+Definition preActionsOp a1 a2 := preActions a2 a1.
+Definition strictPreActions (a1 a2: Actions) := 
+  exists o a', a2 = a1 ++ o::a'.
+
+Definition postActions (a1 a2: Actions) := exists a', a2 = a'++a1.
+Definition postActionsOp a1 a2 := postActions a2 a1.
+Definition strictPostActions (a1 a2: Actions) := 
+  exists o a', a2 = a'++o::a1.
 
 Require Import RelationClasses Program.Basics.
+
 Instance preActions_Pre: PreOrder preActions.
 Proof. repeat constructor; hnf.
 move => a. exists nil. by rewrite cats0.
+move => x y z [a1 ->] [a2 ->]. exists (a1++a2). by rewrite catA. 
+Qed. 
+
+
+Instance preActionsOp_Pre: PreOrder preActionsOp.
+Proof. repeat constructor; hnf.
+move => a. exists nil. by rewrite cats0.
+move => x y z [a1 ->] [a2 ->]. exists (a2++a1). by rewrite catA. 
+Qed. 
+
+Instance postActionsOp_Pre: PreOrder postActionsOp.
+Proof. repeat constructor; hnf.
+move => a. by exists nil. 
 move => x y z [a1 ->] [a2 ->]. exists (a1++a2). by rewrite catA. 
 Qed. 
 
@@ -71,3 +94,30 @@ Proof.
 Qed.
 
 Definition outputToActions o : Actions := map (fun p => Out p.1 p.2) o.
+
+Lemma preActionsOp_strictPre x t t':
+  preActionsOp t t' -> strictPreActions x t' -> strictPreActions x t. 
+Proof. move => PRE [a [b H]]. destruct t'. destruct x => //. 
++ destruct x. destruct PRE as [d ->]. simpl. by exists a0, (t'++d).
++ inversion H. subst. destruct PRE as [d ->]. simpl. 
+exists a, (b++d). by rewrite /= -!catA. Qed. 
+
+Lemma strictPre_implies_preActionsOp x y :
+  strictPreActions x y -> preActionsOp y x.
+Proof. move => [a [b ->]]. by exists (a::b).  Qed.
+
+Lemma preActionsOpDef o o' : preActions o o' <-> preActionsOp o' o.
+Proof. by unfold preActionsOp. Qed.
+
+Lemma postActionsOp_strictPost x t t':
+  postActionsOp t t' -> strictPostActions x t' -> strictPostActions x t. 
+Proof. move => PRE [a [b H]]. destruct t'. destruct b => //. 
++ admit.  
+Qed. 
+
+Lemma strictPost_implies_postActionsOp x y :
+  strictPostActions x y -> postActionsOp y x.
+Proof. move => [a [b ->]]. unfold postActionsOp. exists (b++[::a]). by rewrite -catA/=. Qed.
+
+Lemma postActionsOpDef o o' : postActions o o' <-> postActionsOp o' o.
+Proof. by unfold postActionsOp. Qed.

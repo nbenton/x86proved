@@ -58,7 +58,6 @@ Proof.
   split; apply catOP_entails_m; (apply HP || apply HQ).
 Qed.
 
-
 Definition outOP (c:Chan) (d:Data) : OPred := eq_opred [::Out c d]. 
 Definition seqOP (o:Actions) : OPred := eq_opred o.
 
@@ -106,6 +105,13 @@ Proof. split => //. by move => s [s1 [s2 [H1 [H2 H3]]]]/=. Qed.
 
 Lemma catOP_lfalseR P : catOP P lfalse -|- lfalse.
 Proof. split => //. by move => s [s1 [s2 [H1 [H2 H3]]]]/=. Qed. 
+
+Lemma catOP_eq_opred (O: OPred) o1 o2 :
+  O o2 ->
+  catOP (eq_opred o1) O (o1++o2).
+Proof. move => H. 
+exists o1, o2. firstorder.  reflexivity. 
+Qed. 
 
 Hint Extern 0 (catOP empOP ?O |-- ?P) => by rewrite -> empOPL.  
 Hint Extern 0 (catOP ?O ?empOP |-- ?P) => by rewrite -> empOPR.  
