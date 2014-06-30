@@ -30,7 +30,7 @@ Proof.
   rewrite /spec_reads. specintros => code Hcode.
   autorewrite with push_at. 
   apply: limplAdj. apply: landL1. rewrite -> Hcode.  
-  etransitivity; [apply safe_loop|]. cancel2. cancel1. eexists _. split; by ssimpl.
+  etransitivity; [apply safe_loop|]. rewrite ->empOPL. cancel2. reflexivity. eexists _. split; by ssimpl.
 Qed.
 
 (* Show off the sequencing rule for [basic]. *)
@@ -47,7 +47,6 @@ Proof.
   rewrite /OSZCP addIsIterInc/iter; sbazooka.
 Qed.
 
-(*
 Example incdec_while c a:
   |-- basic
     (ECX ~= c ** EAX ~= a)
@@ -69,7 +68,8 @@ Proof.
       first 2 last.
   - reflexivity.
   - subst I. rewrite /stateIsAny/ConditionIs. sbazooka.
-  - subst I; cbv beta. reflexivity. sbazooka. sdestructs => c' a' Hzero Hadd.
+  - reflexivity.
+  - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.
     rewrite ->(eqP Hzero) in *. rewrite add0B in Hadd.
     subst a'. rewrite /ConditionIs/stateIsAny. by sbazooka.
   - specintros => b1 b2. subst I; cbv beta. specintros => c' a' Hzero Hadd.
@@ -83,4 +83,3 @@ Proof.
     rewrite /OSZCP/ConditionIs.
     sbazooka.
 Qed.
-*)

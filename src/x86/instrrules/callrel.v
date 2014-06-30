@@ -14,7 +14,7 @@ Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
   do_instrrule
     ((try specintros => *; autorewrite with push_at);
-     apply TRIPLE_safe => ?;
+     apply TRIPLE_safeLater => ?;
      do !instrrule_triple_bazooka_step idtac).
 Qed.
 

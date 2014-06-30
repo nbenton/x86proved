@@ -109,12 +109,6 @@ Proof. move => [a [b ->]]. by exists (a::b).  Qed.
 Lemma preActionsOpDef o o' : preActions o o' <-> preActionsOp o' o.
 Proof. by unfold preActionsOp. Qed.
 
-Lemma postActionsOp_strictPost x t t':
-  postActionsOp t t' -> strictPostActions x t' -> strictPostActions x t. 
-Proof. move => PRE [a [b H]]. destruct t'. destruct b => //. 
-+ admit.  
-Qed. 
-
 Lemma strictPost_implies_postActionsOp x y :
   strictPostActions x y -> postActionsOp y x.
 Proof. move => [a [b ->]]. unfold postActionsOp. exists (b++[::a]). by rewrite -catA/=. Qed.

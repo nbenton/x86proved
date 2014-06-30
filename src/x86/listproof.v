@@ -109,7 +109,7 @@ specapply JMP_I_rule. by ssimpl.
 rewrite <-spec_later_weaken.
 rewrite <-spec_reads_frame.
 apply: limplAdj. autorewrite with push_at.
-apply: landL2. rewrite empOPL. cancel1.
+apply: landL2. rewrite -> empOPL. cancel1.
 rewrite /OSZCP/stateIsAny. sbazooka.
 apply: lorR2. sbazooka.
 Qed.

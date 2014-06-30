@@ -64,7 +64,7 @@ Ltac specsplit :=
    lemma and then apply it. *)
 Lemma safe_safe_ro C C' S S' R R' P P' RP O O': 
   C' |-- (S' -->> obs O' @ P') <@ R' ->
-  O' |-- O ->
+  entailsOP O' O ->
   C |-- C' ->
   P |-- P' ** RP /\ R |-- R' ** ltrue ->
   C |-- (S -->> S' @ RP) <@ R ->
@@ -291,7 +291,7 @@ Module SpecApply.
     match tonf t , tonf t' with
     | Some (mknf So Oo Po Ro) , Some (mknf So' Oo' Po' Ro') =>      
         C' |-- eval t' ->
-        Oo' |-- Oo ->
+        entailsOP Oo' Oo ->
         C |-- C' ->
         eval_oSPred Po |-- osep Po' RP /\
         eval_oSPred Ro |-- osep Ro' ltrue ->
@@ -327,11 +327,11 @@ Module SpecApply.
           let tgoal := quote_term S in
           (* Apply safe_safe_nf, which will match if tgoal and tlem could be
              put into normal form. The first subgoal is the lemma to be
-             applied, the second and third subgoals are (O' |-- O) and (C |-- C'), 
+             applied, the second and third subgoals are (entailsOP O' O) and (C |-- C'), 
              which are often trivial, the fourth subgoal is a conjunction of 
              assertion-logic entailments, and the last subgoal is the goal that's 
              left after doing this application. *)
-          eapply (@safe_safe_nf tgoal tlem C C'); [exact Hlem | try done | try done | |];
+          eapply (@safe_safe_nf tgoal tlem C C'); [exact Hlem | try reflexivity; try done | try done | |];
           cbv [eval_ospec eval_oSPred osep oconj oimpl oat];
           [.. | try solve_code |]
         end

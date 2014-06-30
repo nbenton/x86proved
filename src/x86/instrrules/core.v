@@ -43,9 +43,24 @@ Qed.
 Section UnfoldSpec.
   Transparent ILPre_Ops.
 
+  Require Import ioaction step.
   Lemma TRIPLE_safe_gen (instr:Instr) P O Q (i j: DWORD) sij:
     eq_pred sij |-- i -- j :-> instr -> 
     forall O',
+    (forall (R: SPred),
+     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) O
+            (Q ** R)) ->
+    (obs O') @ Q |-- obs (catOP O O') @ (EIP ~= i ** P ** eq_pred sij).
+  Proof.
+    move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
+    specialize (HQ s). 
+    specialize (HTRIPLE R s). 
+    admit.  
+  Qed. 
+
+  Lemma TRIPLE_safeLater_gen (instr:Instr) P O Q (i j: DWORD) sij:
+    eq_pred sij |-- i -- j :-> instr -> 
+    forall O', 
     (forall (R: SPred),
      TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) O
             (Q ** R)) ->
@@ -81,20 +96,39 @@ Section UnfoldSpec.
   Qed.
 End UnfoldSpec.
 
-Lemma TRIPLE_safecat instr P Q (i j: DWORD) O O':
+Lemma TRIPLE_safecatLater instr P Q (i j: DWORD) O O':
   (forall (R: SPred),
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) O (Q ** R)) ->
   |-- (|> (obs O') @ Q -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
   rewrite sepSPA. apply limplValid.
-  eapply TRIPLE_safe_gen; [eassumption|]. move=> R. triple_apply H.
+  eapply TRIPLE_safeLater_gen; [eassumption| ]. move=> R. triple_apply H. 
 Qed.
+
+Lemma TRIPLE_safecat instr P Q (i j: DWORD) O O':
+  (forall (R: SPred),
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) O (Q ** R)) ->
+  |-- ((obs O') @ Q -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+Proof.
+  move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
+  rewrite sepSPA. apply limplValid.
+  eapply TRIPLE_safe_gen; [eassumption|]. move=> R. triple_apply H. 
+Qed.
+
+Lemma TRIPLE_safeLater instr P Q (i j: DWORD) O:
+  (forall (R: SPred),
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) empOP (Q ** R)) ->
+  |-- (|> obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+Proof.
+  move=> H. have TS:= TRIPLE_safecatLater (O:= empOP). 
+  eforalls TS. rewrite -> empOPL in TS. apply TS. done. 
+Qed. 
 
 Lemma TRIPLE_safe instr P Q (i j: DWORD) O:
   (forall (R: SPred),
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) empOP (Q ** R)) ->
-  |-- (|> obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+  |-- (obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. have TS:= TRIPLE_safecat (O:= empOP). 
   eforalls TS. rewrite -> empOPL in TS. by apply TS. done. 
@@ -105,8 +139,7 @@ Lemma TRIPLE_basic instr P O Q:
   |-- basic P instr O Q.
 Proof.
   move=> H. rewrite /basic. specintros => i j O'.
-  rewrite ->(spec_later_weaken (obs O' @ (EIP~=j ** Q))).
-  apply TRIPLE_safecat => R. triple_apply H.
+  apply TRIPLE_safecat => R. triple_apply H. 
 Qed.
 
 (*---------------------------------------------------------------------------

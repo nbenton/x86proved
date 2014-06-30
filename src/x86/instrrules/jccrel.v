@@ -17,7 +17,7 @@ Proof.
   specintros => O.
   rewrite ->(spec_later_weaken (obs O @ (b == (~~ cv) /\\ EIP~=q ** ConditionIs cc b))).
   rewrite <-spec_later_and. rewrite ->spec_at_and_or; last apply _.
-  apply TRIPLE_safe => R. autounfold with instrrules_eval.
+  apply TRIPLE_safeLater => R. autounfold with instrrules_eval.
   triple_apply triple_letGetCondition.
   replace (b == (~~cv)) with (~~(b == cv)); last first.
   { case: b; case: cv; reflexivity. }

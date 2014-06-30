@@ -43,7 +43,7 @@ Section Basic.
   Lemma basic_roc P' O' Q' S P c O Q:
     P |-- P' ->
     Q' |-- Q ->
-    O' |-- O ->
+    entailsOP O' O ->
     S |-- basic P' c O' Q' ->
     S |-- basic P c O Q.
   Proof.
@@ -54,10 +54,17 @@ Section Basic.
 
   (* Morphisms for triples *)
   Global Instance basic_entails_m:
-    Proper (lentails --> eq ==> lentails ++> lentails ++> lentails) basic.
+    Proper (lentails --> eq ==> entailsOP ++> lentails ++> lentails) basic.
   Proof.
     move => P P' HP c _ <- O O' HO Q Q' HQ. apply: basic_roc; try eassumption.
     done.
+  Qed.
+
+  Global Instance basic_equiv_m:
+    Proper (lequiv ==> eq ==> equivOP ==> lequiv ==> lequiv) basic.
+  Proof. 
+    split; apply basic_entails_m. apply H. done. apply H1. apply H2. apply H. done. 
+    apply H1. apply H2. 
   Qed.
 
   (* Annoying extra instances to work around a bug with setoid rewriting on the 
@@ -65,27 +72,20 @@ Section Basic.
   Global Instance basic_entails_m' P c:
     Proper (eq ==> lentails ++> lentails) (basic P c).
   Proof.
-    repeat move => *. subst; apply: basic_roc; try eassumption. done. done. done. 
+    repeat move => *. subst; apply: basic_roc; try eassumption. done. reflexivity. done. 
   Qed.
 
-  Global Instance basic_entails_m'' P c :
-    Proper (eq ==> Basics.flip lentails ++> Basics.flip lentails) (basic P c).
+  Global Instance basic_entails_m'' P c O :
+    Proper (Basics.flip lentails ++> Basics.flip lentails) (basic P c O).
   Proof.
-    repeat move => *. subst; apply: basic_roc; repeat by (instantiate; try eassumption).
-  Qed.
-
-  Global Instance basic_equiv_m:
-    Proper (lequiv ==> eq ==> lequiv ==> lequiv ==> lequiv) basic.
-  Proof.
-    move => P P' HP c _ <- O O' HO Q Q' HQ. 
-    split. setoid_rewrite HQ. setoid_rewrite HP. setoid_rewrite HO. reflexivity.
-    setoid_rewrite <-HQ. setoid_rewrite <-HP. setoid_rewrite <-HO. reflexivity.
+    move => Q Q' H. apply: basic_roc. done. apply H. reflexivity. done. 
   Qed.
 
   Global Instance basic_equiv_m' P c:
-    Proper (lequiv ==> lequiv ==> lequiv) (basic P c).
+    Proper (equivOP ==> lequiv ==> lequiv) (basic P c).
   Proof.
-    move => O O' HO Q Q' HQ. setoid_rewrite HQ. by setoid_rewrite HO. 
+    move => O O' HO Q Q' HQ. setoid_rewrite HO. split. by setoid_rewrite HQ. 
+    by setoid_rewrite <-HQ. 
   Qed. 
 
   (* Special case of consequence for precondition *)
@@ -115,7 +115,7 @@ Section Basic.
     S' |-- basic P' c O' Q' ->
     S |-- S' ->
     P |-- P' ** R ->
-    O' |-- O -> 
+    entailsOP O' O -> 
     Q' ** R |-- Q ->
     S |-- basic P c O Q.
   Proof. move=> Hc HS HP HO HQ. apply: basic_roc. apply HP. apply HQ. apply HO.

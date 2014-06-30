@@ -20,15 +20,22 @@ Require Import Setoid Program.Basics.
 
 (* Triples behave contravariantly in the precondition and covariantly in the postcondition wrt
    entailment *)
-Add Morphism (@TRIPLE) with signature lentails --> eq ==> lentails ==> lentails ==> impl as TRIPLE_mor2.
+Add Morphism (@TRIPLE) with signature lentails --> eq ==> entailsOP ==> lentails ==> impl as TRIPLE_mor2.
 Proof. move => P P' PP' c O O' OO' Q Q' QQ' H.
 move => s H'. assert (H'' : P s) by firstorder.
 specialize (H _ H''). destruct H as [f [o [H1 [H2 H3]]]].
 exists f, o. firstorder. 
 Qed.
 
+Add Morphism (@TRIPLE) with signature lentails --> eq ==> eq ==> lentails ==> impl as TRIPLE_mor3.
+Proof. move => P P' PP' c O Q Q' QQ' H.
+move => s H'. assert (H'' : P s) by firstorder.
+specialize (H _ H''). destruct H as [f [o [H1 [H2 H3]]]].
+exists f, o. firstorder. 
+Qed.
+
 (* Unfortunately we need special case for equivalence *)
-Add Morphism (@TRIPLE) with signature lequiv ==> eq ==> lequiv ==> lequiv ==> iff as TRIPLE_mor.
+Add Morphism (@TRIPLE) with signature lequiv ==> eq ==> equivOP ==> lequiv ==> iff as TRIPLE_mor.
 Proof. move => P P' PP' c O O' OO' Q Q' QQ'.
 split => H.
 move => s H'. assert (H'' : P s) by firstorder.
@@ -40,9 +47,22 @@ specialize (H _ H''). destruct H as [f [o [H1 [H2 H3]]]].
 exists f, o. firstorder. 
 Qed.
 
+Add Morphism (@TRIPLE) with signature lequiv ==> eq ==> eq ==> lequiv ==> iff as TRIPLE_mor4.
+Proof. move => P P' PP' c O Q Q' QQ'.
+split => H.
+move => s H'. assert (H'' : P s) by firstorder.
+specialize (H _ H''). destruct H as [f [o [H1 [H2 H3]]]].
+exists f, o. firstorder. 
+
+move => s H'. assert (H'' : P' s) by firstorder.
+specialize (H _ H''). destruct H as [f [o [H1 [H2 H3]]]].
+exists f, o. firstorder. 
+Qed.
+
+
 Lemma triple_roc P' Q' O' P c O Q:
-  P |-- P' -> O' |-- O -> Q' |-- Q -> TRIPLE P' c O' Q' -> TRIPLE P c O Q.
-Proof. move=> HP HO HQ H. by rewrite ->HP, <-HQ, <-HO. Qed.
+  P |-- P' -> entailsOP O' O -> Q' |-- Q -> TRIPLE P' c O' Q' -> TRIPLE P c O Q.
+Proof. move=> HP HO HQ H. setoid_rewrite<-HO. setoid_rewrite ->HP. by setoid_rewrite <-HQ. Qed.
 
 Lemma triple_roc_pre P' P c O Q:
   P |-- P' -> TRIPLE P' c O Q -> TRIPLE P c O Q.
@@ -113,7 +133,7 @@ Lemma triple_pre_instFlag (f:Flag) P c O Q :
 Proof. move => TR. apply triple_pre_existsSep => v. apply TR. Qed.
 
 Lemma triple_seqcat P P' P'' O1 O2 c1 c2 O :
-  catOP O1 O2 |-- O ->
+  entailsOP (catOP O1 O2) O ->
   TRIPLE P c1 O1 P' ->
   TRIPLE P' c2 O2 P'' ->
   TRIPLE P (do! c1; c2) O P''.
@@ -130,7 +150,7 @@ Lemma triple_seq P P' P'' c1 c2 O :
   TRIPLE P c1 empOP P' ->
   TRIPLE P' c2 O P'' ->
   TRIPLE P (do! c1; c2) O P''.
-Proof. move => T1 T2. by apply: triple_seqcat T1 T2. Qed.
+Proof. move => T1 T2. apply: triple_seqcat T1 T2. by apply empOPL. Qed.
 
 (* Set and get registers *)
 Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) O c:
@@ -566,10 +586,10 @@ rewrite Ev in PTv.
 rewrite Ew in PTw.
 rewrite -PTv -PTw {PTv PTw}.
 
-rewrite 2!pointsTo_consBYTE 2!sepSPA.
+rewrite 2!pointsTo_consBYTE 2!sepSPA. 
 apply triple_setBYTEbind.
 
-destruct (next _).
+destruct (next _). 
 rewrite [in X in TRIPLE X _ _]sepSPC sepSPA pointsTo_consBYTE sepSPA.
 rewrite [in X in TRIPLE _ _ _ X]sepSPC sepSPA pointsTo_consBYTE sepSPA.
 apply triple_setBYTEbind.
@@ -606,9 +626,9 @@ specialize (T _ H2).
 destruct T as [f' [o' [H4 H5]]]. exists f'. rewrite /= H1.
 eexists _.
 destruct (c f). destruct H5. split => //. injection H4 => -> ->. 
-simpl in H, H3. subst. done. intuition. 
+simpl in H, H3. subst. done. intuition. simpl in H3.  
 rewrite /=/outputToActions in H, H3. 
-by rewrite /outputToActions map_cat H3. 
+rewrite /outputToActions. rewrite map_cat. by setoid_rewrite <- H3. 
 Qed.
 
 Hint Rewrite -> (@assoc ST _ _) (@id_l ST _ _) : triple.
@@ -620,8 +640,10 @@ Ltac triple_apply lemma tac :=
  do ?(instantiate;
       match goal with
         | [ |- _ |-- _ ] => reflexivity
+        | [ |- entailsOP _ _ ] => reflexivity
         | [ |- _ |-- _ ] => progress ssimpl
         | [ |- _ |-- _ ] => done
+        | [ |- entailsOP _ _ ] => done
         | [ |- _ |-- _ ] => progress tac
         | [ |- _ |-- _ ] => fail 2 "Cannot fully solve side-conditions of triple_roc"
       end).

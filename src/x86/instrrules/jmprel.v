@@ -6,12 +6,12 @@ Require Import safe (* for [safe] *) spectac (* for [specapply] *).
 
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) :
   |-- interpJmpTgt tgt q (fun P addr =>
-     Forall O, (|> obs O @ (EIP ~= addr ** P) -->> obs O @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt)).
+     Forall O:OPred, (|> obs O @ (EIP ~= addr ** P) -->> obs O @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt)).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
   do_instrrule
     ((try specintros => *; autorewrite with push_at);
-     apply TRIPLE_safe => ?;
+     apply TRIPLE_safeLater => ?;
      do !instrrule_triple_bazooka_step idtac).
 Qed.
 

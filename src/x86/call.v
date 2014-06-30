@@ -154,7 +154,7 @@ Proof.
   rewrite ->toyfun_example_caller_correct.
   cancel2; last reflexivity. autorewrite with push_at.
   eapply safe_safe_ro; first reflexivity. reflexivity. 
-  - eapply lforallL. eapply lforallL. apply lforallL with O. rewrite empOPL. reflexivity.
+  - eapply lforallL. eapply lforallL. apply lforallL with O. rewrite ->empOPL. reflexivity.
   - split; sbazooka.
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
   rewrite spec_at_emp. cancel1. sbazooka.

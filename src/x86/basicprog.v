@@ -5,15 +5,17 @@ Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
 Require Import SPred OPred septac spec spectac obs pointsto cursor instr reader instrcodec.
 Require Import Setoid RelationClasses Morphisms.
-Require Import program basic.
+Require Import program basic ilogic.
 
 (* Morphism for program equivalence *)
 Global Instance basic_progEq_m:
-Proper (lequiv ==> progEq ==> lequiv ==> lequiv ==> lequiv) basic.
+Proper (lequiv ==> progEq ==> equivOP ==> lequiv ==> lequiv) basic.
   Proof.
-    move => P P' HP c c' Hc O O' HO Q Q' HQ.
-    setoid_rewrite HQ. setoid_rewrite HP. setoid_rewrite HO. 
+    move => P P' HP c c' Hc O O' HO Q Q' HQ. split. 
+    setoid_rewrite -> HQ. setoid_rewrite HP. setoid_rewrite HO. 
     unfold basic. by setoid_rewrite Hc. 
+    setoid_rewrite <- HQ. setoid_rewrite <- HP. setoid_rewrite <- HO. 
+    unfold basic. by setoid_rewrite <-Hc. 
   Qed.
 
 (* Skip rule *)
@@ -21,22 +23,22 @@ Lemma basic_skip P: |-- basic P prog_skip empOP P.
 Proof.
   rewrite /basic. specintros => i j O'. unfold_program.
   specintro => ->. 
-  rewrite empOPL emp_unit spec_reads_eq_at; rewrite <- emp_unit.
+  rewrite -> empOPL. rewrite emp_unit spec_reads_eq_at; rewrite <- emp_unit.
   rewrite spec_at_emp. by apply limplValid. 
 Qed.
 
 (* Sequencing rule *)
 Lemma basic_seq (c1 c2: program) S P O1 Q O2 R O:
-  catOP O1 O2 |-- O ->
+  entailsOP (catOP O1 O2) O ->
   S |-- basic P c1 O1 Q ->
   S |-- basic Q c2 O2 R ->
   S |-- basic P (c1;; c2) O R.
 Proof.
   rewrite /basic. move=> HO Hc1 Hc2. specintros => i j O'. unfold_program.
   specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst. 
-  rewrite <- HO. rewrite catOPA. 
-  specapply Hc1. reflexivity. by ssimpl. 
-  specapply Hc2. reflexivity. by ssimpl. 
+  rewrite <- HO. rewrite -> catOPA. 
+  specapply Hc1. by ssimpl. 
+  specapply Hc2. by ssimpl. 
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
   by rewrite spec_at_emp.
 Qed.

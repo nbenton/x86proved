@@ -158,13 +158,13 @@ Definition ifthenelse (cond: Condition) (value: bool)
     specsplit.
     - (* THEN branch *)
       rewrite <-spec_later_weaken. specintro. move/eqP => ->. 
-      specapply Hthen. reflexivity. by ssimpl.
+      specapply Hthen. by ssimpl.
        rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
        apply: landL2. cancel1. by ssimpl.
 
     (* ELSE branch *)
     specintro. move/eqP => ->.
-    specapply Helse. reflexivity. by ssimpl.
+    specapply Helse. by ssimpl.
 
     (* JMP END *)
     specapply JMP_I_rule. by ssimpl.
@@ -214,7 +214,7 @@ Definition while (ptest: program)
       apply spec_lob_context. autorewrite with push_later.
       autorewrite with push_at. apply: limplL; first exact: landL2.
       exact: landL1. apply _.
-    rewrite empOPL. rewrite <-Hlob => {Hlob}.
+    rewrite -> empOPL. rewrite <-Hlob => {Hlob}.
 
     specsplit.
     (* JMP TEST *)
@@ -223,7 +223,7 @@ Definition while (ptest: program)
       apply: landL2. apply: landL2. by (autorewrite with push_at; reflexivity).
 
     (* ptest *)
-    specapply Htest; first by ssimpl.
+    specapply Htest. by ssimpl.
 
     (* JCC cond value BODY *)
     specintro => b.
@@ -235,7 +235,7 @@ Definition while (ptest: program)
     - autorewrite with push_at. rewrite ->landL2; last reflexivity.
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
-      specapply Hbody.
+      specapply Hbody. 
       - sdestruct. move/eqP => ->. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
@@ -291,7 +291,7 @@ Definition while (ptest: program)
       apply spec_lob_context. autorewrite with push_later.
       autorewrite with push_at. apply: limplL; first exact: landL2.
       exact: landL1. apply _.
-    rewrite empOPL. rewrite <-Hlob => {Hlob}.
+    rewrite -> empOPL. rewrite <-Hlob => {Hlob}.
 
     specsplit.
     (* JMP TEST *)
