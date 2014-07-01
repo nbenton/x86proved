@@ -2,7 +2,8 @@
 Require Import x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import spectac (* for [eforalls] *) bitsprops (* for [low_catB] *).
+Require Import Coq.Classes.Morphisms.
+Require Import spectac (* for [eforalls] *) bitsprops (* for [low_catB] *) septac (* for [ssplits] *).
 
 (** ** Generic rule *)
 Lemma CMP_rule d (ds:DstSrc d) v1 :
@@ -13,29 +14,25 @@ Lemma CMP_rule d (ds:DstSrc d) v1 :
               D v1 ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
 
-(** TODO(t-jagro): Figure out a more systematic way to do this. *)
-Local Ltac CMP_ruleZC_t v1 :=
-  (move => *; try specintros => *; autorewrite with push_at);
-  let C := match goal with | [ C : |-- _ |- _ ] => constr:(C) end in
-  eapply basic_basic;
-  [ by (eforalls C; autorewrite with push_at in C; apply C)
-  | by sbazooka
-  | ];
-  (elim E:(sbbB false v1 _) => [? ?]);
-  rewrite /OSZCP/stateIsAny; sbazooka;
-    by apply sbbB_ZC.
-
 (** ** Generic rule with C and Z flags determining ltB and equality respectively *)
-(** TODO(t-jagro): speed this up by proving that entailment of the result from basic plays well with [specAtDstSrc] *)
+Section setoid_rewrite_opacity.
+(** TODO(t-jagro): Figure out a way to [setoid_rewrite] without making [sepSP] opaque here *)
+Local Opaque sepSP.
+(** TODO(t-jagro): Figure out a way to not need to do so much setoid_rewriting manually *)
 Lemma CMP_ruleZC d (ds:DstSrc d) v1 :
    |-- specAtDstSrc ds (fun D v2 =>
        basic (D v1 ** OSZCP?)
              (BOP d OP_CMP ds)
-             (D v1 ** OF? ** SF? ** PF? ** CF ~= ltB v1 v2 ** ZF ~= (v1==v2))).
+             (D v1 ** OF? ** SF? ** ZF ~= (v1==v2) ** CF ~= ltB v1 v2 ** PF?)).
 Proof.
-  generalize (CMP_rule ds v1).
-  do_instrrule (CMP_ruleZC_t v1).
+  etransitivity; first by apply CMP_rule.
+  eapply specAtDstSrc_entails_m.
+  move => ? ?.
+  setoid_rewrite <- sbbB_ZC'; [ | by apply prod_eta ].
+  eapply basic_entails_m; try reflexivity.
+  rewrite /OSZCP/stateIsAny; try ssplits => *; reflexivity.
 Qed.
+End setoid_rewrite_opacity.
 
 Ltac basicCMP :=
   rewrite /makeBOP;
