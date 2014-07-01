@@ -2,7 +2,7 @@
     Some useful instances of Monad
   ===========================================================================*)
 Require Import ssreflect seq.
-Require Import monad.
+Require Import x86proved.monad.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

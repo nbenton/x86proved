@@ -2,7 +2,7 @@
     Instruction evaluator
   ===========================================================================*)
 Require Import ssreflect ssrnat ssrbool eqtype tuple.
-Require Import bitsops instr monad reader procstate procstatemonad exn.
+Require Import bitsops instr x86proved.monad reader procstate procstatemonad exn.
 Require Import common_definitions.
 
 Definition updateZPS {n} (result: BITS n) :=

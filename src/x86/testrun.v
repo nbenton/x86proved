@@ -2,7 +2,7 @@
     Actually run the transition function on some code
   ===========================================================================*)
 Require Import ssreflect ssrnat ssrbool eqtype tuple seq.
-Require Import instr monad reader writer procstate procstatemonad mem exn eval instrcodec
+Require Import instr x86proved.monad reader writer procstate procstatemonad mem exn eval instrcodec
                monadinst ioaction bitsrep bitsops eval step cursor fact.
 
 Require Import program programassem reg instrsyntax.

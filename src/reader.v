@@ -2,7 +2,7 @@
     Reader monad, with instances for BYTE, WORD and DWORD
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple.
-Require Import bitsrep bitsops bitsopsprops cursor monad.
+Require Import bitsrep bitsops bitsopsprops cursor x86proved.monad.
 Require Import FunctionalExtensionality Coq.Strings.String cstring.
 
 Set Implicit Arguments.

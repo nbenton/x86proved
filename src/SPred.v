@@ -358,7 +358,7 @@ Qed.
 
 Instance PStateSepAlgOps: SepAlgOps PState := {
   sa_unit := emptyPState;
-  sa_mul s1 s2 s := stateSplitsAs s s1 s2 
+  sa_mul s1 s2 s := stateSplitsAs s s1 s2
 }.
 
 Instance PStateSepAlg : SepAlg PState.
@@ -445,26 +445,26 @@ Definition isTotal T U (f: T -> option U) := forall x, f x <> None.
 Definition isTotalPState (s: PState) := forall f:Frag, isTotal (s f).
 
 Lemma splitsTotal T U (s s0 s1: T -> option U) : isTotal s0 -> splitsAs s s0 s1 -> s =1 s0.
-Proof. move => TOT SPLITS. rewrite /splitsAs in SPLITS. 
-move => x. unfold isTotal in TOT.  
-specialize (SPLITS x). specialize (TOT x). 
-destruct (s0 x) => //. destruct (s x) => //. 
-elim SPLITS => [[H1 H2] | [H1 H2]]. done. done. by destruct SPLITS. 
-Qed. 
+Proof. move => TOT SPLITS. rewrite /splitsAs in SPLITS.
+move => x. unfold isTotal in TOT.
+specialize (SPLITS x). specialize (TOT x).
+destruct (s0 x) => //. destruct (s x) => //.
+elim SPLITS => [[H1 H2] | [H1 H2]]. done. done. by destruct SPLITS.
+Qed.
 
 Lemma stateSplitsTotal (s s0 s1: PState) : isTotalPState s0 -> stateSplitsAs s s0 s1 -> s === s0.
-Proof. move => TOT SPLITS. unfold stateSplitsAs in SPLITS. unfold isTotalPState in TOT. 
-move => f. apply: splitsTotal => //. Qed. 
+Proof. move => TOT SPLITS. unfold stateSplitsAs in SPLITS. unfold isTotalPState in TOT.
+move => f. apply: splitsTotal => //. Qed.
 
 Instance stateSplitsAs_m :
   Proper (CSetoid.equiv ==> CSetoid.equiv ==> CSetoid.equiv ==> iff) stateSplitsAs.
 Proof. move => s1 s2 EQ s1' s2' EQ' s1'' s2'' EQ''.
-split => SPLIT f x. 
-specialize (SPLIT f x). specialize (EQ f x). specialize (EQ' f x). specialize (EQ'' f x). 
-destruct (s1 f x); destruct (s2 f x); congruence. 
-specialize (SPLIT f x). specialize (EQ f x). specialize (EQ' f x). specialize (EQ'' f x). 
-destruct (s1 f x); destruct (s2 f x); congruence. 
-Qed. 
+split => SPLIT f x.
+specialize (SPLIT f x). specialize (EQ f x). specialize (EQ' f x). specialize (EQ'' f x).
+destruct (s1 f x); destruct (s2 f x); congruence.
+specialize (SPLIT f x). specialize (EQ f x). specialize (EQ' f x). specialize (EQ'' f x).
+destruct (s1 f x); destruct (s2 f x); congruence.
+Qed.
 
 Local Transparent ILFun_Ops SABIOps.
 
@@ -477,26 +477,26 @@ Qed.
 Lemma eqPredTotal_sepSP_trueR s :
   isTotalPState s ->
   eq_pred s -|- eq_pred s ** ltrue.
-Proof. 
-move => TOT. 
-split => s'. 
+Proof.
+move => TOT.
+split => s'.
 - apply lentails_eq. exists s, emptyPState. split => //; first apply stateSplitsAs_s_s_emp.
-- move => /= [s1 [s2 [H1 [H2 H3]]]]. setoid_rewrite <- H2 in H1. 
-  apply (stateSplitsTotal TOT) in H1. by rewrite H1. 
-Qed. 
+- move => /= [s1 [s2 [H1 [H2 H3]]]]. setoid_rewrite <- H2 in H1.
+  apply (stateSplitsTotal TOT) in H1. by rewrite H1.
+Qed.
 
-Lemma eqPredTotal_sepSP s1 s2 R: 
+Lemma eqPredTotal_sepSP s1 s2 R:
   isTotalPState s2 ->
   eq_pred s1 |-- eq_pred s2 ** R ->
   empSP |-- R.
 Proof. move => TOT H.
-apply lentails_eq in H. destruct H as [s3 [s4 [H1 [H2 H3]]]]. 
-simpl in H2. rewrite <-H2 in H1. 
+apply lentails_eq in H. destruct H as [s3 [s4 [H1 [H2 H3]]]].
+simpl in H2. rewrite <-H2 in H1.
 simpl in H1.
 rewrite -> (stateSplitsTotal TOT H1) in H1.
-apply stateSplitsAs_s_s_t in H1. 
-subst. rewrite emp_unit. by apply lentails_eq. 
-Qed. 
+apply stateSplitsAs_s_s_t in H1.
+subst. rewrite emp_unit. by apply lentails_eq.
+Qed.
 
 Local Opaque SABIOps.
 
@@ -706,5 +706,3 @@ destruct (s Memory p); rewrite eq_refl in H1.
 destruct H1; by destruct H.
 by destruct H1.
 Qed.
-
-

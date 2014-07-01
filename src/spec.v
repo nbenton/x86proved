@@ -21,7 +21,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrfun ssrnat eqtype tuple seq fintype.
 Require Import bitsrep procstate procstatemonad SPred septac.
-Require Import instr eval monad monadinst reader cursor.
+Require Import instr eval x86proved.monad x86proved.monadinst reader cursor.
 Require Import common_tactics.
 
 (* Importing this file really only makes sense if you also import ilogic, so we

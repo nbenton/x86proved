@@ -2,7 +2,7 @@
     Syntax for writers, with instances for BYTE and DWORD
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple.
-Require Import bitsrep bitsops bitsopsprops cursor monad monadinst.
+Require Import bitsrep bitsops bitsopsprops cursor x86proved.monad x86proved.monadinst.
 Require Import FunctionalExtensionality Coq.Strings.String cstring.
 
 Set Implicit Arguments.

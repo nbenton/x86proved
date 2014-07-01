@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple.
-Require Import bitsrep bitsops bitsopsprops monad writer reg instr instrsyntax program programassem cursor.
+Require Import bitsrep bitsops bitsopsprops x86proved.monad writer reg instr instrsyntax program programassem cursor.
 Require Import pecoff cfunc.
 
 Set Implicit Arguments.

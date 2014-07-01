@@ -2,7 +2,7 @@
     Round trip properties for readers and writers
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-Require Import bitsrep bitsprops monad reader cursor writer Coq.Strings.String cstring.
+Require Import bitsrep bitsprops x86proved.monad reader cursor writer Coq.Strings.String cstring.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

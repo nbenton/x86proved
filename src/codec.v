@@ -916,7 +916,7 @@ Proof. rewrite /dpfInterp => H l e v w. rewrite 2!interpDerivSym=> I1 I2. apply:
 
   We use derivatives "on-the-fly" to avoid any backtracking for deterministic codecs.
   ======================================================================================*)
-Require Import monad bitreader.
+Require Import x86proved.monad bitreader.
 Fixpoint codecToBitReader bits t (c: Codec t) : BitReader (option t) :=
   if valIfNull c is Some x then retn (Some x)
   else if bits isn't bits'.+1 then retn None

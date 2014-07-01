@@ -2,7 +2,7 @@ Require Import ssreflect ssrbool ssrnat eqtype tuple seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
 Require Import SPred septac spec spectac safe basic program.
 Require Import instr instrsyntax instrrules reader pointsto cursor.
-Require Import triple monad eval instrcodec enc encdechelp basicprog.
+Require Import triple x86proved.monad eval instrcodec enc encdechelp basicprog.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -267,4 +267,3 @@ Section BISepAlg.
 End BISepAlg.
 
 Global Opaque SABIOps.
-

@@ -8,7 +8,7 @@ Require Import x86.instr pointsto cursor.
 Require Import x86.instrsyntax.
 Require Import x86.procstatemonad (* for [ST] *) bitsprops (* for [high_catB] *) bitsopsprops (* for [subB_eq0] *).
 Require Import septac (* for [sdestruct] *) obs (* for [obs] *) triple (* for [TRIPLE] *).
-Require Import x86.eval (* for [evalInstr] *) monad (* for [doMany] *) monadinst (* for [Success] *).
+Require Import x86.eval (* for [evalInstr] *) x86proved.monad (* for [doMany] *) x86proved.monadinst (* for [Success] *).
 Require Import common_definitions (* for [eta_expand] *) common_tactics (* for [elim_atomic_in_match'] *).
 Require Import Coq.Classes.Morphisms (* for [Parametric Morphism] and [signature_scope] *).
 

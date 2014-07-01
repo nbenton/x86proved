@@ -7,7 +7,7 @@
     We also provide an implementation in terms of BYTE readers.
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple div.
-Require Import bitsrep bitsprops bitsops bitsopsprops cursor monad reader.
+Require Import bitsrep bitsprops bitsops bitsopsprops cursor x86proved.monad reader.
 Require Import FunctionalExtensionality.
 
 Set Implicit Arguments.

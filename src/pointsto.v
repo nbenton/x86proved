@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrnat ssrfun eqtype tuple seq choice fintype.
 Require Import bitsrep bitsops bitsprops bitsopsprops procstate.
-Require Import monad reader writer roundtrip SPred septac pfun cursor iltac ilogic.
+Require Import x86proved.monad reader writer roundtrip SPred septac pfun cursor iltac ilogic.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

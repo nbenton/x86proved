@@ -269,3 +269,27 @@ Ltac destruct_atomic_in_match' :=
   match goal with
     | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; destruct E
   end.
+
+(** [pose proof defn], but only if no hypothesis of the same type exists.
+    most useful for proofs of a proposition *)
+Tactic Notation "unique" "pose" "proof" constr(defn) :=
+  let T := type_of defn in
+  match goal with
+    | [ H : T |- _ ] => fail 1
+    | _ => pose proof defn
+  end.
+
+(** [pose defn], but only if that hypothesis doesn't exist *)
+Tactic Notation "unique" "pose" constr(defn) :=
+  match goal with
+    | [ H := defn |- _ ] => fail 1
+    | _ => pose defn
+  end.
+
+(** try to specialize all hypotheses with all other hypotheses.  This
+    includes [specialize (H x)] where [H x] requires a coercion from
+    the type of [H] to Funclass. *)
+Ltac specialize_all_ways :=
+  repeat match goal with
+           | [ x : ?T, H : _ |- _ ] => unique pose proof (H x)
+         end.

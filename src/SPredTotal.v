@@ -4,7 +4,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool ssrnat eqtype tuple seq fintype.
 Require Import bitsrep bitsprops bitsops bitsopsprops procstate procstatemonad pmapprops.
-Require Import monad monadinst reader SPred septac pointsto pfun cursor writer.
+Require Import x86proved.monad x86proved.monadinst reader SPred septac pointsto pfun cursor writer.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
