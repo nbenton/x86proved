@@ -105,18 +105,18 @@ x86\main.vo \
 x86\fact.vo \
 x86\examples.vo \
 x86\testrun.vo \
-# x86\matcher.vo \
 x86\cstringimp.vo \
 x86\cfunc.vo \
 x86\win\pecoff.vo \
 x86\cfuncspec.vo \
-# x86\globals.vo \
 x86\instrcodec.vo \
 cast.vo \
 regex.vo \
 codec.vo \
 bitscodec.vo \
 codecregex.vo
+# x86\matcher.vo
+# x86\globals.vo
 # x86\lib\regexp\stringbuff.vo
 # x86\lib\regexp\compiler.vo
 # x86\lib\regexp\interfaceATBR.vo
