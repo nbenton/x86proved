@@ -47,23 +47,23 @@ Next Obligation. by exists nil. Qed.
 Definition entailsOP (O O': OPred) := forall s, O s -> O' s. 
 Definition equivOP (O O': OPred) := entailsOP O O' /\ entailsOP O' O.
 
-Global Instance equivOPEquiv : Equiv OPred := equivOP.
+Instance equivOPEquiv : Equiv OPred := equivOP.
 
-Global Instance entailsOPpre : PreOrder entailsOP.
+Instance entailsOPpre : PreOrder entailsOP.
 Proof. constructor; hnf. move => P s. intuition. 
 move => P Q R H1 H2 s. intuition. Qed. 
 
 
-Global Instance equivOP_entailOP : subrelation equivOP entailsOP.
+Instance equivOP_entailOP : subrelation equivOP entailsOP.
 Proof. firstorder. Qed.
 
-Global Instance equivOP_inverse_entailsOP: subrelation equivOP (inverse entailsOP).
+Instance equivOP_inverse_entailsOP: subrelation equivOP (inverse entailsOP).
 Proof. firstorder. Qed.
 
-Global Instance equivOP_entailsOP_m : Proper (equivOP ==> equivOP ==> iff) entailsOP.
+Instance equivOP_entailsOP_m : Proper (equivOP ==> equivOP ==> iff) entailsOP.
 Proof. move => P P' HP Q Q' QP. split => H s H'; firstorder. Qed. 
 
-Global Instance entailsOP_entailsOP_m: Proper (entailsOP --> entailsOP ++> impl) entailsOP.
+Instance entailsOP_entailsOP_m: Proper (entailsOP --> entailsOP ++> impl) entailsOP.
 Proof. move => P P' HP Q Q' QP H s H'. intuition. Qed.
 
 (* Morphisms for operators *)

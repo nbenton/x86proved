@@ -118,7 +118,7 @@ Definition cdecl_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec
   ---------------------------------------------------------------------------*)
 Definition fastcall_nonvoid1_impMeetsSpec (FS: FunSpec (mkFunSig 1 true)) (FI: programWithSig (mkFunSig 1 true)) : spec :=
   Forall arg:DWORD,
-  basic (EAX?          ** ECX ~= arg ** pre FS arg) (FI ECX)
+  basic (EAX?          ** ECX ~= arg ** pre FS arg) (FI ECX) empOP
         (EAX ~= fst (post FS arg) ** ECX? ** snd (post FS arg)) @ (EDX? ** OSZCP?).
 
 (*---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ Definition fastcall_nonvoid1_impMeetsSpec (FS: FunSpec (mkFunSig 1 true)) (FI: p
   ---------------------------------------------------------------------------*)
 Definition stacked_nonvoid1_impMeetsSpec (FS: FunSpec (mkFunSig 1 true)) (FI: programWithSig (mkFunSig 1 true)) : spec :=
   Forall arg:DWORD, Forall ebp:DWORD,
-  basic (EAX?          ** EBP ~= ebp ** ebp +# 8 :-> arg     ** pre FS arg) (FI [EBP+8]%ms)
+  basic (EAX?          ** EBP ~= ebp ** ebp +# 8 :-> arg     ** pre FS arg) (FI [EBP+8]%ms) empOP
         (EAX ~= fst (post FS arg) ** EBP?       ** ebp +# 8 :-> ?:DWORD ** snd (post FS arg)) @ (ECX? ** EDX? ** OSZCP?).
 
 Lemma fastcall_nonvoid1_defCorrect (f f': DWORD) FS FI :

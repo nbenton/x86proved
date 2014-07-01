@@ -29,6 +29,19 @@ Module Import instrruleconfig.
 End instrruleconfig.
 
 Import Prenex Implicits.
+Require Import ioaction step.
+
+Lemma decodeAndAdvance_rule P (i j: DWORD) R sij instr O c Q : 
+  sij |-- i -- j :-> instr -> 
+  TRIPLE (P ** EIP ~= j ** sij ** R) (c instr) O (Q ** R) ->
+  TRIPLE (P ** EIP ~= i ** sij ** R) (bind decodeAndAdvance c) O (Q ** R).
+Proof. 
+move => HR T. rewrite /decodeAndAdvance.
+triple_apply triple_letGetReg.
+try_triple_apply triple_letReadSep. rewrite -> HR; by ssimpl. 
+triple_apply triple_doSetRegSep. 
+triple_apply T. 
+Qed. 
 
 (* TODO: needed now? *)
 Lemma TRIPLE_nopost P (c: ST unit) O:
@@ -40,10 +53,19 @@ Proof.
   by exists s', o.
 Qed.
 
+Lemma step_rule P (i j: DWORD) R sij instr O Q :
+  sij |-- i -- j :-> instr ->
+  TRIPLE (EIP ~= j ** P ** sij ** R ** ltrue) (evalInstr instr) O (Q ** R ** ltrue) ->
+  TRIPLE (EIP ~= i ** P ** sij ** R ** ltrue) step O (Q ** R ** ltrue).
+Proof. 
+move => HR T. rewrite /step.
+try_triple_apply decodeAndAdvance_rule. rewrite -> HR. by ssimpl. 
+triple_apply T.
+Qed.
+
 Section UnfoldSpec.
   Transparent ILPre_Ops.
 
-  Require Import ioaction step.
   Lemma TRIPLE_safe_gen (instr:Instr) P O Q (i j: DWORD) sij:
     eq_pred sij |-- i -- j :-> instr -> 
     forall O',
@@ -53,10 +75,36 @@ Section UnfoldSpec.
     (obs O') @ Q |-- obs (catOP O O') @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
     move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
-    specialize (HQ s). 
-    specialize (HTRIPLE R s). 
-    admit.  
-  Qed. 
+    specialize (HTRIPLE (R**ltrue)). 
+    apply (step_rule Hsij) in HTRIPLE.
+    apply lentails_eq in Hs.
+    repeat rewrite -> sepSPA in Hs.
+    apply lentails_eq in Hs. 
+    specialize (HTRIPLE s Hs). 
+    destruct HTRIPLE as [sf [out [H1 [H2 H3]]]].
+    
+    apply lentails_eq in H3. 
+    rewrite <- sepSPA in H3. 
+    apply lentails_eq in H3.   
+    specialize (HQ _ H3). 
+    destruct HQ as [orest [H4 H5]]. 
+    clear H3 Hsij. 
+    destruct k. 
+    - destruct (inhabitedOP O') as [o' o'H]. 
+      exists (outputToActions out ++ o'). split. by exists (outputToActions out), o'.
+      apply runsForWithPrefixOf0.
+   
+    (* k > 0 *)
+    have LE: k <= succn k by done.
+    apply (runsForWithPrefixOfLe LE) in H5. 
+    destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
+    rewrite /manyStep-/manyStep/oneStep H1.
+    exists (outputToActions out ++ orest). split. by exists (outputToActions out), orest.
+    exists sf'. exists (outputToActions out ++ o''). split; first by apply cat_preActions. 
+    exists sf. exists (outputToActions out), o''. split; first done. 
+    split; last done. 
+    eexists _. intuition. 
+  Qed.
 
   Lemma TRIPLE_safeLater_gen (instr:Instr) P O Q (i j: DWORD) sij:
     eq_pred sij |-- i -- j :-> instr -> 
@@ -67,33 +115,37 @@ Section UnfoldSpec.
     |> (obs O') @ Q |-- obs (catOP O O') @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
     move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
-    destruct k. 
-
-    (* k = 0 *)
-    - exists nil. admit. 
-
-    (* k <> 0 *) 
-
-    simpl. (*rewrite /runsFor-/runsFor. *)
-    (* TODO: This is clumsy. Make it more like in attic/instrrules.v. *)
-    specialize (HQ k). simpl in HQ. admit. (*simpl in HQ.  HQ.  simpl.
-    rewrite /=/runsFor/manyStep-/manyStep/oneStep/step. eexists _, _, _, simpl. apply: TRIPLE_nopost. rewrite /doMany-/doMany.
-    rewrite assoc. eapply triple_letGetReg.
-    - by ssimpl.
-    rewrite assoc.
-    eapply triple_letReadSep.
-    - rewrite ->Hsij. by ssimpl.
-    rewrite assoc. eapply triple_seq.
-    - eapply triple_setRegSepGen. by ssimpl.
-    eapply triple_seq.
-    - triple_apply HTRIPLE.
-    move=> s Hs.
-    edestruct (HQ k) as [f [o Hf]]; first omega.
-    - rewrite ->lentails_eq. rewrite ->sepSPA, <-lentails_eq.
-      eassumption.
-    exists f. exists o. by split.
-*)
+    specialize (HTRIPLE (R**ltrue)). 
+    apply (step_rule Hsij) in HTRIPLE.
+    apply lentails_eq in Hs.
+    repeat rewrite -> sepSPA in Hs.
+    apply lentails_eq in Hs. 
+    specialize (HTRIPLE s Hs). 
+    destruct HTRIPLE as [sf [out [H1 [H2 H3]]]].
+    
+    apply lentails_eq in H3. 
+    rewrite <- sepSPA in H3. 
+    apply lentails_eq in H3.
+    destruct k => //.    
+    - destruct (inhabitedOP O') as [o' o'H]. 
+      exists (outputToActions out ++ o'). split. by exists (outputToActions out), o'.
+      apply runsForWithPrefixOf0.
+    (* k > 0 *)
+    have LT: (k < succn k)%coq_nat by done.
+    have LE: k <= succn k by done.
+    specialize (HQ k LT _ H3). 
+    destruct HQ as [orest [H4 H5]]. 
+    clear H3 Hsij. 
+   
+    destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
+    rewrite /manyStep-/manyStep/oneStep H1.
+    exists (outputToActions out ++ orest). split. by exists (outputToActions out), orest.
+    exists sf'. exists (outputToActions out ++ o''). split; first by apply cat_preActions. 
+    exists sf. exists (outputToActions out), o''. split; first done. 
+    split; last done. 
+    eexists _. intuition. 
   Qed.
+
 End UnfoldSpec.
 
 Lemma TRIPLE_safecatLater instr P Q (i j: DWORD) O O':
@@ -627,10 +679,32 @@ Global Opaque evalLogicalOp.
 (** TODO(t-jagro): Find a better place for this opacity control *)
 Global Opaque setRegInProcState getDWORDFromProcState updateFlagInProcState forgetFlagInProcState.
 
+Local Ltac make_un_do lem :=
+  let c := match goal with |- TRIPLE _ ?c _ _ => constr:(c) end in
+  rewrite -(@doRet _ _ _ c);
+  apply lem;
+  apply triple_skip.
+
+Lemma triple_setFlagSep (f : Flag) v w S
+: TRIPLE (f ~= v ** S) (updateFlagInProcState f w) empOP (f ~= w ** S).
+Proof. make_un_do triple_doSetFlagSep. Qed.
+
+Lemma triple_updateZPS n (v: BITS n) z p s P
+: TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (updateZPS v) empOP (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P).
+Proof. make_un_do triple_doUpdateZPS. Qed.
+
+Lemma triple_forgetFlagSep (f : Flag) v S
+: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) empOP (f? ** S).
+Proof. make_un_do triple_doForgetFlagSep. Qed.
+
+Lemma triple_forgetFlagSep' (f : Flag) v S
+: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) empOP ((Exists v, f ~= v) ** S).
+Proof. exact (@triple_forgetFlagSep f v S). Qed.
+
 Ltac instrrule_triple_bazooka_step tac :=
   idtac;
   let tapply H := triple_apply H using tac in
-  match goal with
+  lazymatch goal with
     | [ |- TRIPLE _ (bind (evalDWORDorBYTEReg ?d ?r) _) _ _ ]                                     => tapply (@evalDWORDorBYTEReg_rule d)
     | [ |- TRIPLE _ (bind (evalReg ?r) _) _ _ ]                                                   => tapply evalReg_rule
     | [ |- TRIPLE _ (bind (evalBYTEReg ?r) _) _ _ ]                                               => tapply evalBYTEReg_rule
@@ -643,24 +717,24 @@ Ltac instrrule_triple_bazooka_step tac :=
     | [ |- TRIPLE _ (bind (evalArithOp ?f ?arg1 ?arg2) _) _ _ ]                                   => tapply evalArithOp_rule
     | [ |- TRIPLE _ (bind (evalLogicalOp ?f ?arg1 ?arg2) _) _ _ ]                                 => tapply evalLogicalOp_rule
     | [ |- TRIPLE _ (bind (evalCondition ?cc) _) _ _ ]                                            => tapply triple_letGetCondition
-    | [ |- TRIPLE _ (do!updateFlagInProcState ?f ?w; _) _ _ ]                                     => tapply triple_doSetFlagSep
-    | [ |- TRIPLE _ (do!updateZPS ?v; _) _ _ ]                                                    => tapply triple_doUpdateZPS
-    | [ |- TRIPLE _ (do!forgetFlagInProcState ?f; _) _ _ ]                                        => tapply triple_doForgetFlagSep
-    | [ |- TRIPLE _ (setDWORDorBYTERegInProcState _ ?d ?p) _ _ ]                                  => tapply triple_setDWORDorBYTERegSep
-    | [ |- TRIPLE _ (setDWORDorBYTEInProcState ?p ?w) _ _ ]                                       => tapply triple_setDWORDorBYTESep
+    | [ |- TRIPLE _ (updateFlagInProcState ?f ?w) _ _ ]                                           => tapply triple_setFlagSep
+    | [ |- TRIPLE _ (updateZPS ?v) _ _ ]                                                          => tapply triple_updateZPS
+    | [ |- TRIPLE _ (forgetFlagInProcState ?f) _ _ ]                                              => do [ tapply triple_forgetFlagSep | tapply triple_forgetFlagSep' ]
+    | [ |- TRIPLE _ (setDWORDorBYTERegInProcState ?b ?d ?p) _ _ ]                                 => tapply (@triple_setDWORDorBYTERegSep b)
+    | [ |- TRIPLE _ (@setDWORDorBYTEInProcState ?b ?p ?w) _ _ ]                                   => tapply (@triple_setDWORDorBYTESep b)
     | [ |- TRIPLE _ (setRegInProcState ?d ?p) _ _ ]                                               => tapply triple_setRegSep
     | [ |- TRIPLE _ (retn tt) _ _ ]                                                               => tapply triple_skip
-    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]                                      => tapply triple_letGetFlagSep
-    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]                                      => tapply triple_letGetFlag
+    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]                                      => do [ tapply triple_letGetFlagSep | tapply triple_letGetFlag ]
     | [ |- TRIPLE _ (bind (getRegFromProcState ?r) _) _ _ ]                                       => tapply triple_letGetRegSep
     | [ |- TRIPLE _ (bind (getDWORDorBYTEFromProcState ?d ?p) _) _ _ ]                            => tapply (@triple_letGetDWORDorBYTESep d)
     | [ |- TRIPLE _ (bind (getDWORDFromProcState ?p) _) _ _ ]                                     => tapply triple_letGetDWORDSep
     | [ |- TRIPLE _ (evalPush ?p) _ _ ]                                                           => tapply evalPush_rule
-    | [ |- TRIPLE _ (do! ?f; ?g) _ _ ] => eapply triple_seq; [ by do !instrrule_triple_bazooka_step tac | ]
-    | _ => apply TRIPLE_basic => *
-    | _ => triple_apply triple_pre_introFlags => *; rewrite /OSZCP
-    | _ => progress autorewrite with triple
-    | _ => progress autounfold with instrrules_eval
+    (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
+    | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ] => eapply triple_seq
+    | _ => do [ apply TRIPLE_basic => *
+              | triple_apply triple_pre_introFlags => *; rewrite /OSZCP
+              | progress autorewrite with triple
+              | progress autounfold with instrrules_eval ]
   end.
 
 Ltac instrrule_triple_bazooka tac :=

@@ -10,12 +10,16 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-(* Decode instruction at EIP, move EIP to next instruction, execute instruction *)
-(*=step *)
-Definition step : ST unit :=
+(* Decode instruction at EIP, move EIP to next instruction *)
+Definition decodeAndAdvance : ST Instr :=
   let! oldIP = getRegFromProcState EIP;
   let! (instr,newIP) = readFromProcState oldIP;
   do! setRegInProcState EIP newIP;
+  retn instr.
+  
+(*=step *)
+Definition step : ST unit :=
+  let! instr = decodeAndAdvance;
   evalInstr instr.
 (*=End *)
 
@@ -28,6 +32,33 @@ Fixpoint manyStep k s o s' :=
   if k is k'.+1
   then exists s'' o1 o2, o = o1 ++ o2 /\ oneStep s o1 s'' /\ manyStep k' s'' o2 s'
   else o = nil /\ s = s'. 
+
+Lemma doManyStep k : forall s o s', (exists out, outputToActions out = o /\
+  doMany k step s = (out, Success _ (s',tt))) <-> manyStep k s o s'.
+Proof. induction k => /= s o s'. 
+split. - by move => [out [<- [<- ->]]]. 
+- move => [H1 H2]. exists nil. by subst. 
+
+case E: (step s) => [s0 x]. 
+split. move => [out [H1 H2]].  
+destruct x => //. destruct x => //. 
+case E': (doMany k step p) => [s1 x'].
+rewrite E' in H2. injection H2 => [H3 H4]. subst. clear H2. 
+eexists _. exists (outputToActions s0), (outputToActions s1).
+split. unfold outputToActions. by rewrite map_cat. 
+split. rewrite /oneStep. exists s0. split => //. destruct u. eapply E. 
+apply IHk. by exists s1. 
+
+move => [s'' [o1 [o2 [H1 [[o3 [H2a H2b]] H3]]]]]. 
+subst. rewrite H2b in E. 
+injection E => [E1 E2]. subst. clear E. 
+case E': (doMany k step s'') => [s1 x'].
+specialize (IHk s'' o2 s'). 
+destruct IHk as [_ IHk]. specialize (IHk H3). 
+destruct IHk as [out [H1 H2]]. subst. exists (s0 ++ out). 
+split. unfold outputToActions. by rewrite map_cat.
+rewrite E' in H2.  congruence. 
+Qed. 
 
 Lemma manyStepLe k : forall k', k' <= k -> 
   forall s o s', manyStep k s o s' -> exists o' s'', preActions o' o /\ manyStep k' s o' s''.

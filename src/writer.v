@@ -130,9 +130,9 @@ Definition runWriter padSkip T (w: Writer T) (c: DWORDCursor) (x: T): option (se
   ---------------------------------------------------------------------------*)
 
 (*=writeDWORD *)
-Instance writeBYTE : Writer BYTE :=
+Instance writeBYTE : Writer BYTE | 0 :=
   fun b => writerNext b (writerRetn tt).
-Instance writeDWORD : Writer DWORD := fun d =>
+Instance writeDWORD : Writer DWORD | 0 := fun d =>
   let: (b3,b2,b1,b0) := split4 8 8 8 8 d in
   do! writeBYTE b0;
   do! writeBYTE b1;
@@ -147,7 +147,8 @@ Instance writeWORD : Writer WORD := fun w =>
   do! writeNext b1;
   retn tt.
 
-Instance writeDWORDorBYTE dw : Writer (DWORDorBYTE dw) :=
+(** This must go at a lower level/priority than [writeDWORD] and [writeBYTE] so it is picked up less eagerly. *)
+Instance writeDWORDorBYTE dw : Writer (DWORDorBYTE dw) | 1 :=
   if dw as dw return Writer (DWORDorBYTE dw) then writeDWORD else writeBYTE.
 Implicit Arguments writeDWORDorBYTE [].
 

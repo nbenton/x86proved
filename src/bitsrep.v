@@ -39,16 +39,16 @@ Definition n24 := 24.
 Arguments n24 : simpl never.
 Opaque n24.
 Definition NIBBLE := BITS n4.
-Definition BYTE   := BITS n8.
 Definition WORD   := BITS n16.
-Definition DWORD  := BITS n32.
 Definition QWORD  := BITS n64.
 Definition DWORDorBYTE (d: bool) := BITS (if d then n32 else n8).
+Definition DWORD  := DWORDorBYTE true.
+Definition BYTE   := DWORDorBYTE false.
 (*=End *)
 
-
-Identity Coercion DWORDtoBITS32 : DWORD >-> BITS.
-Identity Coercion BYTEtoBITS8 : BYTE >-> BITS.
+Identity Coercion DWORDorBYTEtoBITS : DWORDorBYTE >-> BITS.
+Identity Coercion DWORDtoDWORDorBYTE : DWORD >-> DWORDorBYTE.
+Identity Coercion BYTEtoDWORDorBYTE : BYTE >-> DWORDorBYTE.
 Identity Coercion WORDtoBITS16 : WORD >-> BITS.
 
 (* Construction *)

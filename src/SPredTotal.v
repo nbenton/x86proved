@@ -33,7 +33,14 @@ destruct s1 as [s1r s1f s1m].
 destruct s2 as [s2r s2f s2m].
 unfold "===", toPState in H.
 simpl in H. 
-Admitted.
+have E1: s1r = s2r.
+extensionality x. specialize (H Registers x). by injection H.  
+have E2: s1f = s2f. 
+extensionality x. specialize (H Flags x). by injection H.  
+have E3: s1m = s2m.
+apply extensional_PMAP => x. specialize (H Memory x). by injection H. 
+by rewrite E1 E2 E3.
+Qed.
 
 Lemma eqPredProcState_sepSP (s: ProcState) R :
   eq_pred s ** R |-- eq_pred s. 
