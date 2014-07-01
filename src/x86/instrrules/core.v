@@ -43,16 +43,6 @@ triple_apply triple_doSetRegSep.
 triple_apply T. 
 Qed. 
 
-(* TODO: needed now? *)
-Lemma TRIPLE_nopost P (c: ST unit) O:
-  TRIPLE (P ** ltrue) c O ltrue ->
-  forall s: ProcState, (P ** ltrue) (toPState s) ->
-    exists s', exists o, c s = (o, Success _ (s', tt)).
-Proof.
-  move=> HTRIPLE s Hs. move/(_ s Hs): HTRIPLE => [s' [o [Hs' _]]].
-  by exists s', o.
-Qed.
-
 Lemma step_rule P (i j: DWORD) R sij instr O Q :
   sij |-- i -- j :-> instr ->
   TRIPLE (EIP ~= j ** P ** sij ** R ** ltrue) (evalInstr instr) O (Q ** R ** ltrue) ->
@@ -175,15 +165,6 @@ Lemma TRIPLE_safeLater instr P Q (i j: DWORD) O:
 Proof.
   move=> H. have TS:= TRIPLE_safecatLater (O:= empOP). 
   eforalls TS. rewrite -> empOPL in TS. apply TS. done. 
-Qed. 
-
-Lemma TRIPLE_safe instr P Q (i j: DWORD) O:
-  (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) empOP (Q ** R)) ->
-  |-- (obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
-Proof.
-  move=> H. have TS:= TRIPLE_safecat (O:= empOP). 
-  eforalls TS. rewrite -> empOPL in TS. by apply TS. done. 
 Qed. 
 
 Lemma TRIPLE_basic instr P O Q:
