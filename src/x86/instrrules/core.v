@@ -573,6 +573,14 @@ Proof. move => E.
   destruct carry. + rewrite HH. by ssimpl. + rewrite ltBNle HH /negb. by ssimpl.
 Qed.
 
+Section sbbB_ZC_for_rewrite.
+(** TODO(t-jagro): Find a way to [setoid_rewrite] without making [sepSP] opaque here. *)
+Local Opaque sepSP lentails.
+Lemma sbbB_ZC' n (r : BITS n) carry (v1 v: BITS n) P Q (E : sbbB false v1 v = (carry, r))
+: P ** ZF~=(r == #(0)) ** CF~=carry ** Q |-- P ** ZF~=(v1 == v) ** CF~=ltB v1 v ** Q.
+Proof. sbazooka; etransitivity; try (by apply sbbB_ZC; eassumption); sbazooka. Qed.
+End sbbB_ZC_for_rewrite.
+
 Definition ConditionIs cc cv : SPred :=
   match cc with
   | CC_O => OF ~= cv
