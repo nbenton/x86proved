@@ -5,7 +5,7 @@
     assertion logic and specification logic of a separation logic framework
     have in common.
   ---------------------------------------------------------------------------*)
-Require Import Setoid Morphisms RelationClasses Program.Basics Omega.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses Program.Basics Omega.
 Require Import CSetoid.
 
 (* We [Require] (and later [Import]) ssreflect, because when we inline

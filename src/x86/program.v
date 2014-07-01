@@ -286,7 +286,7 @@ Inductive progEq : program -> program -> Prop :=
 | progEqDecLabelSkip: progEq (prog_declabel (fun l => prog_skip)) prog_skip.
 
 (* Add progEq as an instance of Equivalence for rewriting *)
-Require Import Setoid Morphisms RelationClasses.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses.
 Global Instance progEqEqu : Equivalence progEq.
 Proof. constructor; red.
 + apply progEqRefl.

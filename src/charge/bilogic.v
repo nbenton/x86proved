@@ -1,4 +1,4 @@
-Require Import Setoid Morphisms RelationClasses Program.Basics.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses Program.Basics.
 Require Import ilogic iltac CSetoid.
 
 Set Implicit Arguments.

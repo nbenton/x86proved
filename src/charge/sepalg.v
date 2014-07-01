@@ -1,4 +1,4 @@
-Require Import Setoid Morphisms RelationClasses Program.Basics Omega.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses Program.Basics Omega.
 Require Import CSetoid.
 
 Set Implicit Arguments.

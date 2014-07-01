@@ -5,7 +5,7 @@
 Require Import ssreflect ssrfun ssrbool eqtype fintype finfun seq tuple.
 Require Import bitsrep pfun reg mem flags.
 Require Import pmap pmapprops.
-Require Import Setoid CSetoid Morphisms.
+Require Import Coq.Setoids.Setoid CSetoid Coq.Classes.Morphisms.
 
 
 (* Importing this file really only makes sense if you also import ilogic, so we

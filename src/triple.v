@@ -16,7 +16,7 @@ Definition TRIPLE (P:SPred) (c:ST unit) (O:OPred) (Q:SPred) :=
   forall s:ProcState, P s ->
     exists f o, c s = (o, Success _ (f,tt)) /\ O (outputToActions o) /\ Q f.
 
-Require Import Setoid Program.Basics.
+Require Import Coq.Setoids.Setoid Program.Basics.
 
 (* Triples behave contravariantly in the precondition and covariantly in the postcondition wrt
    entailment *)

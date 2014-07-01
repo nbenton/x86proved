@@ -4,7 +4,7 @@
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
 Require Import SPred OPred septac spec spectac obs pointsto cursor instr reader instrcodec.
-Require Import Setoid RelationClasses Morphisms.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import program basic ilogic.
 
 (* Morphism for program equivalence *)

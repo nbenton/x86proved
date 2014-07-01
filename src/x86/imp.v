@@ -2,7 +2,7 @@ Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad tuple bitsops bitsprops bitsopsprops.
 Require Import SPred septac spec OPred basic basicprog program macros.
 Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor.
-Require Import Setoid RelationClasses Morphisms CSetoid.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms CSetoid.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

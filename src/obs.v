@@ -10,7 +10,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import Setoid RelationClasses Morphisms.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Local Obligation Tactic := idtac.
 
 Program Definition obs (O: OPred) := mkspec (fun k P =>

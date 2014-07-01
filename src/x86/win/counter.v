@@ -25,7 +25,7 @@ Compute makeDLL #x"00AC0000" "counter.dll" counterDLL.
 (*
 Require Import SPred septac spectac spec safe pointsto cursor instr.
 Require Import basic basicprog program instrsyntax macros instrrules.
-Require Import Setoid RelationClasses Morphisms.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Example counterModuleSpec IAT P Inc Get :=
       (Forall c: DWORD, toyfun Inc (P c ** ECX? ** OSZCP?) (P (c +# 1) ** ECX? ** OSZCP?))

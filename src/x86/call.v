@@ -2,7 +2,7 @@ Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
 Require Import SPred OPred septac spectac spec obs pointsto cursor instr.
 Require Import basic basicprog program instrsyntax macros instrrules.
-Require Import Setoid RelationClasses Morphisms.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Definition retreg := EBP.
 
