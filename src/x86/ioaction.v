@@ -4,7 +4,7 @@
 Require Import ssreflect ssrbool ssrfun eqtype tuple seq.
 Require Import bitsrep bitsops bitsprops.
 
-Definition Chan := BYTE.
+Definition Chan := WORD.
 Definition Data := BYTE.
 
 Inductive Action :=

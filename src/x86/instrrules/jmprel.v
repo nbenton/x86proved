@@ -2,11 +2,12 @@
 Require Import x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import safe (* for [safe] *) spectac (* for [specapply] *).
+Require Import spectac (* for [specapply] *).
 
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) :
   |-- interpJmpTgt tgt q (fun P addr =>
-     Forall O:OPred, (|> obs O @ (EIP ~= addr ** P) -->> obs O @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt)).
+     Forall O, (|> obs O @ (EIP ~= addr ** P) 
+              -->> obs O @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt)).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
   do_instrrule
@@ -18,22 +19,21 @@ Qed.
 Section specapply_hint.
 Local Hint Unfold interpJmpTgt : specapply.
 
-Lemma JMPrel_I_rule rel (p q: DWORD):
-  |-- Forall O, (|> obs O @ (EIP ~= addB q rel) -->> obs O @ (EIP ~= p)) <@
-        (p -- q :-> JMPrel (mkTgt rel)).
+Lemma JMPrel_I_rule (rel: DWORD) (p q: DWORD):
+  |-- Forall O, (|> obs O @ (EIP ~= addB q rel) 
+               -->> obs O @ (EIP ~= p)) <@ (p -- q :-> JMPrel rel).
 Proof.
-  specintros => O. specapply (JMPrel_rule (JmpTgtI (mkTgt rel))). by ssimpl.
+  specintros => O. specapply (JMPrel_rule rel). by ssimpl.
 
   autorewrite with push_at. rewrite <-spec_reads_frame. apply limplValid.
   cancel1. cancel1. sbazooka.
 Qed.
 
-Lemma JMPrel_R_rule (r:Reg) addr (p q: DWORD) :
-  |-- Forall O, 
-      (|> obs O @ (EIP ~= addr ** r ~= addr) -->> obs O @ (EIP ~= p ** r ~= addr)) <@
-        (p -- q :-> JMPrel (JmpTgtR r)).
+Lemma JMPrel_R_rule (r:Reg) (addr: DWORD) (p q: DWORD) :
+  |-- Forall O, (|> obs O @ (EIP ~= addr ** r ~= addr) 
+               -->> obs O @ (EIP ~= p ** r ~= addr)) <@ (p -- q :-> JMPrel r).
 Proof.
-  specintros => O. specapply (JMPrel_rule (JmpTgtR r)). by ssimpl.
+  specintros => O. specapply (JMPrel_rule r). by ssimpl.
 
   rewrite <-spec_reads_frame. autorewrite with push_at. rewrite limplValid.
   cancel1. cancel1. sbazooka.

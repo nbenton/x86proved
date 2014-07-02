@@ -205,6 +205,16 @@ Notation "'LEA' x , y" := (LEA x (RegMemM true y%ms)) (x,y at level 55, at level
 
 Notation "'RET' x" := (RETOP x) (at level 60, x at level 55, format "'RET' x") : instr_scope.
 
+Notation "'OUT' 'DX' ',' 'AL'" := (OUTOP false PortDX) : instr_scope.
+Notation "'OUT' 'DX' ',' 'EAX'" := (OUTOP true PortDX) : instr_scope.
+Notation "'IN'  'DX' ',' 'AL'" := (INOP false PortDX) : instr_scope.
+Notation "'IN' 'DX' ',' 'EAX'" := (INOP true PortDX) : instr_scope.
+
+Notation "'OUT' x ',' 'AL'" := (OUTOP false (PortI x)) : instr_scope.
+Notation "'OUT' x ',' 'EAX'" := (OUTOP true (PortI x)) : instr_scope.
+Notation "'IN'  x ',' 'AL'" := (INOP false (PortI x)) : instr_scope.
+Notation "'IN' x ',' 'EAX'" := (INOP true (PortI x)) : instr_scope.
+
 Definition NOP := XCHG true EAX (RegMemR true EAX).
 
 Arguments PUSH (src)%ms.

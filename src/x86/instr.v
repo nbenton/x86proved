@@ -72,6 +72,9 @@ Inductive JmpTgt :=
 | JmpTgtR :> Reg -> JmpTgt.
 Inductive ShiftCount :=
 | ShiftCountCL | ShiftCountI (c: BYTE).
+Inductive Port :=
+| PortI :> BYTE -> Port
+| PortDX : Port.
 (*=End *)
 
 
@@ -113,7 +116,7 @@ Inductive Instr :=
 | CALLrel (tgt: JmpTgt) | JMPrel (tgt: JmpTgt)
 | CLC | STC | CMC
 | RETOP (size: WORD)
-| OUT (d: bool) (port: BYTE)
-| IN (d: bool) (port: BYTE)
+| OUTOP (d: bool) (port: Port)
+| INOP (d: bool) (port: Port)
 | HLT | BADINSTR.
 (*=End *)

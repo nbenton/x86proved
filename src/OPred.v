@@ -43,6 +43,13 @@ Qed.
 Program Definition trueOP : OPred := @mkOPred (fun _ => True) _. 
 Next Obligation. by exists nil. Qed. 
 
+(* Union *)
+Program Definition orOP (P Q: OPred) : OPred
+  := mkOPred (fun o => P o \/ Q o) _.
+Next Obligation.
+move => [P [Px PH]] [Q [Qx QH]]. exists Px. by left. 
+Qed.
+
 (* Inclusion and equivalence on predicates *)
 Definition entailsOP (O O': OPred) := forall s, O s -> O' s. 
 Definition equivOP (O O': OPred) := entailsOP O O' /\ entailsOP O' O.
@@ -103,6 +110,12 @@ Proof. move => s H/=. by exists nil, s. Qed.
 
 Lemma catOP_trueR P : entailsOP P (catOP P trueOP). 
 Proof. move => s H/=. exists s, nil. by rewrite cats0. Qed.
+
+Lemma orOPR1 C P Q : entailsOP C P -> entailsOP C (orOP P Q).
+Proof. move => H s H'. left. by apply H. Qed. 
+
+Lemma orOPR2 C P Q : entailsOP C Q -> entailsOP C (orOP P Q).
+Proof. move => H s H'. right. by apply H. Qed. 
 
 Lemma inhabitedOP (O: OPred) : exists s, O s.
 Proof. by destruct O. Qed. 

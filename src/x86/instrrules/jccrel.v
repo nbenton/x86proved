@@ -2,17 +2,17 @@
 Require Import x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import safe (* for [safe] *) triple (* for [triple_apply] *).
+Require Import triple (* for [triple_apply] *).
 
 (** For convenience, the [~~b] branch is not under a [|>] operator
     since [q] will never be equal to [p], and thus there is no risk of
     recursion. *)
-Lemma JCCrel_rule rel cc cv (b:bool) (p q: DWORD) :
+Lemma JCCrel_rule (rel: DWORD) cc cv (b:bool) (p q: DWORD) :
   |-- Forall O, (
       |> obs O @ (b == cv /\\ EIP ~= (addB q rel) ** ConditionIs cc b) //\\
          obs O @ (b == (~~cv) /\\ EIP ~= q ** ConditionIs cc b) -->>
       obs O @ (EIP ~= p ** ConditionIs cc b)
-    ) <@ (p -- q :-> JCCrel cc cv (mkTgt rel)).
+    ) <@ (p -- q :-> JCCrel cc cv rel).
 Proof.
   specintros => O.
   rewrite ->(spec_later_weaken (obs O @ (b == (~~ cv) /\\ EIP~=q ** ConditionIs cc b))).

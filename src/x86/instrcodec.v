@@ -2,7 +2,6 @@
   Instruction codec
   ======================================================================================*)
 Require Import ssreflect ssrfun seq ssrbool ssrnat fintype.
-Add LoadPath "..".
 Require Import bitsrep bitsprops bitsops eqtype tuple.
 Require Import Coq.Strings.String.
 Require Import cast codec bitscodec.
@@ -307,13 +306,21 @@ apply: (MakeCast (fun p => IMUL p.1 p.2)
                  (fun i => if i is IMUL dst src then Some (dst,src) else None) _).
 elim => //. by move => dst src [dst' src'] [<-] ->.  Defined.
 
-Definition unIN : CAST (bool*BYTE) Instr.
-apply: MakeCast (fun p => IN p.1 p.2) (fun i => if i is IN d p then Some(d,p) else None) _.
-by elim => // ? ? [? ?] [-> ->]. Defined.
+Definition unINI : CAST (bool*BYTE) Instr.
+apply: MakeCast (fun p => INOP p.1 (PortI p.2)) (fun i => if i is INOP d (PortI p) then Some(d,p) else None) _.
+by elim => // ?; elim => // ? [? ?] [-> ->]. Defined.
 
-Definition unOUT : CAST (bool*BYTE) Instr.
-apply: MakeCast (fun p => OUT p.1 p.2) (fun i => if i is OUT d p then Some(d,p) else None) _.
-by elim => // ? ?  [? ?] [-> ->]. Defined.
+Definition unINR : CAST bool Instr.
+apply: MakeCast (fun p => INOP p PortDX) (fun i => if i is INOP d PortDX then Some d else None) _.
+by elim => // ?; elim => // ? [->]. Defined.
+
+Definition unOUTI : CAST (bool*BYTE) Instr.
+apply: MakeCast (fun p => OUTOP p.1 (PortI p.2)) (fun i => if i is OUTOP d (PortI p) then Some(d,p) else None) _.
+by elim => // ?; elim => // ? [? ?] [-> ->]. Defined.
+
+Definition unOUTR : CAST bool Instr.
+apply: MakeCast (fun p => OUTOP p PortDX) (fun i => if i is OUTOP d PortDX then Some d else None) _.
+by elim => // ?; elim => // ? [->]. Defined.
 
 Definition unLEA : CAST (Reg * RegMem true) Instr.
 apply: MakeCast (fun p => LEA p.1 p.2) (fun i => if i is LEA x y then Some(x,y) else None) _.
@@ -537,8 +544,10 @@ Definition InstrCodec : Codec Instr :=
 ||| #x"0F" .$ #x"AF" .$ RegMemCodec regCodec _ ~~> unIMUL
 ||| droplsb #x"F6" .$ RegMemOpDepCodec #4 ~~> unMUL
 (* IN and OUT *)
-||| droplsb #x"E4" .$ Any $ BYTECodec ~~> unIN
-||| droplsb #x"E6" .$ Any $ BYTECodec ~~> unOUT
+||| droplsb #x"E4" .$ Any $ BYTECodec ~~> unINI
+||| droplsb #x"EC" .$ Any ~~> unINR
+||| droplsb #x"E6" .$ Any $ BYTECodec ~~> unOUTI
+||| droplsb #x"EE" .$ Any ~~> unOUTR
 (* LEA *)
 ||| #x"8D" .$ RegMemCodec regCodec _ ~~> unLEA
 (* XCHG *)

@@ -2,7 +2,7 @@
 Require Import x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import safe (* for [safe] *) spectac (* for [specapply] *).
+Require Import spectac (* for [specapply] *).
 
 Lemma CALLrel_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) O :
   |-- interpJmpTgt tgt q (fun P p' =>
@@ -28,7 +28,7 @@ Corollary CALLrel_R_rule (r:Reg) (p q: DWORD) :
     ) <@ (p -- q :-> CALLrel r).
 Proof.
   specintros => O w sp p'.
-  specapply (CALLrel_rule p q (JmpTgtR r)). sbazooka.
+  specapply (CALLrel_rule p q r). sbazooka.
 
   (* Should be able to automate this! *)
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
@@ -38,11 +38,11 @@ Qed.
 Corollary CALLrel_I_rule (rel: DWORD) (p q: DWORD) :
   |-- Forall O, Forall w: DWORD, Forall sp:DWORD, (
       |> obs O @ (EIP ~= addB q rel ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
-         obs O @ (EIP ~= p  ** ESP~=sp    ** sp-#4 :-> w)
+         obs O @ (EIP ~= p          ** ESP~=sp    ** sp-#4 :-> w)
     ) <@ (p -- q :-> CALLrel rel).
 Proof.
   specintros => O w sp.
-  specapply (CALLrel_rule p q (JmpTgtI rel)). sbazooka.
+  specapply (CALLrel_rule p q rel). sbazooka.
 
   (* Should be able to automate this! *)
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.

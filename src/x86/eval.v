@@ -266,6 +266,12 @@ Definition evalRegImm {dword} (ri: RegImm dword)  :=
   | RegImmI c => retn c
   end.
 
+Definition evalPort (p: Port) :=
+  match p with
+  | PortI b => retn (zeroExtend 8 b)
+  | PortDX => let! d = evalReg EDX; retn (low 16 d)
+  end.
+
 Definition evalShiftCount (c: ShiftCount) :=
   match c with
   | ShiftCountCL => evalBYTEReg CL
@@ -454,9 +460,10 @@ Definition evalInstr instr : ST unit :=
     setRegInProcState EAX (zeroExtend _ d)
 *)
 
-  | OUT false port =>
+  | OUTOP false port =>
+    let! p = evalPort port;
     let! data = evalBYTEReg AL;
-    outputOnChannel port data
+    outputOnChannel p data
 
   | _ =>
     raiseUnspecified
