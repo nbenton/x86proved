@@ -2,7 +2,7 @@ Require Import triple.core.
 Import triple.core.tripleconfig.
 
 Require Import septac (* for [sbazooka] *) pfun (* for [splitsAs] *).
-Require Import triple.roc.
+Require Import triple.roc triple.tactics.
 
 Import Prenex Implicits.
 
@@ -90,4 +90,19 @@ rewrite <- H2 in H4.
 specialize (H4 Memory p). rewrite /= eq_refl/= in H4.
 specialize (H4 (Some v) (refl_equal _)).
 inversion H4. rewrite /isMapped H0. done.
+Qed.
+
+(** Is there a  better way of doing this? *)
+Lemma triple_preEq (T: eqType) (v w:T) P c O Q :
+  TRIPLE (v == w /\\ P) (c w) O Q ->
+  TRIPLE (v == w /\\ P) (c v) O Q.
+Proof. move => S. apply: triple_pre_exists => H. rewrite -(eqP H) eq_refl in S.
+triple_apply S using sbazooka. Qed.
+
+Lemma triple_preEq_and_star (T: eqType) (v w:T) P R c O Q :
+  TRIPLE ((v == w /\\ P) ** R) (c w) O Q ->
+  TRIPLE ((v == w /\\ P) ** R) (c v) O Q.
+Proof.
+  move => S. triple_apply (@triple_preEq T v w (P ** R) c O Q) using sbazooka.
+  triple_apply S using sbazooka.
 Qed.

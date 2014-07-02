@@ -31,25 +31,25 @@ End instrruleconfig.
 Import Prenex Implicits.
 Require Import ioaction step.
 
-Lemma decodeAndAdvance_rule P (i j: DWORD) R sij instr O c Q : 
-  sij |-- i -- j :-> instr -> 
+Lemma decodeAndAdvance_rule P (i j: DWORD) R sij instr O c Q :
+  sij |-- i -- j :-> instr ->
   TRIPLE (P ** EIP ~= j ** sij ** R) (c instr) O (Q ** R) ->
   TRIPLE (P ** EIP ~= i ** sij ** R) (bind decodeAndAdvance c) O (Q ** R).
-Proof. 
+Proof.
 move => HR T. rewrite /decodeAndAdvance.
 triple_apply triple_letGetReg.
-try_triple_apply triple_letReadSep. rewrite -> HR; by ssimpl. 
-triple_apply triple_doSetRegSep. 
-triple_apply T. 
-Qed. 
+try_triple_apply triple_letReadSep. rewrite -> HR; by ssimpl.
+triple_apply triple_doSetRegSep.
+triple_apply T.
+Qed.
 
 Lemma step_rule P (i j: DWORD) R sij instr O Q :
   sij |-- i -- j :-> instr ->
   TRIPLE (EIP ~= j ** P ** sij ** R ** ltrue) (evalInstr instr) O (Q ** R ** ltrue) ->
   TRIPLE (EIP ~= i ** P ** sij ** R ** ltrue) step O (Q ** R ** ltrue).
-Proof. 
+Proof.
 move => HR T. rewrite /step.
-try_triple_apply decodeAndAdvance_rule. rewrite -> HR. by ssimpl. 
+try_triple_apply decodeAndAdvance_rule. rewrite -> HR. by ssimpl.
 triple_apply T.
 Qed.
 
@@ -57,7 +57,7 @@ Section UnfoldSpec.
   Transparent ILPre_Ops.
 
   Lemma TRIPLE_safe_gen (instr:Instr) P O Q (i j: DWORD) sij:
-    eq_pred sij |-- i -- j :-> instr -> 
+    eq_pred sij |-- i -- j :-> instr ->
     forall O',
     (forall (R: SPred),
      TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) O
@@ -65,75 +65,75 @@ Section UnfoldSpec.
     (obs O') @ Q |-- obs (catOP O O') @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
     move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
-    specialize (HTRIPLE (R**ltrue)). 
+    specialize (HTRIPLE (R**ltrue)).
     apply (step_rule Hsij) in HTRIPLE.
     apply lentails_eq in Hs.
     repeat rewrite -> sepSPA in Hs.
-    apply lentails_eq in Hs. 
-    specialize (HTRIPLE s Hs). 
+    apply lentails_eq in Hs.
+    specialize (HTRIPLE s Hs).
     destruct HTRIPLE as [sf [out [H1 [H2 H3]]]].
-    
-    apply lentails_eq in H3. 
-    rewrite <- sepSPA in H3. 
-    apply lentails_eq in H3.   
-    specialize (HQ _ H3). 
-    destruct HQ as [orest [H4 H5]]. 
-    clear H3 Hsij. 
-    destruct k. 
-    - destruct (inhabitedOP O') as [o' o'H]. 
+
+    apply lentails_eq in H3.
+    rewrite <- sepSPA in H3.
+    apply lentails_eq in H3.
+    specialize (HQ _ H3).
+    destruct HQ as [orest [H4 H5]].
+    clear H3 Hsij.
+    destruct k.
+    - destruct (inhabitedOP O') as [o' o'H].
       exists (outputToActions out ++ o'). split. by exists (outputToActions out), o'.
       apply runsForWithPrefixOf0.
-   
+
     (* k > 0 *)
     have LE: k <= succn k by done.
-    apply (runsForWithPrefixOfLe LE) in H5. 
+    apply (runsForWithPrefixOfLe LE) in H5.
     destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
     rewrite /manyStep-/manyStep/oneStep H1.
     exists (outputToActions out ++ orest). split. by exists (outputToActions out), orest.
-    exists sf'. exists (outputToActions out ++ o''). split; first by apply cat_preActions. 
-    exists sf. exists (outputToActions out), o''. split; first done. 
-    split; last done. 
-    eexists _. intuition. 
+    exists sf'. exists (outputToActions out ++ o''). split; first by apply cat_preActions.
+    exists sf. exists (outputToActions out), o''. split; first done.
+    split; last done.
+    eexists _. intuition.
   Qed.
 
   Lemma TRIPLE_safeLater_gen (instr:Instr) P O Q (i j: DWORD) sij:
-    eq_pred sij |-- i -- j :-> instr -> 
-    forall O', 
+    eq_pred sij |-- i -- j :-> instr ->
+    forall O',
     (forall (R: SPred),
      TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) O
             (Q ** R)) ->
     |> (obs O') @ Q |-- obs (catOP O O') @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
     move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
-    specialize (HTRIPLE (R**ltrue)). 
+    specialize (HTRIPLE (R**ltrue)).
     apply (step_rule Hsij) in HTRIPLE.
     apply lentails_eq in Hs.
     repeat rewrite -> sepSPA in Hs.
-    apply lentails_eq in Hs. 
-    specialize (HTRIPLE s Hs). 
+    apply lentails_eq in Hs.
+    specialize (HTRIPLE s Hs).
     destruct HTRIPLE as [sf [out [H1 [H2 H3]]]].
-    
-    apply lentails_eq in H3. 
-    rewrite <- sepSPA in H3. 
+
     apply lentails_eq in H3.
-    destruct k => //.    
-    - destruct (inhabitedOP O') as [o' o'H]. 
+    rewrite <- sepSPA in H3.
+    apply lentails_eq in H3.
+    destruct k => //.
+    - destruct (inhabitedOP O') as [o' o'H].
       exists (outputToActions out ++ o'). split. by exists (outputToActions out), o'.
       apply runsForWithPrefixOf0.
     (* k > 0 *)
     have LT: (k < succn k)%coq_nat by done.
     have LE: k <= succn k by done.
-    specialize (HQ k LT _ H3). 
-    destruct HQ as [orest [H4 H5]]. 
-    clear H3 Hsij. 
-   
+    specialize (HQ k LT _ H3).
+    destruct HQ as [orest [H4 H5]].
+    clear H3 Hsij.
+
     destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
     rewrite /manyStep-/manyStep/oneStep H1.
     exists (outputToActions out ++ orest). split. by exists (outputToActions out), orest.
-    exists sf'. exists (outputToActions out ++ o''). split; first by apply cat_preActions. 
-    exists sf. exists (outputToActions out), o''. split; first done. 
-    split; last done. 
-    eexists _. intuition. 
+    exists sf'. exists (outputToActions out ++ o''). split; first by apply cat_preActions.
+    exists sf. exists (outputToActions out), o''. split; first done.
+    split; last done.
+    eexists _. intuition.
   Qed.
 
 End UnfoldSpec.
@@ -145,7 +145,7 @@ Lemma TRIPLE_safecatLater instr P Q (i j: DWORD) O O':
 Proof.
   move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
   rewrite sepSPA. apply limplValid.
-  eapply TRIPLE_safeLater_gen; [eassumption| ]. move=> R. triple_apply H. 
+  eapply TRIPLE_safeLater_gen; [eassumption| ]. move=> R. triple_apply H.
 Qed.
 
 Lemma TRIPLE_safecat instr P Q (i j: DWORD) O O':
@@ -155,7 +155,7 @@ Lemma TRIPLE_safecat instr P Q (i j: DWORD) O O':
 Proof.
   move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
   rewrite sepSPA. apply limplValid.
-  eapply TRIPLE_safe_gen; [eassumption|]. move=> R. triple_apply H. 
+  eapply TRIPLE_safe_gen; [eassumption|]. move=> R. triple_apply H.
 Qed.
 
 Lemma TRIPLE_safeLater instr P Q (i j: DWORD) O:
@@ -163,16 +163,16 @@ Lemma TRIPLE_safeLater instr P Q (i j: DWORD) O:
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) empOP (Q ** R)) ->
   |-- (|> obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
-  move=> H. have TS:= TRIPLE_safecatLater (O:= empOP). 
-  eforalls TS. rewrite -> empOPL in TS. apply TS. done. 
-Qed. 
+  move=> H. have TS:= TRIPLE_safecatLater (O:= empOP).
+  eforalls TS. rewrite -> empOPL in TS. apply TS. done.
+Qed.
 
 Lemma TRIPLE_basic instr P O Q:
   (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) O (Q ** R)) ->
   |-- basic P instr O Q.
 Proof.
   move=> H. rewrite /basic. specintros => i j O'.
-  apply TRIPLE_safecat => R. triple_apply H. 
+  apply TRIPLE_safecat => R. triple_apply H.
 Qed.
 
 (*---------------------------------------------------------------------------
@@ -401,21 +401,6 @@ Lemma evalReg_rule (r: Reg) v c O Q :
 Proof. by apply triple_letGetRegSep. Qed.
 Global Opaque evalReg.
 
-(* Is there a  better way of doing this? *)
-Lemma triple_preEq (T: eqType) (v w:T) P c O Q :
-  TRIPLE (v == w /\\ P) (c w) O Q ->
-  TRIPLE (v == w /\\ P) (c v) O Q.
-Proof. move => S. apply: triple_pre_exists => H. rewrite -(eqP H) eq_refl in S.
-triple_apply S using sbazooka. Qed.
-
-Lemma triple_preEq_and_star (T: eqType) (v w:T) P R c O Q :
-  TRIPLE ((v == w /\\ P) ** R) (c w) O Q ->
-  TRIPLE ((v == w /\\ P) ** R) (c v) O Q.
-Proof.
-  move => S. triple_apply (@triple_preEq T v w (P ** R) c O Q) using sbazooka.
-  triple_apply S using sbazooka.
-Qed.
-
 Lemma evalBYTERegAux_rule (r: BYTEReg) d v c O Q :
   forall S,
   TRIPLE (BYTEregIsAux r d v ** S) (c v) O Q ->
@@ -449,6 +434,7 @@ destruct d; [apply evalReg_rule | apply evalBYTEReg_rule].
 Qed.
 Opaque evalDWORDorBYTEReg.
 
+(** TODO(t-jagro): Move [ASSOC] and [LOWLEMMA] elsewhere. *)
 Lemma ASSOC (D: WORD) (b c:BYTE) : (D ## b) ## c = D ## b ## c.
 Proof. rewrite /catB. apply val_inj. simpl. by rewrite -catA. Qed.
 
