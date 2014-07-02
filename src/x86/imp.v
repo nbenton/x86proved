@@ -1,8 +1,8 @@
-Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
-Require Import procstate procstatemonad tuple bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec OPred basic basicprog program macros.
-Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor.
-Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms CSetoid.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad Ssreflect.tuple x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.OPred x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms x86proved.charge.CSetoid.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -157,7 +157,7 @@ Section LogicDefinitions.
    Definition subst {A} (f: substitution) (E: stack -> A) : stack -> A :=
     fun s => E (stack_subst f s).
 
-   Require Import FunctionalExtensionality.
+   Require Import Coq.Logic.FunctionalExtensionality.
 
    Program Definition asn_subst (f : substitution) (E : stack -> Prop) : asn:=
      mkAsn (subst f E) _.

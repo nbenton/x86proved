@@ -1,5 +1,5 @@
-Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses Program.Basics.
-Require Import ilogic iltac CSetoid.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses Coq.Program.Basics.
+Require Import x86proved.charge.ilogic x86proved.charge.iltac x86proved.charge.CSetoid.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -175,7 +175,7 @@ Section DerivedInferenceRules.
 
 End DerivedInferenceRules.
 
-Require Import sepalg.
+Require Import x86proved.charge.sepalg.
 
 Section BISepAlg.
   Context {A} `{sa : SepAlg A}.

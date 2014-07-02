@@ -1,7 +1,7 @@
-Require Import triple.core.
+Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import triple.morphisms.
+Require Import x86proved.triple.morphisms.
 
 Import Prenex Implicits.
 

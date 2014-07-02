@@ -1,4 +1,4 @@
-Require Import ssreflect ssrfun ssrbool eqtype seq.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.seq.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

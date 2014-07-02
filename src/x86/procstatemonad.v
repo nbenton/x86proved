@@ -1,10 +1,10 @@
 (*===========================================================================
     State transformer monad for processor
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool ssrnat seq eqtype.
-Require Import bitsops bitsprops x86proved.monad.
-Require Import x86proved.monadinst procstate exn reader writer cursor ioaction.
-Require Import Coq.Strings.String FunctionalExtensionality.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.seq Ssreflect.eqtype.
+Require Import x86proved.bitsops x86proved.bitsprops x86proved.monad.
+Require Import x86proved.monadinst x86proved.x86.procstate x86proved.x86.exn x86proved.reader x86proved.writer x86proved.cursor x86proved.x86.ioaction.
+Require Import Coq.Strings.String Coq.Logic.FunctionalExtensionality.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

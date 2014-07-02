@@ -1,9 +1,9 @@
 (** * CMP instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 Require Import Coq.Classes.Morphisms.
-Require Import spectac (* for [eforalls] *) bitsprops (* for [low_catB] *) septac (* for [ssplits] *).
+Require Import x86proved.spectac (* for [eforalls] *) x86proved.bitsprops (* for [low_catB] *) x86proved.septac (* for [ssplits] *).
 
 (** ** Generic rule *)
 Lemma CMP_rule d (ds:DstSrc d) v1 :

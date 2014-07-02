@@ -3,9 +3,9 @@
   We use a representation that is sparse, has O(n) lookup, and is canonical
   so Leibniz equality coincides with extensional equality
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-Require Import bitsrep.
-Require Export update.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype Ssreflect.tuple Ssreflect.finfun.
+Require Import x86proved.bitsrep.
+Require Export x86proved.update.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

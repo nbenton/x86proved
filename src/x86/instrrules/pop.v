@@ -1,5 +1,5 @@
 (** * POP instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 (** ** Generic POP *)

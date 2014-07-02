@@ -1,10 +1,10 @@
-Require Import triple.core.
+Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import x86.procstatemonad (* for [setRegInProcState] *) pmapprops (* for [updateThenLookup] *) x86.ioaction (* for [outputToActions] *).
-Require Import septac (* for [sbazoooka] *) pointsto (* for [:->] *) pfun (* for [splitsAs] *) cursor (* for [PTR >-> DWORDCursor *) writer (* for [WriterTm] *).
+Require Import x86proved.x86.procstatemonad (* for [setRegInProcState] *) x86proved.pmapprops (* for [updateThenLookup] *) x86proved.x86.ioaction (* for [outputToActions] *).
+Require Import x86proved.septac (* for [sbazoooka] *) x86proved.pointsto (* for [:->] *) x86proved.pfun (* for [splitsAs] *) x86proved.cursor (* for [PTR >-> DWORDCursor *) x86proved.writer (* for [WriterTm] *).
 
-Require Import triple.morphisms triple.roc.
+Require Import x86proved.triple.morphisms x86proved.triple.roc.
 
 Import Prenex Implicits.
 

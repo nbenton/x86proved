@@ -1,10 +1,10 @@
 (*===========================================================================
   Implementation of "Game of Life"
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrfun ssrnat eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec OPred basic program basicprog macros call.
-Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor screenspec.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.OPred x86proved.x86.basic x86proved.x86.program x86proved.x86.basicprog x86proved.x86.macros x86proved.x86.call.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.screenspec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -87,7 +87,7 @@ Definition incModN (r: Reg) n : program :=
   CMP r, (n.-1);;
   ifthenelse CC_Z true (MOV r, 0) (INC r).
 
-Require Import div.
+Require Import Ssreflect.div.
 Lemma decModN_correct (r:Reg) n m : n < 2^32 -> m < n ->
   |-- basic (r ~= #m) (decModN r n) empOP (r ~= #((m + n.-1) %% n)) @ OSZCP?.
 Proof.

@@ -1,11 +1,11 @@
 (*===========================================================================
     C-style string code
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrnat eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac OPred basic basicprog program.
-Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor flags macros.
-Require Import Coq.Strings.String cstring Ascii.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.spectac x86proved.OPred x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.flags x86proved.x86.macros.
+Require Import Coq.Strings.String x86proved.cstring Coq.Strings.Ascii.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

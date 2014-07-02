@@ -1,4 +1,4 @@
-Require Import ssreflect ssrfun ssrnat ssrbool.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.ssrbool.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

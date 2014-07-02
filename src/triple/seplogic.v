@@ -1,8 +1,8 @@
-Require Import triple.core.
+Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import septac (* for [sbazooka] *) pfun (* for [splitsAs] *).
-Require Import triple.roc triple.tactics.
+Require Import x86proved.septac (* for [sbazooka] *) x86proved.pfun (* for [splitsAs] *).
+Require Import x86proved.triple.roc x86proved.triple.tactics.
 
 Import Prenex Implicits.
 

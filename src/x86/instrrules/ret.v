@@ -1,8 +1,8 @@
 (** * RET instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import safe (* for [safe] *).
+Require Import x86proved.safe (* for [safe] *).
 
 Lemma RET_rule p' (sp:DWORD) (offset:WORD) (p q: DWORD) O :
   let sp':DWORD := addB (sp+#4) (zeroExtend 16 offset) in

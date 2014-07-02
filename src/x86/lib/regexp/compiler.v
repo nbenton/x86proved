@@ -1,11 +1,11 @@
-Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple tuplehelp.
-Require Import path fingraph  finset.
-Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec safe basic program macros call.
-Require Import instr x86proved.monad reader writer procstate procstatemonad mem exn eval instrcodec
-               monadinst ioaction bitsrep bitsops eval step pointsto cursor.
-Require Import program programassem programeq reg instrsyntax instrrules.
-Require Import spectac iltac triple.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.tuple x86proved.tuplehelp.
+Require Import Ssreflect.path Ssreflect.fingraph  Ssreflect.finset.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.program x86proved.x86.macros x86proved.x86.call.
+Require Import x86proved.x86.instr x86proved.monad x86proved.reader x86proved.writer x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.x86.mem x86proved.x86.exn x86proved.x86.eval x86proved.x86.instrcodec
+               x86proved.monadinst x86proved.x86.ioaction x86proved.bitsrep x86proved.bitsops x86proved.x86.eval x86proved.x86.step x86proved.pointsto x86proved.cursor.
+Require Import x86proved.x86.program x86proved.x86.programassem x86proved.x86.programeq x86proved.x86.reg x86proved.x86.instrsyntax x86proved.x86.instrrules.
+Require Import x86proved.spectac x86proved.charge.iltac x86proved.triple.
 (*Require Import pecoff.*)
 
 Require Import stringbuff.

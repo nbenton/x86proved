@@ -1,4 +1,4 @@
-Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.tuple.
 
 (* ATBR *)
 Require Import ATBR.DecideKleeneAlgebra.

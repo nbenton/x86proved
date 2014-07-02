@@ -1,8 +1,8 @@
 (*===========================================================================
     I/O actions
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrfun eqtype tuple seq.
-Require Import bitsrep bitsops bitsprops.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsprops.
 
 Definition Chan := BYTE.
 Definition Data := BYTE.
@@ -55,7 +55,7 @@ Definition postActionsOp a1 a2 := postActions a2 a1.
 Definition strictPostActions (a1 a2: Actions) := 
   exists o a', a2 = a'++o::a1.
 
-Require Import Coq.Classes.RelationClasses Program.Basics.
+Require Import Coq.Classes.RelationClasses Coq.Program.Basics.
 
 Instance preActions_Pre: PreOrder preActions.
 Proof. repeat constructor; hnf.
@@ -79,7 +79,7 @@ Qed.
 Lemma cat_preActions a : forall a1 a2, preActions a1 a2 -> preActions (a++a1) (a++a2). 
 Proof. induction a => // a1 a2 [a' ->]. exists a'. by rewrite catA. Qed.
 
-Require Import Coq.Setoids.Setoid CSetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
+Require Import Coq.Setoids.Setoid x86proved.charge.CSetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Instance ActionsEquiv : Equiv Actions := {
    equiv a1 a2 := a1 = a2

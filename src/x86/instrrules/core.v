@@ -2,14 +2,14 @@
     Rules for x86 instructions in terms of [safe]
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq (* for [catA] *) Ssreflect.tuple.
-Require Import x86.procstate bitsops.
-Require Import spec SPred SPredTotal OPred x86.basic x86.basicprog spectac.
-Require Import x86.instr pointsto cursor.
-Require Import x86.instrsyntax.
-Require Import x86.procstatemonad (* for [ST] *) bitsprops (* for [high_catB] *) bitsopsprops (* for [subB_eq0] *).
-Require Import septac (* for [sdestruct] *) obs (* for [obs] *) triple (* for [TRIPLE] *).
-Require Import x86.eval (* for [evalInstr] *) x86proved.monad (* for [doMany] *) x86proved.monadinst (* for [Success] *).
-Require Import common_definitions (* for [eta_expand] *) common_tactics (* for [elim_atomic_in_match'] *).
+Require Import x86proved.x86.procstate x86proved.bitsops.
+Require Import x86proved.spec x86proved.SPred x86proved.SPredTotal x86proved.OPred x86proved.x86.basic x86proved.x86.basicprog x86proved.spectac.
+Require Import x86proved.x86.instr x86proved.pointsto x86proved.cursor.
+Require Import x86proved.x86.instrsyntax.
+Require Import x86proved.x86.procstatemonad (* for [ST] *) x86proved.bitsprops (* for [high_catB] *) x86proved.bitsopsprops (* for [subB_eq0] *).
+Require Import x86proved.septac (* for [sdestruct] *) x86proved.obs (* for [obs] *) x86proved.triple (* for [TRIPLE] *).
+Require Import x86proved.x86.eval (* for [evalInstr] *) x86proved.monad (* for [doMany] *) x86proved.monadinst (* for [Success] *).
+Require Import x86proved.common_definitions (* for [eta_expand] *) x86proved.common_tactics (* for [elim_atomic_in_match'] *).
 Require Import Coq.Classes.Morphisms (* for [Parametric Morphism] and [signature_scope] *).
 
 Module Import instrruleconfig.
@@ -29,7 +29,7 @@ Module Import instrruleconfig.
 End instrruleconfig.
 
 Import Prenex Implicits.
-Require Import ioaction step.
+Require Import x86proved.x86.ioaction x86proved.x86.step.
 
 Lemma decodeAndAdvance_rule P (i j: DWORD) R sij instr O c Q :
   sij |-- i -- j :-> instr ->

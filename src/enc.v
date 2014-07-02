@@ -1,8 +1,8 @@
 (*===========================================================================
     General encoder class, with instances for BYTE and DWORD
   ===========================================================================*)
-Require Import ssreflect seq.
-Require Import bitsrep update.
+Require Import Ssreflect.ssreflect Ssreflect.seq.
+Require Import x86proved.bitsrep x86proved.update.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

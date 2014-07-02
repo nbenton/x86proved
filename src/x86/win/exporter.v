@@ -1,6 +1,6 @@
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple.
-Require Import bitsrep bitsops bitsopsprops x86proved.monad writer reg instr instrsyntax program.
-Require Import pecoff programassem.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsopsprops x86proved.monad x86proved.writer x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.program.
+Require Import x86proved.x86.win.pecoff x86proved.x86.programassem.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

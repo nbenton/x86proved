@@ -1,14 +1,14 @@
 (*===========================================================================
   Test the performance of bits operations
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple.
-Require Import bitsrep bitsops bitsopsprops.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsopsprops.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import ssralg.
+Require Import Ssreflect.ssralg.
 Open Scope ring_scope.
 
 Definition n' := Eval cbv in 31.

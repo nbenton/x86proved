@@ -2,8 +2,8 @@
     Model for x86 registers
     Note that the EFL register (flags) is treated separately.
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple.
-Require Import bitsrep.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype Ssreflect.tuple.
+Require Import x86proved.bitsrep.
 
 (* General purpose registers, excluding ESP *)
 (*=NonSPReg *)

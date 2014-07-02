@@ -1,5 +1,5 @@
-Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses Program.Basics Omega.
-Require Import ilogic.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses Coq.Program.Basics Coq.omega.Omega.
+Require Import x86proved.charge.ilogic.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -1,8 +1,8 @@
-Require Import ssreflect ssrbool ssrnat eqtype tuple seq fintype.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic program.
-Require Import instr instrsyntax instrrules reader pointsto cursor.
-Require Import triple x86proved.monad eval instrcodec enc encdechelp basicprog.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.fintype.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.program.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
+Require Import x86proved.triple x86proved.monad x86proved.x86.eval x86proved.x86.instrcodec x86proved.enc x86proved.x86.encdechelp x86proved.x86.basicprog.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

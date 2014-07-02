@@ -2,9 +2,9 @@
    Embedding of total states (ProcState) into partial states (PState)
    and associate lemmas regarding SPreds
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool ssrnat eqtype tuple seq fintype.
-Require Import bitsrep bitsprops bitsops bitsopsprops procstate procstatemonad pmapprops.
-Require Import x86proved.monad x86proved.monadinst reader SPred septac pointsto pfun cursor writer.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops x86proved.bitsopsprops x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.pmapprops.
+Require Import x86proved.monad x86proved.monadinst x86proved.reader x86proved.SPred x86proved.septac x86proved.pointsto x86proved.pfun x86proved.cursor x86proved.writer.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -26,7 +26,7 @@ Coercion toPState : ProcState >-> PState.
 Lemma totalProcState (s: ProcState) : isTotalPState s.
 Proof. move => f x. destruct f; destruct x => //.  Qed. 
 
-Require Import FunctionalExtensionality CSetoid.
+Require Import Coq.Logic.FunctionalExtensionality x86proved.charge.CSetoid.
 Lemma toPState_inj s1 s2 : toPState s1 === toPState s2 -> s1 = s2. 
 Proof. move => H. 
 destruct s1 as [s1r s1f s1m]. 

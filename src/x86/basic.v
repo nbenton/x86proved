@@ -7,9 +7,9 @@
      if   it's safe to run from EIP=j with assertion Q
      then it's safe to run from EIP=i with assertion P
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred OPred septac spec spectac safe obs pointsto cursor instr reader instrcodec.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.OPred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.obs x86proved.pointsto x86proved.cursor x86proved.x86.instr x86proved.reader x86proved.x86.instrcodec.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Section Basic.

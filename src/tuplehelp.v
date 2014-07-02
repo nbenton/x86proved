@@ -1,5 +1,5 @@
 (* Additional lemmas about tuples *)
-Require Import ssreflect ssrbool ssrnat eqtype seq fintype tuple.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 
 Lemma mapCons {n A B} (f: A -> B) b (p: n.-tuple A) :
   map_tuple f [tuple of b :: p] = [tuple of f b :: map_tuple f p].

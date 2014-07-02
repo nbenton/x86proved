@@ -1,10 +1,10 @@
 (*===========================================================================
     obs specification    
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrfun ssrnat eqtype tuple seq fintype.
-Require Import bitsrep procstate procstatemonad SPred SPredTotal septac spec.
-Require Import ioaction step bilogic OPred.
-Require Import safe.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.SPred x86proved.SPredTotal x86proved.septac x86proved.spec.
+Require Import x86proved.x86.ioaction x86proved.x86.step x86proved.charge.bilogic x86proved.OPred.
+Require Import x86proved.safe.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -1,7 +1,7 @@
 (*===========================================================================
     Monadic syntax and monad laws
   ===========================================================================*)
-Require Import ssreflect ssrnat.
+Require Import Ssreflect.ssreflect Ssreflect.ssrnat.
 
 (* Collect the monad operations in their own class, and define nice Fsharp-like notation *)
 (*=MonadOps *)
@@ -46,7 +46,7 @@ Lemma doManyAdd {T} {ops: MonadOps T} {laws: Monad T}  n c :
   forall n', doMany (n+n') c = do! doMany n c; doMany n' c.
 Proof. induction n; move => n'. by rewrite add0n id_l. by rewrite /= assoc IHn. Qed.
 
-Require Import FunctionalExtensionality.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Lemma doLet {T}{X} `{HT: Monad T} (c1: T unit) (c2: unit -> T X) :
   (let! u = c1; c2 u) = (do! c1; c2 tt).

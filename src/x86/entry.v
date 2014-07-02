@@ -1,6 +1,6 @@
-Require Import ssreflect seq finfun tuple fintype.
-Require Import bitsrep bitsops mem reg instr instrsyntax instrcodec.
-Require Import program macros Ascii.
+Require Import Ssreflect.ssreflect Ssreflect.seq Ssreflect.finfun Ssreflect.tuple Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec.
+Require Import x86proved.x86.program x86proved.x86.macros Coq.Strings.Ascii.
 
 Local Open Scope instr_scope.
 

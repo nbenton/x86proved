@@ -1,8 +1,8 @@
-Require Import ssreflect ssrfun seq ssrbool ssrnat fintype eqtype tuple.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.seq Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.fintype Ssreflect.eqtype Ssreflect.tuple.
 Require Import Coq.Strings.String.
-Require Import cast.
+Require Import x86proved.cast.
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses.
-Require Import FunctionalExtensionality.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -268,7 +268,7 @@ match c with
 | Star _ _ => nil
 end.
 
-Require Import div.
+Require Import Ssreflect.div.
 (* Compute minimum, maximum, and gcd of number of bits *)
 Definition stats t (c: Codec t) :=
   let s := sizes c
@@ -916,7 +916,7 @@ Proof. rewrite /dpfInterp => H l e v w. rewrite 2!interpDerivSym=> I1 I2. apply:
 
   We use derivatives "on-the-fly" to avoid any backtracking for deterministic codecs.
   ======================================================================================*)
-Require Import x86proved.monad bitreader.
+Require Import x86proved.monad x86proved.bitreader.
 Fixpoint codecToBitReader bits t (c: Codec t) : BitReader (option t) :=
   if valIfNull c is Some x then retn (Some x)
   else if bits isn't bits'.+1 then retn None
@@ -941,7 +941,7 @@ Qed.
 
 (* Completeness of decoding: if a value is in the interpretation of a prefix-free codec, then
    codecToBitReader will return it *)
-Require Import bitsrep bitsops cursor.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.cursor.
 Lemma codecToBitReaderComplete n  : forall t (c: Codec t) cursor cursor' l,
   dpfInterp c ->
   size l <= n ->

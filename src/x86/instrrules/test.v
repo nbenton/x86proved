@@ -1,8 +1,8 @@
 (** * TEST instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import bitsopsprops (* for [andBB] *).
+Require Import x86proved.bitsopsprops (* for [andBB] *).
 
 Lemma TEST_self_rule (r:Reg) (v:DWORD) :
   |-- basic (r ~= v ** OSZCP?) (TEST r, r) empOP

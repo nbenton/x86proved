@@ -1,9 +1,9 @@
 (** * Hoare triple for machine state monad *)
-Require Import triple.core.
+Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
 Require Import Coq.Setoids.Setoid Coq.Program.Basics.
-Require Import common_tactics.
+Require Import x86proved.common_tactics.
 
 Import Prenex Implicits.
 

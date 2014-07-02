@@ -11,7 +11,7 @@
   ===========================================================================*)
 (* We need ssreflect for the [if ... then ... else ...] syntax in an inlineable way. *)
 Require Import Ssreflect.ssreflect.
-Require Import bitsrep reg.
+Require Import x86proved.bitsrep x86proved.x86.reg.
 
 
 (* Memory addressing. Note: using ESP for the index register is illegal *)

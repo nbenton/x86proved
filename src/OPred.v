@@ -1,9 +1,9 @@
 (*===========================================================================
     Predicates over observations (sequences of actions)
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype fintype finfun seq tuple.
-Require Import bitsrep ioaction ilogic.
-Require Import Coq.Setoids.Setoid CSetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms Program.Basics.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.x86.ioaction x86proved.charge.ilogic.
+Require Import Coq.Setoids.Setoid x86proved.charge.CSetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Program.Basics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -1,5 +1,5 @@
 (** * XOR instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 Lemma XOR_RR_rule d (r1 r2:DWORDorBYTEReg d) v1 (v2:DWORDorBYTE d):

@@ -2,9 +2,9 @@
     Single-step transition function and extension to multiple steps,
     with various lemmas
   ===========================================================================*)
-Require Import ssreflect ssrnat ssrbool ssrfun eqtype tuple seq.
-Require Import instr x86proved.monad reader procstate procstatemonad exn eval instrcodec
-               monadinst ioaction bitsrep bitsops.
+Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq.
+Require Import x86proved.x86.instr x86proved.monad x86proved.reader x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.x86.exn x86proved.x86.eval x86proved.x86.instrcodec
+               x86proved.monadinst x86proved.x86.ioaction x86proved.bitsrep x86proved.bitsops.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

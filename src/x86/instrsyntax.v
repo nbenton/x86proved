@@ -2,8 +2,8 @@
     Notation to simulate Intel x86 instruction syntax
     You can cut-and-paste this notation into inline assembler in VS!
   ===========================================================================*)
-Require Import ssreflect ssrbool seq.
-Require Import bitsrep bitsops reg instr.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.seq.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.x86.reg x86proved.x86.instr.
 Require Export Coq.Strings.String.
 
 Delimit Scope instr_scope with asm.

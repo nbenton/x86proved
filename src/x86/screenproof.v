@@ -1,11 +1,11 @@
 (*===========================================================================
   Specification of CGA screen functions
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec spectac safe basic basicprog program basic.
-Require Import instr instrsyntax instrcodec reader pointsto cursor instrrules macros.
-Require Import screenspec screenimp.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.basic.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.instrrules x86proved.x86.macros.
+Require Import x86proved.x86.screenspec x86proved.x86.screenimp.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

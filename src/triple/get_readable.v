@@ -1,10 +1,10 @@
-Require Import triple.core.
+Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import x86.procstatemonad (* for [getRegFromProcState] *).
-Require Import reader (* for [Reader] *) pointsto (* for [interpReader] *) cursor (* for [PTR >-> DWORDCursor] *).
+Require Import x86proved.x86.procstatemonad (* for [getRegFromProcState] *).
+Require Import x86proved.reader (* for [Reader] *) x86proved.pointsto (* for [interpReader] *) x86proved.cursor (* for [PTR >-> DWORDCursor] *).
 
-Require Import triple.read.
+Require Import x86proved.triple.read.
 
 Import Prenex Implicits.
 

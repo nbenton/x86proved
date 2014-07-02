@@ -1,10 +1,10 @@
 (*======================================================================================
   Primitive codecs for words etc.
   ======================================================================================*)
-Require Import ssreflect ssrfun seq ssrbool ssrnat fintype.
-Require Import bitsrep bitsprops bitsops eqtype tuple.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.seq Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops Ssreflect.eqtype Ssreflect.tuple.
 Require Import Coq.Strings.String.
-Require Import cast codec.
+Require Import x86proved.cast x86proved.codec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

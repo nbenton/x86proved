@@ -1,5 +1,5 @@
-Require Import ssreflect ssrbool ssrnat ssrfun eqtype seq.
-Require Import SPred.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
+Require Import x86proved.SPred.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

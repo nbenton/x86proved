@@ -1,15 +1,15 @@
-Require Import ssreflect ssrfun ssrbool eqtype fintype finfun seq tuple.
-Require Import ilogic.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.charge.ilogic.
 
 (* Importing this file really only makes sense if you also import ilogic, so we
    force that. *)
-Require Export ilogic bilogic.
+Require Export x86proved.charge.ilogic x86proved.charge.bilogic.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import FunctionalExtensionality.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 
 (* This should not be here, //Jesper *)

@@ -1,10 +1,10 @@
-Require Import triple.core.
+Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import x86.procstatemonad (* for [ST] *).
-Require pointsto (* for [ssimpl] *).
+Require Import x86proved.x86.procstatemonad (* for [ST] *).
+Require x86proved.pointsto (* for [ssimpl] *).
 
-Require Import triple.roc.
+Require Import x86proved.triple.roc.
 
 Import Prenex Implicits.
 

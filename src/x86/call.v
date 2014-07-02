@@ -1,7 +1,7 @@
-Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
-Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
-Require Import SPred OPred septac spectac spec obs pointsto cursor instr.
-Require Import basic basicprog program instrsyntax macros instrrules.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.OPred x86proved.septac x86proved.spectac x86proved.spec x86proved.obs x86proved.pointsto x86proved.cursor x86proved.x86.instr.
+Require Import x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.instrsyntax x86proved.x86.macros x86proved.x86.instrrules.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Definition retreg := EBP.
