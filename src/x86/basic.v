@@ -10,7 +10,7 @@
 Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
 Require Import procstate procstatemonad bitsops bitsprops bitsopsprops.
 Require Import SPred OPred septac spec spectac safe obs pointsto cursor instr reader instrcodec.
-Require Import Setoid RelationClasses Morphisms.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Section Basic.
   Context {T} `{MI: MemIs T}.

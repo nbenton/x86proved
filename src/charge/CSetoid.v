@@ -1,5 +1,5 @@
-Require Import Setoid.
-Require Import Morphisms.
+Require Import Coq.Setoids.Setoid.
+Require Import Coq.Classes.Morphisms.
 
 Class Equiv (A : Type) := equiv : relation A.
 Infix "===" := equiv (at level 70, no associativity).

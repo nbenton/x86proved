@@ -2,7 +2,7 @@ Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple t
 Require Import path fingraph  finset.
 Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
 Require Import SPred septac spec safe basic program macros call.
-Require Import instr monad reader writer procstate procstatemonad mem exn eval instrcodec
+Require Import instr x86proved.monad reader writer procstate procstatemonad mem exn eval instrcodec
                monadinst ioaction bitsrep bitsops eval step pointsto cursor.
 Require Import program programassem programeq reg instrsyntax instrrules.
 Require Import spectac iltac triple.

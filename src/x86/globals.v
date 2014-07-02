@@ -6,7 +6,7 @@ Require Import bitsrep bitsprops bitsops bitsopsprops instr instrrules procstate
         instrsyntax eval monad enc instrcodec tuplehelp.
 Require Import SPred septac spec spectac safe basic program macros programassem programassemcorrect.
 Require Import reader pointsto cursor.
-Require Import Morphisms.
+Require Import Coq.Classes.Morphisms.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.

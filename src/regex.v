@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun seq ssrbool ssrnat fintype eqtype choice.
-Require Import Setoid Morphisms RelationClasses.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

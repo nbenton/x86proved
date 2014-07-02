@@ -9,7 +9,7 @@
   * binders are represented using Chlipala's PHOAS, as in his POPL'10 paper
   ======================================================================================*)
 Require Import ssreflect ssrbool ssrfun ssrnat tuple seq eqtype.
-Require Import bitsrep bitsops instr procstate instrsyntax eval monad enc instrcodec.
+Require Import bitsrep bitsops instr procstate instrsyntax eval x86proved.monad enc instrcodec.
 Require Import SPred septac spec safe basic program macros programassem.
 Require Import reader pointsto cursor.
 Require Import NaryFunctions.

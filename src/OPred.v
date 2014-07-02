@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype fintype finfun seq tuple.
 Require Import bitsrep ioaction ilogic.
-Require Import Setoid CSetoid RelationClasses Morphisms Program.Basics.
+Require Import Coq.Setoids.Setoid CSetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms Program.Basics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

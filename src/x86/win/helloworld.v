@@ -2,7 +2,7 @@
   Hello world for Windows
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple.
-Require Import bitsrep bitsops bitsopsprops monad writer reg instr instrsyntax program.
+Require Import bitsrep bitsops bitsopsprops x86proved.monad writer reg instr instrsyntax program.
 Require Import pecoff programassem macros.
 
 Set Implicit Arguments.

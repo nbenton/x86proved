@@ -21,7 +21,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrbool ssrfun ssrnat eqtype tuple seq fintype.
 Require Import bitsrep procstate procstatemonad SPred septac.
-Require Import instr eval monad monadinst reader cursor.
+Require Import instr eval x86proved.monad x86proved.monadinst reader cursor.
 Require Import common_tactics.
 
 (* Importing this file really only makes sense if you also import ilogic, so we
@@ -33,7 +33,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import Setoid RelationClasses Morphisms.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 (* The ssreflect inequalities on nat are just getting in the way here. They
    don't work with non-Equivalence setoids. *)

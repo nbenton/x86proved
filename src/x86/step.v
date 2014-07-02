@@ -3,7 +3,7 @@
     with various lemmas
   ===========================================================================*)
 Require Import ssreflect ssrnat ssrbool ssrfun eqtype tuple seq.
-Require Import instr monad reader procstate procstatemonad exn eval instrcodec
+Require Import instr x86proved.monad reader procstate procstatemonad exn eval instrcodec
                monadinst ioaction bitsrep bitsops.
 
 Set Implicit Arguments.

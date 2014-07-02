@@ -46,12 +46,12 @@ STDTIME=
 endif
 TIMER=\$$(if \$$(TIMED), $(STDTIME), $(TIMECMD))
 
-.PHONY: all
+.PHONY: all check-Makefile.common
 
 %.dll %.exe: %.v
 	./buildexe.sh $< $@ $(COQLIBS)
 
-all: .dir-locals.el
+all: .dir-locals.el check-Makefile.common
 
 Makefile.coq: GNUmakefile Makefile.common
 	@(which time >/dev/null 2>&1) || echo "WARNING: Timing will be unavailable; please install /usr/bin/time."
@@ -60,5 +60,27 @@ Makefile.coq: GNUmakefile Makefile.common
 .dir-locals.el: .dir-locals.el.in
 	$(VECHO) "SED $< > $@"
 	$(Q)sed s'/@LIBNAME@/$(LIBNAME)/g' "$<" > "$@"
+
+# Find any suspicious comments in Makefile.common
+# TODO(t-jagro): Find a better way to do color than 'grep --color=auto '\*''
+check-Makefile.common:
+	$(VECHO) "CHECK Makefile.common"
+	$(Q)FILES="$$(grep -A 1 '^\s*#.*\\[\s#]\?.*$$' Makefile.common | grep -v -- '^--$$' | grep -v '^\s*$$' | grep -B 1 '^\s*[^#].*')"; \
+	if [ ! -z "$$FILES" ]; then \
+	  echo '***************************************************************************' | grep --color=auto '\*'; \
+	  echo '***************************************************************************' | grep --color=auto '\*'; \
+	  echo '** ERROR: GNU Make treats line-continuation characters (\) in comments   **' | grep --color=auto '\*\|ERROR:'; \
+	  echo '**        as comment continuations.  You have the following suspicious   **' | grep --color=auto '\*'; \
+	  echo '**        lines involving comment continuations:                         **' | grep --color=auto '\*'; \
+	  echo ''; \
+	  grep -A 1 '^\s*#.*\\[\s#]\?.*$$' Makefile.common | grep -v -- '^--$$' | grep -v '^\s*$$' | grep --color=auto -B 1 '^\s*[^#].*'; \
+	  echo ''; \
+	  echo '** Please comment out the lines after comment continuations to continue. **' | grep --color=auto '\*'; \
+	  echo '** If these lines should not be commented out, move the comments to the  **' | grep --color=auto '\*'; \
+	  echo '** End of whatever variable declaration list you have them in.           **' | grep --color=auto '\*'; \
+	  echo '***************************************************************************' | grep --color=auto '\*'; \
+	  echo '***************************************************************************' | grep --color=auto '\*'; \
+	  exit 1; \
+	fi
 
 include Makefile.coq

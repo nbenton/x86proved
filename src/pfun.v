@@ -2,7 +2,7 @@
     Partial functions, represented as X -> option Y
   ===========================================================================*)
 Require Import ssreflect ssrfun ssrbool.
-Require Import Setoid Morphisms.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

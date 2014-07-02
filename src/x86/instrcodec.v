@@ -623,7 +623,7 @@ apply: sizesProp I. apply: InstrCodecFinite. apply byteAligned. Qed.
 Corollary encInstrAligned : forall l x, enc InstrCodec x = Some l -> 8 %| size l.
 Proof. move => l x ENC. apply encSound in ENC. by apply: InstrCodecAlignment ENC. Qed.
 
-Require Import bitreader monad cursor.
+Require Import bitreader x86proved.monad cursor.
 
 Corollary InstrCodecRoundtrip l cursor cursor' e x:
   enc InstrCodec x = Some l ->
@@ -680,7 +680,7 @@ Instance readInstr : Reader Instr :=
     retn BADINSTR.
 
 
-Require Import writer monadinst.
+Require Import writer x86proved.monadinst.
 Fixpoint writeBytes (s: seq BYTE) : WriterTm unit :=
   if s is b::rest
   then do! writeNext b; writeBytes rest

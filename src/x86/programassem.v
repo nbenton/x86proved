@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import ssreflect ssrnat ssrbool seq eqtype tuple.
 Require Import tuplehelp bitsrep bitsops mem reg instr instrsyntax instrcodec cursor update.
-Require Import program monad monadinst writer.
+Require Import program x86proved.monad x86proved.monadinst writer.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
