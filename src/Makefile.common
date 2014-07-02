@@ -72,6 +72,7 @@ x86\instrrules\mov.vo \
 x86\instrrules\neg.vo \
 x86\instrrules\not.vo \
 x86\instrrules\or.vo \
+x86\instrrules\out.vo \
 x86\instrrules\pop.vo \
 x86\instrrules\push.vo \
 x86\instrrules\ret.vo \
