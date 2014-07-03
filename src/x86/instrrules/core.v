@@ -39,7 +39,7 @@ Proof.
 move => HR T. rewrite /decodeAndAdvance.
 triple_apply triple_letGetReg.
 try_triple_apply triple_letReadSep. rewrite -> HR; by ssimpl.
-triple_apply triple_seq; first by triple_apply triple_setRegSep.
+triple_apply triple_setRegSep.
 triple_apply T.
 Qed.
 
@@ -454,22 +454,11 @@ destruct r; apply triple_pre_existsSep => d; apply triple_pre_existsSep => _;
 Qed.
 Global Opaque setBYTERegInProcState.
 
-Lemma triple_doSetBYTERegSep r (v w: BYTE) c O Q S :
-  TRIPLE (BYTEregIs r w ** S) c O Q ->
-  TRIPLE (BYTEregIs r v ** S) (do! setBYTERegInProcState r w; c) O Q.
-Proof. apply triple_seq. apply triple_setBYTERegSep. Qed.
-
 Lemma triple_setDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w :
   forall S, TRIPLE (DWORDorBYTEregIs r v ** S) (setDWORDorBYTERegInProcState _ r w) empOP
                    (DWORDorBYTEregIs r w ** S).
 Proof. destruct d; [apply triple_setRegSep | apply triple_setBYTERegSep]. Qed.
 Global Opaque setDWORDorBYTERegInProcState.
-
-(** TODO(t-jagro): maybe remove the [doSet] versions? *)
-Lemma triple_doSetDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w c O Q S :
-  TRIPLE (DWORDorBYTEregIs r w ** S) c O Q ->
-  TRIPLE (DWORDorBYTEregIs r v ** S) (do! setDWORDorBYTERegInProcState _ r w; c) O Q.
-Proof. apply triple_seq. triple_apply triple_setDWORDorBYTERegSep. Qed.
 
 Lemma evalMemSpecNone_rule offset c O Q :
   forall S,
@@ -503,7 +492,7 @@ Lemma evalPush_rule sp (v w:DWORD) (S:SPred) :
          (ESP~=sp -# 4 ** (sp -# 4) :-> w ** S).
 Proof.
 triple_apply triple_letGetRegSep.
-eapply triple_seq; first by triple_apply triple_setRegSep.
+triple_apply triple_setRegSep.
 triple_apply triple_setDWORDSep.
 Qed.
 Global Opaque evalPush.
@@ -532,7 +521,7 @@ Qed.
 
 Lemma triple_updateZPS P n (v: BITS n) z p s:
   TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (updateZPS v) empOP (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P).
-Proof. rewrite /updateZPS. move => H. do 3 (try eapply triple_seq; first by triple_apply triple_setFlagSep). Qed.
+Proof. rewrite /updateZPS. move => H. do 3 triple_apply triple_setFlagSep. Qed.
 Global Opaque updateZPS.
 
 Lemma triple_letGetDWORDorBYTESep d (p:PTR) (v:DWORDorBYTE d) c O Q :
@@ -581,11 +570,11 @@ Definition ConditionIs cc cv : SPred :=
 Local Ltac triple_op_helper :=
   idtac;
   match goal with
-    (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
-    | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ]      => eapply triple_seq
     | [ |- TRIPLE _ (updateFlagInProcState ?f ?w_) _ _ ]      => triple_apply triple_setFlagSep
     | [ |- TRIPLE _ (updateZPS ?v) _ _ ]                      => triple_apply triple_updateZPS
     | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]  => triple_apply triple_letGetFlagSep
+    (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
+    | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ]      => eapply triple_seq
     | _ => progress autorewrite with triple
   end.
 

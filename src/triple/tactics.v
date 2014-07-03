@@ -5,6 +5,7 @@ Require Import x86proved.x86.procstatemonad (* for [ST] *).
 Require x86proved.pointsto (* for [ssimpl] *).
 
 Require Import x86proved.triple.roc.
+Require Import x86proved.triple.monad.
 
 Import Prenex Implicits.
 
@@ -13,7 +14,12 @@ Hint Rewrite -> (@assoc ST _ _) (@id_l ST _ _) : triple.
 Ltac triple_apply lemma tac :=
  autounfold with spred;
  autorewrite with triple;
- eapply triple_roc; [| | |eapply lemma];
+ eapply triple_roc;
+ [| | | match goal with
+          (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
+          | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ] => eapply triple_seq; first eapply lemma
+          | _ => eapply lemma
+        end ];
  do ?(instantiate;
       match goal with
         | [ |- _ |-- _ ] => reflexivity

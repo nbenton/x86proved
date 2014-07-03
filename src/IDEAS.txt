@@ -1,2 +1,1 @@
-* [eapply triple_seq] first in [triple_apply]??
 * Use canonical structures to unify the [~=] notation for, e.g., [stateIs], [regIs], etc.
