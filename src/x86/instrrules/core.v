@@ -39,7 +39,7 @@ Proof.
 move => HR T. rewrite /decodeAndAdvance.
 triple_apply triple_letGetReg.
 try_triple_apply triple_letReadSep. rewrite -> HR; by ssimpl.
-triple_apply triple_doSetRegSep.
+triple_apply triple_seq; first by triple_apply triple_setRegSep.
 triple_apply T.
 Qed.
 
@@ -503,7 +503,7 @@ Lemma evalPush_rule sp (v w:DWORD) (S:SPred) :
          (ESP~=sp -# 4 ** (sp -# 4) :-> w ** S).
 Proof.
 triple_apply triple_letGetRegSep.
-triple_apply triple_doSetRegSep.
+eapply triple_seq; first by triple_apply triple_setRegSep.
 triple_apply triple_setDWORDSep.
 Qed.
 Global Opaque evalPush.
@@ -530,10 +530,9 @@ Proof.
   eapply H; eassumption.
 Qed.
 
-Lemma triple_doUpdateZPS P O Q n (v: BITS n) c z p s:
-  TRIPLE (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P) c O Q ->
-  TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (do!updateZPS v; c) O Q.
-Proof. rewrite /updateZPS. move => H. do 3 triple_apply triple_doSetFlagSep. triple_apply H. Qed.
+Lemma triple_updateZPS P n (v: BITS n) z p s:
+  TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (updateZPS v) empOP (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P).
+Proof. rewrite /updateZPS. move => H. do 3 (try eapply triple_seq; first by triple_apply triple_setFlagSep). Qed.
 Global Opaque updateZPS.
 
 Lemma triple_letGetDWORDorBYTESep d (p:PTR) (v:DWORDorBYTE d) c O Q :
@@ -582,9 +581,11 @@ Definition ConditionIs cc cv : SPred :=
 Local Ltac triple_op_helper :=
   idtac;
   match goal with
-    | [ |- TRIPLE _ (do!updateFlagInProcState ?f ?w; _) _ _ ]                                       => triple_apply triple_doSetFlagSep
-    | [ |- TRIPLE _ (do!updateZPS ?v; _) _ _ ]                                                      => triple_apply triple_doUpdateZPS
-    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]                                        => triple_apply triple_letGetFlagSep
+    (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
+    | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ]      => eapply triple_seq
+    | [ |- TRIPLE _ (updateFlagInProcState ?f ?w_) _ _ ]      => triple_apply triple_setFlagSep
+    | [ |- TRIPLE _ (updateZPS ?v) _ _ ]                      => triple_apply triple_updateZPS
+    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]  => triple_apply triple_letGetFlagSep
     | _ => progress autorewrite with triple
   end.
 
@@ -653,28 +654,6 @@ Global Opaque evalLogicalOp.
 
 (** TODO(t-jagro): Find a better place for this opacity control *)
 Global Opaque setRegInProcState getDWORDFromProcState updateFlagInProcState forgetFlagInProcState.
-
-Local Ltac make_un_do lem :=
-  let c := match goal with |- TRIPLE _ ?c _ _ => constr:(c) end in
-  rewrite -(@doRet _ _ _ c);
-  apply lem;
-  apply triple_skip.
-
-Lemma triple_setFlagSep (f : Flag) v w S
-: TRIPLE (f ~= v ** S) (updateFlagInProcState f w) empOP (f ~= w ** S).
-Proof. make_un_do triple_doSetFlagSep. Qed.
-
-Lemma triple_updateZPS n (v: BITS n) z p s P
-: TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (updateZPS v) empOP (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P).
-Proof. make_un_do triple_doUpdateZPS. Qed.
-
-Lemma triple_forgetFlagSep (f : Flag) v S
-: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) empOP (f? ** S).
-Proof. make_un_do triple_doForgetFlagSep. Qed.
-
-Lemma triple_forgetFlagSep' (f : Flag) v S
-: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) empOP ((Exists v, f ~= v) ** S).
-Proof. exact (@triple_forgetFlagSep f v S). Qed.
 
 Ltac instrrule_triple_bazooka_step tac :=
   idtac;
