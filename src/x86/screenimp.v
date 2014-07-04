@@ -4,7 +4,7 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.x86.program x86proved.x86.macros.
-Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.reader x86proved.cursor x86proved.x86.screenspec x86proved.x86.mulc.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.reader x86proved.cursor x86proved.x86.screenspec x86proved.examples.mulc.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
