@@ -1,8 +1,8 @@
 (** * JCC (rel) instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import triple (* for [triple_apply] *).
+Require Import x86proved.triple (* for [triple_apply] *).
 
 (** For convenience, the [~~b] branch is not under a [|>] operator
     since [q] will never be equal to [p], and thus there is no risk of

@@ -1,8 +1,8 @@
 (** * JMP (rel) instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import spectac (* for [specapply] *).
+Require Import x86proved.spectac (* for [specapply] *).
 
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) :
   |-- interpJmpTgt tgt q (fun P addr =>

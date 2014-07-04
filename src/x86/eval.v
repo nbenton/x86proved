@@ -1,9 +1,9 @@
 (*===========================================================================
     Instruction evaluator
   ===========================================================================*)
-Require Import ssreflect ssrnat ssrbool eqtype tuple.
-Require Import bitsops instr x86proved.monad reader procstate procstatemonad exn.
-Require Import common_definitions.
+Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.tuple.
+Require Import x86proved.bitsops x86proved.x86.instr x86proved.monad x86proved.reader x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.x86.exn.
+Require Import x86proved.common_definitions.
 
 Definition updateZPS {n} (result: BITS n) :=
   do! updateFlagInProcState ZF (result == #0);

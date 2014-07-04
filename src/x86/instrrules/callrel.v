@@ -1,8 +1,8 @@
 (** * CALL (rel) instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import spectac (* for [specapply] *).
+Require Import x86proved.spectac (* for [specapply] *).
 
 Lemma CALLrel_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) O :
   |-- interpJmpTgt tgt q (fun P p' =>

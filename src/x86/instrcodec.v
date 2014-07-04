@@ -1,11 +1,11 @@
 (*======================================================================================
   Instruction codec
   ======================================================================================*)
-Require Import ssreflect ssrfun seq ssrbool ssrnat fintype.
-Require Import bitsrep bitsprops bitsops eqtype tuple.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.seq Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops Ssreflect.eqtype Ssreflect.tuple.
 Require Import Coq.Strings.String.
-Require Import cast codec bitscodec.
-Require Import instr encdechelp reg.
+Require Import x86proved.cast x86proved.codec x86proved.bitscodec.
+Require Import x86proved.x86.instr x86proved.x86.encdechelp x86proved.x86.reg.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -47,7 +47,7 @@ elim => //. move => m. elim => // ms. by move => [<-].
 by move => r y [<-].
 Defined.
 
-Require Import bitsopsprops.
+Require Import x86proved.bitsopsprops.
 Definition unTgt : CAST DWORD Tgt.
 apply: MakeCast mkTgt
                 (fun t => let: mkTgt d := t in Some d) _.
@@ -601,7 +601,7 @@ Definition InstrCodec : Codec Instr :=
 ||| JCC8PREF .$ conditionCodec $ Any $ ShortTgtCodec  ~~> unJCC
 .
 
-Require Import codecregex div.
+Require Import x86proved.codecregex Ssreflect.div.
 
 (* Various facts about the instruction codec that can be determined statically.
    - it's non-ambiguous
@@ -632,7 +632,7 @@ apply: sizesProp I. apply: InstrCodecFinite. apply byteAligned. Qed.
 Corollary encInstrAligned : forall l x, enc InstrCodec x = Some l -> 8 %| size l.
 Proof. move => l x ENC. apply encSound in ENC. by apply: InstrCodecAlignment ENC. Qed.
 
-Require Import bitreader x86proved.monad cursor.
+Require Import x86proved.bitreader x86proved.monad x86proved.cursor.
 
 Corollary InstrCodecRoundtrip l cursor cursor' e x:
   enc InstrCodec x = Some l ->
@@ -643,7 +643,7 @@ have CC := codecToFiniteBitReaderRoundtrip _ _ InstrCodecMaxBits AP ENC.
 have CS := codecToBitReaderSound. apply: CC.
 apply nonAmbiguousDet. apply InstrCodecIsNonAmbiguous. Qed.
 
-Require Import reader.
+Require Import x86proved.reader.
 Corollary InstrCodecRoundtripReader (pc:DWORD) cursor' bits x:
   enc InstrCodec x = Some bits ->
   apart ((size bits) %/ 8) pc cursor' ->
@@ -689,7 +689,7 @@ Instance readInstr : Reader Instr :=
     retn BADINSTR.
 
 
-Require Import writer x86proved.monadinst.
+Require Import x86proved.writer x86proved.monadinst.
 Fixpoint writeBytes (s: seq BYTE) : WriterTm unit :=
   if s is b::rest
   then do! writeNext b; writeBytes rest
