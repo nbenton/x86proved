@@ -646,6 +646,8 @@ Qed.
    direction that seems useful. *)
 Instance: subrelation lentails Basics.impl.
 Proof. reflexivity. Qed.
+Instance: subrelation (Basics.flip lentails) (Basics.flip Basics.impl).
+Proof. reflexivity. Qed.
 
 (* It does not seem possible to add a morphism that applies to an arbitrary
    function application. This is sometimes needed when we make a logic out of a
