@@ -1,5 +1,5 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
-Require Import x86proved.bitsrep x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.SPred x86proved.pointsto x86proved.cursor x86proved.reader x86proved.writer x86proved.roundtrip.
+Require Import x86proved.bitsrep x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.spred x86proved.pointsto x86proved.cursor x86proved.reader x86proved.writer x86proved.roundtrip.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -2,8 +2,8 @@
     obs specification    
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.fintype.
-Require Import x86proved.bitsrep x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.SPred x86proved.SPredTotal x86proved.septac x86proved.spec.
-Require Import x86proved.x86.ioaction x86proved.x86.step x86proved.charge.bilogic x86proved.OPred.
+Require Import x86proved.bitsrep x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.spred x86proved.spredtotal x86proved.septac x86proved.spec.
+Require Import x86proved.x86.ioaction x86proved.x86.step x86proved.charge.bilogic x86proved.opred.
 Require Import x86proved.safe.
 
 Set Implicit Arguments.

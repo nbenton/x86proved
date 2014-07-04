@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq (* for [catA] *) Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.bitsops.
-Require Import x86proved.spec x86proved.SPred x86proved.SPredTotal x86proved.OPred x86proved.x86.basic x86proved.x86.basicprog x86proved.spectac.
+Require Import x86proved.spec x86proved.spred x86proved.spredtotal x86proved.opred x86proved.x86.basic x86proved.x86.basicprog x86proved.spectac.
 Require Import x86proved.x86.instr x86proved.pointsto x86proved.cursor.
 Require Import x86proved.x86.instrsyntax.
 Require Import x86proved.x86.procstatemonad (* for [ST] *) x86proved.bitsprops (* for [high_catB] *) x86proved.bitsopsprops (* for [subB_eq0] *).
@@ -15,12 +15,12 @@ Require Import Coq.Classes.Morphisms (* for [Parametric Morphism] and [signature
 Module Import instrruleconfig.
   Export Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple.
 
-  Export x86.procstate bitsops.
-  Export spec SPred OPred obs x86.basic x86.basicprog.
-  Export x86.instr pointsto cursor.
-  Export x86.instrsyntax.
+  Export x86proved.x86.procstate x86proved.bitsops.
+  Export x86proved.spec x86proved.spred x86proved.opred x86proved.obs x86proved.x86.basic x86proved.x86.basicprog.
+  Export x86proved.x86.instr x86proved.pointsto x86proved.cursor.
+  Export x86proved.x86.instrsyntax.
 
-  Export common_definitions (* for [eta_expand] *).
+  Export x86proved.common_definitions (* for [eta_expand] *).
 
   Open Scope instr_scope.
 

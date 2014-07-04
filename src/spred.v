@@ -5,7 +5,7 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
 Require Import x86proved.bitsrep x86proved.pfun x86proved.x86.reg x86proved.x86.mem x86proved.x86.flags.
 Require Import x86proved.pmap x86proved.pmapprops.
-Require Import Coq.Setoids.Setoid x86proved.charge.CSetoid Coq.Classes.Morphisms.
+Require Import Coq.Setoids.Setoid x86proved.charge.csetoid Coq.Classes.Morphisms.
 
 
 (* Importing this file really only makes sense if you also import ilogic, so we
@@ -457,7 +457,7 @@ Proof. move => TOT SPLITS. unfold stateSplitsAs in SPLITS. unfold isTotalPState 
 move => f. apply: splitsTotal => //. Qed.
 
 Instance stateSplitsAs_m :
-  Proper (CSetoid.equiv ==> CSetoid.equiv ==> CSetoid.equiv ==> iff) stateSplitsAs.
+  Proper (csetoid.equiv ==> csetoid.equiv ==> csetoid.equiv ==> iff) stateSplitsAs.
 Proof. move => s1 s2 EQ s1' s2' EQ' s1'' s2'' EQ''.
 split => SPLIT f x.
 specialize (SPLIT f x). specialize (EQ f x). specialize (EQ' f x). specialize (EQ'' f x).
@@ -539,14 +539,14 @@ Program Definition byteIs p b : SPred := eq_pred (addBYTEToPState emptyPState p 
 Definition byteAny p : SPred := lexists (byteIs p).
 
 Instance flagIsEquiv_m :
-  Proper (eq ==> eq ==> CSetoid.equiv ==> iff) flagIs.
+  Proper (eq ==> eq ==> csetoid.equiv ==> iff) flagIs.
 Proof.
   intros n m Hneqm f g Hbeqc p q Hpeqq; subst.
   split; simpl; rewrite <- Hpeqq; tauto.
 Qed.
 
 Instance byteIsEquiv_m :
-  Proper (eq ==> eq ==> CSetoid.equiv ==> iff) byteIs.
+  Proper (eq ==> eq ==> csetoid.equiv ==> iff) byteIs.
 Proof.
   intros n m Hneqm b c Hbeqc p q Hpeqq; subst.
   split; simpl; rewrite <- Hpeqq; tauto.

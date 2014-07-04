@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
 Require Import x86proved.bitsrep x86proved.x86.ioaction x86proved.charge.ilogic.
-Require Import Coq.Setoids.Setoid x86proved.charge.CSetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Program.Basics.
+Require Import Coq.Setoids.Setoid x86proved.charge.csetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Program.Basics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

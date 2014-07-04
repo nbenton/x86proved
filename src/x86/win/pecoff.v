@@ -625,7 +625,7 @@ Definition computeRVAsIn (f: (DWORD -> program) -> program) : program :=
     f (fun VA => dd (if VA == #0 then #0 else VA - base)).
 (*=End *)
 
-Require Import x86proved.pointsto x86proved.SPred x86proved.septac.
+Require Import x86proved.pointsto x86proved.spred x86proved.septac.
 Lemma computeRVAsIn_interp (k: (DWORD -> program) -> program) (i:DWORD) j :
   interpProgram i j
   (k (fun VA => dd (if VA == #0 then #0 else VA - i)))

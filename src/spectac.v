@@ -3,9 +3,9 @@
   ===========================================================================*)
 Ltac type_of t := type of t (* ssreflect bug workaround *).
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
-Require Import x86proved.bitsrep x86proved.SPred x86proved.spec x86proved.septac.
+Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.septac.
 Require Import x86proved.x86.reg x86proved.x86.flags. (* for EIP *)
-Require Import x86proved.safe x86proved.OPred x86proved.obs.
+Require Import x86proved.safe x86proved.opred x86proved.obs.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
