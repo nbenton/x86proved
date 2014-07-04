@@ -1,7 +1,7 @@
 (*===========================================================================
     Predicates over observations (sequences of actions)
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype fintype finfun seq tuple.
+Require Import ssreflect ssrfun ssrbool ssrnat eqtype fintype finfun seq tuple.
 Require Import bitsrep ioaction ilogic.
 Require Import Coq.Setoids.Setoid CSetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms Program.Basics.
 
@@ -49,6 +49,20 @@ Program Definition orOP (P Q: OPred) : OPred
 Next Obligation.
 move => [P [Px PH]] [Q [Qx QH]]. exists Px. by left. 
 Qed.
+
+(* Repetition *)
+Fixpoint repOP n P := if n is n.+1 then catOP P (repOP n P) else empOP.
+
+(* Existential quantification, for inhabited types *)
+Program Definition existsOP X {_: inhabited X} (f: X -> OPred) : OPred := 
+  mkOPred (fun o => exists x: X, f x o) _. 
+Next Obligation.
+move => X [x] f. 
+destruct (OPred_inhabited (f x)) as [y H]. by exists y, x. 
+Qed. 
+
+(* Kleene star *)
+Definition starOP P := @existsOP _ (inhabits 0) (fun n => repOP n P).
 
 (* Inclusion and equivalence on predicates *)
 Definition entailsOP (O O': OPred) := forall s, O s -> O' s. 
@@ -130,9 +144,21 @@ Qed.
 Hint Extern 0 (entailsOP (catOP empOP ?O) ?P) => by apply empOPL.  
 Hint Extern 0 (entailsOP (catOP ?O ?empOP) ?P) => by apply empOPR.  
 
+Lemma starOP_def (P: OPred) : equivOP (starOP P) (orOP empOP (catOP P (starOP P))).
+Proof. split => s /= H. 
+destruct H as [n H].
+destruct n.
+rewrite H. by left.
+destruct H as [s1 [s2 [H1 [H2 H3]]]].
+subst. right. 
+exists s1, s2. intuition. by exists n. 
+destruct s. by exists 0.   
+destruct H => //. 
+destruct H as [s1 [s2 [H1 [H2 [n H3]]]]].
+exists n.+1.  simpl. exists s1, s2. intuition. 
+Qed. 
 
-(*
-Local Transparent ILFun_Ops ILPre_Ops.
+(*Local Transparent ILFun_Ops ILPre_Ops.
 
 Lemma land_catOP P Q R : catOP (P//\\Q) R |-- (catOP P R) //\\ (catOP Q R).
 Proof. apply landR. apply catOP_entails_m => //. by apply landL1. 
