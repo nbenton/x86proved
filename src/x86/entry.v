@@ -22,7 +22,7 @@ Definition outEx :=
       MOV EBX, 10;;
       XOR ECX, ECX;;
     loopBody:;;
-      OUT false #50;;
+      OUT 50, AL;;
       INC EAX;;
       CMP EAX, EBX;;
       JNZ loopBody
