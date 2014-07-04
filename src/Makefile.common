@@ -12,6 +12,7 @@ charge\later.vo \
 common_tactics.vo \
 common_definitions.vo \
 pointed.vo \
+ilogic_pointed.vo \
 cstring.vo \
 update.vo \
 monad.vo \
