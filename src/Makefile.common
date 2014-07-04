@@ -92,7 +92,7 @@ x86\instrrules\xor.vo \
 x86\instrrules.vo \
 x86\macros.vo \
 x86\call.vo \
-x86\specexamples.vo \
+examples\specexamples.vo \
 x86\inlinealloc.vo \
 x86\listspec.vo \
 x86\listimp.vo \
@@ -102,7 +102,7 @@ x86\screenimp.vo \
 x86\screenproof.vo \
 x86\imp.vo \
 x86\gcdex.vo \
-x86\entry.vo \
+examples\entry.vo \
 x86\basicprog.vo \
 x86\program.vo \
 x86\programassem.vo \
@@ -110,10 +110,10 @@ x86\programassemcorrect.vo \
 x86\programeq.vo \
 x86\wrapalloc.vo \
 x86\lifeimp.vo \
-x86\xorswap.vo \
-x86\mulc.vo \
+examples\xorswap.vo \
+examples\mulc.vo \
 x86\main.vo \
-x86\fact.vo \
+examples\fact.vo \
 x86\examples.vo \
 x86\testrun.vo \
 x86\cstringimp.vo \
