@@ -16,6 +16,7 @@ Require Export x86proved.x86.instrrules.mov.
 Require Export x86proved.x86.instrrules.neg.
 Require Export x86proved.x86.instrrules.not.
 Require Export x86proved.x86.instrrules.or.
+Require Export x86proved.x86.instrrules.out.
 Require Export x86proved.x86.instrrules.pop.
 Require Export x86proved.x86.instrrules.push.
 Require Export x86proved.x86.instrrules.ret.

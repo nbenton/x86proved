@@ -363,7 +363,7 @@ Coercion InstrArg_of_DWORDorBYTEReg d : DWORDorBYTEReg d -> InstrArg := if d as 
 (** Only things without [_rule]s should go in this database *)
 Hint Unfold
   evalInstr
-  evalSrc evalDst evalDstR evalDstM evalDstSrc
+  evalSrc evalDst evalDstR evalDstM evalDstSrc evalPort
   (** Perhaps we should have [evalMov_rule] and [evalUnaryOp_rule]? *)
   evalMOV evalUnaryOp evalBinOp
   (** Maybe we should write [_rule]s for [evalShiftOp] and [evalCondition]. *)
@@ -641,6 +641,11 @@ Lemma evalLogicalOp_rule o s z c p n (f : BITS n -> BITS n -> BITS n) arg1 arg2 
 Proof. rewrite /evalLogicalOp. triple_op_bazooka. Qed.
 Global Opaque evalLogicalOp.
 
+Lemma evalPortI_rule (p: BYTE) c O Q S :
+  TRIPLE S (c (zeroExtend 8 p)) O Q ->
+  TRIPLE S (bind (evalPort p) c) O Q.
+Proof. move => T. rewrite /evalPort. triple_apply T. Qed. 
+
 (** TODO(t-jagro): Find a better place for this opacity control *)
 Global Opaque setRegInProcState getDWORDFromProcState updateFlagInProcState forgetFlagInProcState.
 
@@ -650,6 +655,7 @@ Ltac instrrule_triple_bazooka_step tac :=
   lazymatch goal with
     | [ |- TRIPLE _ (bind (evalDWORDorBYTEReg ?d ?r) _) _ _ ]                                     => tapply (@evalDWORDorBYTEReg_rule d)
     | [ |- TRIPLE _ (bind (evalReg ?r) _) _ _ ]                                                   => tapply evalReg_rule
+    | [ |- TRIPLE _ (bind (evalPort (PortI ?r)) _) _ _ ]                                          => tapply evalPortI_rule
     | [ |- TRIPLE _ (bind (evalBYTEReg ?r) _) _ _ ]                                               => tapply evalBYTEReg_rule
     | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec None ?offset)) _) _ _ ]                         => tapply evalMemSpecNone_rule
     | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec (Some (?r, None)) ?offset)) _) _ _ ]            => tapply evalMemSpecSomeNone_rule
