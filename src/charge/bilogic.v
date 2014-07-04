@@ -1,5 +1,5 @@
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses Coq.Program.Basics.
-Require Import x86proved.charge.ilogic x86proved.charge.iltac x86proved.charge.CSetoid.
+Require Import x86proved.charge.ilogic x86proved.charge.iltac x86proved.charge.csetoid.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

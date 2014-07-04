@@ -3,7 +3,7 @@ ARCH = x86
 LIBNAME = x86proved
 
 TARGETS = \
-charge\CSetoid.vo \
+charge\csetoid.vo \
 charge\sepalg.vo \
 charge\ilogic.vo \
 charge\iltac.vo \
@@ -11,6 +11,7 @@ charge\bilogic.vo \
 charge\later.vo \
 common_tactics.vo \
 common_definitions.vo \
+pointed.vo \
 cstring.vo \
 update.vo \
 monad.vo \
@@ -40,9 +41,9 @@ x86\eval.vo \
 x86\encdechelp.vo \
 x86\step.vo \
 x86\ioaction.vo \
-SPred.vo \
-SPredTotal.vo \
-OPred.vo \
+spred.vo \
+spredtotal.vo \
+opred.vo \
 septac.vo \
 spec.vo \
 safe.vo \
@@ -130,7 +131,7 @@ codecregex.vo
 # x86\globals.vo
 # x86\lib\regexp\stringbuff.vo
 # x86\lib\regexp\compiler.vo
-# x86\lib\regexp\interfaceATBR.vo
+# x86\lib\regexp\interfaceatbr.vo
 # x86\lib\regexp\regexpsyntax.vo
 # x86\lib\regexp\exampleregexp.vo
 # x86\lib\regexp\regexpexe.vo

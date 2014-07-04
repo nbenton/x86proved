@@ -596,8 +596,6 @@ Definition MAKEDFA r := explore iterations r nil nil.
 
 Example r := RSeq (RStar (RSeq (RSym false) (RSym true))) (RSym true).
 
-Compute MAKEDFA r.
-
 (* Semantic interpretation of DrvAny *)
 Lemma rinterpDrvAny r : starfree r -> forall l,
   rinterp (DrvAny r) l <-> exists b:bool, rinterp r (b::l).

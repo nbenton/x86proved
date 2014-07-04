@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq.
 Require Import x86proved.x86.instr x86proved.monad x86proved.reader x86proved.writer x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.x86.mem x86proved.x86.exn x86proved.x86.eval x86proved.x86.instrcodec
-               x86proved.monadinst x86proved.x86.ioaction x86proved.bitsrep x86proved.bitsops x86proved.x86.eval x86proved.x86.step x86proved.cursor x86proved.x86.fact.
+               x86proved.monadinst x86proved.x86.ioaction x86proved.bitsrep x86proved.bitsops x86proved.x86.eval x86proved.x86.step x86proved.cursor x86proved.examples.fact.
 
 Require Import x86proved.x86.program x86proved.x86.programassem x86proved.x86.reg x86proved.x86.instrsyntax.
 

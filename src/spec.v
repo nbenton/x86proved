@@ -20,7 +20,7 @@
     [spec_frame].
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.fintype.
-Require Import x86proved.bitsrep x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.SPred x86proved.septac.
+Require Import x86proved.bitsrep x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.spred x86proved.septac.
 Require Import x86proved.x86.instr x86proved.x86.eval x86proved.monad x86proved.monadinst x86proved.reader x86proved.cursor.
 Require Import x86proved.common_tactics.
 

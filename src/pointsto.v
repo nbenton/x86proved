@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.choice Ssreflect.fintype.
 Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops x86proved.x86.procstate.
-Require Import x86proved.monad x86proved.reader x86proved.writer x86proved.roundtrip x86proved.SPred x86proved.septac x86proved.pfun x86proved.cursor x86proved.charge.iltac x86proved.charge.ilogic.
+Require Import x86proved.monad x86proved.reader x86proved.writer x86proved.roundtrip x86proved.spred x86proved.septac x86proved.pfun x86proved.cursor x86proved.charge.iltac x86proved.charge.ilogic.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

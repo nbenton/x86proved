@@ -79,7 +79,7 @@ Qed.
 Lemma cat_preActions a : forall a1 a2, preActions a1 a2 -> preActions (a++a1) (a++a2). 
 Proof. induction a => // a1 a2 [a' ->]. exists a'. by rewrite catA. Qed.
 
-Require Import Coq.Setoids.Setoid x86proved.charge.CSetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
+Require Import Coq.Setoids.Setoid x86proved.charge.csetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Instance ActionsEquiv : Equiv Actions := {
    equiv a1 a2 := a1 = a2
