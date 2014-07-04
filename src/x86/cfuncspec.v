@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros x86proved.x86.call.
+Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros x86proved.x86.call.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.spectac.
 Require Import Coq.Numbers.NaryFunctions.
 Require Import x86proved.x86.cfunc.
@@ -14,6 +14,7 @@ Import Prenex Implicits.
 
 Local Open Scope instr_scope.
 
+(*
 (* Create special purpose lemma just to use sbazooka below *)
 Lemma SAFEY (P P' Q Q': SPred) :
   P |-- P' ->
@@ -36,6 +37,7 @@ setoid_rewrite H1.
 setoid_rewrite H2.
 done.
 Qed.
+*)
 
 
 (*---------------------------------------------------------------------------
@@ -67,15 +69,18 @@ Fixpoint scratchedExcept r (rs: seq NonSPReg) : SPred :=
 (*---------------------------------------------------------------------------
     What does it mean to be a function pointer with a particular
     signature, calling convention and specification?
+
+    For now, no output.
   ---------------------------------------------------------------------------*)
 
 Definition fastcall_void1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 false)) : spec :=
   Forall v:DWORD,
   Forall sp:DWORD,
   Forall iret:DWORD,
+  Forall O, 
   (
-    safe @ (EIP ~= iret ** ECX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** post FS v) -->>
-    safe @ (EIP ~= f    ** ECX ~= v ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS  v)
+    obs O @ (EIP ~= iret ** ECX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** post FS v) -->>
+    obs O @ (EIP ~= f    ** ECX ~= v ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS  v)
   )
   @ (EAX? ** EDX? ** OSZCP?).
 
@@ -83,9 +88,10 @@ Definition fastcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : s
   Forall arg:DWORD,
   Forall sp:DWORD,
   Forall iret:DWORD,
+  Forall O,
   (
-    safe @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ECX?       ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** snd (post FS arg)) -->>
-    safe @ (EIP ~= f    ** EAX?          ** ECX ~= arg ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS arg)
+    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ECX?       ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** snd (post FS arg)) -->>
+    obs O @ (EIP ~= f    ** EAX?          ** ECX ~= arg ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS arg)
   )
   @ (EDX? ** OSZCP?).
 
@@ -95,9 +101,10 @@ Definition stdcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : sp
   Forall sp:DWORD,
   Forall iret:DWORD,
   Forall ebp:DWORD,
+  Forall O, 
   (
-    safe @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
-    safe @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
+    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
+    obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
   )
   @ (EBP ~= ebp ** ECX? ** EDX? ** OSZCP? ** sp-#12 :-> ?:DWORD).
 
@@ -105,9 +112,10 @@ Definition cdecl_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec
   Forall arg:DWORD,
   Forall sp:DWORD,
   Forall iret:DWORD,
+  Forall O,
   (
-    safe @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp-#8 ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
-    safe @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
+    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp-#8 ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
+    obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
   )
   @ (ECX? ** EDX? ** OSZCP?).
 
@@ -138,7 +146,7 @@ Lemma fastcall_nonvoid1_defCorrect (f f': DWORD) FS FI :
 Proof.
 rewrite /fastcall_nonvoid1_impMeetsSpec/fastcall_nonvoid1_spec/def_fast.
 move => H.
-specintros => arg sp iret.
+specintros => arg sp iret O.
 autorewrite with push_at.
 unfold_program. specintros => i'.
 
@@ -152,14 +160,15 @@ by rewrite toNat_zeroExtend addB0.
 Qed.
 
 (* Push/pop idiom. It would be nice to have an anti-frame rule so we don't need to mention r in the frame *)
-Lemma pushpop_rule (r:NonSPReg) c P Q :
-  |-- basic P c Q ->
-  |-- Forall esp:DWORD, Forall v:DWORD, basic P (PUSH r;; c;; POP r) Q @ (r ~= v ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
+Lemma pushpop_rule (r:NonSPReg) c P O Q :
+  |-- basic P c O Q ->
+  |-- Forall esp:DWORD, Forall v:DWORD, basic P (PUSH r;; c;; POP r) O Q @ (r ~= v ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
 Proof.
 move => H.
 specintro => esp. specintro => v.
 autorewrite with push_at. specintro => old.
-basicapply PUSH_R_rule.
+eapply basic_seq. setoid_rewrite -> empOPL. reflexivity. 
+basicapply PUSH_R_rule.  
 basicapply H.
 try_basicapply POP_R_rule.
 autorewrite with bitsHints.
@@ -168,14 +177,16 @@ Qed.
 
 (* Stack frame idiom *)
 
-Lemma stackframe_rule c P Q ebp esp :
-  |-- basic (P ** EBP ~= esp-#4) c (Q ** EBP?) ->
-  |-- basic P (PUSH EBP;; MOV EBP, ESP;; c;; POP EBP) Q @ (EBP ~= ebp ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
+Lemma stackframe_rule c P O Q ebp esp :
+  |-- basic (P ** EBP ~= esp-#4) c O (Q ** EBP?) ->
+  |-- basic P (PUSH EBP;; MOV EBP, ESP;; c;; POP EBP) O Q @ (EBP ~= ebp ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
 Proof.
 move => H.
 
 autorewrite with push_at. specintro => old.
+eapply basic_seq. setoid_rewrite -> empOPL. reflexivity. 
 basicapply PUSH_R_rule.
+eapply basic_seq. setoid_rewrite -> empOPL. reflexivity. 
 try_basicapply MOV_RanyR_rule. rewrite /stateIsAny. sbazooka.
 basicapply H.
 unhideReg EBP => oldebp.
@@ -203,7 +214,8 @@ set C := (PUSH EBP;; _).
 unfold_program. specintro => f''.
 
 (* It's rather unpleasant that we have to do this! *)
-specapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?)
+specintro => O. 
+specapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?) empOP
                                           (snd (post FS arg) ** EAX ~= fst (post FS arg) ** ECX? ** EDX? ** OSZCP? ** sp-#4 :-> ?:DWORD) ebp (sp-#8)).
 
 split; last first. rewrite /C. by ssimpl.
@@ -219,7 +231,7 @@ rewrite -(toNatK (zeroExtend _ _)). rewrite toNat_zeroExtend. rewrite toNat_from
 autorewrite with bitsHints. replace (ESP~=_) with (ESP~=sp) by done.
 sbazooka.
 
-specintros => i j. specapply H. ssimpl.
+specintros => i j O'. specapply H. ssimpl.
 autorewrite with bitsHints. set A := (_ :-> arg). sbazooka.
 
 rewrite <-spec_reads_frame. autorewrite with push_at.
@@ -253,10 +265,11 @@ Definition calleeSpec_fastcall2 (f: DWORD) (P Q: DWORD -> DWORD -> SPred) : spec
   Forall v:DWORD,
   Forall w:DWORD,
   Forall sp:DWORD,
-  Forall iret:DWORD,
+  Forall iret:DWORD,  
+  Forall O,
   (
-    safe @ (EIP ~= iret ** ECX?     ** EDX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** Q v w) -->>
-    safe @ (EIP ~= f    ** ECX ~= v ** EDX ~= w ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** P v w)
+    obs O @ (EIP ~= iret ** ECX?     ** EDX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** Q v w) -->>
+    obs O @ (EIP ~= f    ** ECX ~= v ** EDX ~= w ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** P v w)
   )
   @ EAX?.
 
