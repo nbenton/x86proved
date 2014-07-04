@@ -1,6 +1,6 @@
-Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple.
-Require Import bitsrep bitsprops.
-Require Import program.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.bitsprops.
+Require Import x86proved.x86.program.
 
 Require Import stringbuff.
 Require Import compiler.

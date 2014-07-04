@@ -1,10 +1,10 @@
 (*===========================================================================
     Assembler for type [program]. Import this and call [assemble_program].
   ===========================================================================*)
-Require Import ssreflect ssrnat ssrbool seq eqtype tuple.
-Require Import tuplehelp bitsrep bitsops mem reg instr instrsyntax cursor update.
-Require Import program x86proved.monad x86proved.monadinst writer.
-Require Import SPred septac pointsto reader roundtrip programassem codec bitreader instrcodec.
+Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.seq Ssreflect.eqtype Ssreflect.tuple.
+Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.cursor x86proved.update.
+Require Import x86proved.x86.program x86proved.monad x86proved.monadinst x86proved.writer.
+Require Import x86proved.SPred x86proved.septac x86proved.pointsto x86proved.reader x86proved.roundtrip x86proved.x86.programassem x86proved.codec x86proved.bitreader x86proved.x86.instrcodec.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

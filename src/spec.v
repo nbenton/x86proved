@@ -19,14 +19,14 @@
     logic, which is exactly what the higher-order frame rule allows -- see
     [spec_frame].
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrfun ssrnat eqtype tuple seq fintype.
-Require Import bitsrep procstate procstatemonad SPred septac.
-Require Import instr eval x86proved.monad x86proved.monadinst reader cursor.
-Require Import common_tactics.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.SPred x86proved.septac.
+Require Import x86proved.x86.instr x86proved.x86.eval x86proved.monad x86proved.monadinst x86proved.reader x86proved.cursor.
+Require Import x86proved.common_tactics.
 
 (* Importing this file really only makes sense if you also import ilogic, so we
    force that. *)
-Require Export ilogic later.
+Require Export x86proved.charge.ilogic x86proved.charge.later.
 Transparent ILPre_Ops.
 
 Set Implicit Arguments.

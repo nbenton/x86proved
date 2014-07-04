@@ -1,9 +1,9 @@
 (*===========================================================================
   Properties of partial finite maps
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-Require Import tuplehelp bitsrep bitsprops pmap.
-Require Export update.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype Ssreflect.tuple Ssreflect.finfun.
+Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsprops x86proved.pmap.
+Require Export x86proved.update.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

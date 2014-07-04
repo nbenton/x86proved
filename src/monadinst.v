@@ -1,14 +1,14 @@
 (*===========================================================================
     Some useful instances of Monad
   ===========================================================================*)
-Require Import ssreflect seq.
+Require Import Ssreflect.ssreflect Ssreflect.seq.
 Require Import x86proved.monad.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import FunctionalExtensionality.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 (*---------------------------------------------------------------------------
     Option monad
@@ -101,7 +101,7 @@ Section IO.
   Definition IO_write ch d : IOM unit := Out ch d (retn tt).
   Definition IO_read ch : IOM D := In ch retn.
 
-  Require Import Streams.
+  Require Import Coq.Lists.Streams.
   Fixpoint IO_run X (s:Stream D) (m: IOM X) : seq D * X :=
   match m with
   | retnIO x => (nil,x)

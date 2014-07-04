@@ -1,9 +1,9 @@
 (*===========================================================================
   Properties of bit vectors
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple fintype div zmodp ssralg.
-Require Import ZArith.
-Require Import tuplehelp bitsrep nathelp.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple Ssreflect.fintype Ssreflect.div Ssreflect.zmodp Ssreflect.ssralg.
+Require Import Coq.ZArith.ZArith.
+Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.nathelp.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

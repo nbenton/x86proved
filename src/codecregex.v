@@ -1,8 +1,8 @@
-Require Import ssreflect ssrfun seq ssrbool ssrnat fintype eqtype tuple.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.seq Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.fintype Ssreflect.eqtype Ssreflect.tuple.
 Require Import Coq.Strings.String.
-Require Import cast codec regex.
+Require Import x86proved.cast x86proved.codec x86proved.regex.
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses.
-Require Import FunctionalExtensionality.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

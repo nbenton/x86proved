@@ -1,4 +1,4 @@
-Require Import ssreflect ssrfun seq ssrbool ssrnat fintype eqtype choice.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.seq Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.fintype Ssreflect.eqtype Ssreflect.choice.
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.RelationClasses.
 
 Set Implicit Arguments.

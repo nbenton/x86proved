@@ -23,8 +23,8 @@
   Currently we emit an executable with three sections (code, data and imports), but with
   no exports or base relocations.
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple.
-Require Import bitsrep bitsops bitsopsprops x86proved.monad writer reg instr instrsyntax program programassem cursor.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsopsprops x86proved.monad x86proved.writer x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.program x86proved.x86.programassem x86proved.cursor.
 Require Import Coq.Strings.Ascii Coq.Strings.String.
 
 Set Implicit Arguments.
@@ -65,7 +65,7 @@ Infix "&&" := andB.
 
 (* Section 2.1: MSDOS Stub *)
 (* This is the minimal stub taken from the "Tiny PE" *)
-Require Import ssralg.
+Require Import Ssreflect.ssralg.
 Definition MSDOSStub: program :=
 LOCAL START; LOCAL END;
 START:;;
@@ -625,7 +625,7 @@ Definition computeRVAsIn (f: (DWORD -> program) -> program) : program :=
     f (fun VA => dd (if VA == #0 then #0 else VA - base)).
 (*=End *)
 
-Require Import pointsto SPred septac.
+Require Import x86proved.pointsto x86proved.SPred x86proved.septac.
 Lemma computeRVAsIn_interp (k: (DWORD -> program) -> program) (i:DWORD) j :
   interpProgram i j
   (k (fun VA => dd (if VA == #0 then #0 else VA - i)))

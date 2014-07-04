@@ -4,8 +4,8 @@
     See Intel IA-32 Software Developers Manual, Volume 2, Appendix B
 
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool ssrnat seq tuple eqtype.
-Require Import bitsrep bitsprops reg instr emb.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple Ssreflect.eqtype.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.x86.reg x86proved.x86.instr x86proved.emb.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -1,10 +1,10 @@
-Require Import triple.core.
+Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import x86.procstatemonad (* for [setRegInProcState] *) pmapprops (* for [updateThenLookup] *) x86.ioaction (* for [outputToActions] *).
-Require Import septac (* for [sbazoooka] *) pointsto (* for [:->] *) pfun (* for [splitsAs] *) cursor (* for [PTR >-> DWORDCursor *) writer (* for [WriterTm] *).
+Require Import x86proved.x86.procstatemonad (* for [setRegInProcState] *) x86proved.pmapprops (* for [updateThenLookup] *) x86proved.x86.ioaction (* for [outputToActions] *).
+Require Import x86proved.septac (* for [sbazoooka] *) x86proved.pointsto (* for [:->] *) x86proved.pfun (* for [splitsAs] *) x86proved.cursor (* for [PTR >-> DWORDCursor *) x86proved.writer (* for [WriterTm] *).
 
-Require Import triple.morphisms triple.roc.
+Require Import x86proved.triple.morphisms x86proved.triple.roc.
 
 Import Prenex Implicits.
 
@@ -74,6 +74,14 @@ by case E: (p == p').
 
 Qed.
 
+(** TODO(t-jagro): Add [separateSetDWORD] *)
+(*
+Lemma separateSetDWORD (p:PTR) (v w:DWORD) Q s :
+  (p:->v ** Q) (toPState s) -> (p:->w ** Q) (toPState (s!p:=w)).
+Proof.
+  move => [s1 [s2 [H1 [H2 H3]]]].
+  rewrite /pointsTo/= in H2. *)
+
 Lemma separateSetFlag (f:Flag) v w Q s :
   (f ~= v ** Q) (toPState s) -> (f ~= w ** Q) (toPState (s!f:=w)).
 Proof.
@@ -113,11 +121,9 @@ Proof.
  eapply separateSetFlag. apply H.
 Qed.
 
-Lemma triple_setRegSep (r:AnyReg) v w :
-  forall S, TRIPLE (r~=v ** S) (setRegInProcState r w) empOP (r~=w ** S).
-Proof.
-move => S s pre. eexists _, _. split => //. split => //. apply: separateSetReg pre.
-Qed.
+Lemma triple_setRegSep (r:AnyReg) v w S
+: TRIPLE (r~=v ** S) (setRegInProcState r w) empOP (r~=w ** S).
+Proof. triple_by_compute. apply: separateSetReg; eassumption. Qed.
 
 (*
 Lemma triple_setBYTERegSep r (v:DWORD) (w:BYTE) :
@@ -142,33 +148,17 @@ Lemma triple_setRegSepGen (r:AnyReg) v w P R:
   TRIPLE P (setRegInProcState r w) empOP (r~=w ** R).
 Proof. move=> HP. rewrite ->HP. apply: triple_setRegSep. Qed.
 
-Lemma triple_doSetRegSep (r:AnyReg) (v w:DWORD) c O Q :
-  forall S,
-  TRIPLE (r~=w ** S) c O Q ->
-  TRIPLE (r~=v ** S) (do! setRegInProcState r w; c) O Q.
-Proof. move => S T s pre. rewrite /TRIPLE in T.
-simpl. have H:= separateSetReg w pre.  specialize (T _ H).
-destruct T as [f [o [T]]]. exists f, o.
-by destruct (c _).
-Qed.
+Lemma triple_setFlagSep (f:Flag) v (w:bool) S
+: TRIPLE (f~=v ** S) (updateFlagInProcState f w) empOP (f~=w ** S).
+Proof. triple_by_compute. apply: separateSetFlag; eassumption. Qed.
 
-Lemma triple_doSetFlagSep (f:Flag) v (w:bool) c O Q :
-  forall S,
-  TRIPLE (f~=w ** S) c O Q ->
-  TRIPLE (f~=v ** S) (do! updateFlagInProcState f w; c) O Q.
-Proof. move => S T s pre. rewrite /TRIPLE in T.
-simpl. have H:= separateSetFlag w pre. specialize (T _ H).
-destruct T as [fs [o T]]. exists fs, o.
-by destruct (c _). Qed.
+Lemma triple_forgetFlagSep (f:Flag) v S
+: TRIPLE (f~=v ** S) (forgetFlagInProcState f) empOP (f? ** S).
+Proof. triple_by_compute. apply: separateForgetFlag; eassumption. Qed.
 
-Lemma triple_doForgetFlagSep (f:Flag) v c O Q :
-  forall S,
-  TRIPLE (f? ** S) c O Q ->
-  TRIPLE (f~=v ** S) (do! forgetFlagInProcState f; c) O Q.
-Proof. move => S T s pre. rewrite /TRIPLE in T.
-simpl. have H:=separateForgetFlag pre. specialize (T _ H).
-destruct T as [fs [o T]]. exists fs, o.
-by destruct (c _). Qed.
+Lemma triple_forgetFlagSep' (f : Flag) v S
+: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) empOP ((Exists v, f ~= v) ** S).
+Proof. exact (@triple_forgetFlagSep f v S). Qed.
 
 Lemma byteIsMapped (p:PTR) (v: BYTE) S s :
   (byteIs p v ** S) (toPState s) -> isMapped p s.
@@ -182,17 +172,15 @@ specialize (H4 (Some v) (refl_equal _)).
 inversion H4. rewrite /isMapped H0. done.
 Qed.
 
-Lemma triple_setBYTESep (p:PTR) (v w:BYTE) :
-  forall S,
-  TRIPLE (p:->v ** S) (setBYTEInProcState p w) empOP (p:->w ** S).
+Lemma triple_setBYTESep (p:PTR) (v w:BYTE) S
+: TRIPLE (p:->v ** S) (setBYTEInProcState p w) empOP (p:->w ** S).
 Proof.
-move => S.
-rewrite 2!pointsToBYTE_byteIs.
-
-move => s pre. rewrite /setBYTEInProcState/setInProcState/writeMem/=.
-rewrite (byteIsMapped pre).
-eexists _, _.
-split => //. split => //. apply: (separateSetBYTE _ pre).
+  rewrite 2!pointsToBYTE_byteIs.
+  triple_by_compute.
+  rewrite /=/writeMem/=.
+  erewrite byteIsMapped by eassumption.
+  split; first by reflexivity.
+  apply: separateSetBYTE; eassumption.
 Qed.
 
 Lemma triple_setBYTEbind (v w: BYTE) (p: DWORD) Q (W: WriterTm unit) Q' :
@@ -223,8 +211,9 @@ exists f'.
 by case E: (writeMemTm W _ _) => [[p' m] |]; rewrite E in H.
 Qed.
 
-Lemma triple_setDWORDSep (p:PTR) (v w:DWORD) S:
-  TRIPLE (p:->v ** S) (setDWORDInProcState p w) empOP (p:->w ** S).
+(** TODO(t-jagro): Maybe write [separateSetDWORD] and make this proof shorter. *)
+Lemma triple_setDWORDSep (p:PTR) (v w:DWORD) S
+: TRIPLE (p:->v ** S) (setDWORDInProcState p w) empOP (p:->w ** S).
 Proof.
 elim Ev: (@split4 8 8 8 8 v) => [[[v3 v2] v1] v0].
 elim Ew: (@split4 8 8 8 8 w) => [[[w3 w2] w1] w0].
@@ -267,17 +256,3 @@ Qed.
 Lemma triple_setDWORDorBYTESep dword (p:PTR) (v w: DWORDorBYTE dword) S :
   TRIPLE (p:->v ** S) (setDWORDorBYTEInProcState p w) empOP (p:->w ** S).
 Proof. destruct dword. apply triple_setDWORDSep. apply triple_setBYTESep. Qed.
-
-Lemma triple_doSetDWORDSep (p:PTR) (v w: DWORD) c O Q S :
-  TRIPLE (p:->w ** S) c O Q ->
-  TRIPLE (p:->v ** S) (do! setDWORDInProcState p w; c) O Q.
-Proof. move => T s pre.
-destruct (triple_setDWORDSep w pre) as [f [o [H1 [H3 H2]]]].
-specialize (T _ H2).
-destruct T as [f' [o' [H4 H5]]]. exists f'. rewrite /= H1.
-eexists _.
-destruct (c f). destruct H5. split => //. injection H4 => -> ->.
-simpl in H, H3. subst. done. intuition. simpl in H3.
-rewrite /=/outputToActions in H, H3.
-rewrite /outputToActions. rewrite map_cat. by setoid_rewrite <- H3.
-Qed.

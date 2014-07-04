@@ -2,9 +2,9 @@
   Arithmetic and logical operations on n-bit words
   For proofs of properties of operations see bitsopsprops.v
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple.
-Require Import bitsrep.
-Require Import common_definitions.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.bitsrep.
+Require Import x86proved.common_definitions.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

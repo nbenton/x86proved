@@ -1,9 +1,9 @@
  (*===========================================================================
   Proofs of properties of arithmetic and logical operations on n-bit words
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple zmodp fintype.
-Require Import tuplehelp bitsrep bitsprops bitsops div nathelp.
-Require Import common_tactics common_definitions.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple Ssreflect.zmodp Ssreflect.fintype.
+Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsprops x86proved.bitsops Ssreflect.div x86proved.nathelp.
+Require Import x86proved.common_tactics x86proved.common_definitions.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -190,7 +190,7 @@ destruct b. simpl. by rewrite uphalf_double.
 by rewrite add0n half_double.
 Qed.
 
-Require Import ssralg.
+Require Import Ssreflect.ssralg.
 Import GRing.Theory.
 
 (*---------------------------------------------------------------------------
@@ -1511,7 +1511,7 @@ Qed.
 (*---------------------------------------------------------------------------
     Algebraic structures
   ---------------------------------------------------------------------------*)
-Require Import choice fintype fingroup finalg.
+Require Import Ssreflect.choice Ssreflect.fintype Ssreflect.fingroup Ssreflect.finalg.
 Section Structures.
 
 Variable n:nat.

@@ -11,7 +11,7 @@
   Definitions of operations on bitvectors can be found in bitsops.v
   Proofs of properties of operations can be found in bitsopsprops.v
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple fintype zmodp.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple Ssreflect.fintype Ssreflect.zmodp.
 Require Import Coq.ZArith.ZArith Coq.Strings.String.
 
 (* We represent n-bit words by a tuple of booleans, least-significant bit at the head *)

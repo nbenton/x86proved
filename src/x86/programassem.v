@@ -1,9 +1,9 @@
 (*===========================================================================
     Assembler for type [program]. Import this and call [assemble_program].
   ===========================================================================*)
-Require Import ssreflect ssrnat ssrbool seq eqtype tuple.
-Require Import tuplehelp bitsrep bitsops mem reg instr instrsyntax instrcodec cursor update.
-Require Import program x86proved.monad x86proved.monadinst writer.
+Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.seq Ssreflect.eqtype Ssreflect.tuple.
+Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.cursor x86proved.update.
+Require Import x86proved.x86.program x86proved.monad x86proved.monadinst x86proved.writer.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -26,7 +26,7 @@ Definition getPos: ST DWORD :=
   let! pos = assemblerLift getWCursor;
   if pos is mkCursor c then retn c else writerFail.
 
-Require Import pmap.
+Require Import x86proved.pmap.
 Fixpoint countDecLabels (p: program) : nat :=
   match p with
   | prog_seq p1 p2 => countDecLabels p1 + countDecLabels p2

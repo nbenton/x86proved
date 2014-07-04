@@ -1,9 +1,9 @@
 (*===========================================================================
     Syntax for writers, with instances for BYTE and DWORD
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple.
-Require Import bitsrep bitsops bitsopsprops cursor x86proved.monad x86proved.monadinst.
-Require Import FunctionalExtensionality Coq.Strings.String cstring.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsopsprops x86proved.cursor x86proved.monad x86proved.monadinst.
+Require Import Coq.Logic.FunctionalExtensionality Coq.Strings.String x86proved.cstring.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

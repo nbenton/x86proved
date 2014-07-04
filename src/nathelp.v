@@ -1,7 +1,7 @@
 (*---------------------------------------------------------------------------
     Various helpers for halving, double and powers of 2
   ---------------------------------------------------------------------------*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple zmodp fintype div.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.tuple Ssreflect.zmodp Ssreflect.fintype Ssreflect.div.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

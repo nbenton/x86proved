@@ -1,9 +1,9 @@
-Require Import triple.core.
+Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import x86.ioaction (* for [outputToActions] *).
+Require Import x86proved.x86.ioaction (* for [outputToActions] *).
 
-Require Import triple.roc.
+Require Import x86proved.triple.roc.
 
 Import Prenex Implicits.
 

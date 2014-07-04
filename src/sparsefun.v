@@ -397,7 +397,7 @@ Fixpoint fromFunAux {A} n start (g: nat -> option A) :SFun A :=
 
 Definition fromFun {A} n (g: nat -> option A) := fromFunAux n 0 g.
 
-Require Import Omega.
+Require Import Coq.omega.Omega.
 Lemma fromFunAuxCorrect {A} n :
   forall start (g: nat -> option A),
   forall x, (x < n -> fromFunAux n start g x = g (start+x))

@@ -1,6 +1,6 @@
-Require Import ssreflect ssrfun ssrbool eqtype choice seq.
-Require Import generic_quotient.
-Require Import program instr.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.choice Ssreflect.seq.
+Require Import Ssreflect.generic_quotient.
+Require Import x86proved.x86.program x86proved.x86.instr.
 
 Local Open Scope quotient_scope.
 

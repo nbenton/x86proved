@@ -1,8 +1,8 @@
 (** * MOV instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import spectac (* for [unhideReg] *).
+Require Import x86proved.spectac (* for [unhideReg] *).
 
 (** ** Generic rule *)
 Lemma MOV_rule d ds oldv:

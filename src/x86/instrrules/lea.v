@@ -1,8 +1,8 @@
 (** * LEA instruction *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import x86.eval (* for [scaleBy] *).
+Require Import x86proved.x86.eval (* for [scaleBy] *).
 
 Lemma LEA_ruleSameBase (v indexval offset: DWORD) (r: Reg) (r1:NonSPReg) sc :
   |-- basic (r ~= v ** r1 ~= indexval)

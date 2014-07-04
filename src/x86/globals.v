@@ -1,11 +1,11 @@
 (*===========================================================================
   A first attempt at defining "modules" that export entry points
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrfun ssrnat tuple seq eqtype fintype.
-Require Import bitsrep bitsprops bitsops bitsopsprops instr instrrules procstate
-        instrsyntax eval monad enc instrcodec tuplehelp.
-Require Import SPred septac spec spectac safe basic program macros programassem programassemcorrect.
-Require Import reader pointsto cursor.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.tuple Ssreflect.seq Ssreflect.eqtype Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops x86proved.bitsopsprops x86proved.x86.instr x86proved.x86.instrrules x86proved.x86.procstate
+        x86proved.x86.instrsyntax x86proved.x86.eval x86proved.monad x86proved.enc x86proved.x86.instrcodec x86proved.tuplehelp.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.program x86proved.x86.macros x86proved.x86.programassem x86proved.x86.programassemcorrect.
+Require Import x86proved.reader x86proved.pointsto x86proved.cursor.
 Require Import Coq.Classes.Morphisms.
 Set Implicit Arguments.
 Unset Strict Implicit.

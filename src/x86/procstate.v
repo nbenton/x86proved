@@ -1,9 +1,9 @@
 (*===========================================================================
     Processor state: registers, flags and memory
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool finfun fintype.
-Require Export update reg regstate flags mem bitsrep.
-Require Import bitsops.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype.
+Require Export x86proved.update x86proved.x86.reg x86proved.x86.regstate x86proved.x86.flags x86proved.x86.mem x86proved.bitsrep.
+Require Import x86proved.bitsops.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

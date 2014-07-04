@@ -1,10 +1,10 @@
 (*===========================================================================
   Factorial example, from Section 1.1 of the PPDP 2013 submission
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrfun ssrnat eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec safe basic program macros call.
-Require Import instr instrsyntax instrcodec instrrules reader pointsto cursor programassem.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.program x86proved.x86.macros x86proved.x86.call.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.programassem.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -1,8 +1,8 @@
 (*===========================================================================
     State of the registers
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype seq fintype finfun .
-Require Import reg bitsrep update.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.finfun .
+Require Import x86proved.x86.reg x86proved.bitsrep x86proved.update.
 Local Open Scope update_scope.
 
 (* State of the registers, including IP and flags *)
@@ -24,7 +24,7 @@ Proof. rewrite /update /RegStateUpdateOps.
 by rewrite (introT (eqP) (refl_equal _)).
 Qed.
 
-Require Import FunctionalExtensionality.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Instance RegStateUpdate : Update RegState AnyReg DWORD.
 apply Build_Update.

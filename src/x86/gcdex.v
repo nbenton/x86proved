@@ -1,10 +1,10 @@
-Require Import ssreflect ssrbool ssrnat eqtype seq finfun tuple fintype.
-Require Import bitsrep ilogic.
-Require Import program programassem programassemcorrect imp call.
-Require Import reader SPred OPred septac pointsto spec spectac basic reg.
-Require Import cursor obs instrrules.
-Require Import instr instrsyntax macros Ascii bitsops bitsprops bitsopsprops.
-Require Import screenspec screenimp lifeimp.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.finfun Ssreflect.tuple Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.charge.ilogic.
+Require Import x86proved.x86.program x86proved.x86.programassem x86proved.x86.programassemcorrect x86proved.x86.imp x86proved.x86.call.
+Require Import x86proved.reader x86proved.SPred x86proved.OPred x86proved.septac x86proved.pointsto x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.reg.
+Require Import x86proved.cursor x86proved.obs x86proved.x86.instrrules.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.macros Coq.Strings.Ascii x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.x86.screenspec x86proved.x86.screenimp x86proved.x86.lifeimp.
 
 Open Scope instr_scope.
 Local Transparent ILFun_Ops.

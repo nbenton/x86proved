@@ -293,3 +293,36 @@ Ltac specialize_all_ways :=
   repeat match goal with
            | [ x : ?T, H : _ |- _ ] => unique pose proof (H x)
          end.
+
+(** Run [hnf] underneath one set of binders in [x], eta-expanding once if necessary *)
+(** In 8.5, this will be simpler:
+<<
+Ltac do_under_binders tac term := constr:(fun y => $(let z := tac (term y) in exact z)$).
+Ltac hnf_under_binders term := do_under_binders ltac:(fun x => eval hnf in x) term.
+>> *)
+Class hnf_under_binders_helper {T P} (y : T) (z : P y) := make_hnf_under_binders_helper : P y.
+Arguments hnf_under_binders_helper {T P} y z / .
+Hint Extern 0 (hnf_under_binders_helper ?y ?z) => let z' := (eval hnf in z) in exact z' : typeclass_instances.
+
+Ltac hnf_under_binders x :=
+  let x' := constr:(fun y => _ : hnf_under_binders_helper y (x y)) in
+  eval unfold hnf_under_binders_helper in x'.
+
+(** Run [hnf] underneath all binders in [x], eta-expanding as much as possible at top level *)
+(** In 8.5, this will be simpler:
+<<
+Ltac hnf_under_all_binders term :=
+  match term with
+    | _ => do_under_binders hnf_under_all_binders term
+    | _ => eval hnf in term
+  end.
+>> *)
+Class hnf_under_all_binders_helper {T P} (y : T) (z : P y) := make_hnf_under_all_binders_helper : P y.
+Arguments hnf_under_all_binders_helper {T P} y z / .
+Ltac hnf_under_all_binders x :=
+  let x' := match x with
+              | _ => constr:(fun y => _ : hnf_under_all_binders_helper y (x y))
+              | _ => (eval hnf in x)
+            end in
+  eval unfold hnf_under_all_binders_helper in x'.
+Hint Extern 0 (hnf_under_all_binders_helper ?y ?z) => let z' := hnf_under_all_binders z in exact z' : typeclass_instances.

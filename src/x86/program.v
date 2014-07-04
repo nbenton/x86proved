@@ -1,5 +1,5 @@
-Require Import ssreflect ssrbool ssrnat eqtype seq fintype.
-Require Import bitsrep instr instrsyntax instrcodec SPred pointsto cursor reader writer roundtrip.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
+Require Import x86proved.bitsrep x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.SPred x86proved.pointsto x86proved.cursor x86proved.reader x86proved.writer x86proved.roundtrip.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -15,7 +15,7 @@ Inductive program :=
 Coercion prog_instr: Instr >-> program.
 (*=End *)
 
-Require Import tuple.
+Require Import Ssreflect.tuple.
 
 (* Instructions in instrsyntax are up to level 60, so delimiters need to be
    above that. *)
@@ -74,7 +74,7 @@ Fixpoint interpProgram i j prog :=
   | prog_data _ _ _ _ v => i -- j :-> v
   end.
 
-Require Import septac.
+Require Import x86proved.septac.
 Lemma interpProgramLeAux prog : forall p q, interpProgram p q prog |-- leCursor p q /\\ interpProgram p q prog.
 Proof.
 induction prog => p q; rewrite /interpProgram-/interpProgram.
@@ -304,7 +304,7 @@ Global Instance progEq_decLabel_m:
 Proof. move => f1 f2 EQ. by apply progEqDecLabel. Qed.
 
 (* Main lemma: memIs respects progEq *)
-Require Import septac.
+Require Import x86proved.septac.
 Lemma memIsProgEquiv p1 p2 : progEq p1 p2 -> forall (l l':DWORD), l -- l' :-> p1 -|- l -- l' :-> p2.
 Proof. move => EQ. induction EQ => l l'.
 (* progEqRefl *)

@@ -2,11 +2,11 @@
   Macros for defining and calling functions using x86 calling conventions
   used by C compilers.
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrfun ssrnat eqtype seq fintype tuple.
-Require Import procstate procstatemonad bitsrep bitsops bitsprops bitsopsprops.
-Require Import SPred septac spec safe basic program macros call.
-Require Import instr instrsyntax.
-Require Import NaryFunctions.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
+Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
+Require Import x86proved.SPred x86proved.septac x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.program x86proved.x86.macros x86proved.x86.call.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax.
+Require Import Coq.Numbers.NaryFunctions.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

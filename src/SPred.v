@@ -2,21 +2,21 @@
     Predicates over system state: actually predicates over a subset of
     processor state, in order to define separating conjunction nicely.
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype fintype finfun seq tuple.
-Require Import bitsrep pfun reg mem flags.
-Require Import pmap pmapprops.
-Require Import Coq.Setoids.Setoid CSetoid Coq.Classes.Morphisms.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.pfun x86proved.x86.reg x86proved.x86.mem x86proved.x86.flags.
+Require Import x86proved.pmap x86proved.pmapprops.
+Require Import Coq.Setoids.Setoid x86proved.charge.CSetoid Coq.Classes.Morphisms.
 
 
 (* Importing this file really only makes sense if you also import ilogic, so we
    force that. *)
-Require Export ilogic bilogic ilogicss sepalg.
+Require Export x86proved.charge.ilogic x86proved.charge.bilogic x86proved.ilogicss x86proved.charge.sepalg.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Require Import FunctionalExtensionality.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 (*---------------------------------------------------------------------------
     Define partial states and lift definitions and lemmas from partial functions

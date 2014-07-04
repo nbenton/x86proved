@@ -1,7 +1,7 @@
 (*===========================================================================
   C-style zero-terminated strings
   ===========================================================================*)
-Require Import ssreflect ssrbool ssrfun ssrnat eqtype.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype.
 Require Import Coq.Strings.Ascii Coq.Strings.String.
 
 Set Implicit Arguments.

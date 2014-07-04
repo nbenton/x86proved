@@ -10,9 +10,9 @@
     regions of memory not all of which are accessible under given permissions,
     and the re-use of partiality for separation would preclude this.
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrnat ssrbool finfun eqtype fintype seq.
-Require Import bitsrep bitsops cursor reader writer.
-Require Export pmap.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.finfun Ssreflect.eqtype Ssreflect.fintype Ssreflect.seq.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.cursor x86proved.reader x86proved.writer.
+Require Export x86proved.pmap.
 Local Open Scope update_scope.
 
 Set Implicit Arguments.

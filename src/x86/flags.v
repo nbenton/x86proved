@@ -1,8 +1,8 @@
 (*===========================================================================
     Model for x86 flags
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat tuple.
-Require Import bitsrep bitsops update.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.update.
 Local Open Scope update_scope.
 
 (* Represent a flag finitely! *)
@@ -37,7 +37,7 @@ Proof. rewrite /update /FlagStateUpdateOps.
 by rewrite (introT (eqP) (refl_equal _)).
 Qed.
 
-Require Import FunctionalExtensionality.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Instance FlagStateUpdate : Update FlagState Flag FlagVal.
 apply Build_Update.

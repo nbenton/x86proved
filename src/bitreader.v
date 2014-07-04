@@ -6,9 +6,9 @@
 
     We also provide an implementation in terms of BYTE readers.
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool finfun fintype ssrnat eqtype seq tuple div.
-Require Import bitsrep bitsprops bitsops bitsopsprops cursor x86proved.monad reader.
-Require Import FunctionalExtensionality.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.tuple Ssreflect.div.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops x86proved.bitsopsprops x86proved.cursor x86proved.monad x86proved.reader.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

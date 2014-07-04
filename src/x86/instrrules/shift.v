@@ -1,8 +1,8 @@
 (** * SHL and SHR instructions *)
-Require Import x86.instrrules.core.
+Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import bitsopsprops (* for [dropmsb_iter_shlB] *).
+Require Import x86proved.bitsopsprops (* for [dropmsb_iter_shlB] *).
 
 (** Lazy man's proof *)
 Lemma SmallCount : forall count, count < 32 -> toNat (n:=8) (andB #x"1f" (fromNat count)) = count.

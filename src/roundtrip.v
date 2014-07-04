@@ -1,8 +1,8 @@
 (*===========================================================================
     Round trip properties for readers and writers
   ===========================================================================*)
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple finfun.
-Require Import bitsrep bitsprops x86proved.monad reader cursor writer Coq.Strings.String cstring.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype Ssreflect.tuple Ssreflect.finfun.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.monad x86proved.reader x86proved.cursor x86proved.writer Coq.Strings.String x86proved.cstring.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -117,7 +117,7 @@ Qed.
 Instance RoundtripPad m : Roundtrip (readPad m) (writePad m).
 Proof. apply RoundtripPadWith. Qed.
 
-Require Import tuplehelp.
+Require Import x86proved.tuplehelp.
 Instance RoundtripTupleBYTE m : Roundtrip (readTupleBYTE m) (@writeTupleBYTE m).
 Proof.
   induction m => v p.
