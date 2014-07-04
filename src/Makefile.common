@@ -11,6 +11,7 @@ charge\bilogic.vo \
 charge\later.vo \
 common_tactics.vo \
 common_definitions.vo \
+pointed.vo \
 cstring.vo \
 update.vo \
 monad.vo \
