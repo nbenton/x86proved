@@ -95,4 +95,3 @@ Proof. case; [case; [case; done | done] | done]. Qed.
 
 Definition AnyReg_finMixin := Eval hnf in FinMixin AnyReg_enumP.
 Canonical AnyReg_finType :=  Eval hnf in FinType _ AnyReg_finMixin.
-

@@ -138,7 +138,3 @@ elim => [z | z].
 case E: (downcast d y) => [x |]//.
 case E: (downcast d y) => [x |]//. move => [<-]. by rewrite (castinv E).
 Defined.
-
-
-
-

@@ -219,7 +219,7 @@ Section LogicLemmas.
     autorewrite with push_at. case: e.
     - move=> x.
       eapply basic_basic; first apply MOV_RanyR_rule.
-      - rewrite ->regs_read_var. by ssimpl. 
+      - rewrite ->regs_read_var. by ssimpl.
       rewrite /eeval. ssimpl. exact: sepSPwand.
     - move=> value.
       eapply basic_basic; first apply MOV_RanyI_rule; reflexivity.
@@ -227,11 +227,11 @@ Section LogicLemmas.
       eapply basic_seq; first try done.
       - eapply basic_basic; first apply MOV_RanyR_rule.
         + rewrite ->regs_read_var. by ssimpl.
-        done. 
+        done.
       eapply basic_basic; first apply SUB_RR_rule.
-      - ssimpl. rewrite ->sepSPwand. rewrite ->regs_read_var. by ssimpl. 
+      - ssimpl. rewrite ->sepSPwand. rewrite ->regs_read_var. by ssimpl.
       elim E: (sbbB false (s x) (s y)) => [carry res].
-      rewrite /OSZCP /stateIsAny. sbazooka. 
+      rewrite /OSZCP /stateIsAny. sbazooka.
       rewrite sepSPA. rewrite ->sepSPwand. cancel2. rewrite /eeval.
       by rewrite E/snd.
     - move=> x y. rewrite /compile_expr.

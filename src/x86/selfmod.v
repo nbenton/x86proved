@@ -425,4 +425,3 @@ ssimpl.
 rewrite /regAny. sbazooka.  ssimpl. apply: landL2.  autorewrite with push_at. rewrite <- spec_later_weaken.
 sbazooka. reflexivity. plit.
 ssimpl.  sbazooka. rewrite / sbazooka. Qed.
-

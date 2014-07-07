@@ -25,4 +25,3 @@ Example askDLL :=
     pat:;; dsz "%d";;  res:;; dd 0.
 Compute makeDLL #x"00AC0000" "ask.dll" askDLL.
 (*=End *)
-

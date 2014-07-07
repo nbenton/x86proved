@@ -14,8 +14,8 @@ Example safe_loop (p q: DWORD) O :
   |-- obs O @ (EIP ~= p ** p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
-  have H := @JMP_I_rule p p q. 
-  Require Import spectac. apply (lforallE_spec O) in H. cbv beta in H.  
+  have H := @JMP_I_rule p p q.
+  Require Import spectac. apply (lforallE_spec O) in H. cbv beta in H.
   rewrite ->spec_reads_entails_at in H; [|apply _].
   autorewrite with push_at in H. apply landAdj in H.
   etransitivity; [|apply H]. apply: landR; [sbazooka | reflexivity].
@@ -26,10 +26,10 @@ Example basic_loop:
   |-- basic empSP (LOCAL l; l:;; JMP l) empOP lfalse.
 Proof.
   rewrite /basic. specintros => i j O'.
-  unfold_program. specintros => _ _ <- <-. 
+  unfold_program. specintros => _ _ <- <-.
   rewrite /spec_reads. specintros => code Hcode.
-  autorewrite with push_at. 
-  apply: limplAdj. apply: landL1. rewrite -> Hcode.  
+  autorewrite with push_at.
+  apply: limplAdj. apply: landL1. rewrite -> Hcode.
   etransitivity; [apply safe_loop|]. rewrite ->empOPL. cancel2. reflexivity. eexists _. split; by ssimpl.
 Qed.
 
@@ -73,14 +73,13 @@ Proof.
     rewrite ->(eqP Hzero) in *. rewrite add0B in Hadd.
     subst a'. rewrite /ConditionIs/stateIsAny. by sbazooka.
   - specintros => b1 b2. subst I; cbv beta. specintros => c' a' Hzero Hadd.
-    eapply basic_basic. exact (TEST_self_rule (v:= c')).  
+    eapply basic_basic. exact (TEST_self_rule (v:= c')).
     + rewrite /ConditionIs/stateIsAny. by sbazooka.
     rewrite /OSZCP/ConditionIs/stateIsAny. by sbazooka.
   - subst I; cbv beta. specintros => c' a' Hzero Hadd.
-    rewrite /stateIsAny. specintros => fo fs fc fp. 
+    rewrite /stateIsAny. specintros => fo fs fc fp.
     try_basicapply DEC_R_rule. + by rewrite /OSZCP/ConditionIs; ssimpl.
     try_basicapply INC_R_rule. + by rewrite addB_decB_incB.
     rewrite /OSZCP/ConditionIs.
     sbazooka.
 Qed.
-

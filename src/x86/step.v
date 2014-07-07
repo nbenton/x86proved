@@ -16,7 +16,7 @@ Definition decodeAndAdvance : ST Instr :=
   let! (instr,newIP) = readFromProcState oldIP;
   do! setRegInProcState EIP newIP;
   retn instr.
-  
+
 (*=step *)
 Definition step : ST unit :=
   let! instr = decodeAndAdvance;
@@ -24,180 +24,179 @@ Definition step : ST unit :=
 (*=End *)
 
 (* Labelled transition from s to s' with actions o *)
-Definition oneStep s o s' := 
+Definition oneStep s o s' :=
   exists output, o = outputToActions output /\ step s = (output, Success _ (s', tt)).
 
 (* Takes k steps from s to s' with events o *)
-Fixpoint manyStep k s o s' := 
+Fixpoint manyStep k s o s' :=
   if k is k'.+1
   then exists s'' o1 o2, o = o1 ++ o2 /\ oneStep s o1 s'' /\ manyStep k' s'' o2 s'
-  else o = nil /\ s = s'. 
+  else o = nil /\ s = s'.
 
 Lemma doManyStep k : forall s o s', (exists out, outputToActions out = o /\
   doMany k step s = (out, Success _ (s',tt))) <-> manyStep k s o s'.
-Proof. induction k => /= s o s'. 
-split. - by move => [out [<- [<- ->]]]. 
-- move => [H1 H2]. exists nil. by subst. 
+Proof. induction k => /= s o s'.
+split. - by move => [out [<- [<- ->]]].
+- move => [H1 H2]. exists nil. by subst.
 
-case E: (step s) => [s0 x]. 
-split. move => [out [H1 H2]].  
-destruct x => //. destruct x => //. 
+case E: (step s) => [s0 x].
+split. move => [out [H1 H2]].
+destruct x => //. destruct x => //.
 case E': (doMany k step p) => [s1 x'].
-rewrite E' in H2. injection H2 => [H3 H4]. subst. clear H2. 
+rewrite E' in H2. injection H2 => [H3 H4]. subst. clear H2.
 eexists _. exists (outputToActions s0), (outputToActions s1).
-split. unfold outputToActions. by rewrite map_cat. 
-split. rewrite /oneStep. exists s0. split => //. destruct u. eapply E. 
-apply IHk. by exists s1. 
-
-move => [s'' [o1 [o2 [H1 [[o3 [H2a H2b]] H3]]]]]. 
-subst. rewrite H2b in E. 
-injection E => [E1 E2]. subst. clear E. 
-case E': (doMany k step s'') => [s1 x'].
-specialize (IHk s'' o2 s'). 
-destruct IHk as [_ IHk]. specialize (IHk H3). 
-destruct IHk as [out [H1 H2]]. subst. exists (s0 ++ out). 
 split. unfold outputToActions. by rewrite map_cat.
-rewrite E' in H2.  congruence. 
-Qed. 
+split. rewrite /oneStep. exists s0. split => //. destruct u. eapply E.
+apply IHk. by exists s1.
 
-Lemma manyStepLe k : forall k', k' <= k -> 
+move => [s'' [o1 [o2 [H1 [[o3 [H2a H2b]] H3]]]]].
+subst. rewrite H2b in E.
+injection E => [E1 E2]. subst. clear E.
+case E': (doMany k step s'') => [s1 x'].
+specialize (IHk s'' o2 s').
+destruct IHk as [_ IHk]. specialize (IHk H3).
+destruct IHk as [out [H1 H2]]. subst. exists (s0 ++ out).
+split. unfold outputToActions. by rewrite map_cat.
+rewrite E' in H2.  congruence.
+Qed.
+
+Lemma manyStepLe k : forall k', k' <= k ->
   forall s o s', manyStep k s o s' -> exists o' s'', preActions o' o /\ manyStep k' s o' s''.
-Proof. induction k => k' LE s o s' /=R1. 
-+ destruct k' => //. elim R1 => [-> ->]. exists nil, s'. split => //. reflexivity. 
+Proof. induction k => k' LE s o s' /=R1.
++ destruct k' => //. elim R1 => [-> ->]. exists nil, s'. split => //. reflexivity.
 + destruct R1 as [s'' [o1 [o2 [EQ [ONE MANY]]]]]. subst.
-  destruct k'. rewrite /manyStep. exists nil, s. intuition. by exists (o1++o2). 
-  specialize (IHk _ LE _ _ _ MANY). 
-  destruct IHk as [o' [s2 [[o3 EQ] MANY']]]. 
-  subst.   
-  exists (o1 ++ o'), s2. split. exists o3. by rewrite catA. 
-  simpl. 
-  by exists s'', o1, o'. 
-Qed. 
+  destruct k'. rewrite /manyStep. exists nil, s. intuition. by exists (o1++o2).
+  specialize (IHk _ LE _ _ _ MANY).
+  destruct IHk as [o' [s2 [[o3 EQ] MANY']]].
+  subst.
+  exists (o1 ++ o'), s2. split. exists o3. by rewrite catA.
+  simpl.
+  by exists s'', o1, o'.
+Qed.
 
 (* Takes at least k steps from s *)
 Definition runsFor k s := exists s' o', manyStep k s o' s'.
-Definition runsForWithPrefixOf k s o := exists s' o', preActions o' o /\ manyStep k s o' s'. 
+Definition runsForWithPrefixOf k s o := exists s' o', preActions o' o /\ manyStep k s o' s'.
 
 (* Runs forever from s without failing *)
 Definition runsForever s := forall k, runsFor k s.
 
 (* Takes some number of steps from s to s' *)
 Definition runsTo s s' := exists k o, manyStep k s o s'.
-Definition runsToWith s o s' := exists k, manyStep k s o s'. 
+Definition runsToWith s o s' := exists k, manyStep k s o s'.
 
 (* Takes at least one step from s to s' *)
 Definition properRunsTo s s' := exists k o, manyStep k.+1 s o s'.
-Definition properRunsToWith s o s' := exists k, manyStep k.+1 s o s'. 
+Definition properRunsToWith s o s' := exists k, manyStep k.+1 s o s'.
 
 Lemma seqManyStep k1 : forall k2 s s' s'' o1 o2,
-  manyStep k1 s o1 s' -> 
+  manyStep k1 s o1 s' ->
   manyStep k2 s' o2 s'' ->
   manyStep (k1+k2) s (o1++o2) s''.
 Proof. induction k1 => k2 s s' s'' o1 o2 /= R1 R2.
-+ rewrite add0n. destruct R1 as [E1 E2]. by subst. 
-+ destruct R1 as [s0 [o3 [o4 [E1 [STEP R1]]]]]. subst. 
++ rewrite add0n. destruct R1 as [E1 E2]. by subst.
++ destruct R1 as [s0 [o3 [o4 [E1 [STEP R1]]]]]. subst.
   specialize (IHk1 _ _ _ _ _ _ R1 R2).
-  exists s0, o3, (o4 ++ o2). split. by rewrite catA. 
-  intuition. 
-Qed. 
+  exists s0, o3, (o4 ++ o2). split. by rewrite catA.
+  intuition.
+Qed.
 
 Lemma runsFor0 s : runsFor 0 s.
-Proof. by exists s, nil. Qed. 
+Proof. by exists s, nil. Qed.
 
 Lemma runsForWithPrefixOf0 s o : runsForWithPrefixOf 0 s o.
-Proof. exists s, nil. split. unfold preActions. by exists o. done. Qed. 
+Proof. exists s, nil. split. unfold preActions. by exists o. done. Qed.
 
 Lemma runsForSinv s k : runsFor k.+1 s ->
   exists s' o, (oneStep s o s' /\ runsFor k s').
-Proof. rewrite /runsFor. move => [s' [o RED]]. 
+Proof. rewrite /runsFor. move => [s' [o RED]].
 rewrite /manyStep-/manyStep in RED.
-destruct RED as [s'' [o1 [o2 [H1 [ONE MANY]]]]].  
+destruct RED as [s'' [o1 [o2 [H1 [ONE MANY]]]]].
 exists s'', o1. split => //.
-by exists s', o2.  
-Qed. 
+by exists s', o2.
+Qed.
 
 Lemma runsForWithPrefixOfSinv s k o : runsForWithPrefixOf k.+1 s o ->
   exists s' o1 o2, (oneStep s o1 s' /\ runsForWithPrefixOf k s' o2 /\ o = o1++o2).
 Proof. rewrite /runsForWithPrefixOf. move => [s' [o' [PRE RED]]].
-rewrite /manyStep-/manyStep in RED. 
-destruct RED as [s'' [o1 [o2 [H [ONE MANY]]]]]. 
+rewrite /manyStep-/manyStep in RED.
+destruct RED as [s'' [o1 [o2 [H [ONE MANY]]]]].
 subst. destruct PRE as [o' PRE]. subst.
-exists s'', o1, (o2++o'). split => //. 
-split; last by rewrite catA. 
-exists s', o2. split => //. by exists o'. 
-Qed. 
+exists s'', o1, (o2++o'). split => //.
+split; last by rewrite catA.
+exists s', o2. split => //. by exists o'.
+Qed.
 
 Lemma runsForS k s o s' : oneStep s o s' -> runsFor k s' -> runsFor k.+1 s.
-Proof. move => ONE [s1 [o1 MANY]]. exists s1, (o++o1). by exists s', o, o1. Qed. 
+Proof. move => ONE [s1 [o1 MANY]]. exists s1, (o++o1). by exists s', o, o1. Qed.
 
-Lemma runsForWithPrefixOfS k s o s' o' : 
+Lemma runsForWithPrefixOfS k s o s' o' :
   oneStep s o s' -> runsForWithPrefixOf k s' o' -> runsForWithPrefixOf k.+1 s (o++o').
-Proof. move => ONE [s1 [o1 [PRE MANY]]]. exists s1, (o++o1). 
-split. by apply cat_preActions. by exists s', o, o1. 
-Qed. 
+Proof. move => ONE [s1 [o1 [PRE MANY]]]. exists s1, (o++o1).
+split. by apply cat_preActions. by exists s', o, o1.
+Qed.
 
 Lemma runsForLe k : forall k', k' <= k -> forall s, runsFor k s -> runsFor k' s.
 Proof. induction k => k' LT s RED => //.
-+ destruct k' => //. 
-+ destruct k' => //. apply runsFor0. 
-+ specialize (IHk _ LT). 
-apply runsForSinv in RED. destruct RED as [s' [o [R1 RED]]]. 
-apply: runsForS.  apply R1. apply IHk => //. 
-Qed. 
++ destruct k' => //.
++ destruct k' => //. apply runsFor0.
++ specialize (IHk _ LT).
+apply runsForSinv in RED. destruct RED as [s' [o [R1 RED]]].
+apply: runsForS.  apply R1. apply IHk => //.
+Qed.
 
 
-Lemma runsForWithPrefixOfLe k : 
+Lemma runsForWithPrefixOfLe k :
   forall k' s o, k' <= k -> runsForWithPrefixOf k s o -> runsForWithPrefixOf k' s o.
 Proof. induction k => k' s o LE RED => //.
-+ by destruct k' => //. 
++ by destruct k' => //.
 + destruct k' => //. apply runsForWithPrefixOf0.
-  apply runsForWithPrefixOfSinv in RED. 
+  apply runsForWithPrefixOfSinv in RED.
   destruct RED as [s' [o' [o'' [ONE [RED EQ]]]]]. subst.
-  apply: runsForWithPrefixOfS. apply ONE. apply IHk => //.  
-Qed. 
+  apply: runsForWithPrefixOfS. apply ONE. apply IHk => //.
+Qed.
 
 Lemma runsTo_runsForever s s' :runsTo s s' -> runsForever s' -> runsForever s.
-Proof. 
-move => [k [o RED]] RF k0. 
-case LE: (k <= k0). 
-specialize (RF (k0-k)). 
-destruct RF as [s'' [o' RF]]. 
+Proof.
+move => [k [o RED]] RF k0.
+case LE: (k <= k0).
+specialize (RF (k0-k)).
+destruct RF as [s'' [o' RF]].
 have RED1 := seqManyStep RED RF. rewrite subnKC in RED1 => //. eexists _, _. apply RED1.
-have LT: k0 < k. by rewrite ltnNge LE. 
+have LT: k0 < k. by rewrite ltnNge LE.
 apply: runsForLe. apply ltnW in LT. apply LT. by exists s', o.
-Qed. 
+Qed.
 
-Lemma runsTo_runsFor k : forall s s', runsTo s s' -> runsFor k s' -> runsFor k s. 
-Proof. move => s s' [k1 [o1 R2]] [k0 [o0 R1]].  
-have REDS:= seqManyStep R2 R1. 
+Lemma runsTo_runsFor k : forall s s', runsTo s s' -> runsFor k s' -> runsFor k s.
+Proof. move => s s' [k1 [o1 R2]] [k0 [o0 R1]].
+have REDS:= seqManyStep R2 R1.
 apply: runsForLe; last first.
-eexists _, _. apply REDS. 
-rewrite addnC. apply leq_addr. 
-Qed. 
+eexists _, _. apply REDS.
+rewrite addnC. apply leq_addr.
+Qed.
 
-Lemma runsToWith_runsForWithPrefixOf k : forall s o s' o', 
-  runsToWith s o s' -> runsForWithPrefixOf k s' o' -> 
-  runsForWithPrefixOf k s (o++o'). 
-Proof. move => s o s' o' R1 R2. 
+Lemma runsToWith_runsForWithPrefixOf k : forall s o s' o',
+  runsToWith s o s' -> runsForWithPrefixOf k s' o' ->
+  runsForWithPrefixOf k s (o++o').
+Proof. move => s o s' o' R1 R2.
 destruct R1 as [k1 R1].
 destruct R2 as [s2 [o2 [PRE R2]]].
-have R3 := seqManyStep R1 R2. 
+have R3 := seqManyStep R1 R2.
 rewrite /runsForWithPrefixOf.
-have LE: k <= k1 + k. rewrite addnC. by apply leq_addr. 
-have MSLE:= manyStepLe LE R3. 
-destruct MSLE as [o3 [s3 [PRE' MANY]]].  
+have LE: k <= k1 + k. rewrite addnC. by apply leq_addr.
+have MSLE:= manyStepLe LE R3.
+destruct MSLE as [o3 [s3 [PRE' MANY]]].
 exists s3, o3. split => //.
-destruct PRE' as [o4 PRE']. 
-destruct PRE as [o5 PRE]. subst.  
-exists (o4++o5). rewrite catA. rewrite PRE'. by rewrite catA. 
-Qed. 
+destruct PRE' as [o4 PRE'].
+destruct PRE as [o5 PRE]. subst.
+exists (o4++o5). rewrite catA. rewrite PRE'. by rewrite catA.
+Qed.
 
-Lemma properRunsTo_runsFor k : forall s s', properRunsTo s s' -> runsFor k s' -> runsFor k.+1 s. 
-Proof. move => s s' [k1 [o1 R2]] [k0 [o0 R1]].  
-have REDS:= seqManyStep R2 R1. 
+Lemma properRunsTo_runsFor k : forall s s', properRunsTo s s' -> runsFor k s' -> runsFor k.+1 s.
+Proof. move => s s' [k1 [o1 R2]] [k0 [o0 R1]].
+have REDS:= seqManyStep R2 R1.
 apply: runsForLe; last first.
-eexists _, _. apply REDS. 
-rewrite addnC. rewrite -(addn1 k1). rewrite (addnC k1) addnA. rewrite addn1. 
-apply leq_addr. 
-Qed. 
-
+eexists _, _. apply REDS.
+rewrite addnC. rewrite -(addn1 k1). rewrite (addnC k1) addnA. rewrite addn1.
+apply leq_addr.
+Qed.

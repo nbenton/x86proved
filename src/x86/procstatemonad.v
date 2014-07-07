@@ -117,4 +117,3 @@ Proof. by rewrite /setRegInProcState/setProcState assoc SMT_bindGet SMT_doSet. Q
 Lemma letGetReg {Y} (s: ProcState) r (f: DWORD -> ST Y):
   bind (getRegFromProcState r) f s = f (registers s r) s.
 Proof. by rewrite /getRegFromProcState/getProcState assoc SMT_bindGet id_l. Qed.
-

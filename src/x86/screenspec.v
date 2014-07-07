@@ -44,5 +44,3 @@ Definition inlineReadChar_spec (col row: nat) (char:BYTE) (instrs: program) :=
     instrs empOP
     (ECX?        ** EDX?        ** BYTEregIs AL char ** charIs (charPos col row) char)
   @ (OSZCP? ** EDI?).
-
-

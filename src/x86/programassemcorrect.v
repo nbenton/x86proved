@@ -156,7 +156,3 @@ Proof.
   move=> _. setoid_rewrite ->runWriter_interpWriter; last eassumption.
   exact: write_program_correct.
 Qed.
-
-
-
-

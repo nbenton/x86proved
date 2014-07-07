@@ -77,4 +77,3 @@ str:;;  ds "Characters";;
 num:;;  align 2;; (* Align on 2^2 boundary i.e. DWORD *)
         dd #x"87654321". (* DWORD value *)
 (*=End *)
-

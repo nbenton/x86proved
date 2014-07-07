@@ -17,7 +17,7 @@ Section Basic.
 
   (** Basic block of position-independent code *)
   Definition basic P (c:T) (O: OPred) Q : spec :=
-    Forall i j:DWORD, Forall O': OPred, 
+    Forall i j:DWORD, Forall O': OPred,
     (obs O' @ (EIP ~= j ** Q) -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> c).
   Global Strategy 10000 [basic].
 
@@ -28,8 +28,8 @@ Section Basic.
     rewrite /basic.
     autorewrite with push_at. cancel1 => i.
     autorewrite with push_at. cancel1 => j.
-    autorewrite with push_at. cancel1 => O'. 
-    autorewrite with push_at. rewrite -2!sepSPA. 
+    autorewrite with push_at. cancel1 => O'.
+    autorewrite with push_at. rewrite -2!sepSPA.
     reflexivity.
   Qed.
 
@@ -48,7 +48,7 @@ Section Basic.
     S |-- basic P c O Q.
   Proof.
     move=> HP HQ HO H. rewrite /basic in H.
-    setoid_rewrite <-HP in H. setoid_rewrite ->HQ in H. setoid_rewrite ->HO in H. 
+    setoid_rewrite <-HP in H. setoid_rewrite ->HQ in H. setoid_rewrite ->HO in H.
     apply H.
   Qed.
 
@@ -62,31 +62,31 @@ Section Basic.
 
   Global Instance basic_equiv_m:
     Proper (lequiv ==> eq ==> equivOP ==> lequiv ==> lequiv) basic.
-  Proof. 
-    split; apply basic_entails_m. apply H. done. apply H1. apply H2. apply H. done. 
-    apply H1. apply H2. 
+  Proof.
+    split; apply basic_entails_m. apply H. done. apply H1. apply H2. apply H. done.
+    apply H1. apply H2.
   Qed.
 
-  (* Annoying extra instances to work around a bug with setoid rewriting on the 
+  (* Annoying extra instances to work around a bug with setoid rewriting on the
      fourth argument in the general morphism above *)
   Global Instance basic_entails_m' P c:
     Proper (eq ==> lentails ++> lentails) (basic P c).
   Proof.
-    repeat move => *. subst; apply: basic_roc; try eassumption. done. reflexivity. done. 
+    repeat move => *. subst; apply: basic_roc; try eassumption. done. reflexivity. done.
   Qed.
 
   Global Instance basic_entails_m'' P c O :
     Proper (Basics.flip lentails ++> Basics.flip lentails) (basic P c O).
   Proof.
-    move => Q Q' H. apply: basic_roc. done. apply H. reflexivity. done. 
+    move => Q Q' H. apply: basic_roc. done. apply H. reflexivity. done.
   Qed.
 
   Global Instance basic_equiv_m' P c:
     Proper (equivOP ==> lequiv ==> lequiv) (basic P c).
   Proof.
-    move => O O' HO Q Q' HQ. setoid_rewrite HO. split. by setoid_rewrite HQ. 
-    by setoid_rewrite <-HQ. 
-  Qed. 
+    move => O O' HO Q Q' HQ. setoid_rewrite HO. split. by setoid_rewrite HQ.
+    by setoid_rewrite <-HQ.
+  Qed.
 
   (* Special case of consequence for precondition *)
   Lemma basic_roc_pre P' S P c O Q:
@@ -97,10 +97,10 @@ Section Basic.
 
   (* Special case of consequence for postcondition *)
   Lemma basic_roc_post Q' S P c O Q:
-    Q' |-- Q -> 
+    Q' |-- Q ->
     S |-- basic P c O Q' ->
     S |-- basic P c O Q.
-  Proof. move=> HQ H. by rewrite <- HQ. Qed. 
+  Proof. move=> HQ H. by rewrite <- HQ. Qed.
 
   Lemma basic_exists A S P c O Q:
     (forall a:A, S |-- basic (P a) c O Q) ->
@@ -108,14 +108,14 @@ Section Basic.
   Proof. rewrite /basic => H. specintros => i j O' a. eforalls H. simple apply H. Qed.
 
   Global Instance AtEx_basic P c O Q : AtEx (basic P c O Q).
-  Proof. rewrite /basic. apply AtEx_forall => i. 
-  apply AtEx_forall => j. apply AtEx_forall => O'. apply _. Qed. 
+  Proof. rewrite /basic. apply AtEx_forall => i.
+  apply AtEx_forall => j. apply AtEx_forall => O'. apply _. Qed.
 
   Lemma basic_basic_context R S' P' O' Q' S P c O Q:
     S' |-- basic P' c O' Q' ->
     S |-- S' ->
     P |-- P' ** R ->
-    entailsOP O' O -> 
+    entailsOP O' O ->
     Q' ** R |-- Q ->
     S |-- basic P c O Q.
   Proof. move=> Hc HS HP HO HQ. apply: basic_roc. apply HP. apply HQ. apply HO.

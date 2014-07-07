@@ -77,7 +77,7 @@ Definition fastcall_void1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 false)) : spe
   Forall v:DWORD,
   Forall sp:DWORD,
   Forall iret:DWORD,
-  Forall O, 
+  Forall O,
   (
     obs O @ (EIP ~= iret ** ECX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** post FS v) -->>
     obs O @ (EIP ~= f    ** ECX ~= v ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS  v)
@@ -101,7 +101,7 @@ Definition stdcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : sp
   Forall sp:DWORD,
   Forall iret:DWORD,
   Forall ebp:DWORD,
-  Forall O, 
+  Forall O,
   (
     obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
     obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
@@ -167,8 +167,8 @@ Proof.
 move => H.
 specintro => esp. specintro => v.
 autorewrite with push_at. specintro => old.
-eapply basic_seq. setoid_rewrite -> empOPL. reflexivity. 
-basicapply PUSH_R_rule.  
+eapply basic_seq. setoid_rewrite -> empOPL. reflexivity.
+basicapply PUSH_R_rule.
 basicapply H.
 try_basicapply POP_R_rule.
 autorewrite with bitsHints.
@@ -184,9 +184,9 @@ Proof.
 move => H.
 
 autorewrite with push_at. specintro => old.
-eapply basic_seq. setoid_rewrite -> empOPL. reflexivity. 
+eapply basic_seq. setoid_rewrite -> empOPL. reflexivity.
 basicapply PUSH_R_rule.
-eapply basic_seq. setoid_rewrite -> empOPL. reflexivity. 
+eapply basic_seq. setoid_rewrite -> empOPL. reflexivity.
 try_basicapply MOV_RanyR_rule. rewrite /stateIsAny. sbazooka.
 basicapply H.
 unhideReg EBP => oldebp.
@@ -214,7 +214,7 @@ set C := (PUSH EBP;; _).
 unfold_program. specintro => f''.
 
 (* It's rather unpleasant that we have to do this! *)
-specintro => O. 
+specintro => O.
 specapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?) empOP
                                           (snd (post FS arg) ** EAX ~= fst (post FS arg) ** ECX? ** EDX? ** OSZCP? ** sp-#4 :-> ?:DWORD) ebp (sp-#8)).
 
@@ -265,7 +265,7 @@ Definition calleeSpec_fastcall2 (f: DWORD) (P Q: DWORD -> DWORD -> SPred) : spec
   Forall v:DWORD,
   Forall w:DWORD,
   Forall sp:DWORD,
-  Forall iret:DWORD,  
+  Forall iret:DWORD,
   Forall O,
   (
     obs O @ (EIP ~= iret ** ECX?     ** EDX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** Q v w) -->>

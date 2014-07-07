@@ -167,5 +167,3 @@ Definition encShiftOp (op: ShiftOp) :=
   end.
 Lemma encShiftOpK : cancel encShiftOp decShiftOp. Proof. by case. Qed.
 Instance ShiftOpEMB: EMB _ _ := Emb encShiftOpK.
-
-

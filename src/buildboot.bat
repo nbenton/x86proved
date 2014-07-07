@@ -12,5 +12,3 @@ cd ..\..\..
 copy x86\BootLoader\obj\loader x86\bin\iso_dir
 
 cl hexbin.c /Fex86\bin\hexbin.exe
-
-

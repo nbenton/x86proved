@@ -99,5 +99,3 @@ Qed.
 
 Lemma domConstSeq n (b: BITS n) T (c2: Codec T) : dom (Const b .$ c2) = dom c2.
 Proof. by rewrite domCast domSeq /= totalConst. Qed.
-
-

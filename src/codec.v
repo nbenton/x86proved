@@ -1184,6 +1184,3 @@ Fixpoint ddec t (c: Codec t) (l: seq sym) : DecRes t :=
 if l is b::l' then ddec (deriv b c) l'
 else if null c is Emp then DecYes tt nil else DecNo _.
 *)
-
-
-

@@ -23,4 +23,3 @@ Example tellProg :=
     greeting:;; ds "Twice %d is %d";; db 10;; db 0.
 Compute makeEXE #x"00AB0000" "tell.exe" tellProg.
 (*=End *)
-

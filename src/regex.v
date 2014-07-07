@@ -721,4 +721,3 @@ right. destruct a. - right. by exists l. - left. by exists l.
 Qed.
 
 *)
-

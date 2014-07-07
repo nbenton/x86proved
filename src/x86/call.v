@@ -8,7 +8,7 @@ Definition retreg := EBP.
 
 (* Toy function calling convention *)
 Definition toyfun f P O Q :=
-  Forall iret, Forall O', 
+  Forall iret, Forall O',
                obs O' @ (EIP~=iret ** retreg? ** Q)
           -->> obs (catOP O O') @ (EIP~=f ** retreg~=iret ** P).
 
@@ -32,8 +32,8 @@ Lemma spec_at_toyfun f P O Q R:
   toyfun f P O Q @ R -|- toyfun f (P**R) O (Q**R).
 Proof.
   rewrite /toyfun.
-  autorewrite with push_at. cancel1 => iret. 
-  autorewrite with push_at. cancel1 => O'. 
+  autorewrite with push_at. cancel1 => iret.
+  autorewrite with push_at. cancel1 => O'.
   autorewrite with push_at. rewrite !sepSPA. by cancel1.
 Qed.
 Hint Rewrite spec_at_toyfun : push_at.
@@ -42,21 +42,21 @@ Lemma toyfun_call (f:DWORD) P (O:OPred) Q:
   |> toyfun f P O Q |-- basic P (call_toyfun f) O Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
-  apply basic_local => iret. rewrite /stateIsAny. specintros => old.  
-  eapply (basic_seq _ _ _ _ empOP _ O). done. 
-  eapply basic_basic. apply MOV_RI_rule. ssimpl. reflexivity. reflexivity. 
+  apply basic_local => iret. rewrite /stateIsAny. specintros => old.
+  eapply (basic_seq _ _ _ _ empOP _ O). done.
+  eapply basic_basic. apply MOV_RI_rule. ssimpl. reflexivity. reflexivity.
 
   rewrite /basic. specintros => i j O'. unfold_program. specintros => _ <- -> {j}.
   specapply JMP_I_rule. by ssimpl.
 
   rewrite <-spec_reads_frame. autorewrite with push_at.
-  rewrite /toyfun. 
+  rewrite /toyfun.
   autorewrite with push_later; last by apply _. apply lforallL with iret.
   autorewrite with push_later; last by apply _. apply lforallL with O'.
   rewrite /stateIsAny. autorewrite with push_later; last by apply _.
   rewrite <- spec_later_weaken.
   cancel2. cancel1. by ssimpl.
-Qed.   
+Qed.
 
 Lemma toyfun_mkbody (f f': DWORD) P p O Q:
   (Forall iret, basic P p O Q @ (retreg ~= iret)) |--
@@ -65,7 +65,7 @@ Proof.
   rewrite /toyfun. specintro => iret. rewrite /mkbody_toyfun.
   unfold_program. specintro => i1.
   apply lforallL with iret. autorewrite with push_at.
-  specintros => O'. 
+  specintros => O'.
   eapply safe_safe_ro; first reflexivity. reflexivity.
   - apply lforallL with f. apply lforallL with i1. apply lforallL with O'. reflexivity.
   - split; sbazooka.
@@ -130,7 +130,7 @@ Proof.
     - by apply spec_later_weaken.
     - by sbazooka.
     done.
-  reflexivity. 
+  reflexivity.
   apply lforallL with (a +# 2).
   eapply basic_basic_context.
   - have H := toyfun_call. setoid_rewrite spec_at_basic in H. apply H.
@@ -153,7 +153,7 @@ Proof.
      rule application. *)
   rewrite ->toyfun_example_caller_correct.
   cancel2; last reflexivity. autorewrite with push_at.
-  eapply safe_safe_ro; first reflexivity. reflexivity. 
+  eapply safe_safe_ro; first reflexivity. reflexivity.
   - eapply lforallL. eapply lforallL. apply lforallL with O. rewrite ->empOPL. reflexivity.
   - split; sbazooka.
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
@@ -194,5 +194,5 @@ Proof.
   autorewrite with push_at.
   rewrite <-spec_reads_frame. rewrite -limpland. apply limplValid.
   rewrite /toyfun. eapply lforallL. eapply lforallL. rewrite <-spec_later_weaken.
-  rewrite /stateIsAny. cancel2; cancel1; by sbazooka. 
+  rewrite /stateIsAny. cancel2; cancel1; by sbazooka.
 Qed.

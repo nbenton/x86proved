@@ -35,4 +35,3 @@ Defined.
 
 Lemma uniqueSingleton t (emb : EMB t unit) : forall x, inv tt = Some x.
 Proof. move => x. assert (H := injinv x). by destruct (emb x). Qed.
-

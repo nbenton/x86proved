@@ -120,4 +120,3 @@ Definition gcdEx : option (seq BYTE) :=
 (*      busy:;;*)
         JMP busy
   ).
-

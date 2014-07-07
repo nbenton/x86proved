@@ -6,7 +6,7 @@ Require Import x86proved.spectac (* for [specapply] *).
 
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) :
   |-- interpJmpTgt tgt q (fun P addr =>
-     Forall O, (|> obs O @ (EIP ~= addr ** P) 
+     Forall O, (|> obs O @ (EIP ~= addr ** P)
               -->> obs O @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt)).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
@@ -20,7 +20,7 @@ Section specapply_hint.
 Local Hint Unfold interpJmpTgt : specapply.
 
 Lemma JMPrel_I_rule (rel: DWORD) (p q: DWORD):
-  |-- Forall O, (|> obs O @ (EIP ~= addB q rel) 
+  |-- Forall O, (|> obs O @ (EIP ~= addB q rel)
                -->> obs O @ (EIP ~= p)) <@ (p -- q :-> JMPrel rel).
 Proof.
   specintros => O. specapply (JMPrel_rule rel). by ssimpl.
@@ -30,7 +30,7 @@ Proof.
 Qed.
 
 Lemma JMPrel_R_rule (r:Reg) (addr: DWORD) (p q: DWORD) :
-  |-- Forall O, (|> obs O @ (EIP ~= addr ** r ~= addr) 
+  |-- Forall O, (|> obs O @ (EIP ~= addr ** r ~= addr)
                -->> obs O @ (EIP ~= p ** r ~= addr)) <@ (p -- q :-> JMPrel r).
 Proof.
   specintros => O. specapply (JMPrel_rule r). by ssimpl.

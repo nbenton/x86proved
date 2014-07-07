@@ -28,7 +28,7 @@ Corollary AND_RM_rule (pbase:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) :
 Proof. autorewrite with push_at. instrrules_basicapply (AND_rule (DstSrcRM true r1 (mkMemSpec (Some(r2, None)) #offset))). Qed.
 
 Corollary AND_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
-  |-- basic (r1~=v1) (AND r1, [r2 + offset]) empOP (r1~=andB v1 v2) 
+  |-- basic (r1~=v1) (AND r1, [r2 + offset]) empOP (r1~=andB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof. autorewrite with push_at. instrrules_basicapply (AND_RM_rule (pbase:=pd) (r1:=r1) (r2:=r2) (v1:=v1) (v2:=v2) (offset:=offset)). Qed.
 

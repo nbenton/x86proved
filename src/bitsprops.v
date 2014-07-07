@@ -448,5 +448,3 @@ move => H. assert (H' := iffBool H). apply (eqP H').
 split. move => H. rewrite (eqP H). done.
 move => H. assert (EQ:toNat b1 = toNat b2) by apply (eqP H). by rewrite (toNat_inj EQ).
 Qed.
-
-

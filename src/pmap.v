@@ -149,4 +149,3 @@ End Maps.
 Instance PMapUpdateOps n V : UpdateOps (PMAP V n) _ _ := @updatePMap V n.
 
 Open Scope update_scope.
-

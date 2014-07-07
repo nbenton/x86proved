@@ -644,7 +644,7 @@ Global Opaque evalLogicalOp.
 Lemma evalPortI_rule (p: BYTE) c O Q S :
   TRIPLE S (c (zeroExtend 8 p)) O Q ->
   TRIPLE S (bind (evalPort p) c) O Q.
-Proof. move => T. rewrite /evalPort. triple_apply T. Qed. 
+Proof. move => T. rewrite /evalPort. triple_apply T. Qed.
 
 (** TODO(t-jagro): Find a better place for this opacity control *)
 Global Opaque setRegInProcState getDWORDFromProcState updateFlagInProcState forgetFlagInProcState.

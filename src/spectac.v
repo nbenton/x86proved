@@ -62,7 +62,7 @@ Ltac specsplit :=
 (* This is the lemma that justifies the specapply tactic. Executing specapply
    will essentially just bring the goal and rule to the form required by this
    lemma and then apply it. *)
-Lemma safe_safe_ro C C' S S' R R' P P' RP O O': 
+Lemma safe_safe_ro C C' S S' R R' P P' RP O O':
   C' |-- (S' -->> obs O' @ P') <@ R' ->
   entailsOP O' O ->
   C |-- C' ->
@@ -81,7 +81,7 @@ Proof.
   rewrite -landA. apply: landL1.
   rewrite landC. apply: landAdj.
   etransitivity; [apply (spec_frame RP)|].
-  autorewrite with push_at. by rewrite <- HS. 
+  autorewrite with push_at. by rewrite <- HS.
 Qed.
 
 Lemma lforallE_spec A (S':spec) S a:
@@ -289,7 +289,7 @@ Module SpecApply.
   (* A version of safe_safe_ro that works on reflected specs. *)
   Lemma safe_safe_nf t t' C C' RP:
     match tonf t , tonf t' with
-    | Some (mknf So Oo Po Ro) , Some (mknf So' Oo' Po' Ro') =>      
+    | Some (mknf So Oo Po Ro) , Some (mknf So' Oo' Po' Ro') =>
         C' |-- eval t' ->
         entailsOP Oo' Oo ->
         C |-- C' ->
@@ -304,8 +304,8 @@ Module SpecApply.
     case Ht': (tonf t') => [[So' Oo' Po' Ro']|] //.
     rewrite -tonf_correct; last apply Ht'.
     rewrite -tonf_correct; last apply Ht. rewrite /eval_nf.
-    rewrite /eval_nf !osep_correct oimpl_correct. 
-    apply: safe_safe_ro. 
+    rewrite /eval_nf !osep_correct oimpl_correct.
+    apply: safe_safe_ro.
   Qed.
 
   (* Create hint database by putting a dummy entry in it. *)
@@ -327,9 +327,9 @@ Module SpecApply.
           let tgoal := quote_term S in
           (* Apply safe_safe_nf, which will match if tgoal and tlem could be
              put into normal form. The first subgoal is the lemma to be
-             applied, the second and third subgoals are (entailsOP O' O) and (C |-- C'), 
-             which are often trivial, the fourth subgoal is a conjunction of 
-             assertion-logic entailments, and the last subgoal is the goal that's 
+             applied, the second and third subgoals are (entailsOP O' O) and (C |-- C'),
+             which are often trivial, the fourth subgoal is a conjunction of
+             assertion-logic entailments, and the last subgoal is the goal that's
              left after doing this application. *)
           eapply (@safe_safe_nf tgoal tlem C C'); [exact Hlem | try reflexivity; try done | try done | |];
           cbv [eval_ospec eval_oSPred osep oconj oimpl oat];

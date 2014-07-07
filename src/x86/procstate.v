@@ -48,4 +48,3 @@ Global Instance ProcStateUpdateOpsDWORD : UpdateOps ProcState PTR DWORD :=
     (ms !p:=b0 !incB p:=b1 !incB(incB p):=b2 !incB(incB(incB p)):=b3).
 
 (* @TODO: update lemmas *)
-

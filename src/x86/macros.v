@@ -157,7 +157,7 @@ Definition ifthenelse (cond: Condition) (value: bool)
 
     specsplit.
     - (* THEN branch *)
-      rewrite <-spec_later_weaken. specintro. move/eqP => ->. 
+      rewrite <-spec_later_weaken. specintro. move/eqP => ->.
       specapply Hthen. by ssimpl.
        rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
        apply: landL2. cancel1. by ssimpl.
@@ -235,7 +235,7 @@ Definition while (ptest: program)
     - autorewrite with push_at. rewrite ->landL2; last reflexivity.
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
-      specapply Hbody. 
+      specapply Hbody.
       - sdestruct. move/eqP => ->. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
@@ -312,13 +312,13 @@ Definition while (ptest: program)
     - autorewrite with push_at. rewrite ->landL2; last reflexivity.
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
-      specapply (Hbody SKIP). 
+      specapply (Hbody SKIP).
       - sdestruct. move/eqP => ->. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
 
     (* End of loop *)
-    specapply Hcoda. 
+    specapply Hcoda.
     sdestructs => EQ. rewrite (eqP EQ). sbazooka.
     rewrite <-spec_reads_frame. apply: limplAdj.
     apply: landL2. apply: landL1. autorewrite with push_at.
@@ -328,4 +328,3 @@ Definition while (ptest: program)
 
 
 End While.
-

@@ -11,20 +11,20 @@ Require Import x86proved.x86.program x86proved.x86.basic x86proved.charge.ilogic
 Global Instance basic_progEq_m:
 Proper (lequiv ==> progEq ==> equivOP ==> lequiv ==> lequiv) basic.
   Proof.
-    move => P P' HP c c' Hc O O' HO Q Q' HQ. split. 
-    setoid_rewrite -> HQ. setoid_rewrite HP. setoid_rewrite HO. 
-    unfold basic. by setoid_rewrite Hc. 
-    setoid_rewrite <- HQ. setoid_rewrite <- HP. setoid_rewrite <- HO. 
-    unfold basic. by setoid_rewrite <-Hc. 
+    move => P P' HP c c' Hc O O' HO Q Q' HQ. split.
+    setoid_rewrite -> HQ. setoid_rewrite HP. setoid_rewrite HO.
+    unfold basic. by setoid_rewrite Hc.
+    setoid_rewrite <- HQ. setoid_rewrite <- HP. setoid_rewrite <- HO.
+    unfold basic. by setoid_rewrite <-Hc.
   Qed.
 
 (* Skip rule *)
 Lemma basic_skip P: |-- basic P prog_skip empOP P.
 Proof.
   rewrite /basic. specintros => i j O'. unfold_program.
-  specintro => ->. 
+  specintro => ->.
   rewrite -> empOPL. rewrite emp_unit spec_reads_eq_at; rewrite <- emp_unit.
-  rewrite spec_at_emp. by apply limplValid. 
+  rewrite spec_at_emp. by apply limplValid.
 Qed.
 
 (* Sequencing rule *)
@@ -35,14 +35,14 @@ Lemma basic_seq (c1 c2: program) S P O1 Q O2 R O:
   S |-- basic P (c1;; c2) O R.
 Proof.
   rewrite /basic. move=> HO Hc1 Hc2. specintros => i j O'. unfold_program.
-  specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst. 
-  rewrite <- HO. rewrite -> catOPA. 
-  specapply Hc1. by ssimpl. 
-  specapply Hc2. by ssimpl. 
+  specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst.
+  rewrite <- HO. rewrite -> catOPA.
+  specapply Hc1. by ssimpl.
+  specapply Hc2. by ssimpl.
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
   by rewrite spec_at_emp.
 Qed.
- 
+
 (* Scoped label rule *)
 Lemma basic_local S P c O Q:
   (forall l, S |-- basic P (c l) O Q) ->

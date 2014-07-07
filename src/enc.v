@@ -23,4 +23,3 @@ Instance encodeWORD : Encoder WORD := fun w =>
     let: (b1,b0) := split2 8 8 w in
     encode b0 ++
     encode b1.
-

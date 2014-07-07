@@ -105,4 +105,3 @@ SECTION DATA
 
 Compute
   makeEXE #x"10E30000" "compiler.exe" exampleCode.
-

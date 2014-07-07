@@ -55,8 +55,8 @@ Proof.
   rewrite /allocSpec/allocImp.
   specintros => *. unfold_program. specintros => *.
 
-  (* MOV ESI, infoBlock *)  
-  specapply MOV_RanyI_rule; first by ssimpl. 
+  (* MOV ESI, infoBlock *)
+  specapply MOV_RanyI_rule; first by ssimpl.
 
   (* MOV EDI, [ESI] *)
   rewrite {2}/allocInv. specintros => base limit.

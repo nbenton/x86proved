@@ -9,6 +9,6 @@ Lemma RET_rule p' (sp:DWORD) (offset:WORD) (p q: DWORD) O :
          obs O @ (EIP ~= p  ** ESP ~= sp  ** sp :-> p')
     ) <@ (p -- q :-> RETOP offset).
 Proof.
-  apply TRIPLE_safeLater => R. 
+  apply TRIPLE_safeLater => R.
   do_instrrule_triple.
 Qed.

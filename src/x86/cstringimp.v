@@ -114,7 +114,7 @@ Proof.
   eapply basic_basic; first eapply CMP_MbxI_ZC_rule.
   rewrite /stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString.
-  sbazooka. 
+  sbazooka.
   sbazooka.
     red. destruct (zeroFree_append ISZF) as [_ [ZFM _]].
     by rewrite eq_sym eqbF_neg.
@@ -150,4 +150,3 @@ Proof.
     rewrite /stateIsAny. rewrite length_append addn0.
     sbazooka.
 Qed.
-

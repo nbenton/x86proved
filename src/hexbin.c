@@ -36,7 +36,7 @@ int main (int argc, char* argv[]) {
   int i;
   size_t result;
 
-  if (argc < 3) 
+  if (argc < 3)
     {
       puts("usage: hexbin <input-file> <output-file>\n");
       exit(1);
@@ -55,7 +55,7 @@ int main (int argc, char* argv[]) {
 
   // copy the file into the buffer:
   result = fread (buffer,1,lSize,pFile);
-  
+
   if (result != lSize) {fputs ("Reading error",stderr); exit (3);}
 
   /* the whole file is now loaded in the memory buffer. */
@@ -65,20 +65,20 @@ int main (int argc, char* argv[]) {
 
   pOut = fopen (argv[2], "wb");
   if (pOut==NULL) {fputs ("File error",stderr); exit (1);}
-      
+
   p = buffer;
   // Find equals sign
   while (*p && *p != '"') { p++; }
   if (*p == 0) { exit(1); }
 
-  // Find opening quotation marks 
+  // Find opening quotation marks
   while (*p && *p != '"') { p++; }
   if (*p == 0) { exit(1); }
 
   if (*p) {
     p++;
     while (*p && *p != '"') {
-      // Decode hex 
+      // Decode hex
       i = htoi(p);
       if (i < 0) { fclose(pOut); exit (1); }
       fputc(i, pOut);
@@ -88,7 +88,7 @@ int main (int argc, char* argv[]) {
   }
   fclose(pOut);
   free (buffer);
-  
+
 
   return 0;
 }

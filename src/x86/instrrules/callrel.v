@@ -6,7 +6,7 @@ Require Import x86proved.spectac (* for [specapply] *).
 
 Lemma CALLrel_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) O :
   |-- interpJmpTgt tgt q (fun P p' =>
-      ( 
+      (
       |> obs O @ (EIP ~= p' ** P ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
          obs O @ (EIP ~= p  ** P ** ESP~=sp    ** sp-#4 :-> w)
     ) <@ (p -- q :-> CALLrel tgt)).

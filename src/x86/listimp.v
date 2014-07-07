@@ -36,6 +36,3 @@ Definition callCons (r1 r2:Reg) heapInfo: program :=
   FAIL:;;
     MOV EDI, 0;;
   SUCCEED:;.
-
-
-

@@ -335,5 +335,3 @@ Corollary CodecRoundtrip t (c: Codec t) l e x:
   enc c x = Some l ->
   dec c (l ++ e) = DecYes x e.
 Proof. move => NA ENC. apply CodecComplete => //. by apply encSound. Qed.
-
-

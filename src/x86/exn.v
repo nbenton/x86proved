@@ -43,4 +43,3 @@ Definition exnToString exn :=
   | ExnMC => "#MC: Machine Check"
   | ExnXM => "#XM: SIMD Floating-Point Exception"
   end%string.
-

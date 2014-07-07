@@ -17,4 +17,3 @@ hex=$noext.hex
 
 coqc -dont-load-proofs $LIBS $input > $hex || exit $?
 x86/bin/hexbin.exe $hex $output # was: xxd -r -p $hex > $output
-

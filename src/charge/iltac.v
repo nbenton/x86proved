@@ -522,5 +522,3 @@ Section ExamplePropImpl.
   Qed.
 
 End ExamplePropImpl.
-
-

@@ -77,4 +77,3 @@ Definition flagsToString (f:FlagState) :=
    showFlag "Z" (f ZF) ++
    showFlag "S" (f SF) ++
    showFlag "O" (f OF))%string.
-

@@ -52,4 +52,3 @@ Definition main (printfSlot: DWORD) :=
 
 Compute assembleToString #x"C0000004" (main #x"C0000000").
 (*=End *)
-

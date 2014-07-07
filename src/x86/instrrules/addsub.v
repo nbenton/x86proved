@@ -58,7 +58,7 @@ Corollary ADD_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
 Proof. basicADDSUB. Qed.
 
 Corollary ADD_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
-  |-- basic (r1~=v1) (ADD r1, [r2 + offset]) empOP (r1~=addB v1 v2) 
+  |-- basic (r1~=v1) (ADD r1, [r2 + offset]) empOP (r1~=addB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof. autorewrite with push_at. basicADDSUB. Qed.
 
