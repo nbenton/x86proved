@@ -5,6 +5,7 @@
 Ltac type_of x := type of x.
 
 Require Import Ssreflect.ssreflect.
+Require Import Coq.Lists.List.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=
@@ -362,3 +363,92 @@ Ltac hnf_under_all_binders x :=
             end in
   eval unfold hnf_under_all_binders_helper in x'.
 Hint Extern 0 (hnf_under_all_binders_helper ?y ?z) => let z' := hnf_under_all_binders z in exact z' : typeclass_instances.
+
+(** Fail if the goal has an evar *)
+Ltac goal_has_evar :=
+  idtac;
+  match goal with
+    | [ |- ?G ] => first [ has_evar G | fail 2 "Goal has no evars" ]
+  end.
+
+(** Destruct hypotheses that can be destructed without loosing
+    information, such as [and] and [sig]. *)
+Ltac destruct_safe_hyps' :=
+  first [ progress destruct_head_hnf ex
+        | progress destruct_head_hnf and
+        | progress destruct_head_hnf prod
+        | progress destruct_head_hnf sig
+        | progress destruct_head_hnf sig2
+        | progress destruct_head_hnf sigT
+        | progress destruct_head_hnf sigT2
+        | progress hnf_subst ].
+
+Ltac destruct_safe_hyps := repeat destruct_safe_hyps'.
+
+(** Split goals that can be split without loosing
+    information, such as [and] and [prod]. *)
+Ltac split_safe_goals' :=
+  hnf;
+  match goal with
+    | [ |- and _ _ ] => split
+    | [ |- prod _ _ ] => split
+  end.
+
+Ltac split_safe_goals := repeat split_safe_goals'.
+
+(** Run [reflexivity], but only if the goal has no evars or one or the other argument is an evar. *)
+Ltac evar_safe_reflexivity :=
+  idtac;
+  match goal with
+    | [ |- ?R ?a ?b ]
+      => not has_evar R;
+        first [ not goal_has_evar
+              | not has_evar a; is_evar b; unify a b
+              | not has_evar b; is_evar a; unify a b ]
+    | [ |- ?R (?f ?a) (?f ?b) ]
+      => not has_evar R;
+        not has_evar f;
+        first [ not has_evar a; is_evar b; unify a b
+              | not has_evar b; is_evar a; unify a b ]
+  end;
+  reflexivity.
+
+Ltac subst_body :=
+  repeat match goal with
+           | [ H := _ |- _ ] => subst H
+         end.
+
+Local Open Scope list_scope.
+(** Takes two lists, and recursively iterates down their structure, unifying forced evars *)
+Ltac structurally_unify_lists l1 l2 :=
+  first [ constr_eq l1 l2
+        | is_evar l1; unify l1 l2
+        | is_evar l2; unify l2 l1
+        | lazymatch l1 with
+            | nil => match l2 with
+                       | ?a ++ ?b => structurally_unify_lists l1 a; structurally_unify_lists l1 b
+                       | _ => idtac
+                     end
+            | ((?a ++ ?b) ++ ?c) => structurally_unify_lists (a ++ (b ++ c)) l2
+            | nil ++ ?a => structurally_unify_lists a l2
+            | ?a ++ nil => structurally_unify_lists a l2
+          end
+        | lazymatch l2 with
+            | nil => match l1 with
+                       | ?a ++ ?b => structurally_unify_lists a l2; structurally_unify_lists b l2
+                       | _ => idtac
+                     end
+            | ((?a ++ ?b) ++ ?c) => structurally_unify_lists l1 (a ++ (b ++ c))
+            | nil ++ ?a => structurally_unify_lists l1 a
+            | ?a ++ nil => structurally_unify_lists l1 a
+          end
+        | let l1l2 := constr:((l1, l2)) in
+          match l1l2 with
+            | (?a ++ ?b, ?a ++ ?b') => structurally_unify_lists b b'
+            | (?a ++ ?b, ?a' ++ ?b) => structurally_unify_lists a a'
+            | (?a ++ ?b, ?a) => let T := type_of b in structurally_unify_lists b (nil : T)
+            | (?a ++ ?b, ?b) => let T := type_of a in structurally_unify_lists a (nil : T)
+            | (?a, ?a ++ ?b) => let T := type_of b in structurally_unify_lists (nil : T) b
+            | (?b, ?a ++ ?b) => let T := type_of a in structurally_unify_lists (nil : T) a
+          end
+        | idtac ].
