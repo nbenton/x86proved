@@ -45,6 +45,10 @@ x86\ioaction.vo \
 spred.vo \
 spredtotal.vo \
 opred.vo \
+opred/core.vo \
+opred/pointed.vo \
+opred/morphisms.vo \
+opred/laws.vo \
 septac.vo \
 spec.vo \
 safe.vo \
