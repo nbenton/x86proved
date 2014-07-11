@@ -103,14 +103,16 @@ Lemma spec_evars (S S': spec) : S |-- S' -> S |-- S'.
 Proof. apply. Qed.
 
 (* This tactic attempts to instantiate universals in a hypothesis with evars. *)
+(* We must explicitly create evars to force Coq to not do typeclass resolution >:-( *)
 Ltac eforalls H :=
+  let e := fresh in
   try match type_of H with
   | forall _:_, _ => eapply spec_evars in H
   end; [
     repeat match type_of H with
-    | _ |-- Forall _: _, _ => eapply lforallE_spec in H
-    | _ |-- (Forall _: _, _) @ _ => eapply lforallE_at_spec in H
-    | _ |-- (Forall _: _, _) <@ _ => eapply lforallE_reads_spec in H
+    | _ |-- Forall _: ?T, _ => evar (e : T); eapply (@lforallE_spec _ _ _ e) in H; subst e; cbv beta in H
+    | _ |-- (Forall _: ?T, _) @ _ => evar (e : T); eapply (@lforallE_at_spec _ _ _ _ e) in H; subst e; cbv beta in H
+    | _ |-- (Forall _: ?T, _) <@ _ => evar (e : T); eapply (@lforallE_reads_spec _ _ _ _ e) in H; subst e; cbv beta in H
     end
   | .. ].
 
@@ -312,7 +314,7 @@ Module SpecApply.
   Hint Unfold not : specapply.
 
   Ltac specapply lem :=
-    let Hlem := fresh in
+    let Hlem := fresh "Hlem" in
     (* Move the lemma to be applied into the context so we can preprocess it
        from there. *)
     move: (lem) => Hlem;
@@ -321,21 +323,22 @@ Module SpecApply.
     repeat autounfold with specapply in Hlem;
     (* Instantiate binders with evars so we can reflect the hypothesis. *)
     eforalls Hlem; [
-      match type_of Hlem with ?C' |-- ?S' =>
-        let tlem := quote_term S' in
-        match goal with |- ?C |-- ?S =>
-          let tgoal := quote_term S in
-          (* Apply safe_safe_nf, which will match if tgoal and tlem could be
-             put into normal form. The first subgoal is the lemma to be
-             applied, the second and third subgoals are (entailsOP O' O) and (C |-- C'),
-             which are often trivial, the fourth subgoal is a conjunction of
-             assertion-logic entailments, and the last subgoal is the goal that's
-             left after doing this application. *)
-          eapply (@safe_safe_nf tgoal tlem C C'); [exact Hlem | try reflexivity; try done | try done | |];
-          cbv [eval_ospec eval_oSPred osep oconj oimpl oat];
-          [.. | try solve_code |]
-        end
-      end
+      let C' := match type_of Hlem with ?C' |-- ?S' => constr:(C') end in
+      let S' := match type_of Hlem with ?C' |-- ?S' => constr:(S') end in
+      let C := match goal with |- ?C |-- ?S => constr:(C) end in
+      let S := match goal with |- ?C |-- ?S => constr:(S) end in
+      let tlem := quote_term S' in
+      let tgoal := quote_term S in
+      (* Apply safe_safe_nf, which will match if tgoal and tlem could
+         be put into normal form. The first subgoal is the lemma to be
+         applied, the second and third subgoals are (O' |-- O) and (C
+         |-- C'), which are often trivial, the fourth subgoal is a
+         conjunction of assertion-logic entailments, and the last
+         subgoal is the goal that's left after doing this
+         application. *)
+      eapply (@safe_safe_nf tgoal tlem C C'); [exact Hlem | try reflexivity; try done | try done | |];
+      cbv [eval_ospec eval_oSPred osep oconj oimpl oat];
+      [.. | try solve_code |]
     | .. ];
     clear Hlem.
 
