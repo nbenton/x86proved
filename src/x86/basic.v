@@ -26,11 +26,11 @@ Section Basic.
     basic P c O Q @ R -|- basic (P ** R) c O (Q ** R).
   Proof.
     rewrite /basic.
-    autorewrite with push_at. cancel1 => i.
-    autorewrite with push_at. cancel1 => j.
-    autorewrite with push_at. cancel1 => O'.
-    autorewrite with push_at. rewrite -2!sepSPA.
-    reflexivity.
+    repeat match goal with
+             | [ |- Forall _ : ?T, _ -|- Forall _ : ?T, _ ] => cancel1 => ?
+             | _ => progress autorewrite with push_at
+           end.
+    by rewrite -2!sepSPA.
   Qed.
 
   (* Frame rule for Hoare triples *)
