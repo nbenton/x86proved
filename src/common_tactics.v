@@ -5,7 +5,7 @@
 Ltac type_of x := type of x.
 
 Require Import Ssreflect.ssreflect.
-Require Import Coq.Lists.List.
+Require Import Coq.Lists.List Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Program.Basics.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=
@@ -477,3 +477,70 @@ Ltac structurally_unify_lists l1 l2 :=
   let l2'R := norm_list_right l2 in
   structurally_unify_lists' l1'L l2'L;
     structurally_unify_lists' l1'R l2'R.
+
+
+(** Unify two terms syntactically, up to evars *)
+Class syntax_unify {T} (a : T) (b : T) := unif : a = b.
+Hint Extern 0 (syntax_unify ?a ?b) => is_evar a; exact (Coq.Init.Logic.eq_refl a) : typeclass_instances.
+Hint Extern 0 (syntax_unify ?a ?b) => is_evar b; exact (Coq.Init.Logic.eq_refl a) : typeclass_instances.
+Hint Extern 0 (syntax_unify ?a ?a) => exact (Coq.Init.Logic.eq_refl a) : typeclass_instances.
+Hint Extern 1 (syntax_unify (?f ?a) (?f ?b)) => first [ has_evar a | has_evar b ];
+                                               let pf := constr:(_ : syntax_unify a b) in
+                                               exact (Coq.Init.Logic.eq_refl (f a)) : typeclass_instances.
+Hint Extern 1 (syntax_unify (?f ?a) (?g ?a)) => first [ has_evar f | has_evar g ];
+                                               let pf := constr:(_ : syntax_unify f g) in
+                                               exact (Coq.Init.Logic.eq_refl (f a)) : typeclass_instances.
+Hint Extern 2 (syntax_unify (?f ?a) (?g ?b)) => first [ has_evar f | has_evar g ];
+                                               first [ has_evar a | has_evar b ];
+                                               let pf1 := constr:(_ : syntax_unify f g) in
+                                               let pf2 := constr:(_ : syntax_unify a b) in
+                                               exact (Coq.Init.Logic.eq_refl (f a)) : typeclass_instances.
+Ltac syntax_unif_under_binders A f g :=
+  first [ has_evar f | has_evar g ];
+  let T := constr:(fun x : A => syntax_unify (f x) (g x)) in
+  let T' := (eval cbv beta in T) in
+  let pf := constr:(fun x => _ : T' x) in
+  exact (Coq.Init.Logic.eq_refl f).
+Hint Extern 1 (syntax_unify (fun x : ?A => x) ?g) => syntax_unif_under_binders A (fun x : A => x) g : typeclass_instances.
+Hint Extern 1 (syntax_unify ?f (fun x : ?A => x)) => syntax_unif_under_binders A f (fun x : A => x) : typeclass_instances.
+Hint Extern 1 (syntax_unify (fun x : ?A => @?f x) ?g) => syntax_unif_under_binders A f g : typeclass_instances.
+Hint Extern 1 (syntax_unify ?f (fun x : ?A => @?g x)) => syntax_unif_under_binders A f g : typeclass_instances.
+Ltac syntax_unify a b := first [ let unif := constr:(_ : syntax_unify a b) in idtac | fail 1 "The terms" a "and" b "do not unify syntactically" ].
+
+(** Run [reflexivity], but only if the terms are syntactically equal up to evars *)
+Ltac syntax_unify_reflexivity :=
+  idtac;
+  lazymatch goal with
+    | [ |- ?R ?a ?b ] => syntax_unify a b
+  end;
+  reflexivity.
+
+(** A variant on [f_equiv] from Coq.Classes.Morphisms which uses a custom tactic instead of reflexivity, and fails in slightly better ways. *)
+Ltac f_equiv_using fin_tac :=
+ match goal with
+  | |- ?R (?f ?x) (?f' _) =>
+    let T := type_of x in
+    let Rx := fresh "R" in
+    evar (Rx : relation T);
+    let H := fresh in
+    first [ assert (H : (Rx==>R)%signature f f')
+          | fail 1 "Cannot find a valid signature relating" f "and" f' "via" R "(possibly because they are dependent functions)" ];
+      unfold Rx in *; clear Rx; [ f_equiv_using fin_tac | apply H; clear H; try fin_tac ]
+  | |- ?R ?f ?f' =>
+    solve [change (Proper R f); eauto with typeclass_instances | fin_tac ]
+ end.
+
+Ltac f_equiv' := f_equiv_using syntax_unify_reflexivity; unfold Basics.flip.
+
+(** Like [f_equal], but for more general relations, and only up to syntax matches.  Safer than [f_equiv], but less general. *)
+Ltac f_cancel :=
+  lazymatch goal with
+    | [ |- ?R (?f ?a) (?f ?a') ]
+      => let P := constr:(fun H => proper_prf (Proper := _ : Proper (_ ==> R) f) a a' H) in refine (P _)
+    | [ |- ?R (?f ?a ?b) (?f ?a' ?b') ]
+      => let P := constr:(fun H H' => proper_prf (Proper := _ : Proper (_ ==> _ ==> R) f) a a' H b b' H') in refine (P _ _)
+    | [ |- ?R (?f ?a ?b ?c) (?f ?a' ?b' ?c') ]
+      => let P := constr:(fun Ha Hb Hc => proper_prf (Proper := _ : Proper (_ ==> _ ==> R) f) a a' Ha b b' Hb c c' Hc) in refine (P _ _ _)
+  end;
+  unfold Basics.flip;
+  try syntax_unify_reflexivity.
