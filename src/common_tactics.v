@@ -403,13 +403,13 @@ Ltac evar_safe_reflexivity :=
     | [ |- ?R ?a ?b ]
       => not has_evar R;
         first [ not goal_has_evar
-              | not has_evar a; is_evar b; unify a b
-              | not has_evar b; is_evar a; unify a b ]
+              | is_evar b; unify a b
+              | is_evar a; unify a b ]
     | [ |- ?R (?f ?a) (?f ?b) ]
       => not has_evar R;
         not has_evar f;
-        first [ not has_evar a; is_evar b; unify a b
-              | not has_evar b; is_evar a; unify a b ]
+        first [ is_evar b; unify a b
+              | is_evar a; unify a b ]
   end;
   reflexivity.
 
@@ -420,35 +420,60 @@ Ltac subst_body :=
 
 Local Open Scope list_scope.
 (** Takes two lists, and recursively iterates down their structure, unifying forced evars *)
-Ltac structurally_unify_lists l1 l2 :=
+Ltac norm_list_left lst :=
+  match lst with
+    | (?a ++ (?b ++ ?c)) => let lst' := constr:((a ++ b) ++ c) in
+                            norm_list_left lst'
+    | (?a ++ nil) => norm_list_left a
+    | (nil ++ ?a) => norm_list_left a
+    | (?a ++ ?b) => let a' := norm_list_left a in
+                    let b' := norm_list_left b in
+                    constr:(a' ++ b')
+    | ?lst' => constr:(lst')
+  end.
+Ltac norm_list_right lst :=
+  match lst with
+    | ((?a ++ ?b) ++ ?c) => let lst' := constr:(a ++ (b ++ c)) in
+                            norm_list_right lst'
+    | (?a ++ nil) => norm_list_right a
+    | (nil ++ ?a) => norm_list_right a
+    | (?a ++ ?b) => let a' := norm_list_right a in
+                    let b' := norm_list_right b in
+                    constr:(a' ++ b')
+    | ?lst' => constr:(lst')
+  end.
+
+Ltac structurally_unify_lists' l1 l2 :=
   first [ constr_eq l1 l2
         | is_evar l1; unify l1 l2
         | is_evar l2; unify l2 l1
         | lazymatch l1 with
             | nil => match l2 with
-                       | ?a ++ ?b => structurally_unify_lists l1 a; structurally_unify_lists l1 b
+                       | ?a ++ ?b => structurally_unify_lists' l1 a; structurally_unify_lists' l1 b
                        | _ => idtac
                      end
-            | ((?a ++ ?b) ++ ?c) => structurally_unify_lists (a ++ (b ++ c)) l2
-            | nil ++ ?a => structurally_unify_lists a l2
-            | ?a ++ nil => structurally_unify_lists a l2
           end
         | lazymatch l2 with
             | nil => match l1 with
-                       | ?a ++ ?b => structurally_unify_lists a l2; structurally_unify_lists b l2
+                       | ?a ++ ?b => structurally_unify_lists' a l2; structurally_unify_lists' b l2
                        | _ => idtac
                      end
-            | ((?a ++ ?b) ++ ?c) => structurally_unify_lists l1 (a ++ (b ++ c))
-            | nil ++ ?a => structurally_unify_lists l1 a
-            | ?a ++ nil => structurally_unify_lists l1 a
           end
         | let l1l2 := constr:((l1, l2)) in
           match l1l2 with
-            | (?a ++ ?b, ?a ++ ?b') => structurally_unify_lists b b'
-            | (?a ++ ?b, ?a' ++ ?b) => structurally_unify_lists a a'
-            | (?a ++ ?b, ?a) => let T := type_of b in structurally_unify_lists b (nil : T)
-            | (?a ++ ?b, ?b) => let T := type_of a in structurally_unify_lists a (nil : T)
-            | (?a, ?a ++ ?b) => let T := type_of b in structurally_unify_lists (nil : T) b
-            | (?b, ?a ++ ?b) => let T := type_of a in structurally_unify_lists (nil : T) a
+            | (?a ++ ?b, ?a ++ ?b') => structurally_unify_lists' b b'
+            | (?a ++ ?b, ?a' ++ ?b) => structurally_unify_lists' a a'
+            | (?a ++ ?b, ?a) => let T := type_of b in structurally_unify_lists' b (nil : T)
+            | (?a ++ ?b, ?b) => let T := type_of a in structurally_unify_lists' a (nil : T)
+            | (?a, ?a ++ ?b) => let T := type_of b in structurally_unify_lists' (nil : T) b
+            | (?b, ?a ++ ?b) => let T := type_of a in structurally_unify_lists' (nil : T) a
           end
         | idtac ].
+
+Ltac structurally_unify_lists l1 l2 :=
+  let l1'L := norm_list_left l1 in
+  let l2'L := norm_list_left l2 in
+  let l1'R := norm_list_right l1 in
+  let l2'R := norm_list_right l2 in
+  structurally_unify_lists' l1'L l2'L;
+    structurally_unify_lists' l1'R l2'R.
