@@ -29,17 +29,17 @@ Qed.
 Local Transparent ILFun_Ops ILPre_Ops.
 
 (* Morphism for obs *)
-Instance obs_entails_m: Proper (entailsOP ==> lentails) obs.
+Instance obs_entails_m: Proper (lentails ==> lentails) obs.
 Proof.
 move => O O' HO k R H1 s H2.
 destruct (H1 s H2) as [o1 [H3 H5]].
 exists o1. by split; [apply: HO |].
 Qed.
 
-Instance obs_equiv_m: Proper (equivOP ==> lequiv) obs.
+Instance obs_equiv_m: Proper (lequiv ==> lequiv) obs.
 Proof. move => O O' [HO HO']. split; by apply obs_entails_m. Qed.
 
-Lemma safeAsObs : safe -|- obs trueOP.
+Lemma safeAsObs : safe -|- obs ltrue.
 Proof.
 apply spec_equiv => k R.
 rewrite /safe/obs/mkspec/spec_fun/=.
@@ -74,13 +74,13 @@ Qed.
 
 Lemma oneStepLaterObs s o s':
   oneStep s o s' ->
-  forall O,
+  forall O, `{IsPointed_OPred O} ->
   |> obs O @ eq_pred s' |-- obs (catOP (eq_opred o) O) @ eq_pred s.
-Proof. move => RED O k0 R /=H s0 H0.
+Proof. move => RED O ? k0 R /=H s0 H0.
 have H1 := eq_pred_aux s' H0.
 rewrite -(eq_pred_aux2 H0).
 destruct k0.
-destruct (inhabitedOP O) as [o' Ho']. rewrite /runsForWithPrefixOf/manyStep.
+destruct (_ : IsPointed_OPred O) as [o' Ho']. rewrite /runsForWithPrefixOf/manyStep.
 exists (o++o').
 split.
 by apply catOP_eq_opred.

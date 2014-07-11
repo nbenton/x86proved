@@ -23,10 +23,8 @@ Ltac triple_apply lemma tac :=
  do ?(instantiate;
       match goal with
         | [ |- _ |-- _ ] => reflexivity
-        | [ |- entailsOP _ _ ] => reflexivity
         | [ |- _ |-- _ ] => progress pointsto.ssimpl
         | [ |- _ |-- _ ] => done
-        | [ |- entailsOP _ _ ] => done
         | [ |- _ |-- _ ] => progress tac
         | [ |- _ |-- _ ] => fail 2 "Cannot fully solve side-conditions of triple_roc"
       end).

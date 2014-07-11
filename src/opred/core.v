@@ -11,31 +11,22 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-(*===========================================================================
-    Predicates over observations (sequences of actions)
-  ===========================================================================*)
-Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
-Require Import x86proved.bitsrep x86proved.x86.ioaction x86proved.charge.ilogic.
-Require Import Coq.Setoids.Setoid x86proved.charge.csetoid Coq.Classes.RelationClasses Coq.Classes.Morphisms Coq.Program.Basics.
+Definition OPred := ILFunFrm Actions Prop.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Import Prenex Implicits.
+Identity Coercion OPred_def : OPred >-> ILFunFrm.
 
-Local Obligation Tactic := idtac.
+Local Existing Instance ILFun_Ops.
+Local Existing Instance ILFun_ILogic.
 
-(* We require predicates on observations to be non-empty i.e. for there to be
-   some sequence of actions for which it holds *)
-Record OPred := mkOPred {
-  OPred_pred :> Actions -> Prop;
-  OPred_inhabited: exists x: Actions, OPred_pred x
-}.
+(** Giving these cost 1 ensures that they are preferred over spec/Prop instances *)
+Instance osepILogicOps : ILogicOps OPred | 1 := _.
+Instance osepILogic : ILogic OPred | 1 := _.
 
-Implicit Arguments mkOPred [].
+Definition mkOPred (P : Actions -> Prop) : OPred
+  := @mkILFunFrm Actions _ Prop _ P (fun t t' H => (eq_rect _ _ (reflexivity _) _ (f_equal P H))).
 
 (** ** Singleton predicate *)
-Program Definition eq_opred s := mkOPred (fun s' => s === s') _.
-Next Obligation. move => s. by exists s. Qed.
+Definition eq_opred s := mkOPred (fun s' => s === s').
 
 (** ** The empty sequence of actions *)
 Definition empOP : OPred := eq_opred nil.
@@ -44,39 +35,19 @@ Definition empOP : OPred := eq_opred nil.
 Definition outOP (c:Chan) (d:Data) : OPred := eq_opred [::Out c d].
 
 (** ** A sequence of actions that splits into the concatenation of one
-satisfying P and one satisfying Q *)
-Program Definition catOP (P Q: OPred) : OPred
- := mkOPred (fun o => exists o1 o2, o = o1++o2 /\ P o1 /\ Q o2) _.
-Next Obligation.
-move => [P [Px PH]] [Q [Qx QH]]. exists (Px++Qx). exists Px, Qx.
-intuition.
-Qed.
-
-(** ** Any sequence of actions *)
-Program Definition trueOP : OPred := @mkOPred (fun _ => True) _.
-Next Obligation. by exists nil. Qed.
-
-(** ** Union *)
-Program Definition orOP (P Q: OPred) : OPred
-  := mkOPred (fun o => P o \/ Q o) _.
-Next Obligation.
-move => [P [Px PH]] [Q [Qx QH]]. exists Px. by left.
-Qed.
+       satisfying P and one satisfying Q *)
+Definition catOP (P Q: OPred) : OPred
+ := mkOPred (fun o => exists o1 o2, o = o1++o2 /\ P o1 /\ Q o2).
 
 (** ** Repetition *)
-Fixpoint repOP n P := if n is n.+1 then catOP P (repOP n P) else empOP.
-
-(** ** Existential quantification, for inhabited types *)
-Program Definition existsOP X {_: inhabited X} (f: X -> OPred) : OPred :=
-  mkOPred (fun o => exists x: X, f x o) _.
-Next Obligation.
-move => X [x] f.
-destruct (OPred_inhabited (f x)) as [y H]. by exists y, x.
-Qed.
+Fixpoint repOP n P := if n is n'.+1 then catOP P (repOP n' P) else empOP.
 
 (** ** Kleene star *)
-Definition starOP P := @existsOP _ (inhabits 0) (fun n => repOP n P).
+Definition starOP P : OPred := Exists n, repOP n P.
 
-(* *** Inclusion and equivalence on predicates *)
-Definition entailsOP (O O': OPred) := forall s, O s -> O' s.
-Definition equivOP (O O': OPred) := entailsOP O O' /\ entailsOP O' O.
+(** ** Rolling a function on numbers into a single [OPred] *)
+Fixpoint rollOP n (f : nat -> OPred) : OPred :=
+  match n with
+    | 0 => empOP
+    | S n' => catOP (f (S n')) (rollOP n' f)
+  end.

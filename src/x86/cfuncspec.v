@@ -77,7 +77,7 @@ Definition fastcall_void1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 false)) : spe
   Forall v:DWORD,
   Forall sp:DWORD,
   Forall iret:DWORD,
-  Forall O,
+  Forall O : PointedOPred,
   (
     obs O @ (EIP ~= iret ** ECX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** post FS v) -->>
     obs O @ (EIP ~= f    ** ECX ~= v ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS  v)
@@ -88,7 +88,7 @@ Definition fastcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : s
   Forall arg:DWORD,
   Forall sp:DWORD,
   Forall iret:DWORD,
-  Forall O,
+  Forall O : PointedOPred,
   (
     obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ECX?       ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** snd (post FS arg)) -->>
     obs O @ (EIP ~= f    ** EAX?          ** ECX ~= arg ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS arg)
@@ -101,7 +101,7 @@ Definition stdcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : sp
   Forall sp:DWORD,
   Forall iret:DWORD,
   Forall ebp:DWORD,
-  Forall O,
+  Forall O : PointedOPred,
   (
     obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
     obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
@@ -112,7 +112,7 @@ Definition cdecl_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec
   Forall arg:DWORD,
   Forall sp:DWORD,
   Forall iret:DWORD,
-  Forall O,
+  Forall O : PointedOPred,
   (
     obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp-#8 ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
     obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
@@ -151,16 +151,17 @@ autorewrite with push_at.
 unfold_program. specintros => i'.
 
 specapply H. sbazooka.
-specapply RET_rule. sbazooka.
+specapply RET_loopy_rule. sbazooka.
 rewrite <-spec_reads_frame. autorewrite with push_at.
 rewrite <-spec_later_weaken. apply: limplAdj. apply: landL2. cancel1. sbazooka.
 rewrite subB_equiv_addB_negB. rewrite <-(addBA sp). rewrite (addBC (negB _)).
 rewrite ->(addBA sp).  rewrite -> addB_negBn. rewrite -(toNatK (zeroExtend _ _)).
 by rewrite toNat_zeroExtend addB0.
+typeclasses eauto.
 Qed.
 
 (* Push/pop idiom. It would be nice to have an anti-frame rule so we don't need to mention r in the frame *)
-Lemma pushpop_rule (r:NonSPReg) c P O Q :
+Lemma pushpop_rule (r:NonSPReg) c P (O : PointedOPred) Q :
   |-- basic P c O Q ->
   |-- Forall esp:DWORD, Forall v:DWORD, basic P (PUSH r;; c;; POP r) O Q @ (r ~= v ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
 Proof.
@@ -177,7 +178,7 @@ Qed.
 
 (* Stack frame idiom *)
 
-Lemma stackframe_rule c P O Q ebp esp :
+Lemma stackframe_rule c P (O : PointedOPred) Q ebp esp :
   |-- basic (P ** EBP ~= esp-#4) c O (Q ** EBP?) ->
   |-- basic P (PUSH EBP;; MOV EBP, ESP;; c;; POP EBP) O Q @ (EBP ~= ebp ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
 Proof.
@@ -215,7 +216,7 @@ unfold_program. specintro => f''.
 
 (* It's rather unpleasant that we have to do this! *)
 specintro => O.
-specapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?) empOP
+specapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?) {| OPred_pred := empOP |}
                                           (snd (post FS arg) ** EAX ~= fst (post FS arg) ** ECX? ** EDX? ** OSZCP? ** sp-#4 :-> ?:DWORD) ebp (sp-#8)).
 
 split; last first. rewrite /C. by ssimpl.
@@ -225,7 +226,7 @@ specapply RET_rule.
 autorewrite with bitsHints. replace (8+4) with 12 by done. by ssimpl.
 
 rewrite <-spec_reads_frame. autorewrite with push_at.
-rewrite <-spec_later_weaken. apply: limplAdj. apply: landL2. cancel1.
+apply: limplAdj. apply: landL2. cancel1.
 
 rewrite -(toNatK (zeroExtend _ _)). rewrite toNat_zeroExtend. rewrite toNat_fromNatBounded => //.
 autorewrite with bitsHints. replace (ESP~=_) with (ESP~=sp) by done.

@@ -10,11 +10,11 @@ Import Prenex Implicits.
 Local Open Scope instr_scope.
 
 (* Example: It is safe to sit forever in a tight loop. *)
-Example safe_loop (p q: DWORD) O :
+Example safe_loop (p q: DWORD) (O : PointedOPred) :
   |-- obs O @ (EIP ~= p ** p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
-  have H := @JMP_I_rule p p q.
+  have H := @JMP_I_loopy_rule p p q.
   Require Import spectac. apply (lforallE_spec O) in H. cbv beta in H.
   rewrite ->spec_reads_entails_at in H; [|apply _].
   autorewrite with push_at in H. apply landAdj in H.

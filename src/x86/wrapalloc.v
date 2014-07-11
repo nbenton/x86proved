@@ -53,7 +53,7 @@ autorewrite with push_at.
 specapply MOV_RanyI_rule.
 - by ssimpl.
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. cancel1. rewrite /natAsDWORD. ssimpl. by apply: lorR2.
+autorewrite with push_at. simpl (OPred_pred (default_PointedOPred _)). rewrite empOPL. cancel1. rewrite /natAsDWORD. ssimpl. by apply: lorR2.
 
 (* success case *)
 autorewrite with push_at.
@@ -74,10 +74,10 @@ specapply JMP_I_rule.
 - by ssimpl.
 
 (* Final stuff *)
-rewrite E0. rewrite <-spec_later_weaken.
+rewrite E0.
 rewrite <-spec_reads_frame.
 apply: limplAdj. autorewrite with push_at.
-apply: landL2. cancel1.
+apply: landL2. simpl (OPred_pred (default_PointedOPred _)). rewrite empOPL. cancel1.
 rewrite /OSZCP/stateIsAny. sbazooka. apply: lorR1.
 
 simpl snd.

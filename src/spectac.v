@@ -64,7 +64,7 @@ Ltac specsplit :=
    lemma and then apply it. *)
 Lemma safe_safe_ro C C' S S' R R' P P' RP O O':
   C' |-- (S' -->> obs O' @ P') <@ R' ->
-  entailsOP O' O ->
+  O' |-- O ->
   C |-- C' ->
   P |-- P' ** RP /\ R |-- R' ** ltrue ->
   C |-- (S -->> S' @ RP) <@ R ->
@@ -293,7 +293,7 @@ Module SpecApply.
     match tonf t , tonf t' with
     | Some (mknf So Oo Po Ro) , Some (mknf So' Oo' Po' Ro') =>
         C' |-- eval t' ->
-        entailsOP Oo' Oo ->
+        Oo' |-- Oo ->
         C |-- C' ->
         eval_oSPred Po |-- osep Po' RP /\
         eval_oSPred Ro |-- osep Ro' ltrue ->

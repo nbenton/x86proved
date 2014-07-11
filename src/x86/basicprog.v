@@ -9,7 +9,7 @@ Require Import x86proved.x86.program x86proved.x86.basic x86proved.charge.ilogic
 
 (* Morphism for program equivalence *)
 Global Instance basic_progEq_m:
-Proper (lequiv ==> progEq ==> equivOP ==> lequiv ==> lequiv) basic.
+Proper (lequiv ==> progEq ==> lequiv ==> lequiv ==> lequiv) basic.
   Proof.
     move => P P' HP c c' Hc O O' HO Q Q' HQ. split.
     setoid_rewrite -> HQ. setoid_rewrite HP. setoid_rewrite HO.
@@ -28,8 +28,8 @@ Proof.
 Qed.
 
 (* Sequencing rule *)
-Lemma basic_seq (c1 c2: program) S P O1 Q O2 R O:
-  entailsOP (catOP O1 O2) O ->
+Lemma basic_seq (c1 c2: program) S P O1 Q (O2 : PointedOPred) R O:
+  catOP O1 O2 |-- O ->
   S |-- basic P c1 O1 Q ->
   S |-- basic Q c2 O2 R ->
   S |-- basic P (c1;; c2) O R.
@@ -37,8 +37,8 @@ Proof.
   rewrite /basic. move=> HO Hc1 Hc2. specintros => i j O'. unfold_program.
   specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst.
   rewrite <- HO. rewrite -> catOPA.
-  specapply Hc1. by ssimpl.
-  specapply Hc2. by ssimpl.
+  specapply Hc1.  by ssimpl.
+  specapply Hc2; first (rewrite /default_PointedOPred/OPred_pred; reflexivity). by ssimpl.
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
   by rewrite spec_at_emp.
 Qed.

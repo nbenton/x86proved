@@ -8,7 +8,7 @@ Definition retreg := EBP.
 
 (* Toy function calling convention *)
 Definition toyfun f P O Q :=
-  Forall iret, Forall O',
+  Forall iret, Forall O' : PointedOPred,
                obs O' @ (EIP~=iret ** retreg? ** Q)
           -->> obs (catOP O O') @ (EIP~=f ** retreg~=iret ** P).
 
@@ -38,8 +38,8 @@ Proof.
 Qed.
 Hint Rewrite spec_at_toyfun : push_at.
 
-Lemma toyfun_call (f:DWORD) P (O:OPred) Q:
-  |> toyfun f P O Q |-- basic P (call_toyfun f) O Q @ retreg?.
+Lemma toyfun_call (f:DWORD) P (O:PointedOPred) Q:
+  |>toyfun f P O Q |-- basic P (call_toyfun f) O Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
   apply basic_local => iret. rewrite /stateIsAny. specintros => old.
@@ -47,7 +47,7 @@ Proof.
   eapply basic_basic. apply MOV_RI_rule. ssimpl. reflexivity. reflexivity.
 
   rewrite /basic. specintros => i j O'. unfold_program. specintros => _ <- -> {j}.
-  specapply JMP_I_rule. by ssimpl.
+  specapply JMP_I_loopy_rule. by ssimpl.
 
   rewrite <-spec_reads_frame. autorewrite with push_at.
   rewrite /toyfun.
@@ -55,10 +55,10 @@ Proof.
   autorewrite with push_later; last by apply _. apply lforallL with O'.
   rewrite /stateIsAny. autorewrite with push_later; last by apply _.
   rewrite <- spec_later_weaken.
-  cancel2. cancel1. by ssimpl.
+  cancel2. cancel1. by ssimpl. reflexivity.
 Qed.
 
-Lemma toyfun_mkbody (f f': DWORD) P p O Q:
+Lemma toyfun_mkbody (f f': DWORD) P p (O : PointedOPred) Q:
   (Forall iret, basic P p O Q @ (retreg ~= iret)) |--
     toyfun f P O Q <@ (f--f' :-> mkbody_toyfun p).
 Proof.
@@ -71,7 +71,7 @@ Proof.
   - split; sbazooka.
   specapply JMP_R_rule. by ssimpl.
   rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
-  rewrite <-spec_later_weaken. rewrite /stateIsAny. autorewrite with push_at.
+  rewrite /stateIsAny. autorewrite with push_at.
   cancel1. by sbazooka.
 Qed.
 
@@ -129,8 +129,8 @@ Proof.
     - have H := toyfun_call. setoid_rewrite spec_at_basic in H. apply H.
     - by apply spec_later_weaken.
     - by sbazooka.
+    - reflexivity.
     done.
-  reflexivity.
   apply lforallL with (a +# 2).
   eapply basic_basic_context.
   - have H := toyfun_call. setoid_rewrite spec_at_basic in H. apply H.
@@ -139,7 +139,7 @@ Proof.
   reflexivity. rewrite -addB_addn. sbazooka. reflexivity.
 Qed.
 
-Example toyfun_example_correct entry (i j: DWORD) a O:
+Example toyfun_example_correct entry (i j: DWORD) a (O : PointedOPred):
   |-- (
       obs O @ (EIP ~= j ** EAX ~= a +# 4) -->>
       obs O @ (EIP ~= entry ** EAX ~= a)
@@ -193,6 +193,6 @@ Proof.
   specapply JMP_R_rule. by ssimpl.
   autorewrite with push_at.
   rewrite <-spec_reads_frame. rewrite -limpland. apply limplValid.
-  rewrite /toyfun. eapply lforallL. eapply lforallL. rewrite <-spec_later_weaken.
+  rewrite /toyfun. eapply lforallL. eapply lforallL.
   rewrite /stateIsAny. cancel2; cancel1; by sbazooka.
 Qed.

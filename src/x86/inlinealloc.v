@@ -37,7 +37,7 @@ Definition allocImp infoBlock (n: nat) (failed: DWORD) : program :=
   MOV [ESI], EDI.
 
 Definition allocSpec n (fail:DWORD) inv code :=
-  Forall i j : DWORD, Forall O, (
+  Forall i j : DWORD, Forall O : PointedOPred, (
       obs O @ (EIP ~= fail ** EDI?) //\\
       obs O @ (EIP ~= j ** Exists p, EDI ~= p +# n ** memAny p (p +# n))
     -->>
@@ -66,7 +66,7 @@ Proof.
   specapply ADD_RI_rule; first by ssimpl.
 
   (* JC failed *)
-  specapply JC_rule; first by rewrite /OSZCP; ssimpl.
+  specapply JC_loopy_rule; first by rewrite /OSZCP; ssimpl.
   repeat specsplit.
   { rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
@@ -77,11 +77,11 @@ Proof.
   specapply CMP_MR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
 
   (* JC failed *)
-  specapply JC_rule; first by ssimpl.
+  specapply JC_loopy_rule; first by ssimpl.
 
   repeat specsplit.
-  { rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
-    autorewrite with push_at. apply limplValid. apply landL1. cancel1.
+  { rewrite <-spec_reads_frame.
+    autorewrite with push_at. apply limplValid. apply landL1. rewrite <-spec_later_weaken. cancel1.
     rewrite /stateIsAny/allocInv. sbazooka. }
 
   (* MOV [ESI], EDI *)

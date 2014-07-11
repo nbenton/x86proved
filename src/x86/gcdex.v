@@ -66,7 +66,7 @@ Definition showOctal_program : program :=
       ).
 
 Theorem gcd_safe: forall endAddr: DWORD,
-  |-- Forall O, (obs O @ (EIP ~= endAddr) -->> obs O @ (EIP ~= codeAddr))
+  |-- Forall O : PointedOPred, (obs O @ (EIP ~= endAddr) -->> obs O @ (EIP ~= codeAddr))
         @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
        <@ (codeAddr -- endAddr :-> gcd_bytes).
 Proof.

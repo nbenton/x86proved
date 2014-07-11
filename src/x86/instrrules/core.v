@@ -80,9 +80,10 @@ Section UnfoldSpec.
     destruct HQ as [orest [H4 H5]].
     clear H3 Hsij.
     destruct k.
-    - destruct (inhabitedOP O') as [o' o'H].
-      exists (outputToActions out ++ o'). split. by exists (outputToActions out), o'.
-      apply runsForWithPrefixOf0.
+    { eexists (outputToActions out ++ _).
+      do ![ apply runsForWithPrefixOf0
+          | eassumption
+          | esplit ]. }
 
     (* k > 0 *)
     have LE: k <= succn k by done.
@@ -98,13 +99,13 @@ Section UnfoldSpec.
 
   Lemma TRIPLE_safeLater_gen (instr:Instr) P O Q (i j: DWORD) sij:
     eq_pred sij |-- i -- j :-> instr ->
-    forall O',
+    forall O' `{IsPointed_OPred O'},
     (forall (R: SPred),
      TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) O
             (Q ** R)) ->
     |> (obs O') @ Q |-- obs (catOP O O') @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
-    move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
+    move => Hsij O' ? HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
     apply (step_rule Hsij) in HTRIPLE.
     apply lentails_eq in Hs.
@@ -117,7 +118,7 @@ Section UnfoldSpec.
     rewrite <- sepSPA in H3.
     apply lentails_eq in H3.
     destruct k => //.
-    - destruct (inhabitedOP O') as [o' o'H].
+    - destruct (_ : IsPointed_OPred O') as [o' o'H].
       exists (outputToActions out ++ o'). split. by exists (outputToActions out), o'.
       apply runsForWithPrefixOf0.
     (* k > 0 *)
@@ -138,14 +139,14 @@ Section UnfoldSpec.
 
 End UnfoldSpec.
 
-Lemma TRIPLE_safecatLater instr P Q (i j: DWORD) O O':
+Lemma TRIPLE_safecatLater instr P Q (i j: DWORD) O O' `{IsPointed_OPred O'} :
   (forall (R: SPred),
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) O (Q ** R)) ->
   |-- (|> (obs O') @ Q -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
   rewrite sepSPA. apply limplValid.
-  eapply TRIPLE_safeLater_gen; [eassumption| ]. move=> R. triple_apply H.
+  eapply TRIPLE_safeLater_gen; try eassumption; []. move=> R. triple_apply H.
 Qed.
 
 Lemma TRIPLE_safecat instr P Q (i j: DWORD) O O':
@@ -158,12 +159,26 @@ Proof.
   eapply TRIPLE_safe_gen; [eassumption|]. move=> R. triple_apply H.
 Qed.
 
-Lemma TRIPLE_safeLater instr P Q (i j: DWORD) O:
+Lemma TRIPLE_safeLater instr P Q (i j: DWORD) O `{IsPointed_OPred O}:
   (forall (R: SPred),
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) empOP (Q ** R)) ->
   |-- (|> obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. have TS:= TRIPLE_safecatLater (O:= empOP).
+  eforalls TS;
+    lazymatch goal with
+      | [ |- IsPointed_OPred _ ] => eassumption
+      | _ => idtac
+    end.
+  rewrite -> empOPL in TS. apply TS. done.
+Qed.
+
+Lemma TRIPLE_safe instr P Q (i j: DWORD) O :
+  (forall (R: SPred),
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) empOP (Q ** R)) ->
+  |-- (obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+Proof.
+  move=> H. have TS:= TRIPLE_safecat (O:= empOP).
   eforalls TS. rewrite -> empOPL in TS. apply TS. done.
 Qed.
 

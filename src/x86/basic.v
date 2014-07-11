@@ -17,7 +17,7 @@ Section Basic.
 
   (** Basic block of position-independent code *)
   Definition basic P (c:T) (O: OPred) Q : spec :=
-    Forall i j:DWORD, Forall O': OPred,
+    Forall i j:DWORD, Forall O': PointedOPred,
     (obs O' @ (EIP ~= j ** Q) -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> c).
   Global Strategy 10000 [basic].
 
@@ -43,25 +43,25 @@ Section Basic.
   Lemma basic_roc P' O' Q' S P c O Q:
     P |-- P' ->
     Q' |-- Q ->
-    entailsOP O' O ->
+    O' |-- O ->
     S |-- basic P' c O' Q' ->
     S |-- basic P c O Q.
   Proof.
     move=> HP HQ HO H. rewrite /basic in H.
-    setoid_rewrite <-HP in H. setoid_rewrite ->HQ in H. setoid_rewrite ->HO in H.
+    setoid_rewrite <-HP in H. setoid_rewrite ->HQ in H.  setoid_rewrite ->HO in H.
     apply H.
   Qed.
 
   (* Morphisms for triples *)
   Global Instance basic_entails_m:
-    Proper (lentails --> eq ==> entailsOP ++> lentails ++> lentails) basic.
+    Proper (lentails --> eq ==> lentails ++> lentails ++> lentails) basic.
   Proof.
     move => P P' HP c _ <- O O' HO Q Q' HQ. apply: basic_roc; try eassumption.
     done.
   Qed.
 
   Global Instance basic_equiv_m:
-    Proper (lequiv ==> eq ==> equivOP ==> lequiv ==> lequiv) basic.
+    Proper (lequiv ==> eq ==> lequiv ==> lequiv ==> lequiv) basic.
   Proof.
     split; apply basic_entails_m. apply H. done. apply H1. apply H2. apply H. done.
     apply H1. apply H2.
@@ -82,7 +82,7 @@ Section Basic.
   Qed.
 
   Global Instance basic_equiv_m' P c:
-    Proper (equivOP ==> lequiv ==> lequiv) (basic P c).
+    Proper (lequiv ==> lequiv ==> lequiv) (basic P c).
   Proof.
     move => O O' HO Q Q' HQ. setoid_rewrite HO. split. by setoid_rewrite HQ.
     by setoid_rewrite <-HQ.
@@ -105,7 +105,7 @@ Section Basic.
   Lemma basic_exists A S P c O Q:
     (forall a:A, S |-- basic (P a) c O Q) ->
     S |-- basic (lexists P) c O Q.
-  Proof. rewrite /basic => H. specintros => i j O' a. eforalls H. simple apply H. Qed.
+  Proof. rewrite /basic => H. specintros => *. eforalls H. simple apply H. Qed.
 
   Global Instance AtEx_basic P c O Q : AtEx (basic P c O Q).
   Proof. rewrite /basic. apply AtEx_forall => i.
@@ -115,7 +115,7 @@ Section Basic.
     S' |-- basic P' c O' Q' ->
     S |-- S' ->
     P |-- P' ** R ->
-    entailsOP O' O ->
+    O' |-- O ->
     Q' ** R |-- Q ->
     S |-- basic P c O Q.
   Proof. move=> Hc HS HP HO HQ. apply: basic_roc. apply HP. apply HQ. apply HO.

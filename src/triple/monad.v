@@ -11,7 +11,7 @@ Lemma triple_skip P : TRIPLE P (retn tt) empOP P.
 Proof.  move => s pre; exists s, nil; intuition. done. Qed.
 
 Lemma triple_seqcat P P' P'' O1 O2 c1 c2 O :
-  entailsOP (catOP O1 O2) O ->
+  catOP O1 O2 |-- O ->
   TRIPLE P c1 O1 P' ->
   TRIPLE P' c2 O2 P'' ->
   TRIPLE P (do! c1; c2) O P''.

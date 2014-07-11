@@ -1,5 +1,5 @@
 (** * Laws about predicates over observations. *)
-Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
 Require Import Ssreflect.bigop.
 Require Import x86proved.bitsrep x86proved.x86.ioaction.
 Require Import x86proved.opred.core.
@@ -9,79 +9,136 @@ Require Import x86proved.common_tactics.
 Generalizable All Variables.
 Set Implicit Arguments.
 
-(** ** catOP has empOP has left and right unit, and is associative *)
-Lemma empOPR P : equivOP (catOP P empOP) P.
-Proof. split.
-move => o [s1 [s2 [-> [H2 /= E2]]]]. by rewrite -E2 cats0.
-move => o H. exists o, nil. by rewrite cats0.
-Qed.
+(** [catOP] has [empOP] as left and right unit, and is associative *)
 
-Lemma empOPL P : equivOP (catOP empOP P) P.
-Proof. split.
-move => o [s1 [s2 [-> [/=E2 H]]]]. by rewrite <- E2. move => o H. by exists nil, o.
-Qed.
+(** We need to [move H at bottom] first because otherwise [progress]
+    will pick up the fact that [rewrite /foo in H] moves [H] at bottom
+    even if it does nothing else. *)
+Local Transparent ILFun_Ops ILPre_Ops.
 
-Lemma catOPA (P Q R : OPred) : equivOP (catOP (catOP P Q) R) (catOP P (catOP Q R)).
-Proof.
-split.
-+ move => o [s1 [s2 [/=-> [[s3 [s4 [/=-> [H3 H4]]]] H5]]]].
-  exists s3, (s4++s2). rewrite catA. split => //. split => //. by exists s4, s2.
-+ move => o [s1 [s2 [/=-> [H2 [s3 [s4 [/=-> [H4 H5]]]]]]]].
-  exists (s1++s3), s4. rewrite catA. split => //. split => //. by exists s1, s3.
-Qed.
+Create HintDb opred_laws_t discriminated.
 
-Lemma catOP_trueL P : entailsOP P (catOP trueOP P).
-Proof. move => s H/=. by exists nil, s. Qed.
+Hint Resolve List.app_assoc List.app_nil_l List.app_nil_r symmetry : opred_laws_t.
 
-Lemma catOP_trueR P : entailsOP P (catOP P trueOP).
-Proof. move => s H/=. exists s, nil. by rewrite cats0. Qed.
+(** Tactics that will never need to be undone *)
+Local Ltac t'_safe_without_evars :=
+  do [ eassumption
+     | done
+     | by hyp_apply *; try eassumption
+     | by eauto with opred_laws_t
+     | by left
+     | by right ].
 
-Lemma orOPR1 C P Q : entailsOP C P -> entailsOP C (orOP P Q).
-Proof. move => H s H'. left. by apply H. Qed.
+(** We do replacement without disturbing evars, or if an evar can only
+    be one thing (like when we have [x = y ++ z] and [x] and [y] are
+    syntactically the same), then we can make progress. *)
+Local Ltac progress_lists' :=
+  idtac;
+  lazymatch goal with
+    | [ |- appcontext[(nil ++ ?a)%list] ] => replace (nil ++ a)%list with a by by symmetry; apply List.app_nil_l
+    | [ |- appcontext[(?a ++ nil)%list] ] => replace (a ++ nil)%list with a by by symmetry; apply List.app_nil_r
+    | [ |- appcontext[((?a ++ ?b) ++ ?c)%list] ] => replace ((a ++ b) ++ c)%list with (a ++ (b ++ c))%list by by apply List.app_assoc
+    | [ |- ?x = ?y ] => progress (structurally_unify_lists x y; change (x = y))
+                                 (** the [change (x = y)] above is a hack to get [progress] to notice instantiation of evars; see https://coq.inria.fr/bugs/show_bug.cgi?id=3412 *)
+  end.
 
-Lemma orOPR2 C P Q : entailsOP C Q -> entailsOP C (orOP P Q).
-Proof. move => H s H'. right. by apply H. Qed.
+Local Ltac t'_safe :=
+  do [ move => ?
+     | progress instantiate
+     | progress evar_safe_reflexivity
+     | progress split_safe_goals
+     | progress destruct_safe_hyps
+     | progress destruct_head_hnf or
+     | progress destruct_head_hnf sum
+     | progress destruct_head_hnf sumbool
+     | progress change @cat with @app
+     | progress_lists'
+     | progress hnf
+     | not goal_has_evar; t'_safe_without_evars ].
 
-Lemma catOP_eq_opred (O: OPred) o1 o2 :
-  O o2 ->
+Local Ltac t' :=
+  do ![do ![ do !do !t'_safe
+           | hnf; match goal with |- ex _ => idtac end; esplit
+           | eassumption ]
+      | by hyp_apply *; try eassumption ].
+
+(** Solving evars is a side effect, so sometimes we need to let [do
+    ?t'] fail on a goal, solve the other goals, and then try again. *)
+Local Ltac t := do ?do ?[ do !t'
+                        | by left; do ?t'
+                        | by right; do ?t' ].
+
+Add Parametric Morphism : catOP with signature lentails ==> lentails ==> lentails as catOP_entails_m.
+Proof. t. Qed.
+
+Add Parametric Morphism : catOP with signature lequiv ==> lequiv ==> lequiv as catOP_equiv_m.
+Proof. t. Qed.
+
+Lemma empOPR P : catOP P empOP -|- P.
+Proof. t. Qed.
+
+Lemma empOPL P : catOP empOP P -|- P.
+Proof. t. Qed.
+
+Lemma catOPA (P Q R : OPred) : catOP (catOP P Q) R -|- catOP P (catOP Q R).
+Proof. t. Qed.
+
+Lemma catOP_trueL P : P |-- catOP ltrue P.
+Proof. t. Qed.
+
+Lemma catOP_trueR P : P |-- catOP P ltrue.
+Proof. t. Qed.
+
+Lemma catOP_eq_opred (O: OPred) o1 o2
+: O o2 ->
   catOP (eq_opred o1) O (o1++o2).
-Proof. move => H.
-exists o1, o2. firstorder.  reflexivity.
+Proof. t. Qed.
+
+
+Hint Extern 0 (catOP ?empOP ?O |-- ?P) => by apply empOPL.
+Hint Extern 0 (catOP ?O ?empOP |-- ?P) => by apply empOPR.
+
+Lemma starOP_def (P: OPred) : starOP P -|- empOP \\// catOP P (starOP P).
+Proof.
+  t;
+  match goal with
+    | _ => by instantiate (1 := 0); t
+    | _ => by instantiate (1 := S _); t
+    | [ x : nat |- _ ] => induction x; by t
+  end.
 Qed.
 
-Hint Extern 0 (entailsOP (catOP empOP ?O) ?P) => by apply empOPL.
-Hint Extern 0 (entailsOP (catOP ?O ?empOP) ?P) => by apply empOPR.
+Lemma catOP_landL P Q R : catOP (P//\\Q) R |-- (catOP P R) //\\ (catOP Q R).
+Proof. t. Qed.
 
-Lemma starOP_def (P: OPred) : equivOP (starOP P) (orOP empOP (catOP P (starOP P))).
-Proof. split => s /= H.
-destruct H as [n H].
-destruct n.
-rewrite H. by left.
-destruct H as [s1 [s2 [H1 [H2 H3]]]].
-subst. right.
-exists s1, s2. intuition. by exists n.
-destruct s. by exists 0.
-destruct H => //.
-destruct H as [s1 [s2 [H1 [H2 [n H3]]]]].
-exists n.+1.  simpl. exists s1, s2. intuition.
-Qed.
-
-(*Local Transparent ILFun_Ops ILPre_Ops.
-
-Lemma land_catOP P Q R : catOP (P//\\Q) R |-- (catOP P R) //\\ (catOP Q R).
-Proof. apply landR. apply catOP_entails_m => //. by apply landL1.
-                    apply catOP_entails_m => //. by apply landL2.
-Qed.
-
-Lemma catOP_land P Q R : catOP P (Q//\\R) |-- (catOP P Q) //\\ (catOP P R).
-Proof. apply landR. apply catOP_entails_m => //. by apply landL1.
-                    apply catOP_entails_m => //. by apply landL2.
-Qed.
+Lemma catOP_landR P Q R : catOP P (Q//\\R) |-- (catOP P Q) //\\ (catOP P R).
+Proof. t. Qed.
 
 Lemma catOP_lfalseL P : catOP lfalse P -|- lfalse.
-Proof. split => //. by move => s [s1 [s2 [H1 [H2 H3]]]]/=. Qed.
+Proof. t. Qed.
 
 Lemma catOP_lfalseR P : catOP P lfalse -|- lfalse.
-Proof. split => //. by move => s [s1 [s2 [H1 [H2 H3]]]]/=. Qed.
+Proof. t. Qed.
 
-*)
+Lemma catOP_O_starOP_O' O O' : catOP O (catOP (starOP O) O') |-- catOP (starOP O) O'.
+Proof.
+  do !t'_safe.
+  do 2 esplit; do !t'_safe; try eassumption; do?t'_safe.
+  eexists (S _).
+  t.
+Qed.
+
+Lemma starOP1 O : O |-- starOP O.
+Proof.
+  t.
+  instantiate (1 := 1).
+  t.
+Qed.
+
+Lemma repOP_rollOP n O : repOP n O -|- rollOP n (fun _ => O).
+Proof.
+  induction n; first by reflexivity.
+  rewrite /repOP/rollOP-/repOP-/rollOP.
+  rewrite IHn.
+  reflexivity.
+Qed.

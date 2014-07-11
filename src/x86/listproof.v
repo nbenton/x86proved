@@ -97,7 +97,7 @@ unhideReg EDI => olddi.
 specapply MOV_RI_rule. sbazooka.
 
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. cancel1. ssimpl. apply: lorR1. by rewrite /natAsDWORD.
+autorewrite with push_at. simpl OPred_pred. rewrite empOPL. cancel1. ssimpl. apply: lorR1. by rewrite /natAsDWORD.
 
 (* success case *)
 autorewrite with push_at.
@@ -106,10 +106,9 @@ autorewrite with push_at.
 specapply JMP_I_rule. by ssimpl.
 
 (* Final stuff *)
-rewrite <-spec_later_weaken.
 rewrite <-spec_reads_frame.
 apply: limplAdj. autorewrite with push_at.
-apply: landL2. rewrite -> empOPL. cancel1.
+apply: landL2. simpl OPred_pred. rewrite -> empOPL. cancel1.
 rewrite /OSZCP/stateIsAny. sbazooka.
 apply: lorR2. sbazooka.
 Qed.

@@ -18,14 +18,14 @@ Fixpoint listSeg (p e:DWORD) (vs: seq DWORD) :SPred :=
   else p == e /\\ empSP.
 
 Definition inlineHead_spec (r1 r2:Reg) (i j p e: DWORD) v vs (instrs: program) :=
-  |-- Forall O,
+  |-- Forall O : PointedOPred,
   (obs O @ (EIP ~= j ** r1~=v) -->>
    obs O @ (EIP ~= i ** r1?)) @
   (listSeg p e (v::vs) ** r2~=p) <@ (i -- j :-> instrs).
 Implicit Arguments inlineHead_spec [].
 
 Definition inlineTail_spec (r1 r2:Reg) (i j p e: DWORD) v vs (instrs: program) :=
-  |-- Forall O,
+  |-- Forall O : PointedOPred,
   (obs O @ (Exists q, EIP ~= j ** r1~=q ** listSeg p q (v::nil) ** listSeg q e vs) -->>
    obs O @ (EIP ~= i ** r1? ** listSeg p e (v::vs))) @
   (r2~=p) <@ (i -- j :-> instrs).
@@ -33,7 +33,7 @@ Implicit Arguments inlineTail_spec [].
 
 (* Head is in EAX, tail is in EDI, result in EDI, ESI trashed *)
 Definition inlineCons_spec (r1 r2:Reg) heapInfo (failLabel:DWORD) (i j h t e: DWORD) vs (instrs: program):=
-  |-- Forall O, (
+  |-- Forall O : PointedOPred, (
       obs O @ (EIP ~= failLabel ** r1? ** r2? ** EDI?) //\\
       obs O @ (EIP ~= j ** Exists pb, r1? ** r2? ** EDI ~= pb ** listSeg pb t [::h])
     -->>
