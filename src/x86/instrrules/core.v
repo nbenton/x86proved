@@ -169,8 +169,8 @@ Proof.
     lazymatch goal with
       | [ |- IsPointed_OPred _ ] => eassumption
       | _ => idtac
-    end.
-  rewrite -> empOPL in TS. apply TS. done.
+    end. 
+  rewrite -> empOPL in TS. apply TS. done. try done.
 Qed.
 
 Lemma TRIPLE_safe instr P Q (i j: DWORD) O :
