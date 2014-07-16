@@ -27,14 +27,13 @@ Definition allocInv (infoBlock: DWORD) :=
      failed: DWORD is label to branch to on failure
    If successful, EDI contains pointer to byte just beyond allocated block.
 *)
-Definition allocImp infoBlock (n: nat) (failed: DWORD) : program :=
-  MOV ESI, infoBlock;;
-  MOV EDI, [ESI:Reg];;
+Definition allocImp (infoBlock:DWORD) (n: nat) (failed: DWORD) : program :=
+  MOV EDI, [infoBlock];;
   ADD EDI, n;;
   JC  failed;;  (* A carry indicates unsigned overflow *)
-  CMP [ESI+4], EDI;;
+  CMP [infoBlock+#4:DWORD], EDI;;
   JC  failed;;  (* A carry indicates unsigned underflow *)
-  MOV [ESI], EDI.
+  MOV [infoBlock], EDI.
 
 Definition allocSpec n (fail:DWORD) inv code :=
   Forall i j : DWORD, Forall O : PointedOPred, (
@@ -43,7 +42,7 @@ Definition allocSpec n (fail:DWORD) inv code :=
     -->>
       obs O @ (EIP ~= i ** EDI?)
     )
-    @ (ESI? ** OSZCP? ** inv)
+    @ (OSZCP? ** inv)
     <@ (i -- j :-> code).
 
 Hint Unfold allocSpec : specapply.
@@ -54,13 +53,11 @@ Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv 
 Proof.
   rewrite /allocSpec/allocImp.
   specintros => *. unfold_program. specintros => *.
+  autorewrite with push_at. 
 
-  (* MOV ESI, infoBlock *)
-  specapply MOV_RanyI_rule; first by ssimpl.
-
-  (* MOV EDI, [ESI] *)
-  rewrite {2}/allocInv. specintros => base limit.
-  specapply MOV_RanyM0_rule; first by ssimpl.
+  (* MOV EDI, [infoBlock] *)
+  rewrite {3}/allocInv. specintros => base limit.
+  specapply MOV_RanyInd_rule; first by ssimpl.
 
   (* ADD EDI, bytes *)
   specapply ADD_RI_rule; first by ssimpl.
@@ -72,9 +69,9 @@ Proof.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
     rewrite /stateIsAny /allocInv. by sbazooka. }
 
-  (* CMP [ESI+4], EDI *)
+  (* CMP [infoBlock+#4], EDI *)
   specintro. move/eqP => Hcarry.
-  specapply CMP_MR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
+  specapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
 
   (* JC failed *)
   specapply JC_loopy_rule; first by ssimpl.
@@ -84,13 +81,13 @@ Proof.
     autorewrite with push_at. apply limplValid. apply landL1. rewrite <-spec_later_weaken. cancel1.
     rewrite /stateIsAny/allocInv. sbazooka. }
 
-  (* MOV [ESI], EDI *)
+  (* MOV [infoBlock], EDI *)
   specintro => LT.
-  specapply MOV_M0R_rule; first by ssimpl.
+  specapply MOV_IndR_rule; first by ssimpl.
   { rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
     apply: landL2. cancel1.
     rewrite /allocInv. ssplits.
-    rewrite /stateIsAny/natAsDWORD. sbazooka.
+    rewrite /stateIsAny/natAsDWORD. ssimpl. sbazooka.
     apply memAnySplit.
     { apply: addB_leB.
       apply injective_projections; [ by rewrite Hcarry

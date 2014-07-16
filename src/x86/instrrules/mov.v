@@ -49,6 +49,12 @@ Lemma MOV_RanyM_rule (pd:DWORD) (r1 r2:Reg) offset (v2: DWORD) :
             (r1 ~= v2 ** r2 ~= pd ** pd +# offset :-> v2).
 Proof. unhideReg r1 => old. basicMOV. Qed.
 
+Lemma MOV_RanyInd_rule (pd:DWORD) (r1:Reg) (v2: DWORD) :
+  |-- basic (r1? ** pd :-> v2)
+            (MOV r1, [pd]) empOP
+            (r1 ~= v2 ** pd :-> v2).
+Proof. unhideReg r1 => old. basicMOV. Qed.
+
 Lemma MOV_RM0_rule (pd:DWORD) (r1 r2:Reg) (v1 v2: DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd :-> v2)
             (MOV r1, [r2]) empOP
@@ -79,6 +85,12 @@ Lemma MOV_M0R_rule (pd:DWORD) (r1 r2:Reg) (v1 v2: DWORD) :
   |-- basic (r1 ~= pd ** pd :-> v1 ** r2 ~= v2)
             (MOV [r1], r2) empOP
             (r1 ~= pd ** pd :-> v2 ** r2 ~= v2).
+Proof. basicMOV. Qed.
+
+Lemma MOV_IndR_rule (pd:DWORD) (r:Reg) (v1 v2: DWORD) :
+  |-- basic (pd :-> v1 ** r ~= v2)
+            (MOV [pd], r) empOP
+            (pd :-> v2 ** r ~= v2).
 Proof. basicMOV. Qed.
 
 

@@ -87,6 +87,12 @@ Lemma CMP_MR_ZC_rule (pd: DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
                         CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed.
 
+Lemma CMP_IndR_ZC_rule (pd: DWORD) (r:Reg) (v1 v2:DWORD):
+  |-- basic (r ~= v2 ** pd :-> v1 ** OSZCP?) (CMP [pd], r) empOP
+            (r ~= v2 ** pd :-> v1 ** OF? ** SF? ** PF? **
+                        CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
+Proof. basicCMP_ZC. Qed.
+
 Lemma CMP_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
   |-- basic (r1 ~= v1 ** r2 ~= v2 ** OSZCP?) (CMP r1, r2) empOP
             (let: (carry,res) := eta_expand (sbbB false v1 v2) in
