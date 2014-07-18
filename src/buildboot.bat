@@ -1,14 +1,13 @@
-rem Build iSO boot loader, also hexbin tool
+rem Build boot loader
 
-set TOOLSDIR=verve\base\build
+set TOOLSDIR=build
 set PATH=%TOOLSDIR%;%PATH%
 
-cd x86\BootLoader\SingLdrPc
+cd boot\SingLdrPc
 call build
-cd ..\..\..
-cd x86\BootLoader\BootSectors
+cd ..\..
+cd boot\BootSectors
 call build
-cd ..\..\..
-copy x86\BootLoader\obj\loader x86\bin\iso_dir
+cd ..\..
+rem copy boot\obj\loader x86\bin\iso_dir
 
-cl hexbin.c /Fex86\bin\hexbin.exe

@@ -42,6 +42,9 @@ clean:
         $(COQTOP) -quiet -batch $(COQINCLUDES) -l $< >$*.hex
 
 # The syntax #@ refers to the full target name (.exe file), $< refers to the dependent (.hex file)
+.hex.bin:
+        $(HEXBIN) $< $@
+
 .hex.exe:
         $(HEXBIN) $< $@
 

@@ -118,7 +118,7 @@ x86\wrapalloc.vo \
 x86\lifeimp.vo \
 examples\xorswap.vo \
 examples\mulc.vo \
-x86\main.vo \
+x86\lifemain.vo \
 examples\fact.vo \
 x86\examples.vo \
 x86\testrun.vo \
@@ -131,7 +131,8 @@ cast.vo \
 regex.vo \
 codec.vo \
 bitscodec.vo \
-codecregex.vo
+codecregex.vo \
+x86\lifemain.bin
 # x86\matcher.vo
 # x86\globals.vo
 # x86\lib\regexp\stringbuff.vo
@@ -148,7 +149,7 @@ x86\win\messagebox.exe \
 x86\win\helloworld.exe \
 x86\win\tell.exe \
 x86\win\usecounter.exe \
-x86\win\importer.exe
+x86\win\importer.exe 
 # x86\win\hexbinexe.exe
 
 DLLTARGETS = \

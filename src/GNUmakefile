@@ -48,7 +48,7 @@ TIMER=\$$(if \$$(TIMED), $(STDTIME), $(TIMECMD))
 
 .PHONY: all check-Makefile.common
 
-%.dll %.exe: %.v
+%.dll %.exe %.bin: %.v
 	./buildexe.sh $< $@ $(COQLIBS)
 
 all: .dir-locals.el check-Makefile.common
