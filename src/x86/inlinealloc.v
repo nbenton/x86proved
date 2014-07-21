@@ -36,7 +36,7 @@ Definition allocImp (infoBlock:DWORD) (n: nat) (failed: DWORD) : program :=
   MOV [infoBlock], EDI.
 
 Definition allocSpec n (fail:DWORD) inv code :=
-  Forall i j : DWORD, Forall O : PointedOPred, (
+  Forall i j : DWORD, Forall O : OPred, (
       obs O @ (EIP ~= fail ** EDI?) //\\
       obs O @ (EIP ~= j ** Exists p, EDI ~= p +# n ** memAny p (p +# n))
     -->>
@@ -53,7 +53,7 @@ Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv 
 Proof.
   rewrite /allocSpec/allocImp.
   specintros => *. unfold_program. specintros => *.
-  autorewrite with push_at. 
+  autorewrite with push_at.
 
   (* MOV EDI, [infoBlock] *)
   rewrite {3}/allocInv. specintros => base limit.
@@ -63,26 +63,25 @@ Proof.
   specapply ADD_RI_rule; first by ssimpl.
 
   (* JC failed *)
-  specapply JC_loopy_rule; first by rewrite /OSZCP; ssimpl.
-  repeat specsplit.
-  { rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
+  specapply JC_rule; first by rewrite /OSZCP; ssimpl.
+  case Hcarry:(carry_addB base n).
+  { rewrite <-spec_reads_frame.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
     rewrite /stateIsAny /allocInv. by sbazooka. }
 
   (* CMP [infoBlock+#4], EDI *)
-  specintro. move/eqP => Hcarry.
+  (*specintro. move/eqP => Hcarry.*)
   specapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
 
   (* JC failed *)
-  specapply JC_loopy_rule; first by ssimpl.
+  specapply JC_rule; first by ssimpl.
 
-  repeat specsplit.
+  case LT:(ltB _ _).
   { rewrite <-spec_reads_frame.
-    autorewrite with push_at. apply limplValid. apply landL1. rewrite <-spec_later_weaken. cancel1.
+    autorewrite with push_at. apply limplValid. apply landL1. cancel1.
     rewrite /stateIsAny/allocInv. sbazooka. }
 
   (* MOV [infoBlock], EDI *)
-  specintro => LT.
   specapply MOV_IndR_rule; first by ssimpl.
   { rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
     apply: landL2. cancel1.
@@ -92,5 +91,5 @@ Proof.
     { apply: addB_leB.
       apply injective_projections; [ by rewrite Hcarry
                                    | by generalize @adcB ]. }
-    { simpl. rewrite ltBNle eqb_negLR /negb /natAsDWORD in LT. by rewrite (eqP LT). } }
+    { simpl. rewrite ltBNle /natAsDWORD in LT. rewrite -> Bool.negb_false_iff in LT. by rewrite LT. } }
 Qed.

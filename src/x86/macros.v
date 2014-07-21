@@ -248,6 +248,56 @@ Definition ifthenelse (cond: Condition) (value: bool)
       rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
       apply: landL2. by (cancel1; reflexivity). }
   Qed.
+
+  Lemma if_loopy_rule cond (value:bool) pthen pelse P (O : PointedOPred) Q S:
+    S |-- loopy_basic (P value ** ConditionIs cond value) pthen O Q ->
+    S |-- loopy_basic (P (~~value) ** ConditionIs cond (~~value)) pelse O Q ->
+    S |-- loopy_basic (Exists b, P b ** ConditionIs cond b)
+                (ifthenelse cond value pthen pelse) O
+                Q.
+  Proof.
+    move=> Hthen Helse. apply basic_local => THEN. apply basic_local => END.
+    rewrite /loopy_basic. specintros => i j O' b.
+    unfold_program.
+    specintros => i1 i2 i3 i4 <- -> i5 -> ->.
+
+    (* JCC cond value THEN *)
+    specapply JCC_loopy_rule. by ssimpl.
+
+    specsplit.
+    { (* THEN branch *)
+      rewrite <- spec_later_weaken.
+      case E: (b == value);
+        move/eqP in E; subst.
+      { specapply Hthen; [ by rewrite /default_PointedOPred/OPred_pred; reflexivity | by sbazooka | ].
+        rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
+        apply: landL2. cancel1. by ssimpl. }
+      { specapply Hthen; [ by rewrite /default_PointedOPred/OPred_pred; reflexivity | rewrite -> lpropandF, -> sepSP_falseL; by apply lfalseL | ].
+        rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
+        apply: landL2. cancel1. by ssimpl. } }
+
+    { (* ELSE branch *)
+      case E: (b == value);
+        move/eqP in E; subst.
+      { specapply Helse; [ by rewrite /default_PointedOPred/OPred_pred; reflexivity |  | ].
+        { replace (value == ~~value) with false by by destruct value.
+          rewrite -> lpropandF, -> sepSP_falseL; by apply lfalseL. }
+
+        { (* JMP END *)
+          specapply JMP_I_rule. by ssimpl.
+          rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
+          apply: landL2. by (cancel1; ssimpl; reflexivity). } }
+
+      { specapply Helse; [ by rewrite /default_PointedOPred/OPred_pred; reflexivity |  | ].
+        { replace (~~value) with b by by destruct value, b; trivial; destruct (E Coq.Init.Logic.eq_refl).
+          sbazooka. }
+
+        { (* JMP END *)
+          specapply JMP_I_rule. by ssimpl.
+          rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
+          apply: landL2. by (cancel1; ssimpl; reflexivity). } } }
+  Qed.
+
 End If.
 
 Section While.
@@ -271,13 +321,13 @@ Definition while (ptest: program)
 
   (* I/O-free while rule *)
   Lemma while_rule ptest cond (value:bool) pbody (I:bool->_) P S:
-    S |-- basic P ptest empOP (Exists b, I b ** ConditionIs cond b) ->
-    S |-- basic (I value ** ConditionIs cond value) pbody empOP P ->
-    S |-- basic P (while ptest cond value pbody) empOP
+    S |-- loopy_basic P ptest empOP (Exists b, I b ** ConditionIs cond b) ->
+    S |-- loopy_basic (I value ** ConditionIs cond value) pbody empOP P ->
+    S |-- loopy_basic P (while ptest cond value pbody) empOP
                 (I (~~value) ** ConditionIs cond (~~value)).
   Proof.
     move=> Htest Hbody. apply basic_local => BODY. apply basic_local => test.
-    rewrite /basic. specintros => i j O'. unfold_program.
+    rewrite /loopy_basic. specintros => i j O'. unfold_program.
     specintros => _ _ <- ->  _ _ <- -> i1. rewrite !empSPL.
 
     (* We need to set up Lob induction but not for this instruction. This is a
@@ -325,9 +375,9 @@ Definition while (ptest: program)
   (* Special case if the test is read-only *)
   Lemma while_rule_ro ptest cond (value:bool) pbody (I:bool->_) S:
     let P := (Exists b, I b) ** (Exists b, ConditionIs cond b) in
-    S |-- basic P ptest empOP (Exists b, I b ** ConditionIs cond b) ->
-    S |-- basic (I value ** ConditionIs cond value) pbody empOP P ->
-    S |-- basic P (while ptest cond value pbody) empOP
+    S |-- loopy_basic P ptest empOP (Exists b, I b ** ConditionIs cond b) ->
+    S |-- loopy_basic (I value ** ConditionIs cond value) pbody empOP P ->
+    S |-- loopy_basic P (while ptest cond value pbody) empOP
                 (I (~~value) ** ConditionIs cond (~~value)).
   Proof. apply while_rule. Qed.
 
@@ -347,14 +397,14 @@ Definition while (ptest: program)
       SKIP:;.
 
   Lemma whileWithExit_rule ptest cond (value:bool) pbody pcoda (I:bool->_) P Q S:
-    S |-- basic P ptest empOP (Exists b, I b ** ConditionIs cond b) ->
-    (forall SKIP, S |-- basic (I value ** ConditionIs cond value) (pbody SKIP) empOP P) ->
-    S |-- basic (I (~~value) ** ConditionIs cond (~~value)) pcoda empOP Q ->
-    S |-- basic P (whileWithExit ptest cond value pbody pcoda) empOP Q.
+    S |-- loopy_basic P ptest empOP (Exists b, I b ** ConditionIs cond b) ->
+    (forall SKIP, S |-- loopy_basic (I value ** ConditionIs cond value) (pbody SKIP) empOP P) ->
+    S |-- loopy_basic (I (~~value) ** ConditionIs cond (~~value)) pcoda empOP Q ->
+    S |-- loopy_basic P (whileWithExit ptest cond value pbody pcoda) empOP Q.
   Proof.
     move=> Htest Hbody Hcoda. apply basic_local => BODY. apply basic_local => test.
     apply basic_local => SKIP.
-    rewrite /basic. specintros => i j O. unfold_program.
+    rewrite /loopy_basic. specintros => i j O. unfold_program.
     specintros => _ _ <- ->  _ _ <- -> i1 i2 i3 -> ->. rewrite !empSPL.
 
     (* We need to set up Lob induction but not for this instruction. This is a

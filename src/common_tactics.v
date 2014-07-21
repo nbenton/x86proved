@@ -101,6 +101,8 @@ Ltac apply_under_binders_in lem H :=
     clear H;
     rename H'' into H.
 
+Tactic Notation "binder_apply" open_constr(lem) "in" hyp(H) := apply_under_binders_in lem H.
+
 Ltac split_in_context ident proj1 proj2 :=
   repeat match goal with
            | [ H : context[ident] |- _ ] =>
@@ -544,3 +546,21 @@ Ltac f_cancel :=
   end;
   unfold Basics.flip;
   try syntax_unify_reflexivity.
+
+(** Log a message in a tactic that returns a constr *)
+Class log {T} (x : T) := mklog : True.
+Hint Extern 0 (log ?msg) => idtac msg; exact I : typeclass_instances.
+Ltac log msg := constr:(_ : log msg).
+
+(** Run a tactic associated with a class underneath binders of [fun] or [forall] *)
+Class run_under_binders_helper {tac_cls_T} (tac_cls : tac_cls_T) {T} (term : T) {R} := make_run_under_binders_helper : R.
+Ltac run_under_binders tac_cls term :=
+  let dummy := log term in
+  lazymatch eval cbv beta in term with
+    | (fun _ => _) => let ret := constr:(fun x => _ : run_under_binders_helper tac_cls (term x)) in
+                      constr:(ret)
+    | (forall x, @?P x) => let ret := constr:(fun x => _ : run_under_binders_helper tac_cls (P x)) in
+                           constr:(ret)
+    | ?term' => constr:(_ : tac_cls _ term' _)
+  end.
+Hint Extern 0 (run_under_binders_helper ?tac_cls ?term) => let x := run_under_binders tac_cls term in exact x : typeclass_instances.

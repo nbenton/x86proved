@@ -183,11 +183,11 @@ Proof.
   eforalls TS. rewrite -> empOPL in TS. apply TS. done.
 Qed.
 
-Lemma TRIPLE_basic instr P O Q:
+Lemma TRIPLE_basic {T_OPred proj} instr P O Q:
   (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) O (Q ** R)) ->
-  |-- basic P instr O Q.
+  |-- @parameterized_basic T_OPred proj _ _ P instr O Q.
 Proof.
-  move=> H. rewrite /basic. specintros => i j O'.
+  move=> H. rewrite /parameterized_basic. specintros => i j O'.
   apply TRIPLE_safecat => R. triple_apply H.
 Qed.
 

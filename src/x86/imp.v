@@ -128,7 +128,7 @@ Section LogicDefinitions.
   (* The high-level triple for the imp language. It lives in the low-level spec
      logic, which is maybe not really appropriate, but it works. *)
   Definition triple (P: asn) (C: cmd) (Q: asn) : spec :=
-    basic (asn_denot P) (compile_cmd C) empOP (asn_denot Q) @ (EDX? ** OSZCP?).
+    loopy_basic (asn_denot P) (compile_cmd C) empOP (asn_denot Q) @ (EDX? ** OSZCP?).
 
   (* Expression evaluation *)
   Definition eeval (e: expr) (s: stack) : DWORD :=
@@ -212,87 +212,74 @@ Section LogicLemmas.
   Lemma leBltB_neg {n} (x y: BITS n): ltB x y = ~~leB y x.
   Proof. by rewrite ltB_nat leB_nat ltnNge. Qed.
 
+  (** TODO(t-jagro): Move this elsewhere *)
+  Lemma adcB_b_0_0 b : adcB b #(0) #(0) = (false, @fromNat n32 (if b then 1 else 0)).
+  Proof.
+    rewrite /adcB adcBmain_nat splitmsb_fromNat toNat_fromNat0. rewrite [X in #(X)]/=. rewrite !addn0.
+    rewrite /nat_of_bool.
+      by destruct b.
+  Qed.
+
   Lemma compile_expr_correct s e:
-    |-- basic EDX? (compile_expr e) empOP (EDX ~= eeval e s)
+    |-- loopy_basic EDX? (compile_expr e) empOP (EDX ~= eeval e s)
         @ (stack_denot s ** OSZCP?).
   Proof.
-    autorewrite with push_at. case: e.
-    - move=> x.
-      eapply basic_basic; first apply MOV_RanyR_rule.
-      - rewrite ->regs_read_var. by ssimpl.
-      rewrite /eeval. ssimpl. exact: sepSPwand.
-    - move=> value.
-      eapply basic_basic; first apply MOV_RanyI_rule; reflexivity.
-    - move=> x y.
-      eapply basic_seq; first try done.
-      - eapply basic_basic; first apply MOV_RanyR_rule.
-        + rewrite ->regs_read_var. by ssimpl.
-        done.
-      eapply basic_basic; first apply SUB_RR_rule.
-      - ssimpl. rewrite ->sepSPwand. rewrite ->regs_read_var. by ssimpl.
-      elim E: (sbbB false (s x) (s y)) => [carry res].
-      rewrite /OSZCP /stateIsAny. sbazooka.
-      rewrite sepSPA. rewrite ->sepSPwand. cancel2. rewrite /eeval.
-      by rewrite E/snd.
-    - move=> x y. rewrite /compile_expr.
-      case Hxy: (x == y).
-      - move/eqP: Hxy => <-.
-        eapply basic_basic; first apply MOV_RanyI_rule.
-        - reflexivity.
-        rewrite /eeval. rewrite ltB_nat.
-        rewrite lt_irreflexive. reflexivity.
-      elim E: (sbbB false (s x) (s y)) => [carry res].
-      eapply basic_seq; first try done.
-      - eapply basic_basic; first apply CMP_RR_rule.
-        + rewrite ->regs_read_vars. by ssimpl.
-        + by move/eqP: Hxy.
-        reflexivity.
-      eapply basic_seq; first try done.
-      - eapply basic_basic; first apply MOV_RanyI_rule.
-        + ssimpl. reflexivity.
-        reflexivity.
-      elim E': (adcB carry (#0: DWORD) #0) => [carry' res'].
-      eapply basic_basic; first apply ADC_RI_rule.
-      - eassumption.
-      - rewrite E /natAsDWORD/fst/snd. by ssimpl.
-      rewrite [X in X ** (_ -* _)]sepSPC. rewrite ->sepSPwand.
-      rewrite /OSZCP /stateIsAny. sbazooka.
-      rewrite /eeval.
-      have Hless := sbbB_ltB_leB (s x) (s y).
-      rewrite E /fst in Hless.
-      destruct carry.
-      - rewrite Hless.
-        rewrite /adcB in E'.
-        rewrite adcBmain_nat in E'.
-        rewrite splitmsb_fromNat in E'.
-        rewrite toNat_fromNat0 in E'.
-        rewrite [X in #(X)]/= in E'. rewrite !addn0 in E'.
-        rewrite /nat_of_bool in E'. by injection E' => -> _.
-      - rewrite leBltB_neg Hless.
-        rewrite /adcB adcBmain_nat in E'.
-        rewrite splitmsb_fromNat in E'.
-        rewrite toNat_fromNat0 in E'.
-        rewrite [X in #(X)]/= in E'. rewrite !addn0 in E'.
-        rewrite /nat_of_bool in E'. rewrite [~~true]/=. cbv iota. by injection E' => -> _.
+    autorewrite with push_at.
+    case: e; rewrite /compile_expr/eeval/natAsDWORD;
+    intros;
+    repeat repeat
+           lazymatch goal with
+             | [ |- ?x |-- ?x ] => reflexivity
+             | [ H : (?x == ?y) = _ |- _ ] => move /eqP in H; subst
+             | [ H : ltB ?x ?x = true |- _ ] => rewrite ltB_nat lt_irreflexive in H; by inversion H
+             | [ |- context[ltB ?x ?x] ] => rewrite (ltB_nat x x) lt_irreflexive
+             | [ |- ?P ** (?P -* ?Q) |-- _ ] => rewrite -> sepSPwand
+             | [ |- ?P ** ((?P -* ?Q) ** _) |-- _ ] => rewrite <- sepSPA, -> sepSPwand
+             | [ |- context[OPred_pred (default_PointedOPred ?x)] ] => change (OPred_pred (default_PointedOPred x)) with x
+             | [ |- context[catOP empOP ?x] ] => rewrite -> empOPL
+             | [ |- context[catOP ?x empOP] ] => rewrite -> empOPR
+             | [ H : context[ltB ?x ?y] |- _ ] => rewrite leBltB_neg in H
+             | [ H : is_true (leB ?x ?y), H' : context[leB ?x ?y] |- _ ] => rewrite H in H'; simpl in H'
+             | [ H : is_true (~~leB ?x ?y), H' : context[leB ?x ?y] |- _ ] => rewrite H in H'; simpl in H'
+             | [ H : false = true |- _ ] => by inversion H
+             | [ H : true = false |- _ ] => by inversion H
+             | [ |- _ |-- parameterized_basic _ (prog_instr (MOV RegArg _, ArgSrc (RegArg _))) _ _ ] => try_basicapply MOV_RanyR_rule
+             | [ |- _ |-- parameterized_basic _ (prog_instr (SUB RegArg _, ArgSrc (RegArg _))) _ _ ] => try_basicapply SUB_RR_rule
+             | [ |- _ |-- parameterized_basic _ (prog_instr (CMP RegArg _, ArgSrc (RegArg _))) _ _ ] => try_basicapply CMP_RR_rule
+             | [ |- _ |-- parameterized_basic _ (prog_instr (MOV RegArg _, ConstSrc _)) _ _ ]        => try_basicapply MOV_RanyI_rule
+             | [ |- _ |-- parameterized_basic _ (prog_instr (ADC RegArg _, ConstSrc _)) _ _ ]        => try_basicapply ADC_RI_rule
+             | |- _ |-- basic _ (prog_seq _ _) _ _       => eapply basic_seq
+             | |- _ |-- loopy_basic _ (prog_seq _ _) _ _ => eapply loopy_basic_seq
+             | [ |- context[if ?E then _ else _] ] => case_eq E; intro
+             | _ => match goal with
+                      | [ |- stack_denot _ ** _ |-- RegOrFlagR (regToAnyReg (var_reg _)) ~= _ ** _ ] => by rewrite ->regs_read_var; ssimpl
+                      | [ |- stack_denot _ |-- RegOrFlagR (regToAnyReg (var_reg _)) ~= _ ** _ ] => by rewrite ->regs_read_var; ssimpl
+                      | [ |- _ ** stack_denot _ |-- (RegOrFlagR (regToAnyReg (var_reg _)) ~= _ ** RegOrFlagR (regToAnyReg (var_reg _)) ~= _) ** _ ] => by rewrite ->regs_read_vars; try ssimpl; trivial
+                      | _ => progress (rewrite /OSZCP/stateIsAny; sbazooka)
+                      | [ |- context[?P -* ?Q] ] => by etransitivity; [ | eapply sepSPwand ]; sbazooka
+                      | [ |- adcB ?b #(0) #(0) = _ ] => eexact (adcB_b_0_0 b)
+                      | [ |- context[carry_subB ?x ?y] ] => generalize (sbbB_ltB_leB x y); case_eq (carry_subB x y); intros
+                    end
+      end.
   Qed.
 
   Lemma compile_condition_correct s e:
-    |-- basic (EDX? ** OSZCP?) (compile_condition e) empOP
+    |-- loopy_basic (EDX? ** OSZCP?) (compile_condition e) empOP
               (EDX? ** ZF ~= (eeval e s == zero _) **
                OF? ** SF? ** CF? ** PF?)
           @ (stack_denot s).
   Proof.
     rewrite /compile_condition. autorewrite with push_at.
-    apply: basic_seq; first try done. have He := (@compile_expr_correct s e).
+    apply: loopy_basic_seq; first try done. have He := (@compile_expr_correct s e).
     autorewrite with push_at in He.
     eapply (basic_basic_context (T:=program)); first apply He.
     - done.
     - by ssimpl.
     - done.
     - reflexivity.
-    eapply basic_basic; first apply TEST_self_rule.
+    eapply basic_basic; first by apply weaken_parameterized_basic; apply TEST_self_rule.
     - by ssimpl.
-    rewrite /stateIsAny /OSZCP. sbazooka; reflexivity.
+    rewrite /stateIsAny /OSZCP. by sbazooka; reflexivity.
   Qed.
 End LogicLemmas.
 
@@ -302,7 +289,7 @@ Section LogicRules.
   Proof.
     rewrite /triple /=. autorewrite with push_at. rewrite {1}/asn_denot.
     specintros => s Hsubst.
-    eapply basic_seq; first done.
+    eapply loopy_basic_seq; first done.
     - have He := (@compile_expr_correct s e).
       autorewrite with push_at in He. eapply (basic_basic_context (T:=program)).
       - apply He.
@@ -310,7 +297,7 @@ Section LogicRules.
       - by ssimpl.
       - done.
       reflexivity.
-    - eapply basic_basic; first apply MOV_RanyR_rule.
+    - eapply basic_basic; first by apply weaken_parameterized_basic; apply MOV_RanyR_rule.
       - rewrite ->var_assign_subst with (e:=e) (x:=x).
         rewrite /stack_denot. ssimpl. rewrite {6}/stateIsAny. sbazooka.
       rewrite /stateIsAny. sbazooka. rewrite /asn_denot /stack_denot.
@@ -349,7 +336,7 @@ Section LogicRules.
   Proof.
     rewrite /triple. autorewrite with push_at.
     move=> H1 H2. simpl compile_cmd.
-    eapply basic_seq; first try done. rewrite -/compile_cmd -/interpProgram.
+    eapply loopy_basic_seq; first try done. rewrite -/compile_cmd -/interpProgram.
     - apply H1.
     - apply H2.
   Qed.
@@ -390,7 +377,7 @@ Section LogicRules.
   Proof.
     rewrite /triple. autorewrite with push_at. move=> HC1 HC2 /=.
     rewrite [_ P]/asn_denot. specintros => s HP.
-    apply: basic_seq; first done.
+    apply: loopy_basic_seq; first done.
     - have He := (@compile_condition_correct s e).
       autorewrite with push_at in He.
       eapply (basic_basic_context (T:=program)); first apply He.
@@ -401,7 +388,7 @@ Section LogicRules.
     set (I := fun b:bool =>
       asn_denot ((blurb e b) //\\ P) **
       EDX? ** OF? ** SF? ** CF? ** PF?).
-    apply: basic_roc_pre; last apply (if_rule (P:=I)).
+    apply: basic_roc_pre; last apply (if_loopy_rule (P:=I)).
     - rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC1.
       rewrite /I /ConditionIs /stateIsAny. by sbazooka.

@@ -73,7 +73,7 @@ Definition strlen : program :=
 (* Correctness of strlen *)
 Lemma strlen_correct p s :
   zeroFree s ->
-  |-- basic ECX? strlen empOP (ECX ~= #(length s))
+  |-- loopy_basic ECX? strlen empOP (ECX ~= #(length s))
     @ (OSZCP? ** EDI ~= p ** pointsToCString p s).
 Proof.
   move => ISZF. rewrite /strlen.
@@ -103,7 +103,7 @@ Proof.
 
   (* Empty string *)
   + rewrite /ConditionIs.
-  eapply basic_basic; first eapply CMP_MbxI_ZC_rule.
+  eapply basic_basic; first (apply weaken_parameterized_basic; eapply CMP_MbxI_ZC_rule).
   rewrite /stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString.
   sbazooka. subst. sbazooka. rewrite <-pointsToCString_append_op.
@@ -111,7 +111,7 @@ Proof.
 
   (* Non-empty string *)
   + subst. rewrite /ConditionIs.
-  eapply basic_basic; first eapply CMP_MbxI_ZC_rule.
+  eapply basic_basic; first (apply weaken_parameterized_basic; eapply CMP_MbxI_ZC_rule).
   rewrite /stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString.
   sbazooka.
@@ -124,7 +124,7 @@ Proof.
   rewrite /ConditionIs/I.
   specintros => prefix suffix APPEND END. rewrite /stateIsAny. specintros => ofl sfl cfl pfl.
   subst.
-  eapply basic_basic. eapply INC_R_rule.
+  eapply basic_basic. apply weaken_parameterized_basic; eapply INC_R_rule.
   rewrite /OSZCP. sbazooka.
 
   case E: suffix => [| a s'].

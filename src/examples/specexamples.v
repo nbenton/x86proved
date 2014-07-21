@@ -2,6 +2,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x86proved.obs x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
+Require Import x86proved.spectac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -15,7 +16,7 @@ Example safe_loop (p q: DWORD) (O : PointedOPred) :
 Proof.
   apply: spec_lob.
   have H := @JMP_I_loopy_rule p p q.
-  Require Import spectac. apply (lforallE_spec O) in H. cbv beta in H.
+  apply (lforallE_spec O) in H. cbv beta in H.
   rewrite ->spec_reads_entails_at in H; [|apply _].
   autorewrite with push_at in H. apply landAdj in H.
   etransitivity; [|apply H]. apply: landR; [sbazooka | reflexivity].
@@ -23,9 +24,9 @@ Qed.
 
 (* We can package up jumpy code in a triple by using labels. *)
 Example basic_loop:
-  |-- basic empSP (LOCAL l; l:;; JMP l) empOP lfalse.
+  |-- loopy_basic empSP (LOCAL l; l:;; JMP l) empOP lfalse.
 Proof.
-  rewrite /basic. specintros => i j O'.
+  rewrite /loopy_basic. specintros => i j O'.
   unfold_program. specintros => _ _ <- <-.
   rewrite /spec_reads. specintros => code Hcode.
   autorewrite with push_at.
@@ -48,7 +49,7 @@ Proof.
 Qed.
 
 Example incdec_while c a:
-  |-- basic
+  |-- loopy_basic
     (ECX ~= c ** EAX ~= a)
     (
       while (TEST ECX, ECX) CC_Z false (

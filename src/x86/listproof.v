@@ -97,7 +97,7 @@ unhideReg EDI => olddi.
 specapply MOV_RI_rule. sbazooka.
 
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. simpl OPred_pred. rewrite empOPL. cancel1. ssimpl. apply: lorR1. by rewrite /natAsDWORD.
+autorewrite with push_at. simpl OPred_pred. cancel1. ssimpl. apply: lorR1. by rewrite /natAsDWORD.
 
 (* success case *)
 autorewrite with push_at.
