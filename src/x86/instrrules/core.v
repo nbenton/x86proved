@@ -166,11 +166,12 @@ Lemma TRIPLE_safeLater instr P Q (i j: DWORD) O `{IsPointed_OPred O}:
 Proof.
   move=> H. have TS:= TRIPLE_safecatLater (O:= empOP).
   eforalls TS;
-    lazymatch goal with
-      | [ |- IsPointed_OPred _ ] => eassumption
-      | _ => idtac
-    end. 
-  rewrite -> empOPL in TS. apply TS. done. try done.
+    repeat match goal with
+             | [ |- IsPointed_OPred _ ] => eassumption
+             | [ H : context[catOP empOP ?P] |- _ ] => rewrite -> empOPL in H
+             | [ H : |-- _ |- |-- _ ] => by apply TS
+             | _ => done
+           end.
 Qed.
 
 Lemma TRIPLE_safe instr P Q (i j: DWORD) O :
