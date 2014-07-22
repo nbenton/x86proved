@@ -147,9 +147,9 @@ Ltac prepare_basic_goal_for_spec :=
   autorewrite with push_at;
   do ?(idtac;
        match goal with
-         | [ |- _ |-- basic _ (LOCAL _; _) _ _ ] => apply basic_local => ?
+         | [ |- _ |-- parameterized_basic _ (LOCAL _; _) _ _ ] => apply basic_local => ?
        end);
-  rewrite /basic;
+  rewrite /parameterized_basic;
   do ?[ progress subst
       | progress specintros => *
       | progress unfold_program ].
@@ -218,11 +218,10 @@ Qed.
 
 Example safe_loop_forever P (pbody : program) O
         (H : |--basic P pbody O P)
-: |-- Forall (i j : DWORD) (O' : PointedOPred),
-          (obs O' @ (EIP~=j ** P) -->> obs (catOP (starOP O) O') @ (EIP~=i ** P))
-            <@ (i -- j :->
-                  (pbody;;
-                   JMP i)).
+: |-- loopy_basic P (LOCAL LOOP;
+                     LOOP:;;
+                         pbody;;
+                         JMP LOOP) (starOP O) lfalse.
 Proof.
   prepare_basic_goal_for_spec.
   apply spec_lob_context.
