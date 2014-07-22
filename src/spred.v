@@ -530,6 +530,8 @@ Notation "x '~=' v" := (stateIs x v) (at level 55, no associativity, format "x '
 Notation "x '?'" := (stateIsAny x) (at level 2, format "x '?'"): spred_scope.
 
 Hint Unfold DWORDorBYTE RegOrFlag_target : spred.
+(** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
+Hint Unfold stateIsAny stateIs : finish_logic_unfolder.
 
 (*---------------------------------------------------------------------------
      Byte-is predicate

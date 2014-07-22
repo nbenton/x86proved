@@ -50,10 +50,12 @@ opred/pointed.vo \
 opred/morphisms.vo \
 opred/laws.vo \
 septac.vo \
+chargetac.vo \
 spec.vo \
 safe.vo \
 obs.vo \
 spectac.vo \
+basicspectac.vo \
 pointsto.vo \
 triple.vo \
 triple/core.vo \

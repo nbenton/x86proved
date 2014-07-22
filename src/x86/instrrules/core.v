@@ -275,6 +275,8 @@ Definition BYTEregIs r b := Exists d, BYTEregIsAux r d b.
 Definition DWORDorBYTEregIs d : DWORDorBYTEReg d -> DWORDorBYTE d -> SPred :=
   if d as d return DWORDorBYTEReg d -> DWORDorBYTE d -> SPred
   then fun r v => r ~= v else fun r v => BYTEregIs r v.
+(** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
+Hint Unfold DWORDorBYTEregIs : finish_logic_unfolder.
 
 
 Definition specAtRegMemDst d (src: RegMem d) (f: (DWORDorBYTE d -> SPred) -> spec) :spec  :=
@@ -366,6 +368,9 @@ Proof. rewrite /specAtDstSrc. specAt_morphism_t. Qed.
 
 Notation "OSZCP?" := (OF? ** SF? ** ZF? ** CF? ** PF?).
 Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= p.
+
+(** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
+Hint Unfold OSZCP : finish_logic_unfolder.
 
 (** These hints are global *)
 (** TODO(t-jagro): Find a better place for this, or, better, generalize [InstrArg] *)
