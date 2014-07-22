@@ -51,3 +51,12 @@ Fixpoint rollOP n (f : nat -> OPred) : OPred :=
     | 0 => empOP
     | S n' => catOP (f (S n')) (rollOP n' f)
   end.
+
+(** ** Rolling a function on numbers into a single [OPred], with a starting and ending place *)
+Fixpoint partial_rollOP (f : nat -> OPred) (start : nat) (count : nat)  : OPred :=
+  if count is count'.+1
+  then catOP (f start) (partial_rollOP f (start.+1) count')
+  else empOP.
+
+(** ** Rolling a function any number of places from a given starting location *)
+Definition roll_starOP (f : nat -> OPred) (start : nat) : OPred := Exists n, partial_rollOP f start n.

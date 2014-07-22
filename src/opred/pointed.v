@@ -40,6 +40,7 @@ Proof.
 Qed.
 Instance IsPointed_repOP0 P : IsPointed_OPred (repOP 0 P) | 0 := _.
 Instance IsPointed_rollOP0 f : IsPointed_OPred (rollOP 0 f) | 0 := _.
+Instance IsPointed_partial_rollOP0 f start : IsPointed_OPred (partial_rollOP f start 0) | 0 := _.
 Instance IsPointed_repOP n `{IsPointed_OPred P} : IsPointed_OPred (repOP n P).
 Proof.
   induction n; typeclasses eauto.
@@ -47,6 +48,10 @@ Qed.
 Instance IsPointed_rollOP n f `{forall n, IsPointed_OPred (f (S n))} : IsPointed_OPred (rollOP n f).
 Proof.
   induction n; typeclasses eauto.
+Qed.
+Instance IsPointed_partial_rollOP f count `{forall n, IsPointed_OPred (f n)} : forall start, IsPointed_OPred (partial_rollOP f start count).
+Proof.
+  induction count; typeclasses eauto.
 Qed.
 
 Instance IsPointed_ltrueOP : IsPointed_OPred ltrue := _.
@@ -78,6 +83,7 @@ Proof.
 Qed.
 
 Instance IsPointed_starOP P : IsPointed_OPred (starOP P) := let _ := 0 : IsPointed nat in IsPointed_lexistsOP.
+Instance IsPointed_roll_starOP f start : IsPointed_OPred (roll_starOP f start) := let _ := 0 : IsPointed nat in IsPointed_lexistsOP.
 
 (** Common case *)
 Instance IsPointed_lorLempOP {Q} : IsPointed_OPred (empOP \\// Q) := _.
