@@ -3,6 +3,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.common_tactics.
 Require Import x86proved.charge.ilogic x86proved.charge.sepalg x86proved.charge.bilogic x86proved.charge.later x86proved.charge.csetoid.
 Require Import x86proved.spec.
+Require Import x86proved.charge.iltac.
 Require Import Coq.Setoids.Setoid.
 
 Set Implicit Arguments.
@@ -44,6 +45,7 @@ Ltac finish_logic_with' tac :=
     | _ => progress autorewrite with push_at
     | _ => progress repeat autounfold with finish_logic_unfolder
     | _ => progress tac
+    | _ => syntax_unify_reflexivity
   end.
 Ltac finish_logic_with tac := do ?finish_logic_with' tac.
 Ltac finish_logic' := finish_logic_with' fail.
@@ -58,4 +60,29 @@ Proof.
            | _ => by apply landAdj
            | _ => syntax_unify_reflexivity
          end.
+Qed.
+
+Ltac lrevert x :=
+  revert x;
+  let T := match goal with |- forall H0 : ?T, |-- @?P H0 => constr:(T) end in
+  let P := match goal with |- forall H0 : ?T, |-- @?P H0 => constr:(P) end in
+  intro x;
+    setoid_rewrite <- (@lforallL _ _ _ T x P _ (reflexivity _));
+    try clear x.
+
+Lemma lforall_limpl_commute `{@ILogic Frm ILOps'} {A P Q}
+: Forall (x : A), P -->> Q x -|- P -->> Forall (x : A), Q x.
+Proof.
+  repeat match goal with
+           | [ H : _ |- _ ] => progress lforallL H
+           | _ => progress lforallR => ?
+           | _ => progress finish_logic
+           | _ => syntax_unify_reflexivity
+         end.
+Qed.
+
+(** TODO(t-jagro): Figure out if this already exists somewhere *)
+Lemma lentails_def1  `{@ILogic Frm ILOps'} P Q (H' : forall C, C |-- P -> C |-- Q) : P |-- Q.
+Proof.
+  rewrite <- H'; reflexivity.
 Qed.

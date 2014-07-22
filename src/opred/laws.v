@@ -3,6 +3,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.
 Require Import Ssreflect.bigop.
 Require Import x86proved.bitsrep x86proved.x86.ioaction.
 Require Import x86proved.opred.core.
+Require Import x86proved.charge.iltac.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses.
 Require Import x86proved.common_tactics.
 
@@ -128,6 +129,14 @@ Proof.
   t.
 Qed.
 
+Lemma catOP_O_roll_starOP_O' start O O' : catOP (O start) (catOP (roll_starOP O (S start)) O') |-- catOP (roll_starOP O start) O'.
+Proof.
+  do !t'_safe.
+  do 2 esplit; do !t'_safe; try eassumption; do?t'_safe.
+  eexists (S _).
+  t.
+Qed.
+
 Lemma starOP1 O : O |-- starOP O.
 Proof.
   t.
@@ -141,4 +150,14 @@ Proof.
   rewrite /repOP/rollOP-/repOP-/rollOP.
   rewrite IHn.
   reflexivity.
+Qed.
+
+Lemma roll_starOP__starOP n O : roll_starOP (fun _ => O) n -|- starOP O.
+Proof.
+  rewrite /starOP/roll_starOP.
+  split; (lexistsL => n'; lexistsR n');
+  revert n; (induction n'; first by reflexivity) => n;
+  rewrite /repOP-/repOP/partial_rollOP-/partial_rollOP;
+  f_cancel;
+  hyp_apply *.
 Qed.
