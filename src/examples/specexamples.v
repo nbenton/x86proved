@@ -4,6 +4,7 @@ Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
 Require Import x86proved.spectac x86proved.basicspectac.
 Require Import x86proved.common_tactics x86proved.chargetac.
+Require Import Coq.Setoids.Setoid.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -216,24 +217,87 @@ Proof.
     eassumption.
 Qed.
 
-Example safe_loop_forever P (pbody : program) O
+Section helper.
+  (** We need these opaque to speed up setoid rewriting. *)
+  Local Opaque lforall limpl illater spec_at spec_reads.
+  Lemma safe_loop_forever_later_helper_faster `{@ILogic Frm ILOps'}
+        {T1 T2 T3 S1 c1 S2 c2 R}
+        (H0 : |-- ((Forall (x : T1) (y : T2) (z : T3 x y), ((((*|>*)S1) @ c1 -->> (|>S2 x y z) @ c2 x y z)))
+                     -->>
+                     (Forall (x : T1) (y : T2) (z : T3 x y), ((S1 @ c1 -->> S2 x y z @ c2 x y z)))) <@ R)
+  : |-- |>(Forall (x : T1) (y : T2) (z : T3 x y), ((S1 @ c1 -->> S2 x y z @ c2 x y z) <@ R))
+        -->>
+        (Forall (x : T1) (y : T2) (z : T3 x y), ((S1 @ c1 -->> S2 x y z @ c2 x y z) <@ R)).
+  Proof.
+    repeat match goal with
+             | _ => progress autorewrite with push_later; [|by typeclasses eauto..]
+             | [ |- context[|>(Forall _ : _, _)] ] => setoid_rewrite spec_later_forall
+             | [ |- context[|>(_ -->> _)] ]        => setoid_rewrite spec_later_impl
+             | [ |- context[|>(_ @ _)] ]           => setoid_rewrite <- spec_at_later
+             | [ |- context[|>(_ <@ ?R)] ]         => setoid_rewrite (fun S => proj2 (@spec_reads_later S R)) (* this case is slow *)
+             | _ => progress setoid_rewrite <- spec_reads_forall
+             | _ => progress setoid_rewrite <- spec_reads_impl
+           end.
+    setoid_rewrite <- (spec_later_weaken S1).
+    exact H0.
+  Qed.
+End helper.
+
+(** Example: We can observe the output of any given code, infinitely many times *)
+(** TODO(t-jagro): automate this proof more *)
+Example safe_loop_forever (PP : nat -> SPred -> Prop) (pbody : program) (O : nat -> OPred)
+        (transition : forall P n, PP n P -> SPred)
+        (transition_correct : forall P n (H : PP n P), PP (n.+1) (transition P n H))
+        (H : forall P n (H' : PP n P) (Q := transition P n H'), PP (S n) Q -> |--basic P pbody (O n) Q)
+        (P0 : SPred) (start : nat) (H0 : PP start P0)
+: |-- (loopy_basic P0
+                   (LOCAL LOOP;
+                    LOOP:;;
+                        pbody;;
+                        JMP LOOP)
+                   (roll_starOP O start)
+                   lfalse).
+Proof.
+  prepare_basic_goal_for_spec.
+  lrevert H0.
+  lrevert P0.
+  lrevert start.
+  apply spec_lob_context.
+  apply landAdj.
+  apply safe_loop_forever_later_helper_faster.
+  do !setoid_rewrite lforall_limpl_commute.
+  let H := match goal with |- |-- ((?A -->> ?B) -->> ?A -->> ?C) <@ _ => constr:(triple_limpl A B C) end in
+  setoid_rewrite <- H.
+  specintros => start Pstart PPstart.
+  specialize (transition_correct Pstart start PPstart).
+
+  (** The body code *)
+  specapply H; clear H; do [ eassumption | by apply catOP_O_roll_starOP_O' | by ssimpl | idtac ]; try (by ssimpl); [].
+
+  (** The jump code *)
+  specapply JMP_I_loopy_rule; first by ssimpl.
+  simpl OPred_pred.
+
+  finish_logic_with sbazooka.
+  (** TODO(t-jagro): There's probably a better way to do [eforalls] in the goal... *)
+  apply lentails_def1 => C H'.
+  eforalls H'.
+  rewrite -> H'; clear H'.
+
+  finish_logic_with sbazooka.
+  Grab Existential Variables.
+  assumption.
+Qed.
+
+Example safe_loop_forever_constant P (pbody : program) O
         (H : |--basic P pbody O P)
 : |-- loopy_basic P (LOCAL LOOP;
                      LOOP:;;
                          pbody;;
                          JMP LOOP) (starOP O) lfalse.
 Proof.
-  prepare_basic_goal_for_spec.
-  apply spec_lob_context.
-  apply landAdj.
-  autorewrite with push_later; [|by typeclasses eauto..].
-  setoid_rewrite <- spec_reads_impl.
-  let H := match goal with |- |-- ((illater ?H @ _ -->> _) -->> _ -->> _) <@ _ => constr:(H) end in
-  setoid_rewrite <- (spec_later_weaken H).
-  let H := match goal with |- |-- ((?A -->> ?B) -->> ?A -->> ?C) <@ _ => constr:(triple_limpl A B C) end in
-  setoid_rewrite <- H.
-  specapply H; clear H; do [ by ssimpl | by apply catOP_O_starOP_O' | idtac ]; [].
-  specapply JMP_I_loopy_rule; first by ssimpl.
-  simpl OPred_pred.
-  finish_logic_with sbazooka.
+  rewrite <- (roll_starOP__starOP 0 O).
+  exact (@safe_loop_forever (fun _ => eq P) pbody (fun _ => O) (fun _ _ _ => P) (fun _ _ _ => reflexivity _)
+                             (fun P0 _ PeqP0 _ => @eq_rect _ _ (fun P0 => |--basic P0 pbody O P) H _ PeqP0) P 0
+                             (reflexivity _)).
 Qed.
