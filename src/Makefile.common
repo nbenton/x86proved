@@ -131,8 +131,7 @@ cast.vo \
 regex.vo \
 codec.vo \
 bitscodec.vo \
-codecregex.vo \
-x86\lifemain.bin
+codecregex.vo 
 # x86\matcher.vo
 # x86\globals.vo
 # x86\lib\regexp\stringbuff.vo
