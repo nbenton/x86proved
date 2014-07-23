@@ -289,6 +289,36 @@ Proof.
   assumption.
 Qed.
 
+Fixpoint rep_apply n {A} (f : A -> A) (x : A) : A :=
+  match n with
+    | 0 => x
+    | S n' => f (rep_apply n' f x)
+  end.
+
+Example safe_loop_forever_state_machine state (transition : state -> state)
+        (P : state -> SPred) (pbody : program) (O : state -> OPred)
+        (H : forall s, |--basic (P s) pbody (O s) (P (transition s)))
+        (start : state) (state_n := fun n => rep_apply n transition start)
+: |-- (loopy_basic (P start)
+                   (LOCAL LOOP;
+                    LOOP:;;
+                        pbody;;
+                        JMP LOOP)
+                   (roll_starOP (fun n => O (state_n n)) 0)
+                   lfalse).
+Proof.
+  exact (@safe_loop_forever
+           (fun n => eq (P (state_n n)))
+           pbody
+           (fun n => O (state_n n))
+           (fun _ n _ => P (state_n (S n)))
+           (fun _ _ _ => reflexivity _)
+           (fun P0 n H0 _ => @eq_rect _ _ (fun P0 => |--basic P0 pbody (O (state_n n)) (P (state_n n.+1))) (H _) _ H0)
+           (P start)
+           0
+           (reflexivity _)).
+Qed.
+
 Example safe_loop_forever_constant P (pbody : program) O
         (H : |--basic P pbody O P)
 : |-- loopy_basic P (LOCAL LOOP;
