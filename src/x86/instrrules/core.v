@@ -774,3 +774,37 @@ Tactic Notation "instrrules_basicapply" open_constr(R) "using" tactic3(tac) :=
   basicapply R' using (tac) side conditions by autounfold with spred instrrules_spred; sbazooka.
 Tactic Notation "instrrules_basicapply" open_constr(R) :=
   instrrules_basicapply R using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem).
+
+(** We use a type class to ask for a rule for a given instruction,
+    parameterized _only_ on the arguments it needs to reduce to
+    something of the form [|-- basic ...], and the things that appear
+    in the instr. *)
+Class instrrule {T} (instr : T) {ruleT} := make_instrrule : ruleT.
+Class instrrule_loopy {T} (instr : T) {ruleT} := make_instrrule_loopy : ruleT.
+Instance instrrule_weaken_loopy {T instr ruleT} `{x : @instrrule_loopy T instr ruleT} : @instrrule T instr ruleT | 1000 := x.
+Definition get_instrrule_of {T} (instr : T) {ruleT} `{x : @instrrule T instr ruleT} : ruleT := x.
+Definition get_instrrule_loopy_of {T} (instr : T) {ruleT} `{x : @instrrule_loopy T instr ruleT} : ruleT := x.
+
+Ltac get_instrrule_of instr :=
+  match True with
+    | _ => constr:(get_instrrule_of instr)
+    | _ => fail 1 "Could not find a non-loopy rule for instruction" instr
+  end.
+
+Ltac get_instrrule_loopy_of instr :=
+  match True with
+    | _ => constr:(get_instrrule_loopy_of instr)
+    | _ => fail 1 "Could not find a rule for instruction" instr
+  end.
+
+Ltac get_next_instrrule_for_basic :=
+  let G := match goal with |- ?G => constr:(G) end in
+  let prog := get_basic_program_from G in
+  let instr := get_first_instr prog in
+  get_instrrule_of instr.
+
+Ltac get_next_instrrule_loopy_for_basic :=
+  let G := match goal with |- ?G => constr:(G) end in
+  let prog := get_basic_program_from G in
+  let instr := get_first_instr prog in
+  get_instrrule_loopy_of instr.

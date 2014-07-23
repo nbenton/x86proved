@@ -11,6 +11,16 @@ Lemma INCDEC_rule d (dir: bool) (src:RegMem d) oldv o s z c pf:
       V w ** OSZCP (msb oldv!=msb w) (msb w) (w == #0) c (lsb w))).
 Proof. do_instrrule_triple. Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Section handle_type_of_rule.
+  Context d (src : RegMem d).
+  Let rule dir := @INCDEC_rule d dir src.
+  Let TI := Eval cbv beta iota zeta delta [specAtRegMemDst] in (fun T (x : T) => T) _ (rule true).
+  Let TD := Eval cbv beta iota zeta delta [specAtRegMemDst] in (fun T (x : T) => T) _ (rule false).
+  Global Instance: instrrule (UOP d OP_INC src) := rule true : TI.
+  Global Instance: instrrule (UOP d OP_DEC src) := rule false : TD.
+End handle_type_of_rule.
+
 Definition INC_rule := Eval hnf in @INCDEC_rule true true.
 Definition DEC_rule := Eval hnf in @INCDEC_rule true false.
 

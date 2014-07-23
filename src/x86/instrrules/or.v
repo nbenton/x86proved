@@ -10,6 +10,9 @@ Lemma OR_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
              OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof. change (stateIs r1) with (@DWORDorBYTEregIs true r1). move => ?; subst. do_instrrule_triple. Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Instance: forall (r1 r2 : Reg) (offset : nat), instrrule (OR r1, [r2 + offset]) := fun r1 r2 offset pd v1 v2 => @OR_RM_rule pd r1 r2 v1 v2 offset.
+
 Corollary OR_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (OR r1, [r2 + offset]) empOP (r1~=orB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).

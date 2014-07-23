@@ -87,6 +87,9 @@ specsplit.
 - apply: landL2. cancel1. sbazooka.
 Qed.
 
+Global Instance: forall a cc cv, instrrule (JCC cc cv a) := @JCC_rule.
+Global Instance: forall a cc cv, instrrule_loopy (JCC cc cv a) := @JCC_loopy_rule.
+
 Lemma JZ_rule a (b:bool) (p q: DWORD) :
   |-- Forall O, (
       obs O @ (EIP ~= (if b then a else q) ** ZF ~= b) -->>
@@ -155,6 +158,8 @@ apply: limplAdj. apply: landL2. autorewrite with push_at.
 cancel1. cancel1. sbazooka.
 Qed.
 
+Global Instance: forall (a : DWORD), instrrule (JMP a) := @JMP_I_rule.
+Global Instance: forall (a : DWORD), instrrule_loopy (JMP a) := @JMP_I_loopy_rule.
 
 Lemma JMP_R_rule (r:Reg) addr (p q: DWORD) :
   |-- Forall O, (obs O @ (EIP ~= addr ** r ~= addr) -->> obs O @ (EIP ~= p ** r ~= addr)) <@
@@ -169,6 +174,9 @@ Lemma JMP_R_loopy_rule (r:Reg) addr (p q: DWORD) :
 Proof.
   rewrite /JMP. apply JMPrel_R_loopy_rule.
 Qed.
+
+Global Instance: forall (a : Reg), instrrule (JMP (JmpTgtR a)) := @JMP_R_rule.
+Global Instance: forall (a : Reg), instrrule_loopy (JMP (JmpTgtR a)) := @JMP_R_loopy_rule.
 
 Lemma CALL_I_rule (a:DWORD) (p q: DWORD) :
   |-- Forall O, Forall w: DWORD, Forall sp:DWORD, (
@@ -201,6 +209,9 @@ autorewrite with push_at.
 apply: limplAdj. apply: landL2. cancel1. cancel1.
 sbazooka.
 Qed.
+
+Global Instance: forall (a : DWORD), instrrule (CALL a) := @CALL_I_rule.
+Global Instance: forall (a : DWORD), instrrule_loopy (CALL a) := @CALL_I_loopy_rule.
 
 Section If.
 (*=ifthenelse *)

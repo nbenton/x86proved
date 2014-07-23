@@ -11,6 +11,14 @@ Lemma AND_rule (ds:DstSrc true) (v1: DWORD) :
               D v ** OSZCP false (msb v) (v == #0) false (lsb v))).
 Proof. do_instrrule_triple. Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Section handle_type_of_rule.
+  Context (ds : DstSrc true).
+  Let rule := @AND_rule ds.
+  Let T := Eval cbv beta iota zeta delta [specAtDstSrc] in (fun T (x : T) => T) _ rule.
+  Global Instance: instrrule (BOP true OP_AND ds) := rule : T.
+End handle_type_of_rule.
+
 (** ** AND r1, r2 *)
 Corollary AND_RR_rule (r1 r2:Reg) v1 (v2:DWORD) :
   |-- basic (r1~=v1 ** r2 ~= v2 ** OSZCP?)

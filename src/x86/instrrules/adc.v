@@ -11,6 +11,14 @@ Lemma ADC_rule d (ds:DstSrc d) v1 o s z (c : bool) p
                                 D v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Section handle_type_of_rule.
+  Context d (ds : DstSrc d).
+  Let rule := @ADC_rule d ds.
+  Let T := Eval cbv beta iota zeta delta [specAtDstSrc] in (fun T (x : T) => T) _ rule.
+  Global Instance: instrrule (BOP d OP_ADC ds) := rule : T.
+End handle_type_of_rule.
+
 (** Only succeed if we don't generate more than one goal. *)
 Ltac basicADC :=
   rewrite /makeBOP;

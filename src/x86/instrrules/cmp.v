@@ -14,6 +14,15 @@ Lemma CMP_rule d (ds:DstSrc d) v1 :
               D v1 ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Section handle_type_of_rule.
+  Context d (ds : DstSrc d).
+  Let rule := @CMP_rule d ds.
+  Let T := Eval cbv beta iota zeta delta [specAtDstSrc] in (fun T (x : T) => T) _ rule.
+  Global Instance: instrrule (BOP d OP_CMP ds) := rule : T.
+End handle_type_of_rule.
+
+
 (** ** Generic rule with C and Z flags determining ltB and equality respectively *)
 Section setoid_rewrite_opacity.
 (** TODO(t-jagro): Figure out a way to [setoid_rewrite] without making [sepSP] opaque here *)

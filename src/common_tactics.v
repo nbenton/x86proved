@@ -564,3 +564,8 @@ Ltac run_under_binders tac_cls term :=
     | ?term' => constr:(_ : tac_cls _ term' _)
   end.
 Hint Extern 0 (run_under_binders_helper ?tac_cls ?term) => let x := run_under_binders tac_cls term in exact x : typeclass_instances.
+
+Ltac do_in_type tac val :=
+  let T := type_of val in
+  let T' := tac T in
+  constr:(val : T').

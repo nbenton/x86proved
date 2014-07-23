@@ -58,3 +58,7 @@ Proof.
   { instrrule_triple_bazooka using do [ progress sbazooka | apply: lorR1 ]. }
   { instrrule_triple_bazooka using do [ progress sbazooka | apply: lorR2 ]. }
 Qed.
+
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Global Instance: forall (rel : DWORD) cc cv, instrrule (@JCCrel cc cv rel) := @JCCrel_rule.
+Global Instance: forall (rel : DWORD) cc cv, instrrule_loopy (@JCCrel cc cv rel) := @JCCrel_loopy_rule.

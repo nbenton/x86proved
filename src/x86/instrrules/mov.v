@@ -10,6 +10,14 @@ Lemma MOV_rule d ds oldv:
       basic (V oldv) (MOVOP d ds) empOP (V v)).
 Proof. do_instrrule_triple. Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Section handle_type_of_rule.
+  Context d (ds : DstSrc d).
+  Let rule := @MOV_rule d ds.
+  Let T := Eval cbv beta iota zeta delta [specAtDstSrc] in (fun T (x : T) => T) _ rule.
+  Global Instance: instrrule (MOVOP d ds) := rule : T.
+End handle_type_of_rule.
+
 Ltac basicMOV :=
   rewrite /makeMOV;
   let R := lazymatch goal with

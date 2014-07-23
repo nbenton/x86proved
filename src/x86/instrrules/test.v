@@ -11,3 +11,6 @@ Proof.
   change (stateIs r) with (@DWORDorBYTEregIs true r).
   do_instrrule (instrrule_triple_bazooka; rewrite andBB; instrrule_triple_bazooka).
 Qed.
+
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Global Instance: forall (r : Reg), instrrule (TEST r, r) := @TEST_self_rule.

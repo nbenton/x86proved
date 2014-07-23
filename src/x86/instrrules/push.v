@@ -9,6 +9,14 @@ Lemma PUSH_rule src sp (v:DWORD) :
                (ESP ~= sp-#4 ** sp-#4 :-> w)).
 Proof. do_instrrule_triple. Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Section handle_type_of_rule.
+  Context (src : Src).
+  Let rule := @PUSH_rule src.
+  Let T := Eval cbv beta iota zeta delta [specAtSrc] in (fun T (x : T) => T) _ rule.
+  Global Instance: instrrule (PUSH src) := rule : T.
+End handle_type_of_rule.
+
 Ltac basicPUSH :=
   let R := lazymatch goal with
              | |- |-- basic ?p (PUSH ?a) ?O ?q => constr:(PUSH_rule a)

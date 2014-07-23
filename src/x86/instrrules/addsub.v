@@ -12,6 +12,17 @@ Lemma ADDSUB_rule isSUB d (ds:DstSrc d) v1 :
               D v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Section handle_type_of_rule.
+  Context d (ds : DstSrc d).
+  Let rule isSUB := @ADDSUB_rule isSUB d ds.
+  Let TS := Eval cbv beta iota zeta delta [specAtDstSrc] in (fun T (x : T) => T) _ (rule true).
+  Let TA := Eval cbv beta iota zeta delta [specAtDstSrc] in (fun T (x : T) => T) _ (rule false).
+  Global Instance: instrrule (BOP d OP_SUB ds) := rule true : TS.
+  Global Instance: instrrule (BOP d OP_ADD ds) := rule false : TA.
+  Set Printing Implicit.
+End handle_type_of_rule.
+
 (** Only succeed if we don't generate more than one goal. *)
 Ltac basicADDSUB :=
   rewrite /makeBOP;

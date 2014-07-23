@@ -33,6 +33,17 @@ Proof.
      do !instrrule_triple_bazooka_step idtac).
 Qed.
 
+(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+Section handle_type_of_rule.
+  Context (tgt : JmpTgt).
+  Let rule := (fun p q => @CALLrel_rule p q tgt).
+  Let loopy_rule := (fun p q => @CALLrel_loopy_rule p q tgt).
+  Let T := Eval cbv beta iota zeta delta [interpJmpTgt] in (fun T (x : T) => T) _ rule.
+  Let loopy_T := Eval cbv beta iota zeta delta [interpJmpTgt] in (fun T (x : T) => T) _ loopy_rule.
+  Global Instance: instrrule (CALLrel tgt) := rule : T.
+  Global Instance: instrrule_loopy (CALLrel tgt) := loopy_rule : loopy_T.
+End handle_type_of_rule.
+
 Section specapply_hint.
 Local Hint Unfold interpJmpTgt : specapply.
 

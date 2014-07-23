@@ -91,6 +91,19 @@ Lemma basic_instr {T_OPred} {proj} S P i O Q :
   S |-- @parameterized_basic T_OPred proj _ _ P (prog_instr i) O Q.
 Proof. done. Qed.
 
+(** Get the program out of a goal; useful for looking up which rule to use. *)
+Ltac get_basic_program_from G :=
+  lazymatch G with
+    | _ |-- ?G' => get_basic_program_from G'
+    | parameterized_basic _ ?P _ _ => constr:(P)
+    | ?G' => fail "No program found in" G'
+  end.
+Ltac get_first_instr P :=
+  lazymatch P with
+    | prog_seq ?P' _ => get_first_instr P'
+    | prog_instr ?I => constr:(I)
+  end.
+
 (* Attempts to apply "basic" lemma on a single command (basic_basic) or
    on the first of a sequence (basic_seq). Note that it attempts to use sbazooka
    to discharge subgoals, so be careful if existentials are exposed in the goal --
