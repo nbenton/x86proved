@@ -274,3 +274,16 @@ Proof.
                              (fun P0 _ PeqP0 _ => @eq_rect _ _ (fun P0 => |--basic P0 pbody O P) H _ PeqP0) P 0
                              (reflexivity _)).
 Qed.
+
+Example loop_forever_one al
+: |-- (loopy_basic (BYTEregIs AL al)
+                   (MOV AL, (#1 : DWORD);;
+                    loop_forever_prog (OUT #0, AL))
+                   (starOP (outOP (zeroExtend n8 (#0 : BYTE)) (#1 : BYTE)))
+                   lfalse).
+Proof.
+  do_loopy_basic'.
+  change (@low 24 8 (@fromNat n32 1)) with (@fromNat n8 1).
+  eapply safe_loop_forever_constant.
+  do_basic'.
+Qed.

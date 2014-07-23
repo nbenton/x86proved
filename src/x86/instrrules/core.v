@@ -781,7 +781,7 @@ Tactic Notation "instrrules_basicapply" open_constr(R) :=
     in the instr. *)
 Class instrrule {T} (instr : T) {ruleT} := make_instrrule : ruleT.
 Class loopy_instrrule {T} (instr : T) {ruleT} := make_loopy_instrrule : ruleT.
-Instance instrrule_weaken_loopy {T instr ruleT} `{x : @loopy_instrrule T instr ruleT} : @instrrule T instr ruleT | 1000 := x.
+Instance instrrule_weaken_loopy {T instr ruleT} `{x : @instrrule T instr ruleT} : @loopy_instrrule T instr ruleT | 1000 := x.
 Definition get_instrrule_of {T} (instr : T) {ruleT} `{x : @instrrule T instr ruleT} : ruleT := x.
 Arguments get_instrrule_of {_} _ {_ _}.
 Definition get_loopy_instrrule_of {T} (instr : T) {ruleT} `{x : @loopy_instrrule T instr ruleT} : ruleT := x.
