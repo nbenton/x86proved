@@ -3,7 +3,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x86proved.obs x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
 Require Import x86proved.spectac x86proved.basicspectac.
-Require Import x86proved.common_tactics x86proved.chargetac.
+Require Import x86proved.common_tactics x86proved.chargetac x86proved.common_definitions.
 Require Import Coq.Setoids.Setoid.
 
 Set Implicit Arguments.
@@ -155,6 +155,16 @@ Ltac prepare_basic_goal_for_spec :=
       | progress specintros => *
       | progress unfold_program ].
 
+Definition output_n_prog (pbody : program) (n : nat)
+  := (LOCAL LOOP;
+      LOCAL END;
+      LOOP:;;
+        CMP ECX, 0;;
+        JCC CC_Z true END;;
+        pbody;;
+        DEC ECX;;
+        JMP LOOP;;
+        END:;).
 
 (** Example: We can observe the output of any given constant, n times *)
 Example safe_loop_n P (pbody : program) O (n : nat) d
@@ -164,19 +174,12 @@ Example safe_loop_n P (pbody : program) O (n : nat) d
         (Hn : small_enough n)
         (H : forall n, small_enough n -> |--basic (ECX ~= #(n.+1) ** BYTEregIs AL d ** P (n.+1) ** OSZCP?) pbody (O (n.+1)) (ECX ~= #(n.+1) ** BYTEregIs AL d ** P n ** OSZCP?))
 : |-- (basic (ECX ~= #n ** BYTEregIs AL d ** P n)
-             (LOCAL LOOP;
-              LOCAL END;
-               LOOP:;;
-               CMP ECX, 0;;
-               JCC CC_Z true END;;
-               pbody;;
-               DEC ECX;;
-               JMP LOOP;;
-               END:;)
+             (output_n_prog pbody n)
              (rollOP n O)
              (ECX ~= #0 ** BYTEregIs AL d ** P 0))
       @ OSZCP?.
 Proof.
+  unfold output_n_prog.
   prepare_basic_goal_for_spec.
   induction n.
   { do_code_loopless. }
@@ -199,15 +202,7 @@ Example safe_loop_n_const P (pbody : program) O (n : nat) d
         (Hn : small_enough n)
         (H : forall n, small_enough n -> |--basic (ECX ~= #(n.+1) ** BYTEregIs AL d ** P ** OSZCP?) pbody O (ECX ~= #(n.+1) ** BYTEregIs AL d ** P ** OSZCP?))
 : |-- (basic (ECX ~= #n ** BYTEregIs AL d ** P)
-             (LOCAL LOOP;
-              LOCAL END;
-               LOOP:;;
-               CMP ECX, 0;;
-               JCC CC_Z true END;;
-               pbody;;
-               DEC ECX;;
-               JMP LOOP;;
-               END:;)
+             (output_n_prog pbody n)
              (repOP n O)
              (ECX ~= #0 ** BYTEregIs AL d ** P))
       @ OSZCP?.
@@ -243,6 +238,12 @@ Section helper.
   Qed.
 End helper.
 
+Definition loop_forever_prog (pbody : program)
+  := (LOCAL LOOP;
+      LOOP:;;
+          pbody;;
+          JMP LOOP).
+
 (** Example: We can observe the output of any given code, infinitely many times *)
 (** TODO(t-jagro): automate this proof more *)
 Example safe_loop_forever (PP : nat -> SPred -> Prop) (pbody : program) (O : nat -> OPred)
@@ -251,13 +252,11 @@ Example safe_loop_forever (PP : nat -> SPred -> Prop) (pbody : program) (O : nat
         (H : forall P n (H' : PP n P) (Q := transition P n H'), PP (S n) Q -> |--basic P pbody (O n) Q)
         (P0 : SPred) (start : nat) (H0 : PP start P0)
 : |-- (loopy_basic P0
-                   (LOCAL LOOP;
-                    LOOP:;;
-                        pbody;;
-                        JMP LOOP)
+                   (loop_forever_prog pbody)
                    (roll_starOP O start)
                    lfalse).
 Proof.
+  unfold loop_forever_prog.
   prepare_basic_goal_for_spec.
   lrevert H0.
   lrevert P0.
@@ -289,21 +288,12 @@ Proof.
   assumption.
 Qed.
 
-Fixpoint rep_apply n {A} (f : A -> A) (x : A) : A :=
-  match n with
-    | 0 => x
-    | S n' => f (rep_apply n' f x)
-  end.
-
 Example safe_loop_forever_state_machine state (transition : state -> state)
         (P : state -> SPred) (pbody : program) (O : state -> OPred)
         (H : forall s, |--basic (P s) pbody (O s) (P (transition s)))
         (start : state) (state_n := fun n => rep_apply n transition start)
 : |-- (loopy_basic (P start)
-                   (LOCAL LOOP;
-                    LOOP:;;
-                        pbody;;
-                        JMP LOOP)
+                   (loop_forever_prog pbody)
                    (roll_starOP (fun n => O (state_n n)) 0)
                    lfalse).
 Proof.
@@ -321,10 +311,7 @@ Qed.
 
 Example safe_loop_forever_constant P (pbody : program) O
         (H : |--basic P pbody O P)
-: |-- loopy_basic P (LOCAL LOOP;
-                     LOOP:;;
-                         pbody;;
-                         JMP LOOP) (starOP O) lfalse.
+: |-- loopy_basic P (loop_forever_prog pbody) (starOP O) lfalse.
 Proof.
   rewrite <- (roll_starOP__starOP 0 O).
   exact (@safe_loop_forever (fun _ => eq P) pbody (fun _ => O) (fun _ _ _ => P) (fun _ _ _ => reflexivity _)

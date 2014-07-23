@@ -6,3 +6,9 @@ Definition prod_eta A B (p : A * B) : p = eta_expand p
     := match p as p return p = eta_expand p with
          | (x, y) => Coq.Init.Logic.eq_refl
        end.
+
+Fixpoint rep_apply n {A} (f : A -> A) (x : A) : A :=
+  match n with
+    | 0 => x
+    | S n' => f (rep_apply n' f x)
+  end.
