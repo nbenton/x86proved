@@ -102,6 +102,7 @@ Ltac get_first_instr P :=
   lazymatch P with
     | prog_seq ?P' _ => get_first_instr P'
     | prog_instr ?I => constr:(I)
+    | ?P' => constr:(P')
   end.
 
 (* Attempts to apply "basic" lemma on a single command (basic_basic) or

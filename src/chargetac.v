@@ -20,8 +20,10 @@ Ltac simpl_logic' :=
     | [ |- _ |-- ltrue ] => apply ltrueR
     | [ |- _ |-- _ -->> _ ] => apply: limplAdj
     | [ |- _ /\ _ ] => split
-    | [ |- ?a @ ?b |-- ?a @ ?b' ] => f_cancel
-    | [ |- ?a <@ ?b |-- ?a' <@ ?b ] => f_cancel
+    | [ |- |>?a |-- |>?b ] => f_cancel; []
+    | [ |- ?a @ ?b |-- ?a @ ?b' ] => f_cancel; []
+    | [ |- ?a <@ ?b |-- ?a' <@ ?b ] => f_cancel; []
+    | [ |- ?a <@ ?b |-- ?a <@ ?b' ] => f_cancel; []
     | [ |- ?P //\\ ?Q |-- ?P ] => apply: (@landL1 _ _ _ P Q P (reflexivity _))
     | [ |- _ -|- _ ] => split
     | [ |- _ -> _ ] => move => ?

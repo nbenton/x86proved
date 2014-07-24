@@ -10,10 +10,12 @@ Lemma OR_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
              OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof. change (stateIs r1) with (@DWORDorBYTEregIs true r1). move => ?; subst. do_instrrule_triple. Qed.
 
-(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
-Instance: forall (r1 r2 : Reg) (offset : nat), instrrule (OR r1, [r2 + offset]) := fun r1 r2 offset pd v1 v2 => @OR_RM_rule pd r1 r2 v1 v2 offset.
+(** We make this rule an instance of the typeclass, and leave
+    unfolding things like [specAtDstSrc] to the getter tactic
+    [get_instrrule_of]. *)
+Instance: forall (r1 r2 : Reg) (offset : nat), instrrule (OR r1, [r2 + offset]) := fun r1 r2 offset pd v1 v2 => @OR_RM_rule pd r1 r2 v1 v2 offset _ (refl_equal _).
 
 Corollary OR_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (OR r1, [r2 + offset]) empOP (r1~=orB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
-Proof. autorewrite with push_at. instrrules_basicapply (@OR_RM_rule pd r1 r2 v1 v2 offset (orB v1 v2) (refl_equal _)). Qed.
+Proof. autorewrite with push_at. do_basic'. Qed.

@@ -41,6 +41,8 @@ Proof.
        | destruct count as [|count]; rewrite /(iter 0) ?droplsb_iter_shrB ].
 Qed.
 
-(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+(** We make this rule an instance of the typeclass, and leave
+    unfolding things like [specAtDstSrc] to the getter tactic
+    [get_instrrule_of]. *)
 Global Instance: forall (r : Reg) (count : nat), instrrule (SHL r, count) := fun r count v => @SHL_RI_rule r v count.
 Global Instance: forall (r : Reg) (count : nat), instrrule (SHR r, count) := fun r count v => @SHR_RI_rule r v count.

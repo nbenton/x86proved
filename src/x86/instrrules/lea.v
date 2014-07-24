@@ -16,7 +16,9 @@ Lemma LEA_rule (old v indexval offset: DWORD) (r r': Reg) (r1:NonSPReg) sc :
             (r ~= addB (addB v offset) (scaleBy sc indexval) ** r' ~= v ** r1 ~= indexval).
 Proof. do_instrrule_triple. Qed.
 
-(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+(** We make this rule an instance of the typeclass, and leave
+    unfolding things like [specAtDstSrc] to the getter tactic
+    [get_instrrule_of]. *)
 Global Instance: forall (offset : DWORD) (r : Reg) (r1 : NonSPReg) sc,
                    instrrule (instr.LEA r (RegMemM _ (mkMemSpec (Some(r, Some(r1, sc))) offset))) | 0
   := fun offset r r1 sc v indexval => @LEA_ruleSameBase v indexval offset r r1 sc.

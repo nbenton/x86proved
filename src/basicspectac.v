@@ -90,3 +90,34 @@ Ltac check_eips_match A B :=
   let post_eip_B := get_post_reg_from EIP B in
   constr_eq pre_eip_A pre_eip_B;
     constr_eq post_eip_A post_eip_B.
+
+Ltac check_goal_eips_match :=
+  let pre_eip := get_pre_reg EIP in
+  let post_eip := get_post_reg EIP in
+  constr_eq pre_eip post_eip.
+
+(** Pull the current [EIP] code, and specapply the relevant lemma *)
+Ltac get_next_instrrule_from_eip :=
+  let G := match goal with |- ?G => constr:(G) end in
+  let instr := get_eip_code G in
+  get_instrrule_of instr.
+Ltac get_next_loopy_instrrule_from_eip :=
+  let G := match goal with |- ?G => constr:(G) end in
+  let instr := get_eip_code G in
+  get_loopy_instrrule_of instr.
+(** [pre_specapply_any] does some clean up for pulling out the rule. *)
+Ltac pre_specapply_any :=
+  rewrite /makeBOP/makeUOP/makeMOV;
+  cbv beta iota zeta;
+  do ?((test progress intros); move => ?).
+Tactic Notation "specapply" open_constr(lem) := specapply lem.
+Tactic Notation "specapply" "*" :=
+  pre_specapply_any;
+  let R := get_next_instrrule_from_eip in
+  first [ specapply R
+        | fail 1 "Failed to specapply basic lemma" R ].
+Tactic Notation "loopy_specapply" "*" :=
+  pre_specapply_any;
+  let R := get_next_loopy_instrrule_from_eip in
+  first [ specapply R
+        | fail 1 "Failed to specapply basic lemma" R ].

@@ -14,14 +14,10 @@ Lemma CMP_rule d (ds:DstSrc d) v1 :
               D v1 ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
 
-(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
-Section handle_type_of_rule.
-  Context d (ds : DstSrc d).
-  Let rule := @CMP_rule d ds.
-  Let T := Eval cbv beta iota zeta delta [specAtDstSrc] in (fun T (x : T) => T) _ rule.
-  Global Instance: instrrule (BOP d OP_CMP ds) := rule : T.
-End handle_type_of_rule.
-
+(** We make this rule an instance of the typeclass, and leave
+    unfolding things like [specAtDstSrc] to the getter tactic
+    [get_instrrule_of]. *)
+Global Instance: forall d (ds : DstSrc d), instrrule (BOP d OP_CMP ds) := @CMP_rule.
 
 (** ** Generic rule with C and Z flags determining ltB and equality respectively *)
 Section setoid_rewrite_opacity.
@@ -43,13 +39,6 @@ Proof.
 Qed.
 End setoid_rewrite_opacity.
 
-Ltac basicCMP :=
-  rewrite /makeBOP;
-  let R := lazymatch goal with
-             | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?O ?q => constr:(@CMP_rule d a)
-           end in
-  instrrules_basicapply R.
-
 Ltac basicCMP_ZC :=
   rewrite /makeBOP;
   let R := lazymatch goal with
@@ -64,13 +53,13 @@ Lemma CMP_RI_rule (r1:Reg) v1 (v2:DWORD):
             (let: (carry,res) := eta_expand (sbbB false v1 v2) in
              r1 ~= v1 ** OSZCP (computeOverflow v1 v2 res) (msb res)
                          (res == #0) carry (lsb res)).
-Proof. basicCMP. Qed.
+Proof. do_basic'. Qed.
 
 Lemma CMP_RbI_rule (r1:BYTEReg) (v1 v2:BYTE):
   |-- basic (BYTEregIs r1 v1 ** OSZCP?) (CMP r1, v2) empOP
             (let: (carry,res) := eta_expand (sbbB false v1 v2) in
   BYTEregIs r1 v1 ** OSZCP (computeOverflow v1 v2 res) (msb res) (res == #0) carry (lsb res)).
-Proof. rewrite /BYTEtoDWORD/makeBOP low_catB. basicCMP. Qed.
+Proof. rewrite /BYTEtoDWORD/makeBOP low_catB. do_basic'. Qed.
 
 Lemma CMP_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
@@ -79,7 +68,7 @@ Lemma CMP_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD) :
              r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP (computeOverflow v1 v2 res) (msb res)
                    (res == #0) carry (lsb res)).
-Proof. basicCMP. Qed.
+Proof. do_basic'. Qed.
 
 Lemma CMP_MR_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
@@ -88,7 +77,7 @@ Lemma CMP_MR_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
              r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP (computeOverflow v2 v1 res) (msb res)
                    (res == #0) carry (lsb res)).
-Proof. basicCMP. Qed.
+Proof. do_basic'. Qed.
 
 Lemma CMP_MR_ZC_rule (pd: DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
   |-- basic (r1 ~= pd ** r2 ~= v2 ** pd +# offset :-> v1 ** OSZCP?) (CMP [r1+offset], r2) empOP
@@ -108,7 +97,7 @@ Lemma CMP_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
              r1 ~= v1 ** r2 ~= v2 **
               OSZCP (computeOverflow v1 v2 res) (msb res)
                     (res == #0) carry (lsb res)).
-Proof. basicCMP. Qed.
+Proof. do_basic'. Qed.
 
 
 Lemma CMP_RI_ZC_rule (r1:Reg) v1 (v2:DWORD):

@@ -45,9 +45,7 @@ Example basic_inc3 x:
 Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  try_basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
-  try_basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
-  try_basicapply INC_R_rule. rewrite /OSZCP; sbazooka.
+  do !do_basic'.
   rewrite /OSZCP addIsIterInc/iter; sbazooka.
 Qed.
 
@@ -76,67 +74,22 @@ Proof.
   - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.
     rewrite ->(eqP Hzero) in *. rewrite add0B in Hadd.
     subst a'. rewrite /ConditionIs/stateIsAny. by sbazooka.
-  - specintros => b1 b2. subst I; cbv beta. specintros => c' a' Hzero Hadd.
-    eapply basic_basic. exact (TEST_self_rule (v:= c')).
-    + rewrite /ConditionIs/stateIsAny. by sbazooka.
-    rewrite /OSZCP/ConditionIs/stateIsAny. by sbazooka.
-  - subst I; cbv beta. specintros => c' a' Hzero Hadd.
-    rewrite /stateIsAny. specintros => fo fs fc fp.
-    try_basicapply DEC_R_rule. + by rewrite /OSZCP/ConditionIs; ssimpl.
-    try_basicapply INC_R_rule. + by rewrite addB_decB_incB.
+  - subst I; cbv beta; specintros => *; subst. rewrite /ConditionIs. do_basic'.
+  - subst I; cbv beta; rewrite /ConditionIs/stateIsAny; specintros => *; subst.
+    do_basic'.
+    do_basic'.
     rewrite /OSZCP/ConditionIs.
     sbazooka.
+    by rewrite addB_decB_incB.
 Qed.
 
 
-(** TODO(t-jagro): Move these tactics to a better location. *)
-Ltac specexamples_specapply rule tac :=
-  let H := fresh in
-  pose proof rule as H;
-    unfold specAtDstSrc, specAtRegMemDst in H;
-    cbv beta in H;
-    specapply H; clear H; first tac.
+Local Ltac t_after_specapply := ssimpl; try reflexivity; rewrite /ConditionIs/OSZCP/DWORDorBYTEregIs/stateIsAny/stateIs; cbv beta; ssimpl; try reflexivity; sbazooka.
 
-Ltac specintro_stateIsAny reg := let regq := constr:(reg?) in rewrite /regq; specintros => *; rewrite -/regq.
-Ltac specintros_OSZCP :=
-  specintro_stateIsAny OF; specintro_stateIsAny SF; specintro_stateIsAny ZF; specintro_stateIsAny CF; specintro_stateIsAny PF.
-
-Ltac do_code_rule_loopless code matcher :=
-  let tac := (ssimpl; try reflexivity; rewrite /OSZCP/DWORDorBYTEregIs/stateIsAny/stateIs; cbv beta; ssimpl; try reflexivity; sbazooka) in
-  lazymatch code with
-    | BOP ?d OP_CMP ?ds          => let ecx := get_post_reg ECX in specexamples_specapply (@CMP_rule d ds ecx) ltac:(by tac)
-    | JZ ?a                      => specexamples_specapply (@JZ_rule a) ltac:(by tac)
-    | JMP (JmpTgtI (mkTgt ?a))   => specexamples_specapply (@JMP_I_rule a) ltac:(by tac)
-    | UOP ?d OP_INC ?a           => let ecx := get_post_reg ECX in specintros_OSZCP; specexamples_specapply (@INCDEC_rule d true a ecx) ltac:(by tac)
-    | UOP ?d OP_DEC ?a           => let ecx := get_post_reg ECX in specintros_OSZCP; specexamples_specapply (@INCDEC_rule d false a ecx) ltac:(by tac)
-    | _                          => let rule := matcher code in specexamples_specapply rule ltac:(by tac)
-  end.
-
-
-Ltac do_code_unfolder :=
+Local Ltac do_code_unfolder :=
   rewrite /makeUOP/makeBOP.
 
-Ltac do_code_loopless' matcher :=
-  do_code_unfolder;
-  let G := match goal with |- ?G => constr:(G) end in
-  let x := get_eip_code G in
-  do_code_rule_loopless x matcher.
-
-Ltac do_code_loopless_with matcher intertac :=
-  do !(do_code_loopless' matcher; intertac).
-
-Ltac check_goal_eips_match :=
-  let pre_eip := get_pre_reg EIP in
-  let post_eip := get_post_reg EIP in
-  constr_eq pre_eip post_eip.
-
-Ltac do_code_loopless :=
-  do_code_loopless_with
-    ltac:(fun code => fail)
-    ltac:(rewrite ?subB0 ?eq_refl;
-          try (check_goal_eips_match; try by finish_logic_with sbazooka)).
-
-Ltac check_eip_hyp_and_do hyp :=
+Local Ltac check_eip_hyp_and_do hyp :=
   let G := match goal with |- ?G => constr:(G) end in
   let T := type_of hyp in
   check_eips_match G T;
@@ -144,7 +97,8 @@ Ltac check_eip_hyp_and_do hyp :=
     do_code_unfolder;
     try by finish_logic_with sbazooka.
 
-Ltac prepare_basic_goal_for_spec :=
+Local Ltac prepare_basic_goal_for_spec :=
+  rewrite /makeBOP/makeUOP/makeMOV;
   autorewrite with push_at;
   do ?(idtac;
        match goal with
@@ -182,17 +136,19 @@ Proof.
   unfold output_n_prog.
   prepare_basic_goal_for_spec.
   induction n.
-  { do_code_loopless. }
+  { do ?[ progress rewrite ?subB0 ?eq_refl /OSZCP/ConditionIs
+        | check_goal_eips_match; by finish_logic_with sbazooka
+        | specapply * ]. }
   { specialize (IHn (is_small _ Hn)).
     specialize (small_is_good _ (is_small _ Hn)).
     specialize (H _ (is_small _ Hn)).
-    do_code_loopless_with
-      ltac:(fun code =>
-              match code with
-                | pbody => constr:(H)
-              end)
-      ltac:(rewrite ?subB0 ?eq_refl ?small_is_good ?catOPA ?decB_fromSuccNat /rollOP-/rollOP;
-            try check_eip_hyp_and_do IHn). }
+    (** Get the instance so that [specapply *] picks it up *)
+    pose proof (H : instrrule pbody).
+    do ?[ progress rewrite ?subB0 ?eq_refl ?small_is_good ?catOPA ?decB_fromSuccNat /rollOP-/rollOP/ConditionIs
+        | rewrite /OSZCP/stateIsAny; specintros => *
+        | progress change (false == true) with false; cbv iota
+        | solve [ check_eip_hyp_and_do IHn ]
+        | specapply *; first by t_after_specapply ]. }
 Qed.
 
 Example safe_loop_n_const P (pbody : program) O (n : nat) d

@@ -12,5 +12,7 @@ Proof.
   do_instrrule (instrrule_triple_bazooka; rewrite andBB; instrrule_triple_bazooka).
 Qed.
 
-(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
+(** We make this rule an instance of the typeclass, and leave
+    unfolding things like [specAtDstSrc] to the getter tactic
+    [get_instrrule_of]. *)
 Global Instance: forall (r : Reg), instrrule (TEST r, r) := @TEST_self_rule.

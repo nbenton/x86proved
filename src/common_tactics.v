@@ -569,3 +569,104 @@ Ltac do_in_type tac val :=
   let T := type_of val in
   let T' := tac T in
   constr:(val : T').
+
+(** Run a tactic associated with [tacClass] under as many binders as necessary until it succeeds. *)
+(** In 8.5, this will be simpler:
+<<
+Ltac do_under_binders tac term := constr:(fun y => $(let z := tac (term y) in exact z)$).
+Ltac do_under_forall_binders tac term :=
+  let T := match term with forall x : ?T, @?P x => constr:(T) end in
+  let P := match term with forall x, @?P x => constr:(P) end in
+  constr:(forall y : T, $(let z := tac (P y) in exact z)$).
+Ltac do_under_many_binders_helper under_binders tac term :=
+  match term with
+    | _ => tac term
+    | _ => under_binders ltac:(do_under_many_binders_helper under_binders tac) term
+  end.
+Ltac do_under_many_binders tac term := do_under_many_binders_helper do_under_binders tac term.
+Ltac do_under_many_forall_binders tac term := do_under_many_forall_binders_helper do_under_binders tac term.
+>> *)
+Ltac do_under_binders tacClass term := constr:(fun y => _ : tacClass _ (term y) _).
+Ltac do_under_forall_binders tacClass term :=
+  let T := match term with forall x : ?T, @?P x => constr:(T) end in
+  let P := match term with forall x, @?P x => constr:(P) end in
+  constr:(forall y : T, (_ : tacClass _ (P y) _)).
+Class do_under_many_binders_class {tacClassT} (tacClass : tacClassT) {T} (term : T) {retT} := make_do_under_many_binders : retT.
+Ltac do_under_many_binders tacClass term :=
+  let tacClass_head := head tacClass in
+  let ret := match (eval cbv beta delta [tacClass_head do_under_many_binders_class] in term) with
+               | ?term' => constr:(_ : tacClass _ term' _)
+               | ?term' => do_under_binders (@do_under_many_binders_class _ tacClass) term'
+             end in
+  eval cbv beta delta [tacClass_head do_under_many_binders_class] in ret.
+Hint Extern 0 (do_under_many_binders_class ?tacClass ?term)
+=> let ret := do_under_many_binders tacClass term in exact ret : typeclass_instances.
+
+Class do_under_many_forall_binders_class {tacClassT} (tacClass : tacClassT) {T} (term : T) {retT} := make_do_under_many_forall_binders : retT.
+Ltac do_under_many_forall_binders tacClass term :=
+  let tacClass_head := head tacClass in
+  let ret := match (eval cbv beta delta [tacClass_head do_under_many_forall_binders_class] in term) with
+               | ?term' => constr:(_ : tacClass _ term' _)
+               | ?term' => do_under_forall_binders (@do_under_many_forall_binders_class _ tacClass) term'
+             end in
+  eval cbv beta delta [tacClass_head do_under_many_forall_binders_class] in ret.
+Hint Extern 0 (do_under_many_forall_binders_class ?tacClass ?term)
+=> let ret := do_under_many_forall_binders tacClass term in exact ret : typeclass_instances.
+
+(** Switch the order of the [match] so that we force binders first *)
+Class do_under_all_binders_class {tacClassT} (tacClass : tacClassT) {T} (term : T) {retT} := make_do_under_all_binders : retT.
+Ltac do_under_all_binders tacClass term :=
+  let tacClass_head := head tacClass in
+  let ret := match (eval cbv beta delta [tacClass_head do_under_all_binders_class] in term) with
+               | ?term' => do_under_binders (@do_under_all_binders_class _ tacClass) term'
+               | ?term' => constr:(_ : tacClass _ term' _)
+             end in
+  eval cbv beta delta [tacClass_head do_under_all_binders_class] in ret.
+Hint Extern 0 (do_under_all_binders_class ?tacClass ?term)
+=> let ret := do_under_all_binders tacClass term in exact ret : typeclass_instances.
+
+Class do_under_all_forall_binders_class {tacClassT} (tacClass : tacClassT) {T} (term : T) {retT} := make_do_under_all_forall_binders : retT.
+Ltac do_under_all_forall_binders tacClass term :=
+  let tacClass_head := head tacClass in
+  let ret := match (eval cbv beta delta [tacClass_head do_under_all_forall_binders_class] in term) with
+               | ?term' => do_under_forall_binders (@do_under_all_forall_binders_class _ tacClass) term'
+               | ?term' => constr:(_ : tacClass _ term' _)
+             end in
+  eval cbv beta delta [tacClass_head do_under_all_forall_binders_class] in ret.
+Hint Extern 0 (do_under_all_forall_binders_class ?tacClass ?term)
+=> let ret := do_under_all_forall_binders tacClass term in exact ret : typeclass_instances.
+
+Section test_do_under_many_binders.
+  Let a := True.
+  Let b := a.
+  Let c := b.
+
+  Ltac help_unfold_head term :=
+    match eval cbv beta in term with
+      | ?f ?x => let f' := help_unfold_head f in
+                 constr:(f' x)
+      | a     => constr:(a)
+      | ?term' => let term'' := (eval unfold term' in term') in
+                  help_unfold_head term''
+      | ?term' => constr:(term')
+    end.
+
+  Class unfolder_helper {T} (term : T) {retT : Type} := make_unfolder_helper : retT.
+  Hint Extern 0 (unfolder_helper (True -> ?term)) => let term' := help_unfold_head term in
+                                                     exact (True -> term')
+                                                     : typeclass_instances.
+
+  Ltac unfold_until_a term := do_under_many_binders (@unfolder_helper) term.
+  Ltac unfold_forall_until_a term := do_under_many_forall_binders (@unfolder_helper) term.
+
+  Goal True.
+    let term := constr:(fun (_ _ _ _ : Set) => True -> c) in
+    let ret := unfold_until_a term in
+    constr_eq ret ((fun (_ _ _ _ : Set) => True -> a) : Set -> Set -> Set -> Set -> Prop);
+      pose ret as ret0.
+    let term := constr:(forall _ _ _ _ : Set, True -> c) in
+    let ret := unfold_forall_until_a term in
+    constr_eq ret ((forall (_ _ _ _ : Set), True -> a) : Prop);
+      pose ret as ret1.
+  Abort.
+End test_do_under_many_binders.

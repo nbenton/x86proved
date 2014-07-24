@@ -11,45 +11,33 @@ Lemma INCDEC_rule d (dir: bool) (src:RegMem d) oldv o s z c pf:
       V w ** OSZCP (msb oldv!=msb w) (msb w) (w == #0) c (lsb w))).
 Proof. do_instrrule_triple. Qed.
 
-(** We make this rule an instance of the typeclass, after unfolding various things in its type. *)
-Section handle_type_of_rule.
-  Context d (src : RegMem d).
-  Let rule dir := @INCDEC_rule d dir src.
-  Let TI := Eval cbv beta iota zeta delta [specAtRegMemDst] in (fun T (x : T) => T) _ (rule true).
-  Let TD := Eval cbv beta iota zeta delta [specAtRegMemDst] in (fun T (x : T) => T) _ (rule false).
-  Global Instance: instrrule (UOP d OP_INC src) := rule true : TI.
-  Global Instance: instrrule (UOP d OP_DEC src) := rule false : TD.
-End handle_type_of_rule.
+(** We make this rule an instance of the typeclass, and leave
+    unfolding things like [specAtDstSrc] to the getter tactic
+    [get_instrrule_of]. *)
+Global Instance: forall d (src : RegMem d), instrrule (UOP d OP_INC src) := fun d => @INCDEC_rule d true.
+Global Instance: forall d (src : RegMem d), instrrule (UOP d OP_DEC src) := fun d => @INCDEC_rule d false.
 
 Definition INC_rule := Eval hnf in @INCDEC_rule true true.
 Definition DEC_rule := Eval hnf in @INCDEC_rule true false.
-
-Ltac basicINCDEC :=
-  rewrite /makeUOP;
-  let R := lazymatch goal with
-             | |- |-- basic ?p (@UOP ?d OP_INC ?a) ?O ?q => constr:(@INCDEC_rule d true a)
-             | |- |-- basic ?p (@UOP ?d OP_DEC ?a) ?O ?q => constr:(@INCDEC_rule d false a)
-           end in
-  instrrules_basicapply R.
 
 (** Special case for increment register *)
 Corollary INC_R_rule (r:Reg) (v:DWORD) o s z c pf:
   let w := incB v in
   |-- basic (r~=v ** OSZCP o s z c pf) (INC r) empOP
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. basicINCDEC. Qed.
+Proof. do_basic'. Qed.
 
 Corollary INC_M_rule (r:Reg) (offset:nat) (v pbase:DWORD) o s z c pf:
   let w := incB v in
   |-- basic (r ~= pbase ** pbase +# offset :-> v ** OSZCP o s z c pf) (INC [r + offset]) empOP
             (r ~= pbase ** pbase +# offset :-> w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. basicINCDEC. Qed.
+Proof. do_basic'. Qed.
 
 Lemma INC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (INC r) empOP (r~=incB v) @ OSZCP?.
 Proof.
   autorewrite with push_at. rewrite /stateIsAny. specintros => *.
-  basicINCDEC.
+  do_basic'.
 Qed.
 
 (* Special case for decrement *)
@@ -57,11 +45,11 @@ Lemma DEC_R_rule (r:Reg) (v:DWORD) o s z c pf :
   let w := decB v in
   |-- basic (r~=v ** OSZCP o s z c pf) (DEC r) empOP
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. basicINCDEC. Qed.
+Proof. do_basic'. Qed.
 
 Lemma DEC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (DEC r) empOP (r~=decB v) @ OSZCP?.
 Proof.
   autorewrite with push_at. rewrite /stateIsAny. specintros => *.
-  basicINCDEC.
+  do_basic'.
 Qed.

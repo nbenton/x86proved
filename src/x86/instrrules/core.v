@@ -780,22 +780,60 @@ Tactic Notation "instrrules_basicapply" open_constr(R) :=
     something of the form [|-- basic ...], and the things that appear
     in the instr. *)
 Class instrrule {T} (instr : T) {ruleT} := make_instrrule : ruleT.
-Class instrrule_loopy {T} (instr : T) {ruleT} := make_instrrule_loopy : ruleT.
-Instance instrrule_weaken_loopy {T instr ruleT} `{x : @instrrule_loopy T instr ruleT} : @instrrule T instr ruleT | 1000 := x.
+Class loopy_instrrule {T} (instr : T) {ruleT} := make_loopy_instrrule : ruleT.
+Instance instrrule_weaken_loopy {T instr ruleT} `{x : @loopy_instrrule T instr ruleT} : @instrrule T instr ruleT | 1000 := x.
 Definition get_instrrule_of {T} (instr : T) {ruleT} `{x : @instrrule T instr ruleT} : ruleT := x.
-Definition get_instrrule_loopy_of {T} (instr : T) {ruleT} `{x : @instrrule_loopy T instr ruleT} : ruleT := x.
+Arguments get_instrrule_of {_} _ {_ _}.
+Definition get_loopy_instrrule_of {T} (instr : T) {ruleT} `{x : @loopy_instrrule T instr ruleT} : ruleT := x.
+Arguments get_loopy_instrrule_of {_} _ {_ _}.
+
+(** We have a tactic that unfolds things in instrrules until we see something like [|-- basic _ _ _ _] *)
+Ltac unfold_to_basic_rule_helper term :=
+  let term' := (eval cbv beta iota zeta in term) in
+  match term' with
+    | ?f ?x => let f' := unfold_to_basic_rule_helper f in
+               (** We need to invoke the call again in case [f] unfolded to a [λ], and we need to reduce it, but only in the case that [f] changed *)
+               let f'x := (eval cbv beta iota zeta in (f' x)) in
+               match f' with
+                 | f => f'x
+                 | _ => unfold_to_basic_rule_helper f'x
+               end
+    | @ltrue => term'
+    | @lfalse => term'
+    | @limpl => term'
+    | @land => term'
+    | @lor => term'
+    | @lforall => term'
+    | @lexists => term'
+    | @spec_reads => term'
+    | @spec_at => term'
+    | @parameterized_basic => term'
+    | ?term' => let term'' := (eval unfold term' in term') in
+                unfold_to_basic_rule_helper term''
+    | ?term' => constr:(term')
+    end.
+
+Class unfold_to_basic_rule_class {T} (term : T) {retT : Type} := make_unfold_to_basic_rule_class : retT.
+Hint Extern 0 (unfold_to_basic_rule_class (@lentails ?Frm ?ILO ?C ?term))
+=> let term' := unfold_to_basic_rule_helper term in
+   exact (@lentails Frm ILO C term')
+   : typeclass_instances.
+
+Ltac unfold_rule_until_basic rule := do_in_type ltac:(do_under_many_forall_binders (@unfold_to_basic_rule_class)) rule.
 
 Ltac get_instrrule_of instr :=
-  match True with
-    | _ => constr:(get_instrrule_of instr)
-    | _ => fail 1 "Could not find a non-loopy rule for instruction" instr
-  end.
+  let rule := match True with
+                | _ => constr:(get_instrrule_of instr)
+                | _ => fail 1 "Could not find a non-loopy rule for instruction" instr
+              end in
+  unfold_rule_until_basic rule.
 
-Ltac get_instrrule_loopy_of instr :=
-  match True with
-    | _ => constr:(get_instrrule_loopy_of instr)
-    | _ => fail 1 "Could not find a rule for instruction" instr
-  end.
+Ltac get_loopy_instrrule_of instr :=
+  let rule := match True with
+                | _ => constr:(get_loopy_instrrule_of instr)
+                | _ => fail 1 "Could not find a rule for instruction" instr
+              end in
+  unfold_rule_until_basic rule.
 
 Ltac get_next_instrrule_for_basic :=
   let G := match goal with |- ?G => constr:(G) end in
@@ -803,8 +841,35 @@ Ltac get_next_instrrule_for_basic :=
   let instr := get_first_instr prog in
   get_instrrule_of instr.
 
-Ltac get_next_instrrule_loopy_for_basic :=
+Ltac get_next_loopy_instrrule_for_basic :=
   let G := match goal with |- ?G => constr:(G) end in
   let prog := get_basic_program_from G in
   let instr := get_first_instr prog in
-  get_instrrule_loopy_of instr.
+  get_loopy_instrrule_of instr.
+
+(** Apply any matching basic rule *)
+(** [pre_basic_apply] does some clean up for pulling out the rule. *)
+Ltac pre_basic_apply :=
+  rewrite /makeBOP/makeUOP/makeMOV;
+  cbv beta iota zeta;
+  do ?((test progress intros); move => ?).
+Tactic Notation "instrrules_basicapply" "*" "using" tactic3(tac) :=
+  pre_basic_apply;
+  let R := get_next_instrrule_for_basic in
+  instrrules_basicapply R using tac.
+Tactic Notation "instrrules_basicapply" "*" :=
+  pre_basic_apply;
+  let R := get_next_instrrule_for_basic in
+  instrrules_basicapply R.
+Ltac do_basic' :=
+  pre_basic_apply;
+  let R := get_next_instrrule_for_basic in
+  first [ instrrules_basicapply R using (fun H => idtac)
+        | instrrules_basicapply R
+        | fail 1 "Failed to basicapply basic lemma" R ].
+Ltac do_loopy_basic' :=
+  pre_basic_apply;
+  let R := get_next_loopy_instrrule_for_basic in
+  first [ instrrules_basicapply R using (fun H => idtac)
+        | instrrules_basicapply R
+        | fail 1 "Failed to basicapply basic lemma" R ].
