@@ -441,6 +441,12 @@ BlReturnToRealMode      proc
         xor     esp, esp
         xor     ebp, ebp
 
+        mov     ax, RM_DATA_SELECTOR
+        mov     ds, ax
+        mov     es, ax
+        mov     ss, ax
+        mov     fs, ax
+        mov     gs, ax
 ;
 ; Disable protected mode.
 ;

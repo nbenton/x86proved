@@ -365,6 +365,10 @@ BlPnpInitialize(
 
 #endif
 
+    if (NumberOfNodes == 0) {
+        return;
+    }
+
     Node = (PPNP_SYSTEM_DEVICE_NODE) BlPoolAllocateBlock(NodeSize);
 
     NodeListSize = 0;

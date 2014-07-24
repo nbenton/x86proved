@@ -1,5 +1,5 @@
-OBJ = ..\obj
-BUILD = ..\..\build
+OBJ = ..\..\obj
+BUILD = ..\..\..\build
 
 AS = $(BUILD)\x86_x86\ml.exe
 LINK16 = $(BUILD)\x86_x86\link16.exe
@@ -17,6 +17,7 @@ $(OBJ):
 
 $(OBJ)\etfs.bin: $(OBJS)
 	$(LINK16) /nologo /tiny $(OBJS),$(OBJ)\etfs.bin;
+
 clean:
 	cd $(OBJ)
 	del *.lst *.obj *.bin

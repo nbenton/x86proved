@@ -215,7 +215,7 @@ BlEntry(
     // Print the welcome banner.
     //
 
-    BlRtlPrintf("iSO %s Boot Loader [%s %s]\n"
+    BlRtlPrintf("Singularity %s Boot Loader [%s %s]\n"
                 "\n",
                 PLATFORM_STRING,
                 __DATE__,

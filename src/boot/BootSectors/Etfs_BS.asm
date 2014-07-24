@@ -120,7 +120,7 @@ FoundJoliet:
 
 Step6:    ; Load the Root Directory (SVD), and search it for SINGLDR
     movzx   ebx, [BlockSize]
-    mov     edx, 0		; 64-bit divide of EDX:EAX by EBX, so make sure high bits are zero. ORIGINAL WAS BUGGY!
+    mov     edx, 0
     div     ebx                     ; eax has # blocks in root directory.  Round up if necessary:
     cmp     edx, 0
     je      ReadyToLoad
@@ -174,7 +174,7 @@ Step7:    ; Load the file to 57c0:0000
     mov     cx, 057c0h
     mov     es, cx
     movzx   ebx, [BlockSize]
-    mov     edx, 0		; 64-bit divide of EDX:EAX by EBX, so make sure high bits are zero. ORIGINAL WAS BUGGY!
+    mov     edx, 0
     div     ebx                     ; eax has # blocks in root directory
     cmp     edx, 0                  ; on carry, there will be one more block
     je      ReadyToLoadFile
@@ -295,8 +295,8 @@ infloop:
     Stage2FileSize  DB  OFFSET Stage2FilePad - OFFSET Stage2File
     Stage2File      DB  0,"l",0,"o",0,"a",0,"d",0,"e",0,"r"         ; in unicode, this is how our filename will appear
     Stage2FilePad   DB  0
-    SvdFailMsg      DB  10,13,"SVD Fail",0
-    FileNotFoundMsg DB  10,13,"File unfound",0  
+    SvdFailMsg      DB  10,13,"SVD Failed",0
+    FileNotFoundMsg DB  10,13,"File not found",0  
 
 ;;;;;;;;;;;;;;;;;;;;
 ; Boot Sector Signature
