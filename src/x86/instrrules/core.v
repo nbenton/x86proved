@@ -771,7 +771,7 @@ Hint Unfold
 
 Tactic Notation "instrrules_basicapply" open_constr(R) "using" tactic3(tac) :=
   let R' := instrrules_unfold R in
-  basicapply R' using (tac) side conditions by autounfold with spred instrrules_spred; sbazooka.
+  basicapply R' using (tac) side conditions by autounfold with spred instrrules_spred instrrules_basicapply; sbazooka.
 Tactic Notation "instrrules_basicapply" open_constr(R) :=
   instrrules_basicapply R using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem).
 

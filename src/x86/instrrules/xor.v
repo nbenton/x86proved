@@ -22,7 +22,7 @@ Proof. change (stateIs r1) with (@DWORDorBYTEregIs true r1). move => ?; subst. d
 (** We make the more specific rule have a higher priority *)
 Global Instance: forall (r1 r2 : Reg) (offset : nat), instrrule (XOR r1, [r2 + offset]) | 0
   := fun r1 r2 offset pd v1 v2 => @XOR_RM_rule pd r1 r2 v1 v2 offset _ (refl_equal _).
-Global Instance: forall d (r1 r2 : DWORDorBYTEReg d), instrrule (XOR r1, r2) | 1
+Global Instance: forall d (r1 r2 : DWORDorBYTEReg d), instrrule (BOP d OP_XOR (DstSrcRR d r1 r2)) | 1
   := @XOR_RR_rule.
 
 Corollary XOR_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
