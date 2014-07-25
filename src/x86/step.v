@@ -25,7 +25,7 @@ Definition step : ST unit :=
 
 (* Labelled transition from s to s' with actions o *)
 Definition oneStep s o s' :=
-  exists output, o = outputToActions output /\ step s = (output, Success _ (s', tt)).
+  exists output, o = outputToActions output /\ step s = (output, (s', Success _ tt)).
 
 (* Takes k steps from s to s' with events o *)
 Fixpoint manyStep k s o s' :=
@@ -34,28 +34,28 @@ Fixpoint manyStep k s o s' :=
   else o = nil /\ s = s'.
 
 Lemma doManyStep k : forall s o s', (exists out, outputToActions out = o /\
-  doMany k step s = (out, Success _ (s',tt))) <-> manyStep k s o s'.
+  doMany k step s = (out, (s', (Success _ tt)))) <-> manyStep k s o s'.
 Proof. induction k => /= s o s'.
 split. - by move => [out [<- [<- ->]]].
 - move => [H1 H2]. exists nil. by subst.
 
-case E: (step s) => [s0 x].
+case E: (step s) => [out0 [s0 x]].
 split. move => [out [H1 H2]].
-destruct x => //. destruct x => //.
-case E': (doMany k step p) => [s1 x'].
+destruct x => //.
+case E': (doMany k step s0) => [s1 x'].
 rewrite E' in H2. injection H2 => [H3 H4]. subst. clear H2.
-eexists _. exists (outputToActions s0), (outputToActions s1).
+eexists _. exists (outputToActions out0), (outputToActions s1).
 split. unfold outputToActions. by rewrite map_cat.
-split. rewrite /oneStep. exists s0. split => //. destruct u. eapply E.
+split. rewrite /oneStep. exists out0. split => //. destruct x. eapply E.
 apply IHk. by exists s1.
 
 move => [s'' [o1 [o2 [H1 [[o3 [H2a H2b]] H3]]]]].
 subst. rewrite H2b in E.
 injection E => [E1 E2]. subst. clear E.
-case E': (doMany k step s'') => [s1 x'].
-specialize (IHk s'' o2 s').
+move => <-. case E': (doMany k step s0) => [s1 x'].
+specialize (IHk s0 o2 s').
 destruct IHk as [_ IHk]. specialize (IHk H3).
-destruct IHk as [out [H1 H2]]. subst. exists (s0 ++ out).
+destruct IHk as [out [H1 H2]]. subst. exists (o3 ++ out).
 split. unfold outputToActions. by rewrite map_cat.
 rewrite E' in H2.  congruence.
 Qed.

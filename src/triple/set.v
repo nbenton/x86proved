@@ -176,11 +176,8 @@ Lemma triple_setBYTESep (p:PTR) (v w:BYTE) S
 : TRIPLE (p:->v ** S) (setBYTEInProcState p w) empOP (p:->w ** S).
 Proof.
   rewrite 2!pointsToBYTE_byteIs.
-  triple_by_compute.
-  rewrite /=/writeMem/=.
-  erewrite byteIsMapped by eassumption.
-  split; first by reflexivity.
-  apply: separateSetBYTE; eassumption.
+  triple_by_compute; erewrite byteIsMapped by eassumption; trivial.
+    by apply: separateSetBYTE; eassumption.
 Qed.
 
 Lemma triple_setBYTEbind (v w: BYTE) (p: DWORD) Q (W: WriterTm unit) Q' :
@@ -206,10 +203,10 @@ simpl.
 rewrite (byteIsMapped pre).
 have post := separateSetBYTE w pre.
 specialize (H _ post).
-destruct H as [f' H]. simpl in H.
-exists f'.
-by case E: (writeMemTm W _ _) => [[p' m] |]; rewrite E in H.
-Qed.
+destruct H as [f' [o' H]]. simpl in H.
+exists f', o'.
+case E: (writeMemTm W _ _) => [[p' m] |]. by rewrite E in H.
+rewrite E in H. by destruct H. Qed.
 
 (** TODO(t-jagro): Maybe write [separateSetDWORD] and make this proof shorter. *)
 Lemma triple_setDWORDSep (p:PTR) (v w:DWORD) S

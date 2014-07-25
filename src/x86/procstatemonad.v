@@ -13,14 +13,15 @@ Import Prenex Implicits.
 Local Open Scope update_scope.
 
 (* Output monad at bottom, wrapped with error monad, then state monad *)
-Definition ST := SMT (errorMT (OutputM (Chan*Data)) (option GeneralException)) ProcState.
+Definition ST := errorMT (SMT (OutputM (Chan*Data)) ProcState) (option GeneralException).
 
-Definition getProcState: ST ProcState := SMT_get _ (S:=_).
-Definition setProcState: ProcState -> ST unit := SMT_set _ (S:=_).
-Definition raiseUnspecified {X} : ST X := SMT_lift _ (EMT_raise _ None).
-Definition raiseExn {X} (e:GeneralException) : ST X := SMT_lift _ (EMT_raise _ (Some e)).
+Definition getProcState: ST ProcState := EMT_lift _ _ (SMT_get _ (S:=_)).
+Definition setProcState (s: ProcState) : ST unit := EMT_lift _ _ (SMT_set _ (S:=ProcState) s).
 
-Definition getRegFromProcState r :=
+Definition raiseUnspecified {X} : ST X := EMT_raise _ None.
+Definition raiseExn {X} (e:GeneralException) : ST X := EMT_raise _ (Some e).
+
+Definition getRegFromProcState r : ST DWORD :=
   let! s = getProcState;
   retn (registers s r).
 
@@ -87,7 +88,7 @@ Definition setDWORDorBYTEInProcState dword p  :=
 
 
 Definition outputOnChannel (c:Chan) (d:Data) : ST unit :=
-  SMT_lift _ (EMT_lift _ _ (Output_write (c,d))).
+  EMT_lift _ _ (SMT_lift _ (Output_write (c,d))).
 
 (*
 Require Import bitsrep tuplehelp.
@@ -112,8 +113,10 @@ Qed.
 (* Lemmas involving register lookup and update *)
 Lemma doSetReg {Y} r v (f: ST Y) s :
   (do! setRegInProcState r v; f) s = f (s !r:=v).
-Proof. by rewrite /setRegInProcState/setProcState assoc SMT_bindGet SMT_doSet. Qed.
+Proof.  rewrite /setRegInProcState/setProcState assoc.
+by rewrite EMT_bind_lift SMT_bindGet EMT_bind_lift SMT_doSet. Qed.
 
 Lemma letGetReg {Y} (s: ProcState) r (f: DWORD -> ST Y):
   bind (getRegFromProcState r) f s = f (registers s r) s.
-Proof. by rewrite /getRegFromProcState/getProcState assoc SMT_bindGet id_l. Qed.
+Proof. rewrite /getRegFromProcState/getProcState assoc.
+by rewrite EMT_bind_lift SMT_bindGet id_l. Qed.

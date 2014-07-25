@@ -278,8 +278,49 @@ Section ErrorMT.
   Definition EMT_raise {X} e : errorMT X :=
     retn (Error _ e).
 
+  Definition EMT_trybind {X Y} (c: errorMT X) (f: F -> errorMT Y) (g: X -> errorMT Y):=
+    bind (MonadOps := ops) c (fun x =>
+    match x with Success x => g x | Error e => f e end).
+
+  Definition EMT_handle {X} (c: errorMT X) (f: F -> errorMT X) : errorMT X :=
+    EMT_trybind c f retn.
+
+  Lemma EMT_bind_as_trybind {X Y} (c: errorMT X) (f: X -> errorMT Y) :
+    bind c f = EMT_trybind c EMT_raise f.
+  Proof. done. Qed.
+
+  Lemma EMT_trybind_retn {X Y} (x:X) (f: F -> errorMT Y) g:
+    EMT_trybind (retn x) f g = g x.
+  Proof. rewrite /EMT_trybind/=. by rewrite id_l. Qed.
+
   Global Coercion EMT_lift {X} (c: M X) : errorMT X :=
     let! x = c; retn (Success _ x).
+
+  Lemma EMT_trybind_bind_lift {X Y Z} (c:M X) (f: X -> errorMT Y) (g: F -> errorMT Z) (h: Y -> errorMT Z):
+    EMT_trybind (bind c f) g h = bind c (fun x => EMT_trybind (f x) g h).
+  Proof. by rewrite /=/EMT_trybind assoc. Qed.
+
+  Lemma EMT_trybind_raise {X Y} e (f: F -> errorMT Y) (g: X -> errorMT Y):
+    EMT_trybind (EMT_raise e) f g = f e.
+  Proof. rewrite /EMT_trybind/=. rewrite /EMT_raise. by rewrite id_l. Qed.
+
+  Lemma EMT_handle_retn {X} f (x:X):
+    EMT_handle (retn x) f = retn x.
+  Proof. apply EMT_trybind_retn. Qed.
+
+  Lemma EMT_handle_raise {X} e (f: F -> errorMT X) :
+    EMT_handle (EMT_raise e) f = f e.
+  Proof. by apply EMT_trybind_raise. Qed.
+
+  Lemma EMT_trybind_lift {X Y} (x:M X) (f: F -> errorMT Y) g:
+    EMT_trybind (EMT_lift x) f g = bind x g.
+  Proof. rewrite /EMT_trybind/=. rewrite assoc. apply f_equal.
+  apply functional_extensionality => y. by rewrite id_l. Qed.
+
+  Lemma EMT_bind_lift {X Y} (x: M X) (f: X -> errorMT Y) :
+    bind (EMT_lift x) f = bind x f.
+  Proof. apply EMT_trybind_lift. Qed.
+
 
 End ErrorMT.
 
@@ -332,3 +373,20 @@ Section StateMT.
 End StateMT.
 
 End MonadTransformers.
+
+Lemma match_match_bool_result F X (b : bool) xT xF T xE xS
+: (match (if b return monadinst.Result F X then xT else xF) as r return T r with
+     | monadinst.Error f => xE f
+     | monadinst.Success x => xS x
+   end)
+  = if b as b return T (if b return monadinst.Result F X then xT else xF)
+    then match xT with
+           | monadinst.Error f => xE f
+           | monadinst.Success x => xS x
+         end
+    else match xF with
+           | monadinst.Error f => xE f
+           | monadinst.Success x => xS x
+         end.
+Proof. destruct b, xT, xF; reflexivity. Defined.
+Hint Rewrite match_match_bool_result : matchdb.

@@ -30,7 +30,7 @@ Definition initialState :=
 
 Definition runFor n s :=
   let: (output,r) := doMany n step s
-  in (output, if r is Success r then fst r else s).
+  in (output, fst r).
 
 Fixpoint outputToString (s: seq (Chan*Data)) :=
   (if s is (c,d)::s
