@@ -5,3 +5,6 @@
 /src/Makefile.coq
 /src/Makefile.deps
 /src/.dir-locals.el
+/src/library.deps
+/src/library.svg
+/src/library.dot
