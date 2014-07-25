@@ -1,7 +1,7 @@
 (*===========================================================================
     Processor state: registers, flags and memory
   ===========================================================================*)
-Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.finfun Ssreflect.fintype Ssreflect.eqtype Ssreflect.tuple.
 Require Export x86proved.update x86proved.x86.reg x86proved.x86.regstate x86proved.x86.flags x86proved.x86.mem x86proved.bitsrep.
 Require Import x86proved.bitsops.
 
@@ -47,4 +47,19 @@ Global Instance ProcStateUpdateOpsDWORD : UpdateOps ProcState PTR DWORD :=
   mkProcState (registers s) (flags s)
     (ms !p:=b0 !incB p:=b1 !incB(incB p):=b2 !incB(incB(incB p)):=b3).
 
+Definition toSlice (b: BITS 2) := toNat b * 8. 
+
+Definition getRegPiece (v: DWORD) (ix: BITS 2)  := 
+  if ix == #0 then slice 0 8 _ v else
+  if ix == #1 then slice 8 8 _ v else
+  if ix == #2 then slice 16 8 _ v else
+  slice 24 8 _ v.
+
+Definition putRegPiece (v: DWORD) (ix: BITS 2) (b: BYTE) : DWORD :=
+  if ix == #0 then updateSlice 0 8 _ v b else
+  if ix == #1 then updateSlice 8 8 _ v b else
+  if ix == #2 then updateSlice 16 8 _ v b else
+  updateSlice 24 8 _ v b.
+  
+  
 (* @TODO: update lemmas *)

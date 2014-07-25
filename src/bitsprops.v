@@ -391,6 +391,10 @@ Qed.
 Lemma toNat_low n1 n2 (p: BITS (n1+n2)) : toNat (low n1 p) = toNat p %% 2^n1.
 Proof. by rewrite -{1}(toNatK p) low_fromNat toNat_fromNat. Qed.
 
+(*
+Lemma slice_catB n n1 n2 (a: BITS n2) (b: BITS n1) (c: BITS n): slice n n1 n2 ((a ## b) ## c) = b. 
+Proof. by rewrite /slice high_catB low_catB. Qed.
+*)
 
 (*---------------------------------------------------------------------------
     Zero and sign extension

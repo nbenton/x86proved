@@ -177,6 +177,16 @@ Definition joinNibble {n}  (p:NIBBLE) (q: BITS n) : BITS (n.+4) :=
 
 Notation "y ## x" := (catB y x) (right associativity, at level 60).
 
+(* Slice of bits *)
+(*
+Definition slice n n1 n2 (p: BITS (n+(n1+n2))) := low n1 (high (n1+n2) p).
+*)
+
+Definition slice n n1 n2 (p: BITS (n+n1+n2)) : BITS n1 :=
+  let: (a,b,c) := split3 n2 n1 n p in b. 
+
+Definition updateSlice n n1 n2 (p: BITS (n+n1+n2)) (m:BITS n1) : BITS (n+n1+n2) :=
+  let: (a,b,c) := split3 n2 n1 n p in a ## m ## c.
 
 (*---------------------------------------------------------------------------
     Single bit operations

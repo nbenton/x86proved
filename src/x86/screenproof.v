@@ -101,7 +101,7 @@ Proof.
 
   (* MOV EAX, BYTE [EDI + 0] *)
   try_basicapply MOV_RMb_rule.
-  rewrite -> addB0. rewrite /BYTEregIs/BYTEregIsAux. sbazooka.
+  rewrite -> addB0. sbazooka.
 
   rewrite /stateIsAny addB0.
   sbazooka.

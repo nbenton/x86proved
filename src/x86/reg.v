@@ -1,6 +1,9 @@
 (*===========================================================================
     Model for x86 registers
     Note that the EFL register (flags) is treated separately.
+
+    These are registers as used inside instructions, and can refer to
+    overlapping sections of the real machine state e.g. AL, AH, AX, EAX
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.bitsrep.
@@ -39,6 +42,9 @@ Canonical Structure AnyRegEqType := Eval hnf in EqType _ AnyRegEqMixin.
 
 (* Segment registers *)
 Inductive SegReg := CS | DS | SS | ES | FS | GS.
+
+(* Byte registers *)
+Inductive BYTEReg := AL|BL|CL|DL|AH|BH|CH|DH.
 
 (* Standard numbering of registers *)
 Definition natToReg n : option Reg :=
@@ -95,3 +101,28 @@ Proof. case; [case; [case; done | done] | done]. Qed.
 
 Definition AnyReg_finMixin := Eval hnf in FinMixin AnyReg_enumP.
 Canonical AnyReg_finType :=  Eval hnf in FinType _ AnyReg_finMixin.
+
+(*---------------------------------------------------------------------------
+    Register pieces: these are the bytes that make up the register state
+  ---------------------------------------------------------------------------*)
+Inductive RegPiece := AnyRegPiece (r: AnyReg) (b: BITS 2).
+Definition RegPieceToCode rp :=  let: AnyRegPiece r b := rp in (AnyRegToNat r, b). 
+Lemma RegPieceToCode_inj : injective RegPieceToCode.
+Proof. by move => [r1 b1] [r2 b2] /= [/AnyRegToNat_inj -> ->]. Qed. 
+
+Canonical Structure RegPieceEqMixin := InjEqMixin RegPieceToCode_inj.
+Canonical Structure RegPieceEqType := Eval hnf in EqType _ RegPieceEqMixin.
+
+Definition BYTERegToRegPiece (r:BYTEReg) :=
+match r with
+| AL => AnyRegPiece EAX #0
+| AH => AnyRegPiece EAX #1
+| BL => AnyRegPiece EBX #0
+| BH => AnyRegPiece EBX #1
+| CL => AnyRegPiece ECX #0
+| CH => AnyRegPiece ECX #1
+| DL => AnyRegPiece EDX #0
+| DH => AnyRegPiece EDX #1
+end.
+
+

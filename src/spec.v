@@ -616,10 +616,6 @@ Corollary spec_reads_flagIs S (p:Flag) b:
   S <@ (p~=b) -|- S @ (p~=b).
 Proof. apply spec_reads_eq_at. Qed.
 
-Corollary spec_reads_regIs S (p:AnyReg) b:
-  S <@ (p~=b) -|- S @ (p~=b).
-Proof. apply spec_reads_eq_at. Qed.
-
 Lemma spec_reads_merge S R1 R2:
   S <@ R1 <@ R2 |-- S <@ (R1 ** R2).
 Proof.

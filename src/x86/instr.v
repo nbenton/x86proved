@@ -24,7 +24,6 @@ Inductive MemSpec :=
 
 (* 8-bit register *)
 (*=BYTEReg *)
-Inductive BYTEReg := AL|BL|CL|DL|AH|BH|CH|DH.
 Definition DWORDorBYTEReg (d: bool) := if d then Reg else BYTEReg.
 (*=End *)
 

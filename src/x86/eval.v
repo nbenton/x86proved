@@ -130,16 +130,9 @@ Definition scaleBy s (d: DWORD) :=
 (* Evaluation functions for various syntactic entities *)
 Definition evalReg (r: Reg) := getRegFromProcState r.
 Definition evalBYTEReg (r: BYTEReg) :=
-  match r with
-  | AL => let! d = getRegFromProcState EAX; retn (low 8 d)
-  | BL => let! d = getRegFromProcState EBX; retn (low 8 d)
-  | CL => let! d = getRegFromProcState ECX; retn (low 8 d)
-  | DL => let! d = getRegFromProcState EDX; retn (low 8 d)
-  | AH => let! d = getRegFromProcState EAX; retn (low 8 (@high 24 8 d))
-  | BH => let! d = getRegFromProcState EBX; retn (low 8 (@high 24 8 d))
-  | CH => let! d = getRegFromProcState ECX; retn (low 8 (@high 24 8 d))
-  | DH => let! d = getRegFromProcState EDX; retn (low 8 (@high 24 8 d))
-  end.
+  let: AnyRegPiece r b := BYTERegToRegPiece r in
+  let! d = getRegFromProcState r;
+  retn (getRegPiece d b).
 
 Definition evalDWORDorBYTEReg (dword:bool) : DWORDorBYTEReg dword -> ST (DWORDorBYTE dword) :=
   if dword as dword return DWORDorBYTEReg dword -> ST (DWORDorBYTE dword)
@@ -181,39 +174,9 @@ Definition evalJmpTgt tgt :=
   end.
 
 Definition setBYTERegInProcState (r: BYTEReg) (b: BYTE) :=
-  match r with
-  | AL =>
-    let! r = getRegFromProcState EAX;
-    setRegInProcState EAX (@high 24 8 r ## b)
-
-  | BL =>
-    let! r = getRegFromProcState EBX;
-    setRegInProcState EBX (@high 24 8 r ## b)
-
-  | CL =>
-    let! r = getRegFromProcState ECX;
-    setRegInProcState ECX (@high 24 8 r ## b)
-
-  | DL =>
-    let! r = getRegFromProcState EDX;
-    setRegInProcState EDX (@high 24 8 r ## b)
-
-  | AH =>
-    let! r = getRegFromProcState EAX;
-    setRegInProcState EAX (@high 16 16 r ## b ## low 8 r)
-
-  | BH =>
-    let! r = getRegFromProcState EBX;
-    setRegInProcState EBX (@high 16 16 r ## b ## low 8 r)
-
-  | CH =>
-    let! r = getRegFromProcState ECX;
-    setRegInProcState ECX(@high 16 16 r ## b ## low 8 r)
-
-  | DH =>
-    let! r = getRegFromProcState EDX;
-    setRegInProcState EDX (@high 16 16 r ## b ## low 8 r)
-  end.
+  let: AnyRegPiece r ix := BYTERegToRegPiece r in
+    let! d = getRegFromProcState r;
+    setRegInProcState r (putRegPiece d ix b).
 
 Definition setDWORDorBYTERegInProcState (dword:bool) :
   DWORDorBYTEReg dword -> DWORDorBYTE dword -> _ :=
