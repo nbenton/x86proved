@@ -4,8 +4,9 @@
     can get that back via [rewrite -> ] and [rewrite <- ]. *)
 Ltac type_of x := type of x.
 
-Require Import Ssreflect.ssreflect.
+Require Import Ssreflect.ssreflect Ssreflect.seq.
 Require Import Coq.Lists.List Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Program.Basics.
+Require Export x86proved.common_definitions.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=
@@ -273,6 +274,11 @@ Ltac destruct_atomic_in_match' :=
     | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; destruct E
   end.
 
+Ltac hyp_destruct_atomic_in_match' :=
+  match goal with
+    | [ H : appcontext[match ?E with _ => _ end] |- _ ] => atomic E; destruct E
+  end.
+
 (** [pose proof defn], but only if no hypothesis of the same type exists.
     most useful for proofs of a proposition *)
 Tactic Notation "unique" "pose" "proof" constr(defn) :=
@@ -422,8 +428,19 @@ Ltac subst_body :=
 
 Local Open Scope list_scope.
 (** Takes two lists, and recursively iterates down their structure, unifying forced evars *)
-Ltac norm_list_left lst :=
+Ltac unfold_cat lst :=
   match lst with
+    | cat ?a ?b => let ab := constr:(app a b) in
+                   unfold_cat ab
+    | app ?a ?b => let a' := unfold_cat a in
+                   let b' := unfold_cat b in
+                   constr:(app a b)
+    | ?x => constr:(x)
+  end.
+
+Ltac norm_list_left lst :=
+  let lst0 := unfold_cat lst in
+  match lst0 with
     | (?a ++ (?b ++ ?c)) => let lst' := constr:((a ++ b) ++ c) in
                             norm_list_left lst'
     | (?a ++ nil) => norm_list_left a
@@ -434,7 +451,8 @@ Ltac norm_list_left lst :=
     | ?lst' => constr:(lst')
   end.
 Ltac norm_list_right lst :=
-  match lst with
+  let lst0 := unfold_cat lst in
+  match lst0 with
     | ((?a ++ ?b) ++ ?c) => let lst' := constr:(a ++ (b ++ c)) in
                             norm_list_right lst'
     | (?a ++ nil) => norm_list_right a
@@ -446,6 +464,8 @@ Ltac norm_list_right lst :=
   end.
 
 Ltac structurally_unify_lists' l1 l2 :=
+  let l1 := unfold_cat l1 in
+  let l2 := unfold_cat l2 in
   first [ constr_eq l1 l2
         | is_evar l1; unify l1 l2
         | is_evar l2; unify l2 l1
@@ -670,3 +690,30 @@ Section test_do_under_many_binders.
       pose ret as ret1.
   Abort.
 End test_do_under_many_binders.
+
+Ltac simpl_paths :=
+  repeat
+    match goal with
+      | [ |- _ = _ :> _ * _ ] => apply injective_projections
+      | [ H : _ = _ :> _ * _ |- _ ] => apply paths_prod in H; destruct H
+    end.
+
+Ltac hyp_simpl_paths :=
+  repeat
+    match goal with
+      | [ H : _ = _ :> _ * _ |- _ ] => apply paths_prod in H; destruct H
+    end.
+
+(** Take goals like [(A -> B) -> (A -> C)] and turn them into goals like [A -> B -> C] *)
+Ltac simpl_impl' :=
+  idtac;
+  match goal with
+    | [ |- (forall x : ?A, @?B x) -> (forall x : ?A, @?C x) ] => apply (@specialize_forall A B C) => ?
+    | [ |- (exists x : ?A, @?B x) -> (exists x : ?A, @?C x) ] => apply (@specialize_ex A B C) => ?
+    | [ |- ?a -> ?b ] => let a' := (eval hnf in a) in
+                         let b' := (eval hnf in b) in
+                         progress change (a' -> b'); simpl_impl'
+    | [ |- _ ] => progress hnf; simpl_impl'
+  end.
+
+Ltac simpl_impl := do ?simpl_impl'.

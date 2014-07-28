@@ -59,3 +59,7 @@ Lemma doRet {T} `{HT: Monad T} c :
 Proof.
   by rewrite -doLet id_r.
 Qed.
+
+Definition fmap {M} `{MonadOps M} A B (f : A -> B) (m : M A) : M B
+  := let! m' = m;
+     retn (f m').

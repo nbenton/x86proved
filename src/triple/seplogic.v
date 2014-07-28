@@ -3,25 +3,33 @@ Import triple.core.tripleconfig.
 
 Require Import x86proved.septac (* for [sbazooka] *) x86proved.pfun (* for [splitsAs] *).
 Require Import x86proved.triple.roc x86proved.triple.tactics.
+Require Import x86proved.common_tactics.
 
 Import Prenex Implicits.
 
+Local Transparent ILFun_Ops SABIOps PStateSepAlgOps.
+
+Local Ltac t hyp :=
+  do ![ move => ?
+      | progress destruct_head_hnf ex ];
+  apply: hyp;
+  do ![ eassumption
+      | esplit ].
+
 Lemma triple_pre_exists T (Pf: T -> SPred) c O Q :
   (forall t:T, TRIPLE (Pf t) c O Q) -> TRIPLE (Exists t, Pf t) c O Q.
-Proof. move => TR.
-move => s [t' H]. by apply (TR t' s H).
-Qed.
+Proof. move => TR. t TR. Qed.
 
 Lemma triple_pre_existsOp T (Pf: T -> _) c O Q :
   TRIPLE (Exists t, Pf t) c O Q -> (forall t:T, TRIPLE (Pf t) c O Q).
-Proof. move => TR t s pre. apply (TR s). by exists t. Qed.
+Proof. move => TR. t TR. Qed.
 
 Lemma triple_pre_existsSep T (Pf: T -> _) c O Q S :
   (forall t, TRIPLE (Pf t ** S) c O Q) -> TRIPLE ((Exists t, Pf t) ** S) c O Q.
 Proof.
   move => TR. apply triple_roc_pre with (Exists t, Pf t ** S).
-  - sbazooka.
-  move => s [t H]. apply (TR t s H).
+  { by sbazooka. }
+  t TR.
 Qed.
 
 Lemma triple_pre_existsSepOp T (Pf: T -> _) c O Q S :
@@ -32,25 +40,15 @@ Qed.
 
 Lemma triple_post_disjL P c O Q1 Q2 :
    TRIPLE P c O Q1 -> TRIPLE P c O (Q1 \\// Q2).
-Proof. move => TR s H.
-specialize (TR s H).
-destruct TR as [f [o [EQ HH]]].
-exists f, o. firstorder. by left.
-Qed.
+Proof. simpl_impl. intuition firstorder. by left. Qed.
 
 Lemma triple_post_disjR P c O Q1 Q2 :
    TRIPLE P c O Q2 -> TRIPLE P c O (Q1 \\// Q2).
-Proof. move => TR s H.
-specialize (TR s H).
-destruct TR as [f [o [EQ [HO HH]]]].
-exists f, o. split => //. split => //. by right.
-Qed.
+Proof. simpl_impl. intuition firstorder. by right. Qed.
 
 Lemma triple_post_existsSep T (t:T) P (Qf: T -> _) c O S :
   TRIPLE P c O (Qf t ** S) -> TRIPLE P c O ((Exists t, Qf t) ** S).
-Proof.
-  move=> TR. eapply triple_roc_post; [|eassumption]. ssplit; reflexivity.
-Qed.
+Proof. move=> TR. eapply triple_roc_post; [|eassumption]. ssplit; reflexivity. Qed.
 
 Lemma triple_pre_hideFlag (f:Flag) v P c O Q :
   TRIPLE (f? ** P) c O Q ->
@@ -98,6 +96,12 @@ Lemma triple_preEq (T: eqType) (v w:T) P c O Q :
   TRIPLE (v == w /\\ P) (c v) O Q.
 Proof. move => S. apply: triple_pre_exists => H. rewrite -(eqP H) eq_refl in S.
 triple_apply S using sbazooka. Qed.
+
+
+(** If [ILFun_Ops] isn't opaque, then [sbazooka] manages to solve more
+    than it thinks it'll be able to solve, and hence, finding not
+    enough goals left to deal with, will fail. :-( *)
+Local Opaque ILFun_Ops.
 
 Lemma triple_preEq_and_star (T: eqType) (v w:T) P R c O Q :
   TRIPLE ((v == w /\\ P) ** R) (c w) O Q ->

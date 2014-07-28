@@ -176,7 +176,7 @@ Lemma triple_setBYTESep (p:PTR) (v w:BYTE) S
 : TRIPLE (p:->v ** S) (setBYTEInProcState p w) empOP (p:->w ** S).
 Proof.
   rewrite 2!pointsToBYTE_byteIs.
-  triple_by_compute; erewrite byteIsMapped by eassumption; trivial.
+  triple_by_compute; erewrite byteIsMapped by eassumption; do !split.
     by apply: separateSetBYTE; eassumption.
 Qed.
 

@@ -19,27 +19,31 @@ End tripleconfig.
 Import Prenex Implicits.
 
 (** Hoare triple for machine state monad *)
-Definition TRIPLE (P:SPred) (c:ST unit) (O:OPred) (Q:SPred) :=
-  forall s:ProcState, P s ->
-    exists f o, c s = (o, (f, Success _ tt)) /\ O (outputToActions o) /\ Q f.
+(** We ocassionally talk about the return value *)
+Definition valued_TRIPLE {T} (v : T) (P:SPred) (c:ST T) (O:OPred) (Q:SPred) :=
+  forall (s:ProcState), P s ->
+    exists f o, c s = (o, (f, Success _ v)) /\ O (outputToActions o) /\ Q f.
+Notation TRIPLE := (@valued_TRIPLE unit tt).
 
 (** The general rule for dealing with [TRIPLE] by computation *)
-Lemma triple_fin (P:SPred) (c:ST unit) (O:OPred) (Q:SPred)
-      (H : forall s:ProcState,
+Lemma triple_fin {T} (v : T) (P:SPred) (c:ST T) (O:OPred) (Q:SPred)
+      (H : forall (s:ProcState),
              P (toPState s)
-             -> let outputs := fst (c s) in
-                let f := fst (snd (c s)) in
-                let ex := snd (snd (c s)) in
+             -> let trace := c s in
+                let outputs := fst trace in
+                let f := fst (snd trace) in
+                let ex := snd (snd trace) in
                 match ex with
-                  | Success _ => O (outputToActions outputs) /\ Q (toPState f)
+                  | Success v' => v = v' /\ O (outputToActions outputs) /\ Q (toPState f)
                   | Error _ => False
                 end)
-: TRIPLE P c O Q.
+: valued_TRIPLE v P c O Q.
 Proof.
   move => s H'.
   specialize (H s H'); simpl in H; generalize dependent (c s).
   move => *.
-  do ![ progress destruct_head False
+  do ![ progress subst
+      | progress destruct_head False
       | progress destruct_head errorMT
       | progress destruct_head OutputM
       | progress destruct_head Result
@@ -49,34 +53,30 @@ Proof.
       | by do !esplit ].
 Qed.
 
-Lemma triple_simple_fin (P:SPred) outputs f (O:OPred) (Q:SPred)
-      (H : forall s:ProcState, P (toPState s) -> O (outputToActions (outputs s)) /\ Q (toPState (f s)))
-: TRIPLE P (fun s => (outputs s, (f s, Success _ tt))) O Q.
-Proof.
-  apply triple_fin => s H' /=.
-  by apply H.
-Qed.
-
 Ltac triple_hnf :=
-  let P := match goal with |- TRIPLE ?P ?c ?O ?Q => constr:(P) end in
-  let c := match goal with |- TRIPLE ?P ?c ?O ?Q => constr:(c) end in
-  let O := match goal with |- TRIPLE ?P ?c ?O ?Q => constr:(O) end in
-  let Q := match goal with |- TRIPLE ?P ?c ?O ?Q => constr:(Q) end in
+  let v := match goal with |- valued_TRIPLE ?v ?P ?c ?O ?Q => constr:(v) end in
+  let P := match goal with |- valued_TRIPLE ?v ?P ?c ?O ?Q => constr:(P) end in
+  let c := match goal with |- valued_TRIPLE ?v ?P ?c ?O ?Q => constr:(c) end in
+  let O := match goal with |- valued_TRIPLE ?v ?P ?c ?O ?Q => constr:(O) end in
+  let Q := match goal with |- valued_TRIPLE ?v ?P ?c ?O ?Q => constr:(Q) end in
   let c' := hnf_under_binders c in
-  change (TRIPLE P c' O Q).
+  change (valued_TRIPLE v P c' O Q).
 
 Ltac triple_post_compute :=
-  do ?[ progress ssr_autorewrite_with_matchdb
-      | progress autorewrite with matchdb
-      | progress unfold fst, snd
-      | progress cbv iota zeta ].
+  do ?[ progress (simpl fst; simpl snd)
+      | progress cbv iota zeta beta
+      | progress hnf_in_match'; progress cbv iota zeta beta
+      | progress ssr_autorewrite_with_matchdb
+      | progress autorewrite with matchdb ].
 
 Ltac triple_by_compute :=
   triple_hnf;
   apply triple_fin;
+  destruct_head_hnf unit;
   let H := fresh "H" in
   let s := fresh "s" in
   (move => H s);
     triple_post_compute;
     repeat split;
-    triple_post_compute.
+    triple_post_compute;
+    try eassumption.

@@ -3,42 +3,57 @@ Import triple.core.tripleconfig.
 
 Require Import x86proved.x86.procstatemonad (* for [getRegFromProcState] *).
 Require Import x86proved.pointsto (* for [:->] *) x86proved.cursor (* for [PTR >-> DWORDCursor] *).
+Require Import x86proved.common_tactics.
 
 Require Import x86proved.triple.morphisms.
 Require Import x86proved.triple.get_readable.
+Require Import x86proved.triple.monad.
 
 Import Prenex Implicits.
 
 (** * Get registers *)
 
+Local Transparent ILFun_Ops SABIOps PStateSepAlgOps.
+
+Local Ltac pre_let :=
+  eapply valued_triple_seqcat; first by apply empOPL.
+
+(** In order to get [specialize_all_ways] to pick up values to
+    [specialize] hypotheses with, such as [Registers] or [Flags],
+    we'll have to [pose] them before we start. *)
+
+Local Ltac get_t :=
+  do 5?[ do ![ move => ?
+             | progress hnf in *
+             | progress rewrite -> eq_refl in *
+             | congruence
+             | progress destruct_head_hnf and
+             | progress destruct_head_hnf ex
+             | progress destruct_head_hnf or ]
+       | specialize_all_ways ].
+
+Lemma getRegSep (r : AnyReg) v (P : SPred) (s : ProcState)
+: P |-- r ~= v ** ltrue -> P s -> v = registers s r.
+Proof. pose Registers. get_t. Qed.
+
 Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) O c:
   (P |-- r ~= v ** ltrue) ->
   TRIPLE P (c v) O Q ->
   TRIPLE P (bind (getRegFromProcState r) c) O Q.
-Proof.
-  move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f, o.
-  rewrite /=. rewrite <-eq. split; last done.
-  move/(_ (toPState s) pre): H => [s1 [s2 [Hs [Hs1 _]]]].
-  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
-  specialize (Hs Registers r v). rewrite /= in Hs.
-  injection Hs. move => ->. by destruct (c v s).
-  by rewrite -Hs1 /= eq_refl.
-Qed.
+Proof. move => ?. pre_let. triple_by_compute; trivial. apply: getRegSep; eassumption. Qed.
+
+Lemma getFlagSep (fl : Flag) (v : bool) (P : SPred) (s : ProcState)
+: P |-- fl ~= v ** ltrue -> P s -> v = flags s fl :> FlagVal.
+Proof. pose Flags. get_t. Qed.
 
 Lemma triple_letGetFlag (fl:Flag) (v:bool) (P Q: SPred) O c:
   (P |-- fl ~= v ** ltrue) ->
   TRIPLE P (c v) O Q ->
   TRIPLE P (bind (getFlagFromProcState fl) c) O Q.
 Proof.
-  move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f.
-  eexists o.
-  rewrite /=. rewrite <-eq. split; last done.
-  move/(_ (toPState s) pre): H => [s1 [s2 [Hs [Hs1 _]]]].
-  rewrite /flagIs in Hs1. rewrite /getFlagFromProcState/=.
-  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
-  specialize (Hs Flags fl v). rewrite /= in Hs.
-  injection Hs. move => ->. simpl. by destruct (c v s).
-  by rewrite -Hs1 /= eq_refl.
+  move => ?. pre_let. triple_by_compute; trivial.
+  erewrite <- getFlagSep by eassumption.
+  triple_post_compute; by do !split.
 Qed.
 
 (*

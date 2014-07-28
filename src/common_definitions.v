@@ -186,3 +186,13 @@ Hint Rewrite match_match_bool_option match_match_bool_pair match_pair_eta match_
 
 Ltac ssr_autorewrite_with_matchdb :=
   do ?(progress rewrite ?match_match_bool_option ?match_match_bool_pair ?match_pair_eta ?match_bool_fn ?match_option_fn ?match_option_match_pair_eta ?match_option_match_pair_eta_fun ?match_option_comm_1 ?match_option_comm_2 ?match_option_comm_1_const ?match_option_comm_2_const ?match_bool_comm_1 ?match_bool_comm_2 ?match_bool_comm_1_const ?match_bool_comm_2_const ?match_bool_const ?if_else_False_iff).
+
+Definition paths_prod A B (x y : A * B) (H : x = y) : fst x = fst y /\ snd x = snd y
+  := conj (f_equal (@fst _ _) H) (f_equal (@snd _ _) H).
+
+Definition specialize_forall {A B C} (H : forall x : A, B x -> C x) : (forall x : A, B x) -> (forall x : A, C x)
+  := fun f x => H x (f x).
+Definition specialize_ex {A} {B C : A -> Prop} (H : forall x, B x -> C x) : (exists x : A, B x) -> (exists x : A, C x)
+  := fun x => match x with
+                | ex_intro x fx => ex_intro _ x (H x fx)
+              end.

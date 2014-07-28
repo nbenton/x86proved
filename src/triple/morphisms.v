@@ -20,19 +20,19 @@ Local Ltac solve_morphism :=
 
 (** Triples behave contravariantly in the precondition and covariantly
     in the postcondition wrt entailment *)
-Global Add Morphism (@TRIPLE) with signature lentails --> eq ==> lentails ==> lentails ==> impl as TRIPLE_mor2.
+Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lentails --> eq ==> lentails ==> lentails ==> impl as TRIPLE_mor2.
 Proof. solve_morphism. Qed.
 
-Global Add Morphism (@TRIPLE) with signature lentails --> eq ==> eq ==> lentails ==> impl as TRIPLE_mor3.
+Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lentails --> eq ==> eq ==> lentails ==> impl as TRIPLE_mor3.
 Proof. solve_morphism. Qed.
 
 (** Unfortunately we need special case for equivalence *)
-Global Add Morphism (@TRIPLE) with signature lequiv ==> eq ==> lequiv ==> lequiv ==> iff as TRIPLE_mor.
+Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lequiv ==> eq ==> lequiv ==> lequiv ==> iff as TRIPLE_mor.
 Proof. solve_morphism. Qed.
 
-Add Morphism (@TRIPLE) with signature lequiv ==> eq ==> eq ==> lequiv ==> iff as TRIPLE_mor4.
+Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lequiv ==> eq ==> eq ==> lequiv ==> iff as TRIPLE_mor4.
 Proof. solve_morphism. Qed.
 
 (** For dealing with programs *)
-Global Add Morphism (@TRIPLE) with signature eq --> (pointwise_relation ProcState eq) ==> eq ==> eq ==> impl as TRIPLE_morprogram.
+Global Add Parametric Morphism T v P : (@valued_TRIPLE T v P) with signature (pointwise_relation ProcState eq) ==> eq ==> eq ==> impl as TRIPLE_morprogram.
 Proof. solve_morphism. Qed.
