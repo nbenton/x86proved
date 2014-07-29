@@ -511,10 +511,10 @@ Definition flagIs f b : SPred := eq_pred (addFlagToPState emptyPState f b).
 Definition BYTEregIs r v : SPred := regPieceIs (BYTERegToRegPiece r) v.
 
 Definition regIs r (v:DWORD) : SPred :=
-   regPieceIs (AnyRegPiece r #0) (getRegPiece v #0)              
-** regPieceIs (AnyRegPiece r #1) (getRegPiece v #1)
-** regPieceIs (AnyRegPiece r #2) (getRegPiece v #2)
-** regPieceIs (AnyRegPiece r #3) (getRegPiece v #3).
+   regPieceIs (AnyRegPiece r RegIx0) (getRegPiece v RegIx0)              
+** regPieceIs (AnyRegPiece r RegIx1) (getRegPiece v RegIx1)
+** regPieceIs (AnyRegPiece r RegIx2) (getRegPiece v RegIx2)
+** regPieceIs (AnyRegPiece r RegIx3) (getRegPiece v RegIx3).
 
 Inductive RegOrFlag :=
 | RegOrFlagR :> AnyReg -> RegOrFlag
@@ -710,7 +710,7 @@ by rewrite !sepSPA. Qed.
 Lemma regIs_same (r:AnyReg) v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse.
 Proof. rewrite /stateIs/regIs. 
 rewrite sepRev4. rewrite sepSPA. 
-rewrite sepRev4. rewrite -!sepSPA. rewrite -> (@regPieceIs_same (AnyRegPiece r #0)).
+rewrite sepRev4. rewrite -!sepSPA. rewrite -> (@regPieceIs_same (AnyRegPiece r RegIx0)).
 by rewrite !sepSP_falseL. Qed. 
 
 Lemma flagIs_same (f:Flag) v1 v2 : f ~= v1 ** f ~= v2 |-- lfalse.

@@ -42,13 +42,149 @@ by case E: (p == p').
 
 Qed.
 
+Require Import bitsprops.
+Lemma updateSliceGetSame n1 n2 n3 d v : slice n1 n2 n3 (updateSlice n1 n2 n3 d v) = v.
+Proof. by rewrite /slice/updateSlice/split3/split2 low_catB high_catB. Qed.
+
+(*Lemma updateSliceGetDistinct n1 n2 n3 d v : slice n1 n2 n3 (updateSlice n1' n2' n3 d v) = slice n1 n2 n3 d.
+Proof. rewrite /slice/updateSlice/split3/split2 low_catB high_catB. Qed.
+*)
+
+
+Lemma setThenGetRegPieceSame d ix v : getRegPiece (putRegPiece d ix v) ix = v.
+Proof. rewrite /getRegPiece/putRegPiece. case ix; apply updateSliceGetSame. Qed.
+
+(* This proof is absurd *)
+Lemma setThenGetRegPieceDistinct d ix1 ix2 v : ix1 != ix2 ->
+  getRegPiece (putRegPiece d ix1 v) ix2 = getRegPiece d ix2.
+Proof. move => H. rewrite /getRegPiece/putRegPiece. 
+destruct ix2. 
+  destruct ix1.  
+  + done. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT': i < 8+8. by apply ltn_addr.
+    rewrite (@getBit_catB 16 16) => //. 
+    rewrite (@getBit_catB 8 8) => //. 
+    rewrite getBit_low LT. rewrite getBit_low. by rewrite LT'. 
+  + apply sliceEq => i /andP [LE LT]. 
+    have LT' : i < 8+8 by apply ltn_addr.
+    have LT'' : i < 8+8+8 by apply ltn_addr.
+    rewrite /updateSlice/split3/split2. 
+    rewrite (@getBit_catB 8 24) => //. 
+    rewrite (@getBit_catB 8 16) => //. 
+    rewrite getBit_low LT'.  
+    by rewrite getBit_low LT''.  
+  + apply sliceEq => i /andP [LE LT]. 
+    have LT' : i < 8+8 by apply ltn_addr.
+    have LT'' : i < 8+8+8 by apply ltn_addr.
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite /updateSlice/split3/split2. 
+    rewrite (@getBit_catB 0 32) => //. 
+    rewrite (@getBit_catB 8 24) => //. 
+    rewrite getBit_low LT''. 
+    by rewrite getBit_low LT'''.  
+  destruct ix1. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2.
+    rewrite (@getBit_catB 24 8). have NLT: ~~(i<8). by rewrite ltnNge in LE. 
+    apply negbTE in NLT. rewrite NLT. rewrite getBit_high. by rewrite subnK. 
+  + done.
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT'' : i < 8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 8 24) => //. 
+    rewrite (@getBit_catB 8 16) => //. 
+    rewrite getBit_low LT.  
+    by rewrite getBit_low LT''.  
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT'' : i < 8+8+8 by apply ltn_addr.
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 0 32) => //. 
+    rewrite (@getBit_catB 8 24) => //. 
+    rewrite getBit_low LT''.  
+    by rewrite getBit_low LT'''.  
+
+  destruct ix1. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 24 8). 
+    have NLT: ~~(i<8). rewrite ltnNge negbK. by apply: ltn_trans LE. 
+    rewrite (negbTE NLT). rewrite getBit_high. rewrite subnK. done. 
+    by rewrite ltnNge. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 16 16) => //. 
+    have NLT: ~~(i<16). by rewrite ltnNge in LE. 
+    rewrite (negbTE NLT). rewrite getBit_high. by rewrite subnK. 
+  + by elim H. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 0 32) => //. rewrite LT'''. 
+    rewrite (@getBit_catB 8 24) => //. rewrite LT. 
+    rewrite getBit_low LT. by rewrite getBit_low LT'''.
+  destruct ix1. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    rewrite (@getBit_catB 24 8) => //. 
+    have NLT: ~~(i<8). rewrite ltnNge. rewrite negbK.
+    by apply: ltn_trans LE. 
+    rewrite (negbTE NLT). rewrite getBit_high. rewrite subnK. done.
+    by  rewrite ltnNge. 
+  + apply sliceEq => i /andP [LE LT]. 
+  rewrite /updateSlice/split3/split2. 
+  rewrite (@getBit_catB 16 16) => //. 
+  have NLT: ~~(i<16). rewrite ltnNge negbK. by apply: ltn_trans LE. 
+  rewrite (negbTE NLT). rewrite getBit_high. rewrite subnK. done.
+  by rewrite ltnNge.
+  + apply sliceEq => i /andP [LE LT]. 
+  rewrite /updateSlice/split3/split2. 
+  rewrite (@getBit_catB 8 24) => //. 
+  have NLT: ~~(i<24). by rewrite ltnNge in LE. 
+  rewrite (negbTE NLT). rewrite getBit_high. by rewrite subnK.
+discriminate H.  
+Qed.   
+
+Lemma AnyRegPiece_eqE r1 ix1 r2 ix2 : 
+  AnyRegPiece r1 ix1 == AnyRegPiece r2 ix2 = (r1 == r2) && (ix1 == ix2).
+Proof. done. Qed. 
+
 Lemma separateSetRegPiece (r:AnyReg) ix (v w:BYTE) Q s :
-  (regPieceIs (AnyRegPiece r ix) v ** Q) (toPState s) -> (regPieceIs (AnyRegPiece r ix) w ** Q) 
-  (s ! r := putRegPiece (registers s r) ix w).
+  (regPieceIs (AnyRegPiece r ix) v ** Q) (toPState s) -> 
+  (regPieceIs (AnyRegPiece r ix) w ** Q) (s ! r := putRegPiece (registers s r) ix w).
 Proof. 
-simpl. rewrite /update/ProcStateUpdateOps/=.
+rewrite /regPieceIs. rewrite /update/ProcStateUpdateOps/=.
 move => [s1 [s2 [H1 [H2 H3]]]].
-Admitted. 
+exists (addRegPieceToPState s1 (AnyRegPiece r ix) w), s2.
+
+split.
+move => fr. specialize (H1 fr).
+destruct fr => //.
+  (* registers *)
+rewrite /splitsAs/= in H1. rewrite /splitsAs/=.
+move => [r0 ix0]. specialize (H1 (AnyRegPiece r0 ix0)). 
+case Er: (r == r0). rewrite (eqP Er). rewrite (eqP Er) in H2.
+case Ei: (ix == ix0). rewrite (eqP Ei) eq_refl. rewrite (eqP Ei) in H2. 
+- rewrite setThenGetSame.
+  destruct H1.
+  * left. destruct H as [Ha Hb]. by rewrite setThenGetRegPieceSame.    
+  * rewrite -H2 in H. case: H => _ H. simpl in H. by rewrite eqxx in H. 
+- rewrite AnyRegPiece_eqE. rewrite Ei andbF.
+  rewrite setThenGetSame => //. 
+  rewrite setThenGetRegPieceDistinct => //. by rewrite  Ei. 
+  rewrite AnyRegPiece_eqE. rewrite Er andFb.
+  rewrite setThenGetDistinct => //. by rewrite Er. 
+
+simpl. 
+split; [|assumption].
+simpl in H2. rewrite -H2 /addRegPieceToPState.
+apply: state_extensional => [[]] //. move=> r' /=.
+by case E: (AnyRegPiece r ix  == r').
+Qed. 
 
 Lemma separateSetReg (r:AnyReg) (v w:DWORD) Q s :
   (r~=v ** Q) (toPState s) -> (r~=w ** Q) (toPState (s!r:=w)).

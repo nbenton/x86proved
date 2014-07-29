@@ -105,43 +105,51 @@ Canonical AnyReg_finType :=  Eval hnf in FinType _ AnyReg_finMixin.
 (*---------------------------------------------------------------------------
     Register pieces: these are the bytes that make up the register state
   ---------------------------------------------------------------------------*)
-Inductive RegPiece := AnyRegPiece (r: AnyReg) (b: BITS 2).
-Definition RegPieceToCode rp :=  let: AnyRegPiece r b := rp in (AnyRegToNat r, b). 
+Inductive RegIx := RegIx0 | RegIx1 | RegIx2 | RegIx3.
+Definition RegIxToNat ix := match ix with RegIx0 => 0 | RegIx1 => 1 | RegIx2 => 2 | RegIx3 => 3 end.
+Lemma RegIxToNat_inj : injective RegIxToNat.
+Proof. by case; case. Qed.
+
+Canonical Structure RegIxEqMixin := InjEqMixin RegIxToNat_inj.
+Canonical Structure RegIxEqType := Eval hnf in EqType _ RegIxEqMixin.
+
+Inductive RegPiece := AnyRegPiece (r: AnyReg) (ix: RegIx).
+Definition RegPieceToCode rp :=  let: AnyRegPiece r b := rp in (AnyRegToNat r, RegIxToNat b). 
 Lemma RegPieceToCode_inj : injective RegPieceToCode.
-Proof. by move => [r1 b1] [r2 b2] /= [/AnyRegToNat_inj -> ->]. Qed. 
+Proof. by move => [r1 b1] [r2 b2] /= [/AnyRegToNat_inj -> /RegIxToNat_inj ->]. Qed. 
 
 Canonical Structure RegPieceEqMixin := InjEqMixin RegPieceToCode_inj.
 Canonical Structure RegPieceEqType := Eval hnf in EqType _ RegPieceEqMixin.
 
 (* This should go somewhere else really *)
-Definition getRegPiece (v: DWORD) (ix: BITS 2)  := 
-  if ix == #0 then slice 0 8 _ v else
-  if ix == #1 then slice 8 8 _ v else
-  if ix == #2 then slice 16 8 _ v else
-  slice 24 8 _ v.
+Definition getRegPiece (v: DWORD) (ix: RegIx)  := 
+  match ix with 
+  | RegIx0 => slice 0 8 _ v 
+  | RegIx1 => slice 8 8 _ v 
+  | RegIx2 => slice 16 8 _ v 
+  | RegIx3 => slice 24 8 _ v 
+  end.
 
-Definition putRegPiece (v: DWORD) (ix: BITS 2) (b: BYTE) : DWORD :=
-  if ix == #0 then updateSlice 0 8 _ v b else
-  if ix == #1 then updateSlice 8 8 _ v b else
-  if ix == #2 then updateSlice 16 8 _ v b else
-  updateSlice 24 8 _ v b.
+Definition putRegPiece (v: DWORD) (ix: RegIx) (b: BYTE) : DWORD :=
+  match ix with
+  | RegIx0 => updateSlice 0 8 _ v b 
+  | RegIx1 => updateSlice 8 8 _ v b 
+  | RegIx2 => updateSlice 16 8 _ v b 
+  | RegIx3 => updateSlice 24 8 _ v b  
+  end.
   
 Require Import bitsprops.
 Lemma getRegPiece_ext (v w: DWORD) :
-  getRegPiece v #0 = getRegPiece w #0 ->
-  getRegPiece v #1 = getRegPiece w #1 ->
-  getRegPiece v #2 = getRegPiece w #2 ->
-  getRegPiece v #3 = getRegPiece w #3 ->
+  getRegPiece v RegIx0 = getRegPiece w RegIx0 ->
+  getRegPiece v RegIx1 = getRegPiece w RegIx1 ->
+  getRegPiece v RegIx2 = getRegPiece w RegIx2 ->
+  getRegPiece v RegIx3 = getRegPiece w RegIx3 ->
   v = w. 
 Proof. move => H0 H1 H2 H3.
-rewrite /getRegPiece eq_refl in H0. 
-rewrite /getRegPiece eq_refl in H1. replace (#1 == #0) with false in H1 by done. 
-rewrite /getRegPiece eq_refl in H2. 
-replace (#2 == #1) with false in H2 by done. replace (#2 == #0) with false in H2 by done. 
+rewrite /getRegPiece in H0. 
+rewrite /getRegPiece in H1. 
+rewrite /getRegPiece in H2. 
 rewrite /getRegPiece in H3. 
-replace (#3 == #0) with false in H3 by done. 
-replace (#3 == #1) with false in H3 by done. 
-replace (#3 == #2) with false in H3 by done.
 have S0 := proj2 (sliceEq _ _) H0. 
 have S1 := proj2 (sliceEq _ _) H1. 
 have S2 := proj2 (sliceEq _ _) H2. 
@@ -156,14 +164,14 @@ Qed.
 
 Definition BYTERegToRegPiece (r:BYTEReg) :=
 match r with
-| AL => AnyRegPiece EAX #0
-| AH => AnyRegPiece EAX #1
-| BL => AnyRegPiece EBX #0
-| BH => AnyRegPiece EBX #1
-| CL => AnyRegPiece ECX #0
-| CH => AnyRegPiece ECX #1
-| DL => AnyRegPiece EDX #0
-| DH => AnyRegPiece EDX #1
+| AL => AnyRegPiece EAX RegIx0
+| AH => AnyRegPiece EAX RegIx1
+| BL => AnyRegPiece EBX RegIx0
+| BH => AnyRegPiece EBX RegIx1
+| CL => AnyRegPiece ECX RegIx0
+| CH => AnyRegPiece ECX RegIx1
+| DL => AnyRegPiece EDX RegIx0
+| DH => AnyRegPiece EDX RegIx1
 end.
 
 

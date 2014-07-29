@@ -432,6 +432,18 @@ Proof. induction n1 => // n2 p i. destruct i => //. case/tupleP: p => [b p].
 rewrite /getBit/joinlsb/= beheadCons theadCons. destruct i => //. apply IHn1. 
 Qed. 
 
+Lemma getBit_high n1: forall n2 (p: BITS (n1+n2)) i,
+  getBit (high n2 p) i = getBit p (i+n1).
+Proof. induction n1 => // n2 p i. by rewrite addn0.  
+rewrite addnS. case/tupleP: p => [b p]. apply IHn1. Qed. 
+
+Lemma getBit_catB n1 n2 (p:BITS n1) (q:BITS n2) : 
+  forall i, getBit (p ## q) i = if i < n2 then getBit q i else getBit p (i-n2).
+Proof. induction n2 => // i. 
+rewrite (tuple0 q). destruct i => //. 
+case/tupleP: q => [b q] //. destruct i => //. apply IHn2. 
+Qed. 
+
 Lemma sliceEq n1 n2 n3 (p q: BITS (n1+n2+n3)) : 
   (forall i, n1 <= i < n1+n2 -> getBit p i = getBit q i) <->
   slice n1 n2 n3 p = slice n1 n2 n3 q.

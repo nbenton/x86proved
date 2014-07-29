@@ -40,7 +40,7 @@ Definition inlineOutputChar_spec (col row: nat) (char: BYTE) (instrs: program) :
 
 Definition inlineReadChar_spec (col row: nat) (char:BYTE) (instrs: program) :=
   basic
-    (ECX ~= # col ** EDX ~= # row ** EAX? ** charIs (charPos col row) char)
+    (ECX ~= # col ** EDX ~= # row ** (Exists b, BYTEregIs AL b) ** charIs (charPos col row) char)
     instrs empOP
     (ECX?        ** EDX?        ** BYTEregIs AL char ** charIs (charPos col row) char)
   @ (OSZCP? ** EDI?).

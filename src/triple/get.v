@@ -69,9 +69,9 @@ Proof.
   suff: (registers s r) = v. move => ->. by elim: (c v s).
   rewrite /stateIs/regIs in H. 
   have H0 := H. rewrite ->sepSPA in H0. have R0 := regPieceSep (H0 _ pre).  
-  have H1 := H. rewrite <-sepSPA in H1. rewrite -> (sepSPC (regPieceIs (AnyRegPiece r #0) _)) in H1. 
+  have H1 := H. rewrite <-sepSPA in H1. rewrite -> (sepSPC (regPieceIs (AnyRegPiece r RegIx0) _)) in H1. 
   do 3 rewrite ->sepSPA in H1. have R1 := regPieceSep (H1 _ pre).  
-  have H2 := H1. rewrite <-sepSPA in H2. rewrite -> (sepSPC (regPieceIs (AnyRegPiece r #2) _)) in H2. 
+  have H2 := H1. rewrite <-sepSPA in H2. rewrite -> (sepSPC (regPieceIs (AnyRegPiece r RegIx2) _)) in H2. 
   do 2 rewrite <-sepSPA in H2. rewrite <- sepSPC in H2. have R2 := regPieceSep (H2 _ pre).  
   have H3 := H1. do 3 rewrite <-sepSPA in H3.  rewrite -> sepSPC in H3. do 2 rewrite <-sepSPA in H3. 
   rewrite -> sepSPC in H3. rewrite ->sepSPA in H3. have R3 := regPieceSep (H3 _ pre). 

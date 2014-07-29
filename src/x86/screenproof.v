@@ -92,8 +92,8 @@ Proof.
   move => NC NR.
   rewrite /inlineReadChar_spec/inlineReadChar/memIs/interpProgram/charIs.
 
-  autorewrite with push_at. rewrite {1}/stateIsAny.
-  specintros => oldeax.
+  autorewrite with push_at.
+  specintros => oldal.
 
   have ICCP := inlineComputeCharPos_correct NC NR.
   rewrite /inlineComputeCharPos_spec in ICCP.

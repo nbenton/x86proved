@@ -35,10 +35,10 @@ destruct s2 as [s2r s2f s2m].
 unfold "===", toPState in H.
 simpl in H.
 have E1: s1r = s2r. extensionality x. 
-have H0 := H Registers (AnyRegPiece x #0).
-have H1 := H Registers (AnyRegPiece x #1).
-have H2 := H Registers (AnyRegPiece x #2).
-have H3 := H Registers (AnyRegPiece x #3).
+have H0 := H Registers (AnyRegPiece x RegIx0).
+have H1 := H Registers (AnyRegPiece x RegIx1).
+have H2 := H Registers (AnyRegPiece x RegIx2).
+have H3 := H Registers (AnyRegPiece x RegIx3).
 clear H.
 apply getRegPiece_ext; congruence.
 
