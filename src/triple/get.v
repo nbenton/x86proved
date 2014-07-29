@@ -51,6 +51,14 @@ Lemma triple_letGetRegPieceSep rp v c O Q :
  TRIPLE (regPieceIs rp v ** S) (bind (getRegPieceFromProcState rp) c) O Q.
 Proof. move => S T. apply: triple_letGetRegPiece. cancel2. reflexivity. done. Qed.
 
+Lemma regPieceSep r P (s: ProcState) b i : (regPieceIs (AnyRegPiece r i) b ** P) s -> 
+  getRegPiece (registers s r) i = b. 
+Proof. move => [s1 [s2 [Hs [Hs1 Hs2]]]].
+  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
+  specialize (Hs Registers (AnyRegPiece r i) b). 
+  rewrite /= in Hs. injection Hs => //. by rewrite -Hs1/= eq_refl. 
+Qed.
+
 Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) O c:
   (P |-- r ~= v ** ltrue) ->
   TRIPLE P (c v) O Q ->
@@ -59,9 +67,16 @@ Proof.
   move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f, o.
   rewrite /=. rewrite <-eq. split; last done.
   suff: (registers s r) = v. move => ->. by elim: (c v s).
-  specialize (H _ pre).  
   rewrite /stateIs/regIs in H. 
-admit. 
+  have H0 := H. rewrite ->sepSPA in H0. have R0 := regPieceSep (H0 _ pre).  
+  have H1 := H. rewrite <-sepSPA in H1. rewrite -> (sepSPC (regPieceIs (AnyRegPiece r #0) _)) in H1. 
+  do 3 rewrite ->sepSPA in H1. have R1 := regPieceSep (H1 _ pre).  
+  have H2 := H1. rewrite <-sepSPA in H2. rewrite -> (sepSPC (regPieceIs (AnyRegPiece r #2) _)) in H2. 
+  do 2 rewrite <-sepSPA in H2. rewrite <- sepSPC in H2. have R2 := regPieceSep (H2 _ pre).  
+  have H3 := H1. do 3 rewrite <-sepSPA in H3.  rewrite -> sepSPC in H3. do 2 rewrite <-sepSPA in H3. 
+  rewrite -> sepSPC in H3. rewrite ->sepSPA in H3. have R3 := regPieceSep (H3 _ pre). 
+  clear H H0 H1 H2 H3.  
+  by apply getRegPiece_ext. 
 Qed.
 
 (*

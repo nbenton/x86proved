@@ -113,6 +113,47 @@ Proof. by move => [r1 b1] [r2 b2] /= [/AnyRegToNat_inj -> ->]. Qed.
 Canonical Structure RegPieceEqMixin := InjEqMixin RegPieceToCode_inj.
 Canonical Structure RegPieceEqType := Eval hnf in EqType _ RegPieceEqMixin.
 
+(* This should go somewhere else really *)
+Definition getRegPiece (v: DWORD) (ix: BITS 2)  := 
+  if ix == #0 then slice 0 8 _ v else
+  if ix == #1 then slice 8 8 _ v else
+  if ix == #2 then slice 16 8 _ v else
+  slice 24 8 _ v.
+
+Definition putRegPiece (v: DWORD) (ix: BITS 2) (b: BYTE) : DWORD :=
+  if ix == #0 then updateSlice 0 8 _ v b else
+  if ix == #1 then updateSlice 8 8 _ v b else
+  if ix == #2 then updateSlice 16 8 _ v b else
+  updateSlice 24 8 _ v b.
+  
+Require Import bitsprops.
+Lemma getRegPiece_ext (v w: DWORD) :
+  getRegPiece v #0 = getRegPiece w #0 ->
+  getRegPiece v #1 = getRegPiece w #1 ->
+  getRegPiece v #2 = getRegPiece w #2 ->
+  getRegPiece v #3 = getRegPiece w #3 ->
+  v = w. 
+Proof. move => H0 H1 H2 H3.
+rewrite /getRegPiece eq_refl in H0. 
+rewrite /getRegPiece eq_refl in H1. replace (#1 == #0) with false in H1 by done. 
+rewrite /getRegPiece eq_refl in H2. 
+replace (#2 == #1) with false in H2 by done. replace (#2 == #0) with false in H2 by done. 
+rewrite /getRegPiece in H3. 
+replace (#3 == #0) with false in H3 by done. 
+replace (#3 == #1) with false in H3 by done. 
+replace (#3 == #2) with false in H3 by done.
+have S0 := proj2 (sliceEq _ _) H0. 
+have S1 := proj2 (sliceEq _ _) H1. 
+have S2 := proj2 (sliceEq _ _) H2. 
+have S3 := proj2 (sliceEq _ _) H3. 
+apply allBitsEq. 
+move => i LT. 
+case LT8: (i < n8). apply (S0 _ LT8). 
+case LT16: (i < n16). apply S1. by rewrite LT16 leqNgt LT8. 
+case LT24: (i < n24). apply S2. by rewrite LT24 leqNgt LT16. 
+apply S3. by rewrite LT leqNgt LT24. 
+Qed.
+
 Definition BYTERegToRegPiece (r:BYTEReg) :=
 match r with
 | AL => AnyRegPiece EAX #0

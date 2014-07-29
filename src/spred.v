@@ -511,10 +511,10 @@ Definition flagIs f b : SPred := eq_pred (addFlagToPState emptyPState f b).
 Definition BYTEregIs r v : SPred := regPieceIs (BYTERegToRegPiece r) v.
 
 Definition regIs r (v:DWORD) : SPred :=
-   regPieceIs (AnyRegPiece r #0) (slice 0 8 _ v)
-** regPieceIs (AnyRegPiece r #1) (slice 8 8 _ v)
-** regPieceIs (AnyRegPiece r #2) (slice 16 8 _ v)
-** regPieceIs (AnyRegPiece r #3) (slice 24 8 _ v).
+   regPieceIs (AnyRegPiece r #0) (getRegPiece v #0)              
+** regPieceIs (AnyRegPiece r #1) (getRegPiece v #1)
+** regPieceIs (AnyRegPiece r #2) (getRegPiece v #2)
+** regPieceIs (AnyRegPiece r #3) (getRegPiece v #3).
 
 Inductive RegOrFlag :=
 | RegOrFlagR :> AnyReg -> RegOrFlag
