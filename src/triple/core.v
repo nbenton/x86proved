@@ -66,8 +66,8 @@ Ltac triple_post_compute :=
   do ?[ progress (simpl fst; simpl snd)
       | progress cbv iota zeta beta
       | progress hnf_in_match'; progress cbv iota zeta beta
-      | progress ssr_autorewrite_with_matchdb
-      | progress autorewrite with matchdb ].
+      | progress autorewrite with matchdb
+      | progress ssr_autorewrite_with_matchdb' ].
 
 Ltac triple_by_compute :=
   triple_hnf;

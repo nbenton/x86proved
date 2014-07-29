@@ -124,6 +124,10 @@ Section IO.
     : @IO_run_output X s (if b then m1 else m2) = if b then (@IO_run_output X s m1) else (@IO_run_output X s m2).
     Proof. by destruct b. Defined.
 
+    Lemma IO_run_output_commute_option X Y s (b : option Y) m1 m2
+    : @IO_run_output X s (match b with Some k => m1 k | None => m2 end) = match b with Some k => @IO_run_output X s (m1 k) | None => @IO_run_output X s m2 end.
+    Proof. by destruct b. Defined.
+
     Lemma IO_run_bindIO_eq X Y inputs1 (m1: IOM X) (m2 : X -> IOM Y)
           (inputs2 := fst (IO_run inputs1 m1))
           (out1 := fst (snd (IO_run inputs1 m1)))
@@ -507,3 +511,20 @@ Lemma IO_run_output_commute_if_rewrite Chan D Chan_eq A F X s b m1 m2 T xE xS
              end.
 Proof. by destruct b. Defined.
 Hint Rewrite IO_run_output_commute_if_rewrite : matchdb.
+
+Lemma IO_run_output_commute_match_option_rewrite Chan D Chan_eq A F X s T xE xS U (o : option U) Sv Nv
+: match snd (snd (@IO_run_output Chan D Chan_eq (A * Result F X) s (match o with Some k => Sv k | None => Nv end))) as r return T r with
+    | Error f => xE f
+    | Success x => xS x
+  end = match o as o return T (snd (snd (@IO_run_output Chan D Chan_eq (A * Result F X) s (match o with Some k => Sv k | None => Nv end)))) with
+          | Some k => match snd (snd (snd (IO_run _ s (Sv k)))) as r return T r with
+                        | Error f => xE f
+                        | Success x => xS x
+                      end
+          | None => match snd (snd (snd (IO_run _ s Nv))) as r return T r with
+                      | Error f => xE f
+                      | Success x => xS x
+                    end
+        end.
+Proof. by destruct o. Defined.
+Hint Rewrite IO_run_output_commute_match_option_rewrite : matchdb.

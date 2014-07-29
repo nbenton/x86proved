@@ -71,6 +71,13 @@ Lemma match_bool_fn b A B xT xF
                    | false => xF x
                  end.
 Proof. destruct b; reflexivity. Defined.
+Lemma match_option_const T (b : option T) A x
+: match b as b return A with
+    | Some _ => x
+    | None => x
+  end
+  = x.
+Proof. destruct b; reflexivity. Defined.
 Lemma match_option_fn T (b : option T) A B s n
 : match b as b return forall x : A, B b x with
     | Some k => s k
@@ -182,10 +189,30 @@ Proof. destruct b; reflexivity. Defined.
 Lemma if_else_False_iff b P : (if b then P else False) <-> (P /\ (b = true)).
 Proof. destruct b; intuition. Qed.
 
-Hint Rewrite match_match_bool_option match_match_bool_pair match_pair_eta match_bool_fn match_option_fn match_option_match_pair_eta match_option_match_pair_eta_fun match_option_comm_1 match_option_comm_2 match_option_comm_1_const match_option_comm_2_const match_bool_comm_1 match_bool_comm_2 match_bool_comm_1_const match_bool_comm_2_const match_bool_const if_else_False_iff : matchdb.
+Hint Rewrite match_option_const match_match_bool_option match_match_bool_pair match_pair_eta match_bool_fn match_option_fn match_option_match_pair_eta match_option_match_pair_eta_fun match_option_comm_1 match_option_comm_2 match_option_comm_1_const match_option_comm_2_const match_bool_comm_1 match_bool_comm_2 match_bool_comm_1_const match_bool_comm_2_const match_bool_const if_else_False_iff : matchdb.
 
-Ltac ssr_autorewrite_with_matchdb :=
-  do ?(progress rewrite ?match_match_bool_option ?match_match_bool_pair ?match_pair_eta ?match_bool_fn ?match_option_fn ?match_option_match_pair_eta ?match_option_match_pair_eta_fun ?match_option_comm_1 ?match_option_comm_2 ?match_option_comm_1_const ?match_option_comm_2_const ?match_bool_comm_1 ?match_bool_comm_2 ?match_bool_comm_1_const ?match_bool_comm_2_const ?match_bool_const ?if_else_False_iff).
+Ltac ssr_autorewrite_with_matchdb' :=
+  (** Order matters; do the things involving only one [match] first, and then do the things involving multiple matches. *)
+  do [ rewrite match_bool_fn
+     | rewrite match_option_fn
+     | rewrite match_bool_const
+     | rewrite match_option_const
+     | rewrite if_else_False_iff
+     | rewrite match_pair_eta
+     | rewrite match_option_match_pair_eta
+     | rewrite match_option_match_pair_eta_fun
+     | rewrite match_match_bool_option
+     | rewrite match_match_bool_pair
+     | rewrite match_option_comm_1
+     | rewrite match_option_comm_2
+     | rewrite match_option_comm_1_const
+     | rewrite match_option_comm_2_const
+     | rewrite match_bool_comm_1
+     | rewrite match_bool_comm_2
+     | rewrite match_bool_comm_1_const
+     | rewrite match_bool_comm_2_const ].
+
+Ltac ssr_autorewrite_with_matchdb := do !ssr_autorewrite_with_matchdb'.
 
 Definition paths_prod A B (x y : A * B) (H : x = y) : fst x = fst y /\ snd x = snd y
   := conj (f_equal (@fst _ _) H) (f_equal (@snd _ _) H).
