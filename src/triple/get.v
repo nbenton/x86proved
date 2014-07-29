@@ -9,24 +9,6 @@ Require Import x86proved.triple.get_readable.
 
 Import Prenex Implicits.
 
-(** * Get registers *)
-
-Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) O c:
-  (P |-- r ~= v ** ltrue) ->
-  TRIPLE P (c v) O Q ->
-  TRIPLE P (bind (getRegFromProcState r) c) O Q.
-Proof.
-  move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f, o.
-  rewrite /=. rewrite <-eq. split; last done.
-  move/(_ (toPState s) pre): H => [s1 [s2 [Hs [Hs1 _]]]].
-  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
-admit. 
-(*  specialize (Hs Registers r v). rewrite /= in Hs.
-  injection Hs. move => ->. by destruct (c v s).
-  by rewrite -Hs1 /= eq_refl.
-*)
-Qed.
-
 Lemma triple_letGetFlag (fl:Flag) (v:bool) (P Q: SPred) O c:
   (P |-- fl ~= v ** ltrue) ->
   TRIPLE P (c v) O Q ->
@@ -41,6 +23,49 @@ Proof.
   specialize (Hs Flags fl v). rewrite /= in Hs.
   injection Hs. move => ->. simpl. by destruct (c v s).
   by rewrite -Hs1 /= eq_refl.
+Qed.
+
+
+(** * Get registers *)
+
+Lemma triple_letGetRegPiece rp (v:BYTE) (P Q:SPred) O c:
+  (P |-- regPieceIs rp v  ** ltrue) ->  
+  TRIPLE P (c v) O Q ->
+  TRIPLE P (bind (getRegPieceFromProcState rp) c) O Q.
+Proof.
+  move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f, o.
+  rewrite /=. rewrite <-eq. split; last done.
+  move/(_ (toPState s) pre): H => [s1 [s2 [Hs [Hs1 _]]]].
+  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
+  specialize (Hs Registers rp v). 
+  rewrite /= in Hs.  elim E: rp => [r ix]. rewrite E in Hs. 
+  rewrite /getRegPieceFromProcState/=. 
+  injection Hs. move => ->. by destruct (c v s).
+  by rewrite -Hs1/= E eq_refl. 
+Qed.
+
+
+Lemma triple_letGetRegPieceSep rp v c O Q :
+ forall S,
+ TRIPLE (regPieceIs rp v ** S) (c v) O Q ->
+ TRIPLE (regPieceIs rp v ** S) (bind (getRegPieceFromProcState rp) c) O Q.
+Proof. move => S T. apply: triple_letGetRegPiece. cancel2. reflexivity. done. Qed.
+
+Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) O c:
+  (P |-- r ~= v ** ltrue) ->
+  TRIPLE P (c v) O Q ->
+  TRIPLE P (bind (getRegFromProcState r) c) O Q.
+Proof.
+  move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f, o.
+  rewrite /=. rewrite <-eq. split; last done.
+  move/(_ (toPState s) pre): H => [s1 [s2 [Hs [Hs1 _]]]].
+  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
+  rewrite /stateIs/regIs in Hs1.
+admit. 
+(*  specialize (Hs Registers r v). rewrite /= in Hs.
+  injection Hs. move => ->. by destruct (c v s).
+  by rewrite -Hs1 /= eq_refl.
+*)
 Qed.
 
 (*

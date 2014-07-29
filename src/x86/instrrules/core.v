@@ -408,22 +408,16 @@ Lemma evalReg_rule (r: Reg) v c O Q :
 Proof. by apply triple_letGetRegSep. Qed.
 Global Opaque evalReg.
 
+
+
 Lemma evalBYTEReg_rule (r: BYTEReg) v c O Q :
   forall S,
   TRIPLE (BYTEregIs r v ** S) (c v) O Q ->
   TRIPLE (BYTEregIs r v ** S) (bind (evalBYTEReg r) c) O Q.
 Proof.
-move => S T.
-admit. 
-(*try_triple_apply T. 
-rewrite /BYTEregIs/evalBYTEReg.
-rewrite /BYTEregIs in T. 
-elim E: (BYTERegToRegPiece r) => [r' ix]. rewrite E in T. 
-rewrite assoc.
-try_triple_apply triple_letGetRegSep. 
-rewrite /stateIs/regIs.
-try_triple_apply T. using sbazooka.
-*)
+move => S T. rewrite /BYTEregIs. 
+triple_apply triple_letGetRegPieceSep. 
+triple_apply T. 
 Qed.
 Global Opaque evalBYTEReg.
 
@@ -440,14 +434,10 @@ Lemma triple_setBYTERegSep r v w :
   forall S, TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) empOP (BYTEregIs r w ** S).
 Proof.
 move => S.
-admit. 
-(*rewrite /setBYTERegInProcState.
-destruct r; apply triple_pre_existsSep => d; apply triple_pre_existsSep => _;
-  triple_apply triple_letGetRegSep;
-  triple_apply triple_setRegSep using (sbazooka;
-                                         by (rewrite low_catB || rewrite LOWLEMMA)).
-*)
-Qed.
+rewrite /BYTEregIs. rewrite /setBYTERegInProcState. 
+elim E: (BYTERegToRegPiece r) => [r' ix].
+try_triple_apply triple_letGetRegSep.
+Admitted. 
 Global Opaque setBYTERegInProcState.
 
 Lemma triple_setDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w :

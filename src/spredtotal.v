@@ -27,6 +27,12 @@ Lemma totalProcState (s: ProcState) : isTotalPState s.
 Proof. move => f x. destruct f; destruct x => //.  Qed.
 
 Require Import Coq.Logic.FunctionalExtensionality x86proved.charge.csetoid.
+
+Corollary sliceEqSome n1 n2 n3 (p q: BITS (n1+n2+n3)) : 
+  Some (slice n1 n2 n3 p) = Some (slice n1 n2 n3 q) ->
+  (forall i, n1 <= i < n1+n2 -> getBit p i = getBit q i).
+Proof. move => [H]. by apply sliceEq. Qed. 
+
 Lemma toPState_inj s1 s2 : toPState s1 === toPState s2 -> s1 = s2.
 Proof. move => H.
 destruct s1 as [s1r s1f s1m].
@@ -34,8 +40,30 @@ destruct s2 as [s2r s2f s2m].
 unfold "===", toPState in H.
 simpl in H.
 have E1: s1r = s2r. extensionality x. 
-admit. 
-(*specialize (H Registers x). by injection H.*)
+have H0 := H Registers (AnyRegPiece x #0).
+have H1 := H Registers (AnyRegPiece x #1).
+have H2 := H Registers (AnyRegPiece x #2).
+have H3 := H Registers (AnyRegPiece x #3).
+clear H.
+rewrite /getRegPiece eq_refl in H0. 
+rewrite /getRegPiece eq_refl in H1. replace (#1 == #0) with false in H1 by done. 
+rewrite /getRegPiece eq_refl in H2. 
+replace (#2 == #1) with false in H2 by done. replace (#2 == #0) with false in H2 by done. 
+rewrite /getRegPiece in H3. 
+replace (#3 == #0) with false in H3 by done. 
+replace (#3 == #1) with false in H3 by done. 
+replace (#3 == #2) with false in H3 by done.
+have S0 := sliceEqSome H0. 
+have S1 := sliceEqSome H1. 
+have S2 := sliceEqSome H2. 
+have S3 := sliceEqSome H3.
+apply allBitsEq. 
+move => i LT. 
+case LT8: (i < n8). apply (S0 _ LT8). 
+case LT16: (i < n16). apply S1. by rewrite LT16 leqNgt LT8. 
+case LT24: (i < n24). apply S2. by rewrite LT24 leqNgt LT16. 
+apply S3. by rewrite LT leqNgt LT24. 
+
 have E2: s1f = s2f.
 extensionality x. specialize (H Flags x). by injection H.
 have E3: s1m = s2m.

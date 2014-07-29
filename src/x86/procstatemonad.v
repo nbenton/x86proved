@@ -24,6 +24,11 @@ Definition getRegFromProcState r :=
   let! s = getProcState;
   retn (registers s r).
 
+Definition getRegPieceFromProcState rp :=
+  let: AnyRegPiece r ix := rp in
+  let! v = getRegFromProcState r;
+  retn (getRegPiece v ix).
+ 
 (* Retrieving a flag that is undefined leads to unspecified behaviour *)
 Definition getFlagFromProcState f :=
   let! s = getProcState;
