@@ -58,14 +58,10 @@ Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) O c:
 Proof.
   move => H T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f, o.
   rewrite /=. rewrite <-eq. split; last done.
-  move/(_ (toPState s) pre): H => [s1 [s2 [Hs [Hs1 _]]]].
-  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
-  rewrite /stateIs/regIs in Hs1.
+  suff: (registers s r) = v. move => ->. by elim: (c v s).
+  specialize (H _ pre).  
+  rewrite /stateIs/regIs in H. 
 admit. 
-(*  specialize (Hs Registers r v). rewrite /= in Hs.
-  injection Hs. move => ->. by destruct (c v s).
-  by rewrite -Hs1 /= eq_refl.
-*)
 Qed.
 
 (*
