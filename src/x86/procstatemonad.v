@@ -67,6 +67,11 @@ Definition setRegInProcState (r:AnyReg) d :=
   let! s = getProcState;
   setProcState (s!r:=d).
 
+Definition setBYTERegInProcState (r: BYTEReg) (b: BYTE) :=
+  let: AnyRegPiece r ix := BYTERegToRegPiece r in
+    let! d = getRegFromProcState r;
+    setRegInProcState r (putRegPiece d ix b).
+
 Definition updateFlagInProcState (f:Flag) (b:bool) :=
   let! s = getProcState;
   setProcState (s!f:=b).

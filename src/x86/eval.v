@@ -173,11 +173,6 @@ Definition evalJmpTgt tgt :=
     getDWORDFromProcState p
   end.
 
-Definition setBYTERegInProcState (r: BYTEReg) (b: BYTE) :=
-  let: AnyRegPiece r ix := BYTERegToRegPiece r in
-    let! d = getRegFromProcState r;
-    setRegInProcState r (putRegPiece d ix b).
-
 Definition setDWORDorBYTERegInProcState (dword:bool) :
   DWORDorBYTEReg dword -> DWORDorBYTE dword -> _ :=
   if dword as dword return DWORDorBYTEReg dword -> DWORDorBYTE dword -> _

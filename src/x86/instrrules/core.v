@@ -430,16 +430,6 @@ destruct d; [apply evalReg_rule | apply evalBYTEReg_rule].
 Qed.
 Opaque evalDWORDorBYTEReg.
 
-Lemma triple_setBYTERegSep r v w :
-  forall S, TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) empOP (BYTEregIs r w ** S).
-Proof.
-move => S.
-rewrite /BYTEregIs. rewrite /setBYTERegInProcState. 
-elim E: (BYTERegToRegPiece r) => [r' ix].
-try_triple_apply triple_letGetRegSep.
-Admitted. 
-Global Opaque setBYTERegInProcState.
-
 Lemma triple_setDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w :
   forall S, TRIPLE (DWORDorBYTEregIs r v ** S) (setDWORDorBYTERegInProcState _ r w) empOP
                    (DWORDorBYTEregIs r w ** S).

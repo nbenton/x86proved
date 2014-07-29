@@ -10,40 +10,6 @@ Import Prenex Implicits.
 
 Local Transparent PStateSepAlgOps.
 
-Lemma separateSetReg (r:AnyReg) (v w:DWORD) Q s :
-  (r~=v ** Q) (toPState s) -> (r~=w ** Q) (toPState (s!r:=w)).
-Proof.
-simpl.
-move => [s1 [s2 [H1 [H2 H3]]]].
-
-rewrite /= in H2.
-admit. 
-(*
-exists (addRegToPState s1 r w), s2.
-
-split.
-move => fr. specialize (H1 fr).
-destruct fr => //.
-  (* registers *)
-rewrite /splitsAs/= in H1. rewrite /splitsAs/=.
-move => r'. specialize (H1 r').
-case E: (r == r').
-- rewrite (eqP E).
-  rewrite setThenGetSame.
-  destruct H1.
-  * left. split => //. by destruct H.
-  * rewrite (eqP E) in H2. rewrite -H2 in H. case: H => _ H.
-    simpl in H. by rewrite eqxx in H.
-- rewrite setThenGetDistinct => //. by apply negbT in E.
-simpl.
-split; [|assumption].
-rewrite -H2 /addRegToPState.
-apply: state_extensional => [[]] //. move=> r' /=.
-by case E: (r == r').
-*)
-Qed.
-
-
 Lemma separateSetBYTE p v w Q s :
   (byteIs p v ** Q) (toPState s) -> (byteIs p w ** Q) (toPState (s!p:=w)).
 Proof.
@@ -75,6 +41,46 @@ apply: state_extensional => [[]] //. move=> p' /=.
 by case E: (p == p').
 
 Qed.
+
+Lemma separateSetRegPiece (r:AnyReg) ix (v w:BYTE) Q s :
+  (regPieceIs (AnyRegPiece r ix) v ** Q) (toPState s) -> (regPieceIs (AnyRegPiece r ix) w ** Q) 
+  (s ! r := putRegPiece (registers s r) ix w).
+Proof. 
+simpl. rewrite /update/ProcStateUpdateOps/=.
+move => [s1 [s2 [H1 [H2 H3]]]].
+Admitted. 
+
+Lemma separateSetReg (r:AnyReg) (v w:DWORD) Q s :
+  (r~=v ** Q) (toPState s) -> (r~=w ** Q) (toPState (s!r:=w)).
+Proof.
+simpl. rewrite /regIs. rewrite /update/ProcStateUpdateOps/=.  simpl.
+move => [s1 [s2 [H1 [H2 H3]]]].
+admit. 
+(*
+exists (addRegToPState s1 r w), s2.
+
+split.
+move => fr. specialize (H1 fr).
+destruct fr => //.
+  (* registers *)
+rewrite /splitsAs/= in H1. rewrite /splitsAs/=.
+move => r'. specialize (H1 r').
+case E: (r == r').
+- rewrite (eqP E).
+  rewrite setThenGetSame.
+  destruct H1.
+  * left. split => //. by destruct H.
+  * rewrite (eqP E) in H2. rewrite -H2 in H. case: H => _ H.
+    simpl in H. by rewrite eqxx in H.
+- rewrite setThenGetDistinct => //. by apply negbT in E.
+simpl.
+split; [|assumption].
+rewrite -H2 /addRegToPState.
+apply: state_extensional => [[]] //. move=> r' /=.
+by case E: (r == r').
+*)
+Qed.
+
 
 (** TODO(t-jagro): Add [separateSetDWORD] *)
 (*
@@ -127,23 +133,10 @@ Lemma triple_setRegSep (r:AnyReg) v w S
 : TRIPLE (r~=v ** S) (setRegInProcState r w) empOP (r~=w ** S).
 Proof. triple_by_compute. apply: separateSetReg; eassumption. Qed.
 
-(*
-Lemma triple_setBYTERegSep r (v:DWORD) (w:BYTE) :
-  forall S, TRIPLE (regIs r v ** S) (setBYTERegInProcState r w) (regIs r (@high 24 8 v ## w) ** S).
-Proof.
-move => S s pre. eexists _. split. by rewrite /setBYTERegInProcState/setProcState.
-have SRR := separateSetReg _ pre.
-elim pre => [s1 [s2 [Hs [Hs1 _]]]].
-rewrite /regIs in Hs1.
-specialize (Hs1 Registers r); simpl in Hs1.
-assert (r == r) by intuition.
-rewrite H in Hs1.
-specialize (Hs Registers r); destruct Hs as [[H1 H2] | [H1 H2]]; subst.
-rewrite H1 in Hs1. inversion Hs1; subst.
-apply SRR.
-by congruence.
-Qed.
-*)
+Lemma triple_setBYTERegSep (r:BYTEReg) v w S
+: TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) empOP (BYTEregIs r w ** S).
+Proof. rewrite /BYTEregIs/=/setBYTERegInProcState. elim E: (BYTERegToRegPiece r) => [r' b]. 
+triple_by_compute. apply: separateSetRegPiece; eassumption. Qed.
 
 Lemma triple_setRegSepGen (r:AnyReg) v w P R:
   P |-- r~=v ** R ->
