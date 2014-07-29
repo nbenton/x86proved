@@ -1,8 +1,10 @@
 (*===========================================================================
     Some useful instances of Monad
   ===========================================================================*)
-Require Import Ssreflect.ssreflect Ssreflect.seq.
+Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.finfun Ssreflect.fintype.
 Require Import x86proved.monad.
+Require Import Coq.Lists.Streams.
+Require Import x86proved.common_tactics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -101,13 +103,112 @@ Section IO.
   Definition IO_write ch d : IOM unit := Out ch d (retn tt).
   Definition IO_read ch : IOM D := In ch retn.
 
-  Require Import Coq.Lists.Streams.
-  Fixpoint IO_run X (s:Stream D) (m: IOM X) : seq D * X :=
-  match m with
-  | retnIO x => (nil,x)
-  | In ch g => let: Cons h t := s in IO_run t (g h)
-  | Out ch d m => let: (output, result) := IO_run s m in (cons d output, result)
-  end.
+  Section IO_run.
+    Hypothesis Chan_eq : @Equality.mixin_of Chan.
+
+    Let chan_eqType := Eval hnf in EqType _ Chan_eq.
+
+    Fixpoint IO_run X (s:Chan -> Stream D) (m: IOM X) : (Chan -> Stream D) * (seq (Chan * D) * X) :=
+      match m with
+        | retnIO x => (s, (nil,x))
+        | In ch g => IO_run (fun ch' : chan_eqType => if ch' == ch then tl (s ch') else s ch') (g (hd (s ch)))
+        | Out ch d m => let s' := fst (IO_run s m) in
+                        let output := fst (snd (IO_run s m)) in
+                        let result := snd (snd (IO_run s m)) in
+                        (s', (cons (ch, d) output, result))
+      end.
+
+    Definition IO_run_output X s m : seq (Chan * D) * X := snd (@IO_run X s m).
+
+    Lemma IO_run_output_commute_if X s b m1 m2
+    : @IO_run_output X s (if b then m1 else m2) = if b then (@IO_run_output X s m1) else (@IO_run_output X s m2).
+    Proof. by destruct b. Defined.
+
+    Lemma IO_run_bindIO_eq X Y inputs1 (m1: IOM X) (m2 : X -> IOM Y)
+          (inputs2 := fst (IO_run inputs1 m1))
+          (out1 := fst (snd (IO_run inputs1 m1)))
+          (x1 := snd (snd (IO_run inputs1 m1)))
+          (inputs := fst (IO_run inputs2 (m2 x1)))
+          (out2 := fst (snd (IO_run inputs2 (m2 x1))))
+          (x2 := snd (snd (IO_run inputs2 (m2 x1))))
+    : @IO_run Y inputs1 (bindIO m1 m2) = (inputs, (out1 ++ out2, x2)).
+    Proof.
+      revert m2 inputs1 x1 inputs2 inputs x2 out1 out2.
+      induction m1; try by simpl; intros; simpl_paths; simpl in *; subst.
+      { simpl; intros; erewrite IHm1;
+        do !(idtac;
+             match goal with
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => evar_safe_reflexivity
+               | [ |- ?a :: ?b ++ ?c = ?a :: ?b' ++ ?c' ] => (apply f_equal; reflexivity)
+               | _ => progress simpl_paths
+             end). }
+      { intros; hyp_eapply *. }
+    Qed.
+
+    Lemma IO_run_bindIO X Y inputs1 inputs2 inputs (m1: IOM X) m2 out1 out2 out x1 x2
+          (H1 : IO_run inputs1 m1 = (inputs2, (out1, x1)))
+          (H2 : IO_run inputs2 (m2 x1) = (inputs, (out2, x2)))
+          (H3 : out1 ++ out2 = out)
+    : @IO_run Y inputs1 (bindIO m1 m2) = (inputs, (out, x2)).
+    Proof.
+      rewrite IO_run_bindIO_eq.
+        by do !hyp_rewrite *.
+    Qed.
+
+    Lemma IO_run_output_bindIO_eq X Y inputs1 (m1: IOM X) m2
+          (inputs2 := fst (IO_run inputs1 m1))
+          (out1 := fst (snd (IO_run inputs1 m1)))
+          (x1 := snd (snd (IO_run inputs1 m1)))
+          (inputs := fst (IO_run inputs2 (m2 x1)))
+          (out2 := fst (IO_run_output inputs2 (m2 x1)))
+          (x2 := snd (IO_run_output inputs2 (m2 x1)))
+    : @IO_run_output Y inputs1 (bindIO m1 m2) = (out1 ++ out2, x2).
+    Proof.
+      unfold IO_run_output in *.
+      rewrite IO_run_bindIO_eq.
+      simpl; f_equal.
+    Qed.
+
+    Lemma IO_run_output_bindIO_helper X Y inputs (m1: IOM X) m2 x2 out
+    : (exists inputs' out1 out2 x1,
+         out1 ++ out2 = out
+         /\ IO_run inputs m1 = (inputs', (out1, x1))
+         /\ IO_run_output inputs' (m2 x1) = (out2, x2))
+      <-> (@IO_run_output Y inputs (bindIO m1 m2) = (out, x2)).
+    Proof.
+      rewrite IO_run_output_bindIO_eq; simpl.
+      do ![ split
+          | move => ?
+          | progress destruct_head_hnf ex
+          | progress destruct_head_hnf and
+          | progress subst
+          | progress simpl_paths; simpl in *
+          | progress f_equal
+          | esplit ].
+    Qed.
+
+    Lemma IO_run_output_bindIO_helper' X Y inputs (m1: IOM X) m2 x2 out
+    : (let inputs' := fst (IO_run inputs m1) in
+       let out1 := fst (snd (IO_run inputs m1)) in
+       let x1 := snd (snd (IO_run inputs m1)) in
+       let out2 := fst (IO_run_output inputs' (m2 x1)) in
+       out1 ++ out2 = out
+       /\ snd (IO_run_output inputs' (m2 x1)) = x2)
+      <-> (@IO_run_output Y inputs (bindIO m1 m2) = (out, x2)).
+    Proof.
+      etransitivity; [ | by apply IO_run_output_bindIO_helper ].
+      do ![ split
+          | progress simpl
+          | move => ?
+          | progress subst
+          | progress destruct_head_hnf ex
+          | progress destruct_head_hnf prod
+          | progress destruct_head_hnf and
+          | by do ?esplit; try simpl_paths; simpl in *; subst; simpl ].
+    Qed.
+  End IO_run.
 
   Definition OutputM X := (seq D * X)%type.
 
@@ -375,18 +476,34 @@ End StateMT.
 End MonadTransformers.
 
 Lemma match_match_bool_result F X (b : bool) xT xF T xE xS
-: (match (if b return monadinst.Result F X then xT else xF) as r return T r with
-     | monadinst.Error f => xE f
-     | monadinst.Success x => xS x
+: (match (if b return Result F X then xT else xF) as r return T r with
+     | Error f => xE f
+     | Success x => xS x
    end)
-  = if b as b return T (if b return monadinst.Result F X then xT else xF)
+  = if b as b return T (if b return Result F X then xT else xF)
     then match xT with
-           | monadinst.Error f => xE f
-           | monadinst.Success x => xS x
+           | Error f => xE f
+           | Success x => xS x
          end
     else match xF with
-           | monadinst.Error f => xE f
-           | monadinst.Success x => xS x
+           | Error f => xE f
+           | Success x => xS x
          end.
 Proof. destruct b, xT, xF; reflexivity. Defined.
 Hint Rewrite match_match_bool_result : matchdb.
+
+Lemma IO_run_output_commute_if_rewrite Chan D Chan_eq A F X s b m1 m2 T xE xS
+: match snd (snd (@IO_run_output Chan D Chan_eq (A * Result F X) s (if b then m1 else m2))) as r return T r with
+    | Error f => xE f
+    | Success x => xS x
+  end = if b as b return T (snd (snd (@IO_run_output Chan D Chan_eq (A * Result F X) s (if b then m1 else m2))))
+        then match snd (snd (IO_run_output _ s m1)) as r return T r with
+               | Error f => xE f
+               | Success x => xS x
+             end
+        else match snd (snd (IO_run_output _ s m2)) as r return T r with
+               | Error f => xE f
+               | Success x => xS x
+             end.
+Proof. by destruct b. Defined.
+Hint Rewrite IO_run_output_commute_if_rewrite : matchdb.
