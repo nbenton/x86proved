@@ -30,14 +30,14 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Inductive Frag := Registers | Memory | Flags.
 Definition fragDom d :=
   match d with
-  | Registers => AnyReg
+  | Registers => RegPiece
   | Memory => PTR
   | Flags => Flag
   end.
 
 Definition fragTgt d :=
   match d with
-  | Registers => DWORD
+  | Registers => BYTE
     (* None = "memory not mapped" or "memory inaccessible".
        Access to such memory should cause a trap handler to be executed *)
   | Memory => option BYTE
@@ -60,10 +60,10 @@ Definition fragOf {sf: StateFrag} (x: carrier sf) := frag sf.
 
 Definition emptyPState : PState := fun _ => empFun _.
 
-Definition addRegToPState (s:PState) (r:AnyReg) (v:DWORD) : PState :=
+Definition addRegPieceToPState (s:PState) (rp:RegPiece) (v:BYTE) : PState :=
   fun (f:Frag) =>
   match f as f in Frag return fragDom f -> option (fragTgt f) with
-  | Registers => fun r' => if r == r' then Some v else s Registers r'
+  | Registers => fun rp' => if rp == rp' then Some v else s Registers rp'
   | Flags => s Flags
   | Memory => s Memory
   end.
@@ -299,8 +299,8 @@ Proof.
   transitivity (s2 f x); assumption.
 Qed.
 
-Instance addRegToPStateEquiv_m :
-  Proper (equiv ==> eq ==> eq ==> equiv) addRegToPState.
+Instance addRegPieceToPStateEquiv_m :
+  Proper (equiv ==> eq ==> eq ==> equiv) addRegPieceToPState.
 Proof.
   move => p q Hpeq r1 r2 Hr1eqr2 w1 w2 Hw1eqw2 f x; subst.
   destruct f; simpl; rewrite Hpeq; reflexivity.
@@ -506,8 +506,15 @@ Global Coercion lbool (b:bool) := lpropand b ltrue.
     "is" predicates on registers and flags
   ===========================================================================*)
 
-Definition regIs r v : SPred := eq_pred (addRegToPState emptyPState r v).
+Definition regPieceIs r v : SPred := eq_pred (addRegPieceToPState emptyPState r v).
 Definition flagIs f b : SPred := eq_pred (addFlagToPState emptyPState f b).
+Definition BYTEregIs r v : SPred := regPieceIs (BYTERegToRegPiece r) v.
+
+Definition regIs r (v:DWORD) : SPred :=
+   regPieceIs (AnyRegPiece r RegIx0) (getRegPiece v RegIx0)              
+** regPieceIs (AnyRegPiece r RegIx1) (getRegPiece v RegIx1)
+** regPieceIs (AnyRegPiece r RegIx2) (getRegPiece v RegIx2)
+** regPieceIs (AnyRegPiece r RegIx3) (getRegPiece v RegIx3).
 
 Inductive RegOrFlag :=
 | RegOrFlagR :> AnyReg -> RegOrFlag
@@ -586,7 +593,7 @@ Proof. rewrite isc_cat /=. by rewrite empSPR. Qed.
 Class StrictlyExact (P: SPred) := strictly_exact:
   forall s s', P s -> P s' -> s === s'.
 
-Instance StrictlyExactRegIs r v: StrictlyExact (regIs r v).
+Instance StrictlyExactRegPieceIs r v: StrictlyExact (regPieceIs r v).
 Proof. move => s s'. simpl. by move ->. Qed.
 
 Instance StrictlyExactFlagIs f v: StrictlyExact (flagIs f v).
@@ -603,6 +610,10 @@ specialize (QH s2 s2' H3 H3').
 rewrite -> PH, QH in H1.
 by rewrite (stateSplitsAsExtends H1) (stateSplitsAsExtends H1').
 Qed.
+
+Instance StrictlyExactRegIs r v: StrictlyExact (regIs r v).
+Proof. rewrite /regIs. do 3 (apply StrictlyExactSep; first apply StrictlyExactRegPieceIs). 
+apply StrictlyExactRegPieceIs. Qed. 
 
 Instance StrictlyExactEmpSP : StrictlyExact empSP.
 Proof. move => s s' H H'.
@@ -679,7 +690,7 @@ Global Opaque PStateSepAlgOps.
   ---------------------------------------------------------------------------*)
 Open Scope spred_scope.
 
-Lemma regIs_same (r:AnyReg) v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse.
+Lemma regPieceIs_same (r:RegPiece) v1 v2 : regPieceIs r v1 ** regPieceIs r v2 |-- lfalse.
 Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]].
 simpl in H1a, H1b. rewrite <-H1a in H1. rewrite <-H1b in H1.
 rewrite /sa_mul/PStateSepAlgOps/= in H1.
@@ -688,6 +699,19 @@ destruct (s Registers r); rewrite eq_refl in H1.
 destruct H1; by destruct H.
 by destruct H1.
 Qed.
+
+Lemma BYTEregIs_same (r:BYTEReg) v1 v2 : BYTEregIs r v1 ** BYTEregIs r v2 |-- lfalse.
+Proof. rewrite /BYTEregIs. apply regPieceIs_same. Qed. 
+
+Lemma sepRev4 P Q R S : P ** Q ** R ** S -|- S ** R ** Q ** P.
+Proof. rewrite (sepSPC P). rewrite (sepSPC Q). rewrite (sepSPC R). 
+by rewrite !sepSPA. Qed. 
+
+Lemma regIs_same (r:AnyReg) v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse.
+Proof. rewrite /stateIs/regIs. 
+rewrite sepRev4. rewrite sepSPA. 
+rewrite sepRev4. rewrite -!sepSPA. rewrite -> (@regPieceIs_same (AnyRegPiece r RegIx0)).
+by rewrite !sepSP_falseL. Qed. 
 
 Lemma flagIs_same (f:Flag) v1 v2 : f ~= v1 ** f ~= v2 |-- lfalse.
 Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]].

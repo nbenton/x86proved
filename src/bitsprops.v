@@ -391,6 +391,70 @@ Qed.
 Lemma toNat_low n1 n2 (p: BITS (n1+n2)) : toNat (low n1 p) = toNat p %% 2^n1.
 Proof. by rewrite -{1}(toNatK p) low_fromNat toNat_fromNat. Qed.
 
+Lemma allBitsEq n (p q: BITS n) : (forall i, i < n -> getBit p i = getBit q i) -> p = q.
+Proof. induction n. by rewrite (tuple0 p) (tuple0 q). 
+case/tupleP: p => [b p]. 
+case/tupleP: q => [c q]. 
+move => H. have H0:= H 0. rewrite /getBit/= in H0. rewrite H0 => //. 
+rewrite (IHn p q). done.
+move => i LT. apply (H i.+1 LT). 
+Qed. 
+
+Require Import tuplehelp. 
+Lemma lowBitsEq n1 n2 (p q: BITS (n1+n2)) : 
+  (forall i, i < n1 -> getBit p i = getBit q i) <-> low n1 p = low n1 q.
+Proof. induction n1 => //=.
+case/tupleP: p => [b p]. fold plus in p.
+case/tupleP: q => [c q]. fold plus in q. 
+rewrite 2!beheadCons 2!theadCons /getBit/=. split => H. 
++ have H0:= H 0. rewrite /= in H0. rewrite H0 => //. 
+  rewrite (proj1 (IHn1 p q)). done. move => i LT. apply (H i.+1 LT). 
++ move => i LT. destruct i. by injection H. 
+  injection H => H1 H2. subst. apply (IHn1 p q). apply val_inj. apply H1. apply LT. 
+Qed. 
+
+Lemma highBitsEq n1 n2 (p q: BITS (n1+n2)) : 
+  (forall i, n1 <= i -> getBit p i = getBit q i) <-> high n2 p = high n2 q.
+Proof. induction n1 => /=.
+split.  
+have ABE := @allBitsEq _ p q. move => H. apply: ABE. move => i H'. rewrite H => //.
+by move => ->.
+case/tupleP: p => [b p]. fold plus in p. 
+case/tupleP: q => [c q]. fold plus in q. 
+rewrite 2!beheadCons /getBit/=. split => H. 
++ apply IHn1. move => i LE. apply (H i.+1 LE). 
++ have IH' := (proj2 (IHn1 p q)). case => // i. by apply IH'. 
+Qed. 
+
+Lemma getBit_low n1: forall n2 (p: BITS (n1+n2)) i,
+  getBit (low n1 p) i = if i < n1 then getBit p i else false.
+Proof. induction n1 => // n2 p i. destruct i => //. case/tupleP: p => [b p]. 
+rewrite /getBit/joinlsb/= beheadCons theadCons. destruct i => //. apply IHn1. 
+Qed. 
+
+Lemma getBit_high n1: forall n2 (p: BITS (n1+n2)) i,
+  getBit (high n2 p) i = getBit p (i+n1).
+Proof. induction n1 => // n2 p i. by rewrite addn0.  
+rewrite addnS. case/tupleP: p => [b p]. apply IHn1. Qed. 
+
+Lemma getBit_catB n1 n2 (p:BITS n1) (q:BITS n2) : 
+  forall i, getBit (p ## q) i = if i < n2 then getBit q i else getBit p (i-n2).
+Proof. induction n2 => // i. 
+rewrite (tuple0 q). destruct i => //. 
+case/tupleP: q => [b q] //. destruct i => //. apply IHn2. 
+Qed. 
+
+Lemma sliceEq n1 n2 n3 (p q: BITS (n1+n2+n3)) : 
+  (forall i, n1 <= i < n1+n2 -> getBit p i = getBit q i) <->
+  slice n1 n2 n3 p = slice n1 n2 n3 q.
+Proof. rewrite /slice/split3/split2. 
+rewrite <-highBitsEq. split. 
+move => H1 i LE. rewrite 2!getBit_low. 
+case LT: (i < (n1+n2)) => //.
+- apply H1. by rewrite LE LT. 
+move => H i. move/andP => [LE LT]. 
+specialize (H i LE). by rewrite 2!getBit_low LT in H. 
+Qed. 
 
 (*---------------------------------------------------------------------------
     Zero and sign extension

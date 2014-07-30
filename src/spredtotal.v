@@ -16,7 +16,7 @@ Transparent ILFun_Ops.
 Definition toPState (s:ProcState) : PState :=
   fun f:Frag =>
   match f return fragDom f -> option (fragTgt f) with
-  | Registers => fun r => Some (registers s r)
+  | Registers => fun rp => let: AnyRegPiece r ix := rp in Some (getRegPiece (registers s r) ix)
   | Flags => fun f => Some (flags s f)
   | Memory => fun p => Some (memory s p)
   end.
@@ -27,14 +27,21 @@ Lemma totalProcState (s: ProcState) : isTotalPState s.
 Proof. move => f x. destruct f; destruct x => //.  Qed.
 
 Require Import Coq.Logic.FunctionalExtensionality x86proved.charge.csetoid.
+
 Lemma toPState_inj s1 s2 : toPState s1 === toPState s2 -> s1 = s2.
 Proof. move => H.
 destruct s1 as [s1r s1f s1m].
 destruct s2 as [s2r s2f s2m].
 unfold "===", toPState in H.
 simpl in H.
-have E1: s1r = s2r.
-extensionality x. specialize (H Registers x). by injection H.
+have E1: s1r = s2r. extensionality x. 
+have H0 := H Registers (AnyRegPiece x RegIx0).
+have H1 := H Registers (AnyRegPiece x RegIx1).
+have H2 := H Registers (AnyRegPiece x RegIx2).
+have H3 := H Registers (AnyRegPiece x RegIx3).
+clear H.
+apply getRegPiece_ext; congruence.
+
 have E2: s1f = s2f.
 extensionality x. specialize (H Flags x). by injection H.
 have E3: s1m = s2m.

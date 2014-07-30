@@ -25,6 +25,11 @@ Definition getRegFromProcState r : ST DWORD :=
   let! s = getProcState;
   retn (registers s r).
 
+Definition getRegPieceFromProcState rp :=
+  let: AnyRegPiece r ix := rp in
+  let! v = getRegFromProcState r;
+  retn (getRegPiece v ix).
+ 
 (* Retrieving a flag that is undefined leads to unspecified behaviour *)
 Definition getFlagFromProcState f :=
   let! s = getProcState;
@@ -62,6 +67,11 @@ Definition getDWORDorBYTEFromProcState dword := getFromProcState (R:=DWORDorBYTE
 Definition setRegInProcState (r:AnyReg) d :=
   let! s = getProcState;
   setProcState (s!r:=d).
+
+Definition setBYTERegInProcState (r: BYTEReg) (b: BYTE) :=
+  let: AnyRegPiece r ix := BYTERegToRegPiece r in
+    let! d = getRegFromProcState r;
+    setRegInProcState r (putRegPiece d ix b).
 
 Definition updateFlagInProcState (f:Flag) (b:bool) :=
   let! s = getProcState;

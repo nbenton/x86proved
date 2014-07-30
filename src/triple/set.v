@@ -10,38 +10,6 @@ Import Prenex Implicits.
 
 Local Transparent PStateSepAlgOps.
 
-Lemma separateSetReg (r:AnyReg) (v w:DWORD) Q s :
-  (r~=v ** Q) (toPState s) -> (r~=w ** Q) (toPState (s!r:=w)).
-Proof.
-simpl.
-move => [s1 [s2 [H1 [H2 H3]]]].
-
-rewrite /= in H2.
-
-exists (addRegToPState s1 r w), s2.
-
-split.
-move => fr. specialize (H1 fr).
-destruct fr => //.
-  (* registers *)
-rewrite /splitsAs/= in H1. rewrite /splitsAs/=.
-move => r'. specialize (H1 r').
-case E: (r == r').
-- rewrite (eqP E).
-  rewrite setThenGetSame.
-  destruct H1.
-  * left. split => //. by destruct H.
-  * rewrite (eqP E) in H2. rewrite -H2 in H. case: H => _ H.
-    simpl in H. by rewrite eqxx in H.
-- rewrite setThenGetDistinct => //. by apply negbT in E.
-simpl.
-split; [|assumption].
-rewrite -H2 /addRegToPState.
-apply: state_extensional => [[]] //. move=> r' /=.
-by case E: (r == r').
-Qed.
-
-
 Lemma separateSetBYTE p v w Q s :
   (byteIs p v ** Q) (toPState s) -> (byteIs p w ** Q) (toPState (s!p:=w)).
 Proof.
@@ -74,6 +42,261 @@ by case E: (p == p').
 
 Qed.
 
+Require Import bitsprops.
+Lemma updateSliceGetSame n1 n2 n3 d v : slice n1 n2 n3 (updateSlice n1 n2 n3 d v) = v.
+Proof. by rewrite /slice/updateSlice/split3/split2 low_catB high_catB. Qed.
+
+Lemma setThenGetRegPieceSame d ix v : getRegPiece (putRegPiece d ix v) ix = v.
+Proof. rewrite /getRegPiece/putRegPiece. case ix; apply updateSliceGetSame. Qed.
+
+(* This proof is absurd *)
+Lemma setThenGetRegPieceDistinct d ix1 ix2 v : ix1 != ix2 ->
+  getRegPiece (putRegPiece d ix1 v) ix2 = getRegPiece d ix2.
+Proof. move => H. rewrite /getRegPiece/putRegPiece. 
+destruct ix2. 
+  destruct ix1.  
+  + done. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT': i < 8+8. by apply ltn_addr.
+    rewrite (@getBit_catB 16 16) => //. 
+    rewrite (@getBit_catB 8 8) => //. 
+    rewrite getBit_low LT. rewrite getBit_low. by rewrite LT'. 
+  + apply sliceEq => i /andP [LE LT]. 
+    have LT' : i < 8+8 by apply ltn_addr.
+    have LT'' : i < 8+8+8 by apply ltn_addr.
+    rewrite /updateSlice/split3/split2. 
+    rewrite (@getBit_catB 8 24) => //. 
+    rewrite (@getBit_catB 8 16) => //. 
+    rewrite getBit_low LT'.  
+    by rewrite getBit_low LT''.  
+  + apply sliceEq => i /andP [LE LT]. 
+    have LT' : i < 8+8 by apply ltn_addr.
+    have LT'' : i < 8+8+8 by apply ltn_addr.
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite /updateSlice/split3/split2. 
+    rewrite (@getBit_catB 0 32) => //. 
+    rewrite (@getBit_catB 8 24) => //. 
+    rewrite getBit_low LT''. 
+    by rewrite getBit_low LT'''.  
+  destruct ix1. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2.
+    rewrite (@getBit_catB 24 8). have NLT: ~~(i<8). by rewrite ltnNge in LE. 
+    apply negbTE in NLT. rewrite NLT. rewrite getBit_high. by rewrite subnK. 
+  + done.
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT'' : i < 8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 8 24) => //. 
+    rewrite (@getBit_catB 8 16) => //. 
+    rewrite getBit_low LT.  
+    by rewrite getBit_low LT''.  
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT'' : i < 8+8+8 by apply ltn_addr.
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 0 32) => //. 
+    rewrite (@getBit_catB 8 24) => //. 
+    rewrite getBit_low LT''.  
+    by rewrite getBit_low LT'''.  
+
+  destruct ix1. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 24 8). 
+    have NLT: ~~(i<8). rewrite ltnNge negbK. by apply: ltn_trans LE. 
+    rewrite (negbTE NLT). rewrite getBit_high. rewrite subnK. done. 
+    by rewrite ltnNge. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 16 16) => //. 
+    have NLT: ~~(i<16). by rewrite ltnNge in LE. 
+    rewrite (negbTE NLT). rewrite getBit_high. by rewrite subnK. 
+  + by elim H. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    have LT''' : i < 8+8+8+8 by apply ltn_addr.
+    rewrite (@getBit_catB 0 32) => //. rewrite LT'''. 
+    rewrite (@getBit_catB 8 24) => //. rewrite LT. 
+    rewrite getBit_low LT. by rewrite getBit_low LT'''.
+  destruct ix1. 
+  + apply sliceEq => i /andP [LE LT]. 
+    rewrite /updateSlice/split3/split2. 
+    rewrite (@getBit_catB 24 8) => //. 
+    have NLT: ~~(i<8). rewrite ltnNge. rewrite negbK.
+    by apply: ltn_trans LE. 
+    rewrite (negbTE NLT). rewrite getBit_high. rewrite subnK. done.
+    by  rewrite ltnNge. 
+  + apply sliceEq => i /andP [LE LT]. 
+  rewrite /updateSlice/split3/split2. 
+  rewrite (@getBit_catB 16 16) => //. 
+  have NLT: ~~(i<16). rewrite ltnNge negbK. by apply: ltn_trans LE. 
+  rewrite (negbTE NLT). rewrite getBit_high. rewrite subnK. done.
+  by rewrite ltnNge.
+  + apply sliceEq => i /andP [LE LT]. 
+  rewrite /updateSlice/split3/split2. 
+  rewrite (@getBit_catB 8 24) => //. 
+  have NLT: ~~(i<24). by rewrite ltnNge in LE. 
+  rewrite (negbTE NLT). rewrite getBit_high. by rewrite subnK.
+discriminate H.  
+Qed.   
+
+Lemma AnyRegPiece_eqE r1 ix1 r2 ix2 : 
+  AnyRegPiece r1 ix1 == AnyRegPiece r2 ix2 = (r1 == r2) && (ix1 == ix2).
+Proof. done. Qed. 
+
+Lemma separateSetRegPiece (r:AnyReg) ix (v w:BYTE) Q s :
+  (regPieceIs (AnyRegPiece r ix) v ** Q) (toPState s) -> 
+  (regPieceIs (AnyRegPiece r ix) w ** Q) (s ! r := putRegPiece (registers s r) ix w).
+Proof. 
+rewrite /regPieceIs. rewrite /update/ProcStateUpdateOps/=.
+move => [s1 [s2 [H1 [H2 H3]]]].
+exists (addRegPieceToPState s1 (AnyRegPiece r ix) w), s2.
+
+split.
+move => fr. specialize (H1 fr).
+destruct fr => //.
+  (* registers *)
+rewrite /splitsAs/= in H1. rewrite /splitsAs/=.
+move => [r0 ix0]. specialize (H1 (AnyRegPiece r0 ix0)). 
+case Er: (r == r0). rewrite (eqP Er). rewrite (eqP Er) in H2.
+case Ei: (ix == ix0). rewrite (eqP Ei) eq_refl. rewrite (eqP Ei) in H2. 
+- rewrite setThenGetSame.
+  destruct H1.
+  * left. destruct H as [Ha Hb]. by rewrite setThenGetRegPieceSame.    
+  * rewrite -H2 in H. case: H => _ H. simpl in H. by rewrite eqxx in H. 
+- rewrite AnyRegPiece_eqE. rewrite Ei andbF.
+  rewrite setThenGetSame => //. 
+  rewrite setThenGetRegPieceDistinct => //. by rewrite  Ei. 
+  rewrite AnyRegPiece_eqE. rewrite Er andFb.
+  rewrite setThenGetDistinct => //. by rewrite Er. 
+
+simpl. 
+split; [|assumption].
+simpl in H2. rewrite -H2 /addRegPieceToPState.
+apply: state_extensional => [[]] //. move=> r' /=.
+by case E: (AnyRegPiece r ix  == r').
+Qed. 
+
+Lemma RegPieceFromStateDefAux r P s b i : (regPieceIs (AnyRegPiece r i) b ** P) s -> 
+  s Registers (AnyRegPiece r i) = Some b. 
+Proof. move => [s1 [s2 [Hs [Hs1 Hs2]]]].
+  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
+  specialize (Hs Registers (AnyRegPiece r i) b). 
+  rewrite /= in Hs. apply Hs. by rewrite -Hs1/= eq_refl. 
+Qed.
+
+Lemma RegPieceFromStateDef (r:AnyReg) (v:DWORD) (s: PState) :
+  (r~=v) s -> 
+  forall ix,
+  s Registers (AnyRegPiece r ix) = Some (getRegPiece v ix).
+Proof. move => H. 
+rewrite /=/regIs in H. 
+elim. 
+- by apply RegPieceFromStateDefAux in H. 
+- apply lentails_eq in H. do 2 rewrite <- sepSPA in H. 
+rewrite -> (sepSPC (regPieceIs (AnyRegPiece r RegIx0) _)) in H. do 2 rewrite -> sepSPA in H.
+apply lentails_eq in H. by apply RegPieceFromStateDefAux in H. 
+- apply lentails_eq in H. do 1 rewrite <- sepSPA in H. rewrite -> sepSPC in H.
+rewrite -> sepSPA in H. apply lentails_eq in H. by apply RegPieceFromStateDefAux in H. 
+- apply lentails_eq in H. do 2 rewrite <- sepSPA in H. rewrite -> sepSPC in H.
+rewrite -> sepSPA in H. apply lentails_eq in H. by apply RegPieceFromStateDefAux in H. 
+Qed. 
+
+Lemma addRegPieceIsSepAux rp b b' (P:SPred) s : 
+  (regPieceIs rp b' ** P) s ->
+  (regPieceIs rp b ** P) (addRegPieceToPState s rp b).
+Proof. move => [s1 [s2 [Hs [Hs1 Hs2]]]].
+exists (addRegPieceToPState emptyPState rp b), s2. split => //. 
+elim. 
+(* registers *)
+- specialize (Hs Registers).  
+destruct (splitsAsIncludes Hs) as [Hsa Hsb].
+move => rp'. simpl. case E: (rp == rp'). 
+  + specialize (Hs rp'). 
+    destruct (s Registers rp'). destruct Hs. intuition. 
+    specialize (Hs1 Registers rp'). rewrite /= E in Hs1. rewrite -Hs1 in H. by destruct H. 
+    left. intuition.
+  + specialize (Hs rp'). 
+    destruct (s Registers rp'). 
+    destruct Hs. specialize (Hs1 _ rp'). rewrite/= E in Hs1. rewrite -Hs1 in H. by destruct H. 
+    right. by destruct H. by destruct Hs.  
+(* memory *)
+- move => v. specialize (Hs Memory v). simpl. destruct (s Memory v). 
+  destruct Hs. specialize (Hs1 Memory v). simpl in Hs1. rewrite <- Hs1 in H. by destruct H. 
+  right. intuition. by destruct Hs. 
+(* flags *)
+- move => v. specialize (Hs Flags v). simpl. destruct (s Flags v). 
+  destruct Hs. specialize (Hs1 Flags v). simpl in Hs1. rewrite <- Hs1 in H. by destruct H. 
+  right. intuition. by destruct Hs. 
+Qed. 
+
+Lemma addRegPieceIsSep rp b (P:SPred) s : 
+  P s ->
+  (s Registers rp = None) ->
+  (regPieceIs rp b ** P) 
+  (addRegPieceToPState s rp b).
+Proof. move => pre.
+exists (addRegPieceToPState emptyPState rp b). 
+exists s.
+split => //. 
+simpl. move => fr/=. destruct fr. move => rp'. simpl. 
+case E: (rp == rp'). left. rewrite -(eqP E). done.
+case E': (s Registers rp') => [x |]. by right. done.
+move => p. simpl. case E': (s Memory p) => [x |]. by right. done.
+move => p. simpl. case E': (s Flags p) => [x |]. by right. done.
+Qed. 
+
+Lemma separateSetReg (r:AnyReg) (v w:DWORD) Q (s:ProcState) :
+  (r~=v ** Q) s -> (r~=w ** Q) (s!r:=w).
+Proof.
+move => [s1 [s2 [Hs [Hs1 Hs2]]]].
+simpl in Hs1. rewrite /stateIs/regIs in Hs1.
+exists
+ (addRegPieceToPState 
+       (addRegPieceToPState 
+       (addRegPieceToPState
+       (addRegPieceToPState s1
+         (AnyRegPiece r RegIx0) (getRegPiece w RegIx0))
+         (AnyRegPiece r RegIx1) (getRegPiece w RegIx1))
+         (AnyRegPiece r RegIx2) (getRegPiece w RegIx2))
+         (AnyRegPiece r RegIx3) (getRegPiece w RegIx3)), s2.
+have RPS := RegPieceFromStateDef Hs1. 
+
+split; last first. split => //.
+rewrite /stateIs/regIs in Hs1. rewrite /stateIs/regIs.
+apply lentails_eq. do 2 rewrite <- sepSPA. rewrite sepSPC. rewrite sepSPA. apply lentails_eq.
+eapply addRegPieceIsSepAux. 
+apply lentails_eq. do 2 rewrite <- sepSPA. rewrite sepSPC. rewrite sepSPA. apply lentails_eq.
+eapply addRegPieceIsSepAux. 
+apply lentails_eq. do 2 rewrite <- sepSPA. rewrite sepSPC. rewrite sepSPA. apply lentails_eq.
+eapply addRegPieceIsSepAux. 
+apply lentails_eq. do 2 rewrite <- sepSPA. rewrite sepSPC. rewrite sepSPA. apply lentails_eq.
+eapply addRegPieceIsSepAux. 
+apply Hs1. 
+
+move => fr. 
+specialize (Hs fr).
+destruct fr => //.
+  (* registers *)
+rewrite /splitsAs/= in Hs. rewrite /splitsAs/=. 
+elim => [r0 ix0].
+case Er: (r == r0). rewrite (eqP Er). rewrite (eqP Er) in Hs1, RPS.
+specialize (RPS ix0). 
+specialize (Hs (AnyRegPiece r0 ix0)). simpl in Hs. rewrite RPS in Hs. 
+destruct Hs. 
+- left. destruct ix0; rewrite eq_refl setThenGetSame;
+  do 3 (try replace (_ == _) with false by by rewrite AnyRegPiece_eqE andbF); intuition.
+- by destruct H. 
+
+(* r != r0 *)
+do 4 replace (_ == _) with false by by rewrite AnyRegPiece_eqE Er.
+rewrite setThenGetDistinct; last by rewrite Er. simpl. apply (Hs (AnyRegPiece r0 ix0)). 
+Qed. 
+
 (** TODO(t-jagro): Add [separateSetDWORD] *)
 (*
 Lemma separateSetDWORD (p:PTR) (v w:DWORD) Q s :
@@ -82,8 +305,8 @@ Proof.
   move => [s1 [s2 [H1 [H2 H3]]]].
   rewrite /pointsTo/= in H2. *)
 
-Lemma separateSetFlag (f:Flag) v w Q s :
-  (f ~= v ** Q) (toPState s) -> (f ~= w ** Q) (toPState (s!f:=w)).
+Lemma separateSetFlag (f:Flag) v w Q (s: ProcState) :
+  (f ~= v ** Q) s -> (f ~= w ** Q) (s!f:=w).
 Proof.
 move => [s1 [s2 [H1 [H2 H3]]]].
 rewrite /flagIs/= in H2.
@@ -125,23 +348,10 @@ Lemma triple_setRegSep (r:AnyReg) v w S
 : TRIPLE (r~=v ** S) (setRegInProcState r w) empOP (r~=w ** S).
 Proof. triple_by_compute. apply: separateSetReg; eassumption. Qed.
 
-(*
-Lemma triple_setBYTERegSep r (v:DWORD) (w:BYTE) :
-  forall S, TRIPLE (regIs r v ** S) (setBYTERegInProcState r w) (regIs r (@high 24 8 v ## w) ** S).
-Proof.
-move => S s pre. eexists _. split. by rewrite /setBYTERegInProcState/setProcState.
-have SRR := separateSetReg _ pre.
-elim pre => [s1 [s2 [Hs [Hs1 _]]]].
-rewrite /regIs in Hs1.
-specialize (Hs1 Registers r); simpl in Hs1.
-assert (r == r) by intuition.
-rewrite H in Hs1.
-specialize (Hs Registers r); destruct Hs as [[H1 H2] | [H1 H2]]; subst.
-rewrite H1 in Hs1. inversion Hs1; subst.
-apply SRR.
-by congruence.
-Qed.
-*)
+Lemma triple_setBYTERegSep (r:BYTEReg) v w S
+: TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) empOP (BYTEregIs r w ** S).
+Proof. rewrite /BYTEregIs/=/setBYTERegInProcState. elim E: (BYTERegToRegPiece r) => [r' b]. 
+triple_by_compute. apply: separateSetRegPiece; eassumption. Qed.
 
 Lemma triple_setRegSepGen (r:AnyReg) v w P R:
   P |-- r~=v ** R ->

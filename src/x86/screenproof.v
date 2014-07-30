@@ -92,8 +92,8 @@ Proof.
   move => NC NR.
   rewrite /inlineReadChar_spec/inlineReadChar/memIs/interpProgram/charIs.
 
-  autorewrite with push_at. rewrite {1}/stateIsAny.
-  specintros => oldeax.
+  autorewrite with push_at.
+  specintros => oldal.
 
   have ICCP := inlineComputeCharPos_correct NC NR.
   rewrite /inlineComputeCharPos_spec in ICCP.
@@ -101,7 +101,7 @@ Proof.
 
   (* MOV EAX, BYTE [EDI + 0] *)
   try_basicapply MOV_RMb_rule.
-  rewrite -> addB0. rewrite /BYTEregIs/BYTEregIsAux. sbazooka.
+  rewrite -> addB0. sbazooka.
 
   rewrite /stateIsAny addB0.
   sbazooka.

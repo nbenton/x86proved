@@ -258,20 +258,6 @@ Definition specAtMemSpec dword ms (f: DWORDorBYTE dword -> spec) :=
         f v @ (regToAnyReg r ~= pbase ** addB pbase offset :-> v)
     else Forall v, f v @ (offset :-> v).
 
-Definition BYTEregIsAux (r: BYTEReg) (d:DWORD) (b: BYTE) : SPred :=
-  match r in BYTEReg return SPred with
-  | AL => low 8 d == b /\\ EAX ~= d
-  | BL => low 8 d == b /\\ EBX ~= d
-  | CL => low 8 d == b /\\ ECX ~= d
-  | DL => low 8 d == b /\\ EDX ~= d
-  | AH => low 8 (@high 24 8 d) == b /\\ EAX ~= d
-  | BH => low 8 (@high 24 8 d) == b /\\ EBX ~= d
-  | CH => low 8 (@high 24 8 d) == b /\\ ECX ~= d
-  | DH => low 8 (@high 24 8 d) == b /\\ EDX ~= d
-  end.
-
-Definition BYTEregIs r b := Exists d, BYTEregIsAux r d b.
-
 Definition DWORDorBYTEregIs d : DWORDorBYTEReg d -> DWORDorBYTE d -> SPred :=
   if d as d return DWORDorBYTEReg d -> DWORDorBYTE d -> SPred
   then fun r v => r ~= v else fun r v => BYTEregIs r v.
@@ -422,27 +408,16 @@ Lemma evalReg_rule (r: Reg) v c O Q :
 Proof. by apply triple_letGetRegSep. Qed.
 Global Opaque evalReg.
 
-Lemma evalBYTERegAux_rule (r: BYTEReg) d v c O Q :
-  forall S,
-  TRIPLE (BYTEregIsAux r d v ** S) (c v) O Q ->
-  TRIPLE (BYTEregIsAux r d v ** S) (bind (evalBYTEReg r) c) O Q.
-Proof.
-  rewrite /evalBYTEReg/BYTEregIsAux.
-  move => S T.
-  destruct r; triple_apply triple_letGetReg using sbazooka;
-  autorewrite with triple;
-    by apply triple_preEq_and_star.
-Qed.
+
 
 Lemma evalBYTEReg_rule (r: BYTEReg) v c O Q :
   forall S,
   TRIPLE (BYTEregIs r v ** S) (c v) O Q ->
   TRIPLE (BYTEregIs r v ** S) (bind (evalBYTEReg r) c) O Q.
 Proof.
-move => S T.
-apply triple_pre_existsSep => d.
-triple_apply evalBYTERegAux_rule. rewrite /BYTEregIs in T.
-triple_apply T using sbazooka.
+move => S T. rewrite /BYTEregIs. 
+triple_apply triple_letGetRegPieceSep. 
+triple_apply T. 
 Qed.
 Global Opaque evalBYTEReg.
 
@@ -454,26 +429,6 @@ Proof.
 destruct d; [apply evalReg_rule | apply evalBYTEReg_rule].
 Qed.
 Opaque evalDWORDorBYTEReg.
-
-(** TODO(t-jagro): Move [ASSOC] and [LOWLEMMA] elsewhere. *)
-Lemma ASSOC (D: WORD) (b c:BYTE) : (D ## b) ## c = D ## b ## c.
-Proof. rewrite /catB. apply val_inj. simpl. by rewrite -catA. Qed.
-
-Lemma LOWLEMMA (D: WORD) (b c:BYTE): low 8 (@high 24 8 (D ## b ## c)) == b.
-Proof. by rewrite -ASSOC high_catB low_catB. Qed.
-
-Lemma triple_setBYTERegSep r v w :
-  forall S, TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) empOP (BYTEregIs r w ** S).
-Proof.
-move => S.
-rewrite /BYTEregIsAux/setBYTERegInProcState.
-destruct r; apply triple_pre_existsSep => d; apply triple_pre_existsSep => _;
-  triple_apply triple_letGetRegSep;
-  triple_apply triple_setRegSep using (rewrite /BYTEregIs/BYTEregIsAux;
-                                       sbazooka;
-                                         by (rewrite low_catB || rewrite LOWLEMMA)).
-Qed.
-Global Opaque setBYTERegInProcState.
 
 Lemma triple_setDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w :
   forall S, TRIPLE (DWORDorBYTEregIs r v ** S) (setDWORDorBYTERegInProcState _ r w) empOP

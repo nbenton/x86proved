@@ -1,6 +1,9 @@
 (*===========================================================================
     Model for x86 registers
     Note that the EFL register (flags) is treated separately.
+
+    These are registers as used inside instructions, and can refer to
+    overlapping sections of the real machine state e.g. AL, AH, AX, EAX
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.bitsrep.
@@ -39,6 +42,9 @@ Canonical Structure AnyRegEqType := Eval hnf in EqType _ AnyRegEqMixin.
 
 (* Segment registers *)
 Inductive SegReg := CS | DS | SS | ES | FS | GS.
+
+(* Byte registers *)
+Inductive BYTEReg := AL|BL|CL|DL|AH|BH|CH|DH.
 
 (* Standard numbering of registers *)
 Definition natToReg n : option Reg :=
@@ -95,3 +101,77 @@ Proof. case; [case; [case; done | done] | done]. Qed.
 
 Definition AnyReg_finMixin := Eval hnf in FinMixin AnyReg_enumP.
 Canonical AnyReg_finType :=  Eval hnf in FinType _ AnyReg_finMixin.
+
+(*---------------------------------------------------------------------------
+    Register pieces: these are the bytes that make up the register state
+  ---------------------------------------------------------------------------*)
+Inductive RegIx := RegIx0 | RegIx1 | RegIx2 | RegIx3.
+Definition RegIxToNat ix := match ix with RegIx0 => 0 | RegIx1 => 1 | RegIx2 => 2 | RegIx3 => 3 end.
+Lemma RegIxToNat_inj : injective RegIxToNat.
+Proof. by case; case. Qed.
+
+Canonical Structure RegIxEqMixin := InjEqMixin RegIxToNat_inj.
+Canonical Structure RegIxEqType := Eval hnf in EqType _ RegIxEqMixin.
+
+Inductive RegPiece := AnyRegPiece (r: AnyReg) (ix: RegIx).
+Definition RegPieceToCode rp :=  let: AnyRegPiece r b := rp in (AnyRegToNat r, RegIxToNat b). 
+Lemma RegPieceToCode_inj : injective RegPieceToCode.
+Proof. by move => [r1 b1] [r2 b2] /= [/AnyRegToNat_inj -> /RegIxToNat_inj ->]. Qed. 
+
+Canonical Structure RegPieceEqMixin := InjEqMixin RegPieceToCode_inj.
+Canonical Structure RegPieceEqType := Eval hnf in EqType _ RegPieceEqMixin.
+
+(* This should go somewhere else really *)
+Definition getRegPiece (v: DWORD) (ix: RegIx)  := 
+  match ix with 
+  | RegIx0 => slice 0 8 _ v 
+  | RegIx1 => slice 8 8 _ v 
+  | RegIx2 => slice 16 8 _ v 
+  | RegIx3 => slice 24 8 _ v 
+  end.
+
+Definition putRegPiece (v: DWORD) (ix: RegIx) (b: BYTE) : DWORD :=
+  match ix with
+  | RegIx0 => updateSlice 0 8 _ v b 
+  | RegIx1 => updateSlice 8 8 _ v b 
+  | RegIx2 => updateSlice 16 8 _ v b 
+  | RegIx3 => updateSlice 24 8 _ v b  
+  end.
+  
+Require Import bitsprops.
+Lemma getRegPiece_ext (v w: DWORD) :
+  getRegPiece v RegIx0 = getRegPiece w RegIx0 ->
+  getRegPiece v RegIx1 = getRegPiece w RegIx1 ->
+  getRegPiece v RegIx2 = getRegPiece w RegIx2 ->
+  getRegPiece v RegIx3 = getRegPiece w RegIx3 ->
+  v = w. 
+Proof. move => H0 H1 H2 H3.
+rewrite /getRegPiece in H0. 
+rewrite /getRegPiece in H1. 
+rewrite /getRegPiece in H2. 
+rewrite /getRegPiece in H3. 
+have S0 := proj2 (sliceEq _ _) H0. 
+have S1 := proj2 (sliceEq _ _) H1. 
+have S2 := proj2 (sliceEq _ _) H2. 
+have S3 := proj2 (sliceEq _ _) H3. 
+apply allBitsEq. 
+move => i LT. 
+case LT8: (i < n8). apply (S0 _ LT8). 
+case LT16: (i < n16). apply S1. by rewrite LT16 leqNgt LT8. 
+case LT24: (i < n24). apply S2. by rewrite LT24 leqNgt LT16. 
+apply S3. by rewrite LT leqNgt LT24. 
+Qed.
+
+Definition BYTERegToRegPiece (r:BYTEReg) :=
+match r with
+| AL => AnyRegPiece EAX RegIx0
+| AH => AnyRegPiece EAX RegIx1
+| BL => AnyRegPiece EBX RegIx0
+| BH => AnyRegPiece EBX RegIx1
+| CL => AnyRegPiece ECX RegIx0
+| CH => AnyRegPiece ECX RegIx1
+| DL => AnyRegPiece EDX RegIx0
+| DH => AnyRegPiece EDX RegIx1
+end.
+
+

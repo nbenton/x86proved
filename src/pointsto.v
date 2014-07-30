@@ -876,7 +876,7 @@ Qed.
 
 (* Disjointness for registers, flags and bytes *)
 Lemma regIs_disjoint (r1 r2: AnyReg) v1 v2 : r1 ~= v1 ** r2 ~= v2 |-- r1 <> r2 /\\ (r1 ~= v1 ** r2 ~= v2).
-Proof. case E: (r1 == r2). rewrite (eqP E). by setoid_rewrite regIs_same at 1.
+Proof. case E: (r1 == r2). rewrite (eqP E). by rewrite ->regIs_same at 1.
 ssplit; last done. move => H. by rewrite H eq_refl in E.
 Qed.
 

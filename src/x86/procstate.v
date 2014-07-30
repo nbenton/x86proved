@@ -1,7 +1,7 @@
 (*===========================================================================
     Processor state: registers, flags and memory
   ===========================================================================*)
-Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.finfun Ssreflect.fintype Ssreflect.eqtype Ssreflect.tuple.
 Require Export x86proved.update x86proved.x86.reg x86proved.x86.regstate x86proved.x86.flags x86proved.x86.mem x86proved.bitsrep.
 Require Import x86proved.bitsops.
 
@@ -47,4 +47,6 @@ Global Instance ProcStateUpdateOpsDWORD : UpdateOps ProcState PTR DWORD :=
   mkProcState (registers s) (flags s)
     (ms !p:=b0 !incB p:=b1 !incB(incB p):=b2 !incB(incB(incB p)):=b3).
 
+Definition toSlice (b: BITS 2) := toNat b * 8. 
+  
 (* @TODO: update lemmas *)
