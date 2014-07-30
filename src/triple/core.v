@@ -40,8 +40,8 @@ Lemma triple_fin {T} (v : T) (P:SPred) (c:ST T) (O:OPred) (Q:SPred)
 : valued_TRIPLE v P c O Q.
 Proof.
   move => s H'.
-  specialize (H s H'); simpl in H; generalize dependent (c s).
-  move => *.
+  specialize (H s H'); simpl in H.
+  generalize dependent (c s) => *.
   do ![ progress subst
       | progress destruct_head False
       | progress destruct_head errorMT
@@ -50,6 +50,7 @@ Proof.
       | progress destruct_head prod
       | progress destruct_head unit
       | progress destruct_head and
+      | progress split_and
       | by do !esplit ].
 Qed.
 

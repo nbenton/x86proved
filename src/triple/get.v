@@ -16,7 +16,11 @@ Import Prenex Implicits.
 Local Transparent ILFun_Ops SABIOps PStateSepAlgOps.
 
 Local Ltac pre_let :=
-  eapply valued_triple_seqcat; first by apply empOPL.
+  let lem := match goal with
+               | [ |- valued_TRIPLE ?v' ?P' _ ?O2 ?P'' -> valued_TRIPLE ?v' ?P0 (bind ?c1 ?c2) ?O0 ?P'' ]
+                 => constr:(fun O1 v => @valued_triple_seqcat _ _ P0 P' P'' O1 O2 c1 c2 v v' O0)
+             end in
+  eapply lem; first by apply empOPL.
 
 (** In order to get [specialize_all_ways] to pick up values to
     [specialize] hypotheses with, such as [Registers] or [Flags],
