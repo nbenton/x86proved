@@ -214,6 +214,58 @@ Section IO.
     Qed.
   End IO_run.
 
+  Section IO_run_const.
+    Variable const : D.
+
+    Fixpoint IO_run_const X (m: IOM X) : (seq (Chan * D) * X) :=
+      match m with
+        | retnIO x => (nil,x)
+        | In ch g => IO_run_const (g const)
+        | Out ch d m => let output := fst (IO_run_const m) in
+                        let result := snd (IO_run_const m) in
+                        (cons (ch, d) output, result)
+      end.
+
+    Lemma IO_run_const_commute_if X b m1 m2
+    : @IO_run_const X (if b then m1 else m2) = if b then (@IO_run_const X m1) else (@IO_run_const X m2).
+    Proof. by destruct b. Defined.
+
+    Lemma IO_run_const_commute_option X Y (b : option Y) m1 m2
+    : @IO_run_const X (match b with Some k => m1 k | None => m2 end) = match b with Some k => @IO_run_const X (m1 k) | None => @IO_run_const X m2 end.
+    Proof. by destruct b. Defined.
+
+    Lemma IO_run_const_bindIO_eq X Y (m1: IOM X) (m2 : X -> IOM Y)
+          (out1 := fst (IO_run_const m1))
+          (x1 := snd (IO_run_const m1))
+          (out2 := fst (IO_run_const (m2 x1)))
+          (x2 := snd (IO_run_const (m2 x1)))
+    : @IO_run_const Y (bindIO m1 m2) = (out1 ++ out2, x2).
+    Proof.
+      revert m2 x1 x2 out1 out2.
+      induction m1; try by simpl; intros; simpl_paths; simpl in *; subst.
+      { simpl; intros; erewrite IHm1;
+        do !(idtac;
+             match goal with
+               | _ => progress subst
+               | _ => progress simpl in *
+               | _ => evar_safe_reflexivity
+               | [ |- ?a :: ?b ++ ?c = ?a :: ?b' ++ ?c' ] => (apply f_equal; reflexivity)
+               | _ => progress simpl_paths
+             end). }
+      { intros; hyp_eapply *. }
+    Qed.
+
+    Lemma IO_run_const_bindIO X Y (m1: IOM X) m2 out1 out2 out x1 x2
+          (H1 : IO_run_const m1 = (out1, x1))
+          (H2 : IO_run_const (m2 x1) = (out2, x2))
+          (H3 : out1 ++ out2 = out)
+    : @IO_run_const Y (bindIO m1 m2) = (out, x2).
+    Proof.
+      rewrite IO_run_const_bindIO_eq.
+        by do !hyp_rewrite *.
+    Qed.
+  End IO_run_const.
+
   Definition OutputM X := (seq D * X)%type.
 
   Global Instance OutputMonadOps : MonadOps OutputM :=
@@ -528,3 +580,36 @@ Lemma IO_run_output_commute_match_option_rewrite Chan D Chan_eq A F X s T xE xS 
         end.
 Proof. by destruct o. Defined.
 Hint Rewrite IO_run_output_commute_match_option_rewrite : matchdb.
+
+Lemma IO_run_const_commute_if_rewrite Chan D const A F X b m1 m2 T xE xS
+: match snd (snd (@IO_run_const Chan D const (A * Result F X) (if b then m1 else m2))) as r return T r with
+    | Error f => xE f
+    | Success x => xS x
+  end = if b as b return T (snd (snd (@IO_run_const Chan D const (A * Result F X) (if b then m1 else m2))))
+        then match snd (snd (IO_run_const _ m1)) as r return T r with
+               | Error f => xE f
+               | Success x => xS x
+             end
+        else match snd (snd (IO_run_const _ m2)) as r return T r with
+               | Error f => xE f
+               | Success x => xS x
+             end.
+Proof. by destruct b. Defined.
+Hint Rewrite IO_run_const_commute_if_rewrite : matchdb.
+
+Lemma IO_run_const_commute_match_option_rewrite Chan D const A F X T xE xS U (o : option U) Sv Nv
+: match snd (snd (@IO_run_const Chan D const (A * Result F X) (match o with Some k => Sv k | None => Nv end))) as r return T r with
+    | Error f => xE f
+    | Success x => xS x
+  end = match o as o return T (snd (snd (@IO_run_const Chan D const (A * Result F X) (match o with Some k => Sv k | None => Nv end)))) with
+          | Some k => match snd (snd (IO_run_const _ (Sv k))) as r return T r with
+                        | Error f => xE f
+                        | Success x => xS x
+                      end
+          | None => match snd (snd (IO_run_const _ Nv)) as r return T r with
+                      | Error f => xE f
+                      | Success x => xS x
+                    end
+        end.
+Proof. by destruct o. Defined.
+Hint Rewrite IO_run_const_commute_match_option_rewrite : matchdb.
