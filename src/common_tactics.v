@@ -256,28 +256,25 @@ Ltac destruct_exists := destruct_head_hnf @sigT;
     | [ |- @sigT2 ?T _ _ ] => destruct_exists' T
   end.
 
-(** Run [elim] on anything that's being discriminated inside a [match] which is also atomic *)
-Ltac elim_atomic_in_match' :=
+(** Run [tac] on the discriminee of a match *)
+Ltac do_with_match_discriminee' tac :=
   match goal with
-    | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; elim E
+    | [ |- appcontext[match ?E with _ => _ end] ] => tac E
+  end.
+
+(** Run [tac] on a hypothesis and the the discriminee of a match in that hypothesis *)
+Ltac hyp_do_with_match_discriminee' tac :=
+  match goal with
+    | [ H : appcontext[match ?E with _ => _ end] |- _ ] => tac H E
   end.
 
 (** Run [elim] on anything that's being discriminated inside a [match] which is also atomic *)
-Ltac generalize_case_atomic_in_match' :=
-  match goal with
-    | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; generalize dependent E; case
-  end.
-
+Ltac elim_atomic_in_match' := do_with_match_discriminee' ltac:(fun E => atomic E; elim E).
+(** Run [elim] on anything that's being discriminated inside a [match] which is also atomic *)
+Ltac generalize_case_atomic_in_match' := do_with_match_discriminee' ltac:(fun E => atomic E; generalize dependent E; case).
 (** Run [destruct] on anything that's being discriminated inside a [match] which is also atomic *)
-Ltac destruct_atomic_in_match' :=
-  match goal with
-    | [ |- appcontext[match ?E with _ => _ end] ] => atomic E; destruct E
-  end.
-
-Ltac hyp_destruct_atomic_in_match' :=
-  match goal with
-    | [ H : appcontext[match ?E with _ => _ end] |- _ ] => atomic E; destruct E
-  end.
+Ltac destruct_atomic_in_match' := do_with_match_discriminee' ltac:(fun E => atomic E; destruct E).
+Ltac hyp_destruct_atomic_in_match' := hyp_do_with_match_discriminee' ltac:(fun H E => atomic E; destruct E).
 
 (** [pose proof defn], but only if no hypothesis of the same type exists.
     most useful for proofs of a proposition *)

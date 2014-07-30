@@ -68,7 +68,8 @@ Ltac triple_post_compute :=
       | progress cbv iota zeta beta
       | progress hnf_in_match'; progress cbv iota zeta beta
       | progress autorewrite with matchdb
-      | progress ssr_autorewrite_with_matchdb' ].
+      | progress ssr_autorewrite_with_matchdb'
+      | progress do_with_match_discriminee' ltac:(fun E => atomic E; destruct E; []) ].
 
 Ltac triple_by_compute :=
   triple_hnf;
