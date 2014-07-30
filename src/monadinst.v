@@ -103,6 +103,16 @@ Section IO.
   Definition IO_write ch d : IOM unit := Out ch d (retn tt).
   Definition IO_read ch : IOM D := In ch retn.
 
+  (** Given an [IO unit] and a predicate [P : X -> Prop], determine if
+      a given [IO X] matches up with [IO unit] on the I/O stuff and
+      satisfies [P] on the leaves. *)
+  Fixpoint IO_compat X (io_spec : IOM unit) P (m : IOM X) : Prop :=
+    match m with
+      | retnIO x => io_spec = retnIO tt /\ P x
+      | Out ch d rest => exists rest', io_spec = Out ch d rest' /\ IO_compat rest' P rest
+      | In ch f => exists g, io_spec = In ch g /\ forall x, IO_compat (g x) P (f x)
+    end.
+
   Section IO_run.
     Hypothesis Chan_eq : @Equality.mixin_of Chan.
 
