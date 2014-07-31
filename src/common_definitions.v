@@ -1,7 +1,6 @@
 (** * Various useful general purpose notations and definitions *)
 Require Import Ssreflect.ssreflect.
 Require Import Coq.Logic.FunctionalExtensionality.
-Print FunctionalExtensionality.
 
 Notation eta_expand x := (fst x, snd x).
 
