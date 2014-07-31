@@ -6,6 +6,7 @@ Ltac type_of x := type of x.
 
 Require Import Ssreflect.ssreflect Ssreflect.seq.
 Require Import Coq.Lists.List Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Program.Basics.
+Require Import Coq.Logic.FunctionalExtensionality.
 Require Export x86proved.common_definitions.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
