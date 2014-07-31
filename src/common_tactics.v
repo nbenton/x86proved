@@ -714,3 +714,15 @@ Ltac simpl_impl' :=
   end.
 
 Ltac simpl_impl := do ?simpl_impl'.
+
+(** Apply [functional_extensionality], introducing variable x. *)
+
+Tactic Notation "extensionality" ident(x) :=
+  match goal with
+    [ |- ?X = ?Y ] =>
+    (apply (@functional_extensionality _ _ X Y) ||
+     apply (@functional_extensionality_dep _ _ X Y) ||
+     apply forall_extensionalityP ||
+     apply forall_extensionalityS ||
+     apply forall_extensionality) ; intro x
+  end.

@@ -1,5 +1,7 @@
 (** * Various useful general purpose notations and definitions *)
 Require Import Ssreflect.ssreflect.
+Require Import Coq.Logic.FunctionalExtensionality.
+Print FunctionalExtensionality.
 
 Notation eta_expand x := (fst x, snd x).
 
@@ -223,3 +225,22 @@ Definition specialize_ex {A} {B C : A -> Prop} (H : forall x, B x -> C x) : (exi
   := fun x => match x with
                 | ex_intro x fx => ex_intro _ x (H x fx)
               end.
+
+(** Extensionality of [forall]s follows from functional extensionality. *)
+Lemma forall_extensionality {A} {B C : A -> Type} (H : forall x : A, B x = C x)
+: (forall x, B x) = (forall x, C x).
+Proof.
+  apply functional_extensionality in H. destruct H. reflexivity.
+Defined.
+
+Lemma forall_extensionalityP {A} {B C : A -> Prop} (H : forall x : A, B x = C x)
+: (forall x, B x) = (forall x, C x).
+Proof.
+  apply functional_extensionality in H. destruct H. reflexivity.
+Defined.
+
+Lemma forall_extensionalityS {A} {B C : A -> Set} (H : forall x : A, B x = C x)
+: (forall x, B x) = (forall x, C x).
+Proof.
+  apply functional_extensionality in H. destruct H. reflexivity.
+Defined.
