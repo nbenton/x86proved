@@ -190,6 +190,9 @@ Ltac head expr :=
 
 Ltac head_hnf expr := let expr' := eval hnf in expr in head expr'.
 
+(** Unfolds the head of [expr] *)
+Ltac unfold_head expr := let h := head expr in eval unfold h in expr.
+
 (** given a [matcher] that succeeds on some hypotheses and fails on
     others, destruct any matching hypotheses, and then execute [tac]
     after each [destruct].

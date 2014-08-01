@@ -415,9 +415,9 @@ Lemma evalBYTEReg_rule (r: BYTEReg) v c O Q :
   TRIPLE (BYTEregIs r v ** S) (c v) O Q ->
   TRIPLE (BYTEregIs r v ** S) (bind (evalBYTEReg r) c) O Q.
 Proof.
-move => S T. rewrite /BYTEregIs. 
-triple_apply triple_letGetRegPieceSep. 
-triple_apply T. 
+move => S T. rewrite /BYTEregIs.
+triple_apply triple_letGetRegPieceSep.
+triple_apply T.
 Qed.
 Global Opaque evalBYTEReg.
 
@@ -742,6 +742,10 @@ Arguments get_instrrule_of {_} _ {_ _}.
 Definition get_loopy_instrrule_of {T} (instr : T) {ruleT} `{x : @loopy_instrrule T instr ruleT} : ruleT := x.
 Arguments get_loopy_instrrule_of {_} _ {_ _}.
 
+(** We add instances from basicprog *)
+(** TODO: Should they go here, or elsewhere? *)
+Instance: instrrule program.prog_skip := @basic_skip.
+
 (** We have a tactic that unfolds things in instrrules until we see something like [|-- basic _ _ _ _] *)
 Ltac unfold_to_basic_rule_helper term :=
   let term' := (eval cbv beta iota zeta in term) in
@@ -774,7 +778,17 @@ Hint Extern 0 (unfold_to_basic_rule_class (@lentails ?Frm ?ILO ?C ?term))
    exact (@lentails Frm ILO C term')
    : typeclass_instances.
 
-Ltac unfold_rule_until_basic rule := do_in_type ltac:(do_under_many_forall_binders (@unfold_to_basic_rule_class)) rule.
+Ltac unfold_rule_until_basic rule :=
+  let rule' := (eval unfold get_loopy_instrrule_of, get_instrrule_of in rule) in
+  (** unfold the instance name, if possible *)
+  let rule'' := match True with
+                  | _ => unfold_head rule'
+                  | _ => constr:(rule')
+                end in
+  (** Get the original type of the rule, or else we'll end up with [instrrule] rather than the type we want *)
+  let T := type_of rule in
+  let T' := do_under_many_forall_binders (@unfold_to_basic_rule_class) T in
+  constr:(rule'' : T').
 
 Ltac get_instrrule_of instr :=
   let rule := match True with
