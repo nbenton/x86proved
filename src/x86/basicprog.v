@@ -96,8 +96,9 @@ Ltac get_basic_program_from G :=
   lazymatch G with
     | _ |-- ?G' => get_basic_program_from G'
     | parameterized_basic _ ?P _ _ => constr:(P)
-    | ?G' => fail "No program found in" G'
+    | ?G' => fail 1 "No program found in" G'
   end.
+
 Ltac get_first_instr P :=
   lazymatch P with
     | prog_seq ?P' _ => get_first_instr P'
