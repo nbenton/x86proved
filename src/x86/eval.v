@@ -412,11 +412,10 @@ Definition evalInstr instr : ST unit :=
     setRegInProcState EIP IP'
 (*=End *)
 
-(*
-  | IN dword port =>
-    let! d = inputST port;
-    setRegInProcState EAX (zeroExtend _ d)
-*)
+  | INOP false port =>
+    let! p = evalPort port;
+    let! d = inputOnChannel p;
+    setBYTERegInProcState AL d
 
   | OUTOP false port =>
     let! p = evalPort port;

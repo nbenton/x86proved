@@ -27,15 +27,8 @@ Local Ltac solve_morphism :=
 
 (** Triples behave contravariantly in the precondition and covariantly
     in the postcondition wrt entailment *)
-Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lentails --> eq ==> lentails ==> lentails ==> impl as TRIPLE_mor2.
+Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lentails --> eq ==> eq ==> lentails ==> impl as TRIPLE_mor2.
 Proof. solve_morphism. Qed.
-
-Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lentails --> eq ==> eq ==> lentails ==> impl as TRIPLE_mor3.
-Proof. move => * ?. fin_solve_morphism. Qed.
-
-(** Unfortunately we need special case for equivalence *)
-Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lequiv ==> eq ==> lequiv ==> lequiv ==> iff as TRIPLE_mor.
-Proof. move => *; split => ?; fin_solve_morphism. Qed.
 
 Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lequiv ==> eq ==> eq ==> lequiv ==> iff as TRIPLE_mor4.
 Proof. move => *; split => ?; fin_solve_morphism. Qed.

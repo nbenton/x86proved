@@ -33,6 +33,7 @@ Definition empOP : OPred := eq_opred nil.
 
 (** ** A single output action *)
 Definition outOP (c:Chan) (d:Data) : OPred := eq_opred [::Out c d].
+Definition inOP (c:Chan) (d:Data) : OPred := eq_opred [::In c d].
 
 (** ** A sequence of actions that splits into the concatenation of one
        satisfying P and one satisfying Q *)

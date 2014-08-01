@@ -15,7 +15,7 @@ Ltac triple_apply lemma tac :=
  autounfold with spred;
  autorewrite with triple;
  eapply triple_roc;
- [| | | match goal with
+ [| | match goal with
           (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
           | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ] => eapply triple_seq; first eapply lemma
           | _ => eapply lemma

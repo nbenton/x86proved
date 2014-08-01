@@ -20,7 +20,7 @@ Local Ltac pre_let :=
                | [ |- valued_TRIPLE ?v' ?P' _ ?O2 ?P'' -> valued_TRIPLE ?v' ?P0 (bind ?c1 ?c2) ?O0 ?P'' ]
                  => constr:(fun O1 v => @valued_triple_seqcat _ _ P0 P' P'' O1 O2 c1 c2 v v' O0)
              end in
-  eapply lem; first by apply empOPL.
+  eapply lem; first by apply cat0s.
 
 (** In order to get [specialize_all_ways] to pick up values to
     [specialize] hypotheses with, such as [Registers] or [Flags],
@@ -126,7 +126,7 @@ Proof. move => S T. apply: triple_letGetFlag. cancel2. reflexivity. done. Qed.
 Lemma triple_doGetReg (r:AnyReg) (P Q: SPred) O c :
   TRIPLE P c O Q ->
   TRIPLE P (do! getRegFromProcState r; c) O Q.
-Proof. move => T s pre. move: (T s pre) => [f [o [eq H']]]. eexists f. eexists o.
+Proof. move => T s pre. move: (T s pre) => [f [eq H']]. eexists f. 
 simpl. by destruct (c s). Qed.
 
 Lemma triple_doGetFlag (f:Flag) (v:bool) (Q: SPred) O c :

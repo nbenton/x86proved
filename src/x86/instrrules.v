@@ -8,6 +8,7 @@ Require Export x86proved.x86.instrrules.addsub.
 Require Export x86proved.x86.instrrules.and.
 Require Export x86proved.x86.instrrules.callrel.
 Require Export x86proved.x86.instrrules.cmp.
+Require Export x86proved.x86.instrrules.in.
 Require Export x86proved.x86.instrrules.incdec.
 Require Export x86proved.x86.instrrules.jccrel.
 Require Export x86proved.x86.instrrules.jmprel.

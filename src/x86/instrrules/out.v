@@ -6,7 +6,7 @@ Import x86.instrrules.core.instrruleconfig.
 Lemma OUT_I_rule (c: BYTE) d :
   |-- basic
       (BYTEregIs AL d) (OUT c, AL) (outOP (zeroExtend 8 c) d) (BYTEregIs AL d).
-Proof. instrrule_triple_bazooka. by triple.core.triple_by_compute. Qed.
+Proof. instrrule_triple_bazooka. triple.core.triple_by_compute. by rewrite !eq_refl. Qed.
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic

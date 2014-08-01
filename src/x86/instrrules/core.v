@@ -56,13 +56,13 @@ Qed.
 Section UnfoldSpec.
   Transparent ILPre_Ops.
 
-  Lemma TRIPLE_safe_gen (instr:Instr) P O Q (i j: DWORD) sij:
+  Lemma TRIPLE_safe_gen (instr:Instr) P o Q (i j: DWORD) sij:
     eq_pred sij |-- i -- j :-> instr ->
     forall O',
     (forall (R: SPred),
-     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) O
+     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
             (Q ** R)) ->
-    (obs O') @ Q |-- obs (catOP O O') @ (EIP ~= i ** P ** eq_pred sij).
+    (obs O') @ Q |-- obs (catOP (eq_opred o) O') @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
     move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
@@ -71,7 +71,8 @@ Section UnfoldSpec.
     repeat rewrite -> sepSPA in Hs.
     apply lentails_eq in Hs.
     specialize (HTRIPLE s Hs).
-    destruct HTRIPLE as [sf [out [H1 [H2 H3]]]].
+    rewrite /runsForWithPrefixOf. 
+    destruct HTRIPLE as [sf [H1 H3]].  
 
     apply lentails_eq in H3.
     rewrite <- sepSPA in H3.
@@ -80,7 +81,7 @@ Section UnfoldSpec.
     destruct HQ as [orest [H4 H5]].
     clear H3 Hsij.
     destruct k.
-    { eexists (outputToActions out ++ _).
+    { eexists (o ++ _).
       do ![ apply runsForWithPrefixOf0
           | eassumption
           | esplit ]. }
@@ -88,22 +89,22 @@ Section UnfoldSpec.
     (* k > 0 *)
     have LE: k <= succn k by done.
     apply (runsForWithPrefixOfLe LE) in H5.
-    destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
-    rewrite /manyStep-/manyStep/oneStep H1.
-    exists (outputToActions out ++ orest). split. by exists (outputToActions out), orest.
-    exists sf'. exists (outputToActions out ++ o''). split; first by apply cat_preActions.
-    exists sf. exists (outputToActions out), o''. split; first done.
+    destruct H5 as [sf' [o'' [PRE MANY]]].
+    exists (o ++ orest). rewrite /manyStep-/manyStep/oneStep. 
+    split. by exists o, orest.
+    exists sf'. exists (o ++ o''). split; first by apply cat_preActions.
+    exists sf. exists o, o''. split; first done.
     split; last done.
-    eexists _. intuition.
+    intuition.
   Qed.
 
-  Lemma TRIPLE_safeLater_gen (instr:Instr) P O Q (i j: DWORD) sij:
+  Lemma TRIPLE_safeLater_gen (instr:Instr) P o Q (i j: DWORD) sij:
     eq_pred sij |-- i -- j :-> instr ->
     forall O' `{IsPointed_OPred O'},
     (forall (R: SPred),
-     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) O
+     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
             (Q ** R)) ->
-    |> (obs O') @ Q |-- obs (catOP O O') @ (EIP ~= i ** P ** eq_pred sij).
+    |> (obs O') @ Q |-- obs (catOP (eq_opred o) O') @ (EIP ~= i ** P ** eq_pred sij).
   Proof.
     move => Hsij O' ? HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
@@ -112,14 +113,14 @@ Section UnfoldSpec.
     repeat rewrite -> sepSPA in Hs.
     apply lentails_eq in Hs.
     specialize (HTRIPLE s Hs).
-    destruct HTRIPLE as [sf [out [H1 [H2 H3]]]].
+    destruct HTRIPLE as [sf [H1 H3]].
 
     apply lentails_eq in H3.
     rewrite <- sepSPA in H3.
     apply lentails_eq in H3.
     destruct k => //.
     - destruct (_ : IsPointed_OPred O') as [o' o'H].
-      exists (outputToActions out ++ o'). split. by exists (outputToActions out), o'.
+      exists (o ++ o'). split. by exists o, o'.
       apply runsForWithPrefixOf0.
     (* k > 0 *)
     have LT: (k < succn k)%coq_nat by done.
@@ -129,30 +130,31 @@ Section UnfoldSpec.
     clear H3 Hsij.
 
     destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
-    rewrite /manyStep-/manyStep/oneStep H1.
-    exists (outputToActions out ++ orest). split. by exists (outputToActions out), orest.
-    exists sf'. exists (outputToActions out ++ o''). split; first by apply cat_preActions.
-    exists sf. exists (outputToActions out), o''. split; first done.
+    exists (o ++ orest). 
+    rewrite /manyStep-/manyStep/oneStep.
+    split. by exists o, orest.
+    exists sf'. exists (o ++ o''). split; first by apply cat_preActions.
+    exists sf. exists o, o''. split; first done.
     split; last done.
-    eexists _. intuition.
+    intuition.
   Qed.
 
 End UnfoldSpec.
 
-Lemma TRIPLE_safecatLater instr P Q (i j: DWORD) O O' `{IsPointed_OPred O'} :
+Lemma TRIPLE_safecatLater instr P Q (i j: DWORD) o O' `{IsPointed_OPred O'} :
   (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) O (Q ** R)) ->
-  |-- (|> (obs O') @ Q -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- (|> (obs O') @ Q -->> obs (catOP (eq_opred o) O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
   rewrite sepSPA. apply limplValid.
   eapply TRIPLE_safeLater_gen; try eassumption; []. move=> R. triple_apply H.
 Qed.
 
-Lemma TRIPLE_safecat instr P Q (i j: DWORD) O O':
+Lemma TRIPLE_safecat instr P Q (i j: DWORD) o O':
   (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) O (Q ** R)) ->
-  |-- ((obs O') @ Q -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- ((obs O') @ Q -->> obs (catOP (eq_opred o) O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
   rewrite sepSPA. apply limplValid.
@@ -161,14 +163,14 @@ Qed.
 
 Lemma TRIPLE_safeLater instr P Q (i j: DWORD) O `{IsPointed_OPred O}:
   (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) empOP (Q ** R)) ->
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
   |-- (|> obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
-  move=> H. have TS:= TRIPLE_safecatLater (O:= empOP).
+  move=> H. have TS:= TRIPLE_safecatLater (o:= nil).
   eforalls TS;
     repeat match goal with
              | [ |- IsPointed_OPred _ ] => eassumption
-             | [ H : context[catOP empOP ?P] |- _ ] => rewrite -> empOPL in H
+             | [ H : context[catOP (eq_opred nil) ?P] |- _ ] => rewrite -> empOPL in H
              | [ H : |-- _ |- |-- _ ] => by apply TS
              | _ => done
            end.
@@ -176,16 +178,16 @@ Qed.
 
 Lemma TRIPLE_safe instr P Q (i j: DWORD) O :
   (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) empOP (Q ** R)) ->
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
   |-- (obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
-  move=> H. have TS:= TRIPLE_safecat (O:= empOP).
+  move=> H. have TS:= TRIPLE_safecat (o:= nil).
   eforalls TS. rewrite -> empOPL in TS. apply TS. done.
 Qed.
 
-Lemma TRIPLE_basic {T_OPred proj} instr P O Q:
-  (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) O (Q ** R)) ->
-  |-- @parameterized_basic T_OPred proj _ _ P instr O Q.
+Lemma TRIPLE_basic {T_OPred proj} instr P o Q:
+  (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- @parameterized_basic T_OPred proj _ _ P instr (eq_opred o) Q.
 Proof.
   move=> H. rewrite /parameterized_basic. specintros => i j O'.
   apply TRIPLE_safecat => R. triple_apply H.
@@ -431,7 +433,7 @@ Qed.
 Opaque evalDWORDorBYTEReg.
 
 Lemma triple_setDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w :
-  forall S, TRIPLE (DWORDorBYTEregIs r v ** S) (setDWORDorBYTERegInProcState _ r w) empOP
+  forall S, TRIPLE (DWORDorBYTEregIs r v ** S) (setDWORDorBYTERegInProcState _ r w) nil
                    (DWORDorBYTEregIs r w ** S).
 Proof. destruct d; [apply triple_setRegSep | apply triple_setBYTERegSep]. Qed.
 Global Opaque setDWORDorBYTERegInProcState.
@@ -464,7 +466,7 @@ Global Opaque evalMemSpec.
 
 Lemma evalPush_rule sp (v w:DWORD) (S:SPred) :
   TRIPLE (ESP~=sp ** (sp -# 4) :-> v ** S)
-         (evalPush w) empOP
+         (evalPush w) nil
          (ESP~=sp -# 4 ** (sp -# 4) :-> w ** S).
 Proof.
 triple_apply triple_letGetRegSep.
@@ -496,7 +498,7 @@ Proof.
 Qed.
 
 Lemma triple_updateZPS P n (v: BITS n) z p s:
-  TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (updateZPS v) empOP (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P).
+  TRIPLE (ZF ~= z ** PF ~= p ** SF ~= s ** P) (updateZPS v) nil (ZF ~= (v == #0) ** PF ~= (lsb v) ** SF ~= (msb v) ** P).
 Proof. rewrite /updateZPS. move => H. do 3 triple_apply triple_setFlagSep. Qed.
 Global Opaque updateZPS.
 
@@ -645,6 +647,7 @@ Ltac instrrule_triple_bazooka_step tac :=
     | [ |- TRIPLE _ (updateFlagInProcState ?f ?w) _ _ ]                                           => tapply triple_setFlagSep
     | [ |- TRIPLE _ (updateZPS ?v) _ _ ]                                                          => tapply triple_updateZPS
     | [ |- TRIPLE _ (forgetFlagInProcState ?f) _ _ ]                                              => do [ tapply triple_forgetFlagSep | tapply triple_forgetFlagSep' ]
+    | [ |- TRIPLE _ (setBYTERegInProcState ?b ?p) _ _ ]                                           => tapply (@triple_setBYTERegSep b)
     | [ |- TRIPLE _ (setDWORDorBYTERegInProcState ?b ?d ?p) _ _ ]                                 => tapply (@triple_setDWORDorBYTERegSep b)
     | [ |- TRIPLE _ (@setDWORDorBYTEInProcState ?b ?p ?w) _ _ ]                                   => tapply (@triple_setDWORDorBYTESep b)
     | [ |- TRIPLE _ (setRegInProcState ?d ?p) _ _ ]                                               => tapply triple_setRegSep
