@@ -744,7 +744,7 @@ Arguments get_loopy_instrrule_of {_} _ {_ _}.
 
 (** We add instances from basicprog *)
 (** TODO: Should they go here, or elsewhere? *)
-Instance: instrrule program.prog_skip := @basic_skip.
+Instance: instrrule program.prog_skip := fun {T_OPred} {proj} => @basic_skip T_OPred proj empSP.
 
 (** We have a tactic that unfolds things in instrrules until we see something like [|-- basic _ _ _ _] *)
 Ltac unfold_to_basic_rule_helper term :=
