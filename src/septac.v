@@ -1,5 +1,6 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
 Require Import x86proved.spred.
+Require Import x86proved.common_tactics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -507,19 +508,23 @@ Module Solving.
   (* If speed is an issue at some point, we could make rquote take two
      environments: one to insert into and one to lookup in. Our decision
      procedures never care about duplicated atoms on either side -- only atoms
-     in common between left and right. *)
+     in common between left and right.
+
+     We first try to do unification up to syntax, and try again after we've simpled *)
   Ltac ssimpl_with doUnify :=
-    match goal with
-    |- ?P |-- ?Q =>
-        lquote ((0, [::]) : env) P ltac:(fun e tP =>
-          rquote doUnify e Q ltac:(fun e tQ =>
-            eapply (@do_simplify e tP tQ);
-            [ cbv; reflexivity
-            | cbv [eval lookup eqn' clean]
-            ]
-          )
-        )
-    end.
+    first [ syntax_unify_reflexivity
+          | match goal with
+              | [ |- ?P |-- ?Q ] =>
+                lquote ((0, [::]) : env) P ltac:(fun e tP =>
+                  rquote doUnify e Q ltac:(fun e tQ =>
+                    eapply (@do_simplify e tP tQ);
+                    [ cbv; reflexivity
+                    | cbv [eval lookup eqn' clean]
+                    ]
+                  )
+                )
+            end;
+            try syntax_unify_reflexivity ].
 
   Ltac ssimpl := ssimpl_with cheap_unify.
 
