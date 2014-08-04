@@ -116,13 +116,31 @@ Ltac get_first_instr P :=
 (** A tactic for solving the side conditions when the basicapplied lemma is completely unconstrained. *)
 Ltac solve_simple_basicapply :=
   solve [ repeat match goal with
+                   (** Try to solve the goal by [reflexivity], but not
+                       if it's going to instantiate evars too eagerly
+                       (and maybe wrongly), nor if it's going to take
+                       forever to unify things *)
                    | _ => evar_safe_syntax_unify_reflexivity
                    | [ |- _ |-- ltrue ] => solve [ apply ltrueR ]
                    | [ |- lfalse |-- _ ] => solve [ apply lfalseL ]
+                   (** If we [basicapply] a lemma that's too general
+                       (has unrestricted pre- and post- conditions,
+                       then we end up with goals like [P |-- ?1 ** ?2]
+                       and [?3 ** ?2 |-- Q].  We need to instantiate
+                       [?1] with [P], [?2] with [empSP], and [?3] with
+                       [Q].  We would like to just [rewrite -> empSPR;
+                       reflexivity], but Coq might decide that I mean
+                       to say that [?1] is [?4 ** empSP], and might
+                       therefore loop if I do [rewrite -> !empSPR],
+                       and [reflexivity] might take forever trying to
+                       unify inequal terms.  So we handle evars and
+                       their locations explicitly.  *)
                    | [ |- ?A |-- ?B ** ?e ] => is_evar e; etransitivity; [ | exact (proj2 (empSPR B)) ]
                    | [ |- ?A ** ?e |-- ?B ] => is_evar e; etransitivity; [ exact (proj1 (empSPR A)) | ]
                    | [ |- ?A |-- ?B ** empSP ] => etransitivity; [ | exact (proj2 (empSPR B)) ]
                    | [ |- ?A ** empSP |-- ?B ] => etransitivity; [ exact (proj1 (empSPR A)) | ]
+                   (** We want to handle the case [?1 x |-- y] and
+                       instantiate [?1] to the constant function. *)
                    | [ |- ?f ?x |-- ?y ] => is_evar f; atomic x; let T := type_of x in unify f (fun _ : T => y); cbv beta; reflexivity
                    | [ |- ?y |-- ?f ?x ] => is_evar f; atomic x; let T := type_of x in unify f (fun _ : T => y); cbv beta; reflexivity
                    | [ |- ?g (?f ?x) |-- ?g ?y ] => is_evar f; atomic x; let T := type_of x in unify f (fun _ : T => y); cbv beta; reflexivity
