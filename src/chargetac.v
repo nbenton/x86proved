@@ -25,6 +25,10 @@ Ltac simpl_logic' :=
     | [ |- ?a <@ ?b |-- ?a' <@ ?b ] => f_cancel; []
     | [ |- ?a <@ ?b |-- ?a <@ ?b' ] => f_cancel; []
     | [ |- ?P //\\ ?Q |-- ?P ] => apply: (@landL1 _ _ _ P Q P (reflexivity _))
+    | [ |- ?Q //\\ ?P |-- ?P ] => apply: (@landL2 _ _ _ Q P P (reflexivity _))
+    | [ |- context[_ @ empSP] ] => rewrite -> empSPL
+    | [ |- context[_ ** empSP] ] => rewrite -> empSPR
+    | [ |- context[empSP ** _] ] => rewrite -> empSPL
     | [ |- _ -|- _ ] => split
     | [ |- _ -> _ ] => move => ?
   end.
