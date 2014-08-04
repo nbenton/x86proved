@@ -71,8 +71,8 @@ Section UnfoldSpec.
     repeat rewrite -> sepSPA in Hs.
     apply lentails_eq in Hs.
     specialize (HTRIPLE s Hs).
-    rewrite /runsForWithPrefixOf. 
-    destruct HTRIPLE as [sf [H1 H3]].  
+    rewrite /runsForWithPrefixOf.
+    destruct HTRIPLE as [sf [H1 H3]].
 
     apply lentails_eq in H3.
     rewrite <- sepSPA in H3.
@@ -90,7 +90,7 @@ Section UnfoldSpec.
     have LE: k <= succn k by done.
     apply (runsForWithPrefixOfLe LE) in H5.
     destruct H5 as [sf' [o'' [PRE MANY]]].
-    exists (o ++ orest). rewrite /manyStep-/manyStep/oneStep. 
+    exists (o ++ orest). rewrite /manyStep-/manyStep/oneStep.
     split. by exists o, orest.
     exists sf'. exists (o ++ o''). split; first by apply cat_preActions.
     exists sf. exists o, o''. split; first done.
@@ -130,7 +130,7 @@ Section UnfoldSpec.
     clear H3 Hsij.
 
     destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
-    exists (o ++ orest). 
+    exists (o ++ orest).
     rewrite /manyStep-/manyStep/oneStep.
     split. by exists o, orest.
     exists sf'. exists (o ++ o''). split; first by apply cat_preActions.
@@ -725,13 +725,13 @@ Hint Rewrite
      addB0 low_catB : instrrules_basicapply.
 
 Hint Unfold
-     OSZCP stateIsAny scaleBy : instrrules_spred.
+     OSZCP stateIsAny scaleBy OPred_pred default_PointedOPred : instrrules_spred.
 
 Tactic Notation "instrrules_basicapply" open_constr(R) "using" tactic3(tac) :=
   let R' := instrrules_unfold R in
-  basicapply R' using (tac) side conditions by autounfold with spred instrrules_spred instrrules_basicapply; sbazooka.
+  basicapply R' using (tac) side conditions by try solve_simple_basicapply; autounfold with spred instrrules_spred instrrules_basicapply; basicapply_default_tacfin; sbazooka.
 Tactic Notation "instrrules_basicapply" open_constr(R) :=
-  instrrules_basicapply R using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem).
+  instrrules_basicapply R using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem; basicapply_default_hyp_tac Hlem).
 
 (** We use a type class to ask for a rule for a given instruction,
     parameterized _only_ on the arguments it needs to reduce to
@@ -748,6 +748,7 @@ Arguments get_loopy_instrrule_of {_} _ {_ _}.
 (** We add instances from basicprog *)
 (** TODO: Should they go here, or elsewhere? *)
 Instance: instrrule program.prog_skip := fun {T_OPred} {proj} => @basic_skip T_OPred proj empSP.
+Instance: forall c, instrrule (program.prog_declabel c) := fun c {T_OPred} {proj} S P => @basic_local T_OPred proj S P c.
 
 (** We have a tactic that unfolds things in instrrules until we see something like [|-- basic _ _ _ _] *)
 Ltac unfold_to_basic_rule_helper term :=

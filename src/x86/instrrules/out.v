@@ -5,7 +5,7 @@ Import x86.instrrules.core.instrruleconfig.
 (** Special case for literal port *)
 Lemma OUT_I_rule (c: BYTE) d :
   |-- basic
-      (BYTEregIs AL d) (OUT c, AL) (outOP (zeroExtend 8 c) d) (BYTEregIs AL d).
+      (BYTEregIs AL d) (OUT c, AL) (outOP (zeroExtend n8 c) d) (BYTEregIs AL d).
 Proof. instrrule_triple_bazooka. triple.core.triple_by_compute. by rewrite !eq_refl. Qed.
 
 (** We make this rule an instance of the typeclass, and leave

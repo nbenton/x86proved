@@ -100,7 +100,7 @@ Proof.
   basicapply CMP_RI_ZC_rule.
 
   apply: basic_roc_pre;
-  last apply (if_rule
+  last apply (if_rule_const_io
     (P:= fun b =>
     (m == 0) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?)).
 
@@ -138,7 +138,7 @@ move => LT1 LT2.
   basicapply CMP_RI_ZC_rule.
 
   apply: basic_roc_pre;
-  last apply (if_rule
+  last apply (if_rule_const_io
     (P:= fun b =>
     (m == n.-1) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?)).
 

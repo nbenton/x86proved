@@ -92,11 +92,18 @@ Lemma basic_instr {T_OPred} {proj} S P i O Q :
 Proof. done. Qed.
 
 (** Get the program out of a goal; useful for looking up which rule to use. *)
+(** Do a separate [lazymatch] and [match] to make sure that the correct
+    error message rises to the top; [lazymatch] will evaluate to
+    either the [fail 1] tactic or a constr, and then the [match] will
+    run the error or return the constr.  *)
 Ltac get_basic_program_from G :=
-  lazymatch G with
-    | _ |-- ?G' => get_basic_program_from G'
-    | parameterized_basic _ ?P _ _ => constr:(P)
-    | ?G' => fail 1 "No program found in" G'
+  let ret := lazymatch G with
+               | _ |-- ?G' => get_basic_program_from G'
+               | parameterized_basic _ ?P _ _ => constr:(P)
+               | ?G' => fail 1 "No program found in" G'
+             end in
+  match True with
+    | _ => ret
   end.
 
 Ltac get_first_instr P :=
@@ -106,52 +113,93 @@ Ltac get_first_instr P :=
     | ?P' => constr:(P')
   end.
 
+(** A tactic for solving the side conditions when the basicapplied lemma is completely unconstrained. *)
+Ltac solve_simple_basicapply :=
+  solve [ repeat match goal with
+                   (** Try to solve the goal by [reflexivity], but not
+                       if it's going to instantiate evars too eagerly
+                       (and maybe wrongly), nor if it's going to take
+                       forever to unify things *)
+                   | _ => evar_safe_syntax_unify_reflexivity
+                   | [ |- _ |-- ltrue ] => solve [ apply ltrueR ]
+                   | [ |- lfalse |-- _ ] => solve [ apply lfalseL ]
+                   (** If we [basicapply] a lemma that's too general
+                       (has unrestricted pre- and post- conditions,
+                       then we end up with goals like [P |-- ?1 ** ?2]
+                       and [?3 ** ?2 |-- Q].  We need to instantiate
+                       [?1] with [P], [?2] with [empSP], and [?3] with
+                       [Q].  We would like to just [rewrite -> empSPR;
+                       reflexivity], but Coq might decide that I mean
+                       to say that [?1] is [?4 ** empSP], and might
+                       therefore loop if I do [rewrite -> !empSPR],
+                       and [reflexivity] might take forever trying to
+                       unify inequal terms.  So we handle evars and
+                       their locations explicitly.  *)
+                   | [ |- ?A |-- ?B ** ?e ] => is_evar e; etransitivity; [ | exact (proj2 (empSPR B)) ]
+                   | [ |- ?A ** ?e |-- ?B ] => is_evar e; etransitivity; [ exact (proj1 (empSPR A)) | ]
+                   | [ |- ?A |-- ?B ** empSP ] => etransitivity; [ | exact (proj2 (empSPR B)) ]
+                   | [ |- ?A ** empSP |-- ?B ] => etransitivity; [ exact (proj1 (empSPR A)) | ]
+                   (** We want to handle the case [?1 x |-- y] and
+                       instantiate [?1] to the constant function. *)
+                   | [ |- ?f ?x |-- ?y ] => is_evar f; atomic x; let T := type_of x in unify f (fun _ : T => y); cbv beta; reflexivity
+                   | [ |- ?y |-- ?f ?x ] => is_evar f; atomic x; let T := type_of x in unify f (fun _ : T => y); cbv beta; reflexivity
+                   | [ |- ?g (?f ?x) |-- ?g ?y ] => is_evar f; atomic x; let T := type_of x in unify f (fun _ : T => y); cbv beta; reflexivity
+                   | [ |- ?g ?y |-- ?g (?f ?x) ] => is_evar f; atomic x; let T := type_of x in unify f (fun _ : T => y); cbv beta; reflexivity
+                 end ].
+
 (* Attempts to apply "basic" lemma on a single command (basic_basic) or
    on the first of a sequence (basic_seq). Note that it attempts to use sbazooka
    to discharge subgoals, so be careful if existentials are exposed in the goal --
    they will be instantiated! *)
-  Hint Unfold not : basicapply.
-  Hint Rewrite eq_refl : basicapply.
-  Ltac instRule R H :=
-    move: (R) => H;
-    repeat (autounfold with basicapply in H);
-    eforalls H;
-    autorewrite with push_at in H.
+Hint Unfold not : basicapply.
+Hint Rewrite eq_refl : basicapply.
+Ltac instRule R H :=
+  move: (R) => H;
+              repeat (autounfold with basicapply in H);
+              eforalls H;
+              autorewrite with push_at in H.
 
-  (** If our goal is a [loopy_basic] and our lemma is a [basic], then we can weaken the goal. *)
-  Ltac weaken_parameterized_basic_if_needed Hlem :=
-    try (match type_of Hlem with _ |-- basic _ _ _ _ => idtac end;
-         apply weaken_parameterized_basic).
+(** If our goal is a [loopy_basic] and our lemma is a [basic], then we can weaken the goal. *)
+Ltac weaken_parameterized_basic_if_needed Hlem :=
+  try (match type_of Hlem with _ |-- basic _ _ _ _ => idtac end;
+       apply weaken_parameterized_basic).
 
-  (* This is all very sensitive to use of "e" versions of apply/exact. Beware! *)
-  (* We ensure that we leave at most one goal remaining. *)
-  Ltac basicatom R tacfin :=
-  lazymatch goal with
-    | |- _ |-- parameterized_basic ?P (prog_instr ?i) ?O ?Q =>
-          (eapply basic_basic; first eapply basic_instr; [ weaken_parameterized_basic_if_needed R; eexact R | tacfin .. | try tacfin ])
+(* This is all very sensitive to use of "e" versions of apply/exact. Beware! *)
+(* We ensure that we leave at most one goal remaining. *)
+Ltac basicatom R tacfin :=
+  match goal with
+    | |- _ |-- parameterized_basic ?P (prog_instr ?i) ?O ?Q => (eapply basic_basic_context; first eapply basic_instr)
+    | _ => eapply basic_basic_context
+  end;
+  [ weaken_parameterized_basic_if_needed R; eexact R | tacfin .. | try tacfin ].
 
-    | _ => eapply basic_basic; [ weaken_parameterized_basic_if_needed R; eexact R | tacfin .. | try tacfin ]
-    end.
-
-  Ltac  basicseq R tacfin :=
+Ltac basicseq R tacfin :=
+  (idtac;
   lazymatch goal with
     | |- _ |-- basic ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply basic_seq; [ | basicatom R tacfin |]; instantiate; [ try done | .. ])
     | |- _ |-- loopy_basic ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply loopy_basic_seq; [ | basicatom R tacfin |]; instantiate; [ try done | ..])
     | |- _ |-- @parameterized_basic ?T_OPred ?proj _ _ ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply (@basic_seq_helper T_OPred proj _) ; [ | | basicatom R tacfin |]; [ | try done | .. ])
     | _ => basicatom R tacfin
-    end.
+  end).
 
-  Ltac basicapply R tac tacfin :=
-    let Hlem := fresh "Hlem" in
-    instRule R Hlem;
+Ltac basicapply_default_tacfin :=
+  try solve_simple_basicapply;
+  autounfold with spred; sbazooka.
+
+Ltac basicapply_default_hyp_tac Hlem :=
+  autorewrite with basicapply in Hlem.
+
+Ltac basicapply R tac tacfin :=
+  let Hlem := fresh "Hlem" in
+  instRule R Hlem;
     tac Hlem;
     first basicseq Hlem tacfin;
     clear Hlem.
 
-  Tactic Notation "basicapply" open_constr(R) "using" tactic3(tac) "side" "conditions" tactic(tacfin) := basicapply R tac tacfin.
-  Tactic Notation "basicapply" open_constr(R) "using" tactic3(tac) := basicapply R using (tac) side conditions by autounfold with spred; sbazooka.
-  Tactic Notation "basicapply" open_constr(R) "side" "conditions" tactic(tacfin) := basicapply R using (fun Hlem => autorewrite with basicapply in Hlem) side conditions tacfin.
-  Tactic Notation "basicapply" open_constr(R) := basicapply R using (fun Hlem => autorewrite with basicapply in Hlem).
-  (** Variant of [basicapply] that doesn't require that the side conditions be fully solved. *)
-  Tactic Notation "try_basicapply" open_constr(R) "using" tactic3(tac) := basicapply R using (tac) side conditions autounfold with spred; sbazooka.
-  Tactic Notation "try_basicapply" open_constr(R) := try_basicapply R using (fun Hlem => autorewrite with basicapply in Hlem).
+Tactic Notation "basicapply" open_constr(R) "using" tactic3(tac) "side" "conditions" tactic(tacfin) := basicapply R tac tacfin.
+Tactic Notation "basicapply" open_constr(R) "using" tactic3(tac) := basicapply R using (tac) side conditions by basicapply_default_tacfin.
+Tactic Notation "basicapply" open_constr(R) "side" "conditions" tactic(tacfin) := basicapply R using (basicapply_default_hyp_tac) side conditions tacfin.
+Tactic Notation "basicapply" open_constr(R) := basicapply R using basicapply_default_hyp_tac.
+(** Variant of [basicapply] that doesn't require that the side conditions be fully solved. *)
+Tactic Notation "try_basicapply" open_constr(R) "using" tactic3(tac) := basicapply R using (tac) side conditions basicapply_default_tacfin.
+Tactic Notation "try_basicapply" open_constr(R) := try_basicapply R using basicapply_default_hyp_tac.

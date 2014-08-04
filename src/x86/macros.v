@@ -2,6 +2,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x86proved.obs x86proved.x86.basic x86proved.x86.program x86proved.spectac.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
+Require Import x86proved.basicspectac x86proved.common_tactics x86proved.common_definitions x86proved.chargetac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -224,89 +225,69 @@ Definition ifthenelse (cond: Condition) (value: bool)
     END:;.
 (*=End *)
 
+  Local Ltac pre_if pthen pelse :=
+    let Hthen := fresh "Hthen" in
+    let Helse := fresh "Helse" in
+    intros Hthen Helse;
+      (try specintros => *; idtac);
+      (** handle the locals *)
+      rewrite /ifthenelse;
+      do 2(do_basic' => ?);
+      (rewrite /parameterized_basic; specintros => *; unfold_program);
+      (specintros => *; do! subst);
+      (** Tell the instrrule machinery about the "then" and "else" cases. *)
+      pose proof (Hthen : instrrule pthen);
+      pose proof (Helse : instrrule pelse).
+
   Lemma if_rule cond (value:bool) pthen pelse P O Q S:
+    S |-- basic (P value ** ConditionIs cond value) pthen (O value) (Q value) ->
+    S |-- basic (P (~~value) ** ConditionIs cond (~~value)) pelse (O (~~value)) (Q (~~value)) ->
+    S |-- Forall b, basic (P b ** ConditionIs cond b)
+                          (ifthenelse cond value pthen pelse) (O b)
+                          (Q b).
+  Proof.
+    pre_if pthen pelse.
+    do ![ specapply *; first by ssimpl
+        | split_eip_match
+        | finish_logic ].
+  Qed.
+
+  Lemma if_loopy_rule cond (value:bool) pthen pelse P (O : bool -> PointedOPred) Q S:
+    S |-- loopy_basic (P value ** ConditionIs cond value) pthen (O value) (Q value) ->
+    S |-- loopy_basic (P (~~value) ** ConditionIs cond (~~value)) pelse (O (~~value)) (Q (~~value)) ->
+    S |-- Forall b, loopy_basic (P b ** ConditionIs cond b)
+                                (ifthenelse cond value pthen pelse) (O b)
+                                (Q b).
+  Proof.
+    pre_if pthen pelse.
+    do ![ specapply *; first by ssimpl
+        | split_eip_match
+        | finish_logic ].
+  Qed.
+
+  Global Instance: forall cond value pthen pelse, instrrule (ifthenelse cond value pthen pelse) := @if_rule.
+  Global Instance: forall cond value pthen pelse, loopy_instrrule (ifthenelse cond value pthen pelse) := @if_loopy_rule.
+
+  Lemma if_rule_const_io cond (value:bool) pthen pelse P O Q S:
     S |-- basic (P value ** ConditionIs cond value) pthen O Q ->
     S |-- basic (P (~~value) ** ConditionIs cond (~~value)) pelse O Q ->
     S |-- basic (Exists b, P b ** ConditionIs cond b)
                 (ifthenelse cond value pthen pelse) O
                 Q.
   Proof.
-    move=> Hthen Helse. apply basic_local => THEN. apply basic_local => END.
-    rewrite /basic. specintros => i j O' b.
-    unfold_program.
-    specintros => i1 i2 i3 i4 <- -> i5 -> ->.
-
-    (* JCC cond value THEN *)
-    specapply JCC_rule. by ssimpl.
-
-    case E: (b == value);
-    do 2(idtac;
-         lazymatch goal with
-           | [ H : (?a == ?a) = true |- _ ] => clear H
-           | [ H : (?a == ?a) = false |- _ ] => (rewrite eq_refl in H; by inversion H)
-           | [ H : (?a == ?b) = true |- _ ] => (assert (a = b) by (destruct a, b; do [ done | by inversion H ]); subst)
-           | [ H : (?a == ?b) = false |- _ ] => assert (a = ~~b) by (destruct a, b; do [ done | by inversion H]); subst
-         end).
-    { (* THEN branch *)
-      specapply Hthen. by ssimpl.
-       rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
-       apply: landL2. cancel1. by ssimpl. }
-    { (* ELSE branch *)
-      specapply Helse. by ssimpl.
-
-      (* JMP END *)
-      specapply JMP_I_rule. by ssimpl.
-      rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
-      apply: landL2. by (cancel1; reflexivity). }
+    move => Hthen Helse. specintro => ?.
+    do_basic'; cbv beta; assumption.
   Qed.
 
-  Lemma if_loopy_rule cond (value:bool) pthen pelse P (O : PointedOPred) Q S:
+  Lemma if_loopy_rule_const_io cond (value:bool) pthen pelse P (O : PointedOPred) Q S:
     S |-- loopy_basic (P value ** ConditionIs cond value) pthen O Q ->
     S |-- loopy_basic (P (~~value) ** ConditionIs cond (~~value)) pelse O Q ->
     S |-- loopy_basic (Exists b, P b ** ConditionIs cond b)
                 (ifthenelse cond value pthen pelse) O
                 Q.
   Proof.
-    move=> Hthen Helse. apply basic_local => THEN. apply basic_local => END.
-    rewrite /loopy_basic. specintros => i j O' b.
-    unfold_program.
-    specintros => i1 i2 i3 i4 <- -> i5 -> ->.
-
-    (* JCC cond value THEN *)
-    specapply JCC_loopy_rule. by ssimpl.
-
-    specsplit.
-    { (* THEN branch *)
-      rewrite <- spec_later_weaken.
-      case E: (b == value);
-        move/eqP in E; subst.
-      { specapply Hthen; [ by rewrite /default_PointedOPred/OPred_pred; reflexivity | by sbazooka | ].
-        rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
-        apply: landL2. cancel1. by ssimpl. }
-      { specapply Hthen; [ by rewrite /default_PointedOPred/OPred_pred; reflexivity | rewrite -> lpropandF, -> sepSP_falseL; by apply lfalseL | ].
-        rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
-        apply: landL2. cancel1. by ssimpl. } }
-
-    { (* ELSE branch *)
-      case E: (b == value);
-        move/eqP in E; subst.
-      { specapply Helse; [ by rewrite /default_PointedOPred/OPred_pred; reflexivity |  | ].
-        { replace (value == ~~value) with false by by destruct value.
-          rewrite -> lpropandF, -> sepSP_falseL; by apply lfalseL. }
-
-        { (* JMP END *)
-          specapply JMP_I_rule. by ssimpl.
-          rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
-          apply: landL2. by (cancel1; ssimpl; reflexivity). } }
-
-      { specapply Helse; [ by rewrite /default_PointedOPred/OPred_pred; reflexivity |  | ].
-        { replace (~~value) with b by by destruct value, b; trivial; destruct (E Coq.Init.Logic.eq_refl).
-          sbazooka. }
-
-        { (* JMP END *)
-          specapply JMP_I_rule. by ssimpl.
-          rewrite <-spec_reads_frame. apply: limplAdj. autorewrite with push_at.
-          apply: landL2. by (cancel1; ssimpl; reflexivity). } } }
+    move => Hthen Helse. specintro => ?.
+    do_loopy_basic'; cbv beta; assumption.
   Qed.
 
 End If.

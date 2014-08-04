@@ -388,7 +388,7 @@ Section LogicRules.
     set (I := fun b:bool =>
       asn_denot ((blurb e b) //\\ P) **
       EDX? ** OF? ** SF? ** CF? ** PF?).
-    apply: basic_roc_pre; last apply (if_loopy_rule (P:=I)).
+    apply: basic_roc_pre; last apply (if_loopy_rule_const_io (P:=I)).
     - rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC1.
       rewrite /I /ConditionIs /stateIsAny. by sbazooka.
