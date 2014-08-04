@@ -4,7 +4,7 @@
     can get that back via [rewrite -> ] and [rewrite <- ]. *)
 Ltac type_of x := type of x.
 
-Require Import Ssreflect.ssreflect Ssreflect.seq.
+Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.seq Ssreflect.eqtype.
 Require Import Coq.Lists.List Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Program.Basics.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Export x86proved.common_definitions.
@@ -405,23 +405,6 @@ Ltac split_safe_goals' :=
 
 Ltac split_safe_goals := repeat split_safe_goals'.
 
-(** Run [reflexivity], but only if the goal has no evars or one or the other argument is an evar. *)
-Ltac evar_safe_reflexivity :=
-  idtac;
-  match goal with
-    | [ |- ?R ?a ?b ]
-      => not has_evar R;
-        first [ not goal_has_evar
-              | is_evar b; unify a b
-              | is_evar a; unify a b ]
-    | [ |- ?R (?f ?a) (?f ?b) ]
-      => not has_evar R;
-        not has_evar f;
-        first [ is_evar b; unify a b
-              | is_evar a; unify a b ]
-  end;
-  reflexivity.
-
 Ltac subst_body :=
   repeat match goal with
            | [ H := _ |- _ ] => subst H
@@ -535,6 +518,40 @@ Ltac syntax_unify_reflexivity :=
   idtac;
   lazymatch goal with
     | [ |- ?R ?a ?b ] => syntax_unify a b
+  end;
+  reflexivity.
+
+(** Run [syntax_unify_reflexivity], but only if the goal has no evars or one or the other argument is an evar. *)
+Ltac evar_safe_syntax_unify_reflexivity :=
+  idtac;
+  match goal with
+    | [ |- ?R ?a ?b ]
+      => not has_evar R;
+        first [ not goal_has_evar
+              | is_evar b; unify a b
+              | is_evar a; unify a b ]
+    | [ |- ?R (?f ?a) (?f ?b) ]
+      => not has_evar R;
+        not has_evar f;
+        first [ is_evar b; unify a b
+              | is_evar a; unify a b ]
+  end;
+  syntax_unify_reflexivity.
+
+(** Run [reflexivity], but only if the goal has no evars or one or the other argument is an evar. *)
+Ltac evar_safe_reflexivity :=
+  idtac;
+  match goal with
+    | [ |- ?R ?a ?b ]
+      => not has_evar R;
+        first [ not goal_has_evar
+              | is_evar b; unify a b
+              | is_evar a; unify a b ]
+    | [ |- ?R (?f ?a) (?f ?b) ]
+      => not has_evar R;
+        not has_evar f;
+        first [ is_evar b; unify a b
+              | is_evar a; unify a b ]
   end;
   reflexivity.
 
@@ -730,3 +747,15 @@ Tactic Notation "extensionality" ident(x) :=
      apply forall_extensionalityS ||
      apply forall_extensionality) ; intro x
   end.
+
+(** Handle some common cases of simplification after [case_eq => ?] *)
+Ltac clean_case_eq :=
+  do ?[ idtac;
+        match goal with
+          | [ H : (?a == ?b) = true |- _ ] => first [ atomic a | atomic b ]; move/eqP in H; subst
+          | [ H : (?a == ?b) = false |- _ ] => move/eqP in H; rewrite -> bool_neq_negb in H; subst
+          | [ H : (?a == ?a) = _ |- _ ] => rewrite eq_refl in H; simpl in H
+          | [ H : false = true |- _ ] => by inversion H
+          | [ H : true = false |- _ ] => by inversion H
+          | [ H : ?a = ?a |- _ ] => clear H
+        end ].
