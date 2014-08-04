@@ -243,8 +243,3 @@ Lemma forall_extensionalityS {A} {B C : A -> Set} (H : forall x : A, B x = C x)
 Proof.
   apply functional_extensionality in H. destruct H. reflexivity.
 Defined.
-
-Lemma bool_neq_negb (a b : bool) : (a <> b) <-> (a = negb b).
-Proof.
-  destruct a, b; split; simpl; congruence.
-Qed.

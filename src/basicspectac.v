@@ -81,7 +81,7 @@ Ltac get_code_at_from eip G :=
 (** Get the code located at [EIP] *)
 Ltac get_eip_code G :=
   let eip := get_post_reg_from EIP G in
-  get_code_at_from (eip : DWORD) G.
+  get_code_at_from eip G.
 
 Ltac check_eips_match A B :=
   let pre_eip_A := get_pre_reg_from EIP A in
@@ -95,20 +95,6 @@ Ltac check_goal_eips_match :=
   let pre_eip := get_pre_reg EIP in
   let post_eip := get_post_reg EIP in
   constr_eq pre_eip post_eip.
-
-
-Ltac split_eip_match :=
-  let G := match goal with |- ?G => constr:(G) end in
-  let eip := get_post_reg_from EIP G in
-  let discriminee := match eip with
-                       | context[match ?E with _ => _ end] => constr:(E)
-                       | _ => fail 1 "No 'if ... then ... else' nor 'match ... with ... end' found in EIP =" eip
-                     end in
-  match discriminee with
-    | _ => atomic discriminee; destruct discriminee
-    | _ => case_eq discriminee => ?
-  end;
-    clean_case_eq.
 
 (** Pull the current [EIP] code, and specapply the relevant lemma *)
 Ltac get_next_instrrule_from_eip :=
