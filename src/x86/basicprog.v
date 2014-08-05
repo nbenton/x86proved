@@ -176,9 +176,9 @@ Ltac basicatom R tacfin :=
 Ltac basicseq R tacfin :=
   (idtac;
   lazymatch goal with
-    | |- _ |-- basic ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply basic_seq; [ | basicatom R tacfin |]; instantiate; [ try done | .. ])
-    | |- _ |-- loopy_basic ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply loopy_basic_seq; [ | basicatom R tacfin |]; instantiate; [ try done | ..])
-    | |- _ |-- @parameterized_basic ?T_OPred ?proj _ _ ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply (@basic_seq_helper T_OPred proj _) ; [ | | basicatom R tacfin |]; [ | try done | .. ])
+    | |- _ |-- basic ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply basic_seq; [ | basicseq R tacfin |]; instantiate; [ try done | .. ])
+    | |- _ |-- loopy_basic ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply loopy_basic_seq; [ | basicseq R tacfin |]; instantiate; [ try done | ..])
+    | |- _ |-- @parameterized_basic ?T_OPred ?proj _ _ ?P (prog_seq ?p1 ?p2) ?O ?Q => (eapply (@basic_seq_helper T_OPred proj _) ; [ | | basicseq R tacfin |]; [ | try done | .. ])
     | _ => basicatom R tacfin
   end).
 

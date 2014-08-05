@@ -287,3 +287,78 @@ Proof.
   eapply safe_loop_forever_constant.
   do_basic'.
 Qed.
+
+Definition echo_once in_c out_c :=
+  (IN in_c, AL;;
+   OUT out_c, AL).
+
+Definition echo_once_clean (al in_c out_c : BYTE) :=
+  (echo_once in_c out_c;;
+   MOV AL, al).
+
+Definition echo_once_OP_helper (in_c out_c : BYTE) v := catOP (inOP (zeroExtend n8 in_c) v) (outOP (zeroExtend n8 out_c) v).
+
+Example safe_echo_once al in_c out_c
+: |-- Forall v, basic (BYTEregIs AL al)
+                      (echo_once in_c out_c)
+                      (echo_once_OP_helper in_c out_c v)
+                      (BYTEregIs AL v).
+Proof.
+  specintros => v. rewrite /echo_once/echo_once_OP_helper.
+  do_basic'; first by reflexivity.
+  do_basic'.
+Qed.
+
+Instance: forall in_c out_c, instrrule (echo_once in_c out_c) := fun in_c out_c al => @safe_echo_once al in_c out_c.
+
+Example safe_echo_once_clean (al in_c out_c : BYTE) v
+: |-- (basic (BYTEregIs AL al)
+             (echo_once_clean al in_c out_c)
+             (echo_once_OP_helper in_c out_c v)
+             (BYTEregIs AL al)).
+Proof.
+  rewrite /echo_once_clean/echo_once_OP_helper.
+  do_basic'.
+  do_basic'.
+  rewrite low_catB. by ssimpl.
+Qed.
+
+Instance: forall al in_c out_c, instrrule (echo_once_clean al in_c out_c) := @safe_echo_once_clean.
+
+Definition echo_n al in_c out_c n := output_n_prog (echo_once_clean al in_c out_c) n.
+
+Definition list_to_in_out (in_c out_c : BYTE) ls
+  := [seq catOP (inOP (zeroExtend n8 in_c) v) (outOP (zeroExtend n8 out_c) v) | v <- ls ].
+
+(** TODO: clean up this proof *)
+Example safe_echo_n in_c out_c n d
+        (small_enough : nat -> Prop)
+        (is_small : forall n, small_enough (n.+1) -> small_enough n)
+        (small_is_good : forall n, small_enough n -> (#(n.+1) == @fromNat n32 0) = false)
+        (Hn : small_enough n)
+: |-- Forall ls (pf : n.+1 < size ls),
+  (basic (ECX ~= #n ** BYTEregIs AL d)
+         (echo_n d in_c out_c n)
+         (rollOP n (fun k => nth empOP (list_to_in_out in_c out_c ls) (k.-1)))
+         (ECX ~= #0 ** BYTEregIs AL d)
+         @ OSZCP?).
+Proof.
+  specintros => ls pf.
+  rewrite /echo_n.
+  pose proof (@safe_loop_n (fun _ => empSP) (echo_once_clean d in_c out_c) (fun k => nth empOP (list_to_in_out in_c out_c ls) (k.-1)) n d (fun k => small_enough k /\ k < n.+1)) as H.
+  cbv beta in H.
+  rewrite -> !empSPR in H.
+  apply H; [ by intuition | by intuition | by intuition | ].
+  move => n' [ Hsmall Hle ].
+  clear H.
+  pre_basic_apply;
+    (let R := get_next_instrrule_for_basic in
+     try_basicapply R).
+  simpl.
+  rewrite /echo_once_OP_helper.
+  rewrite /list_to_in_out.
+  erewrite nth_map; first by reflexivity.
+  by erewrite ltn_trans; try eassumption.
+  Grab Existential Variables.
+  exact #0.
+Qed.
