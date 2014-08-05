@@ -121,6 +121,18 @@ Proof. t. Qed.
 Lemma catOP_lfalseR P : catOP P lfalse -|- lfalse.
 Proof. t. Qed.
 
+Lemma catOP_lexists1 T P Q : catOP (Exists x : T, P x) Q -|- Exists x : T, catOP (P x) Q.
+Proof. t. Qed.
+
+Lemma catOP_lexists2 T P Q : catOP P (Exists x : T, Q x) -|- Exists x : T, catOP P (Q x).
+Proof. t. Qed.
+
+Lemma catOP_lforall1 T P Q : catOP (Forall x : T, P x) Q |-- Forall x : T, catOP (P x) Q.
+Proof. t. Qed.
+
+Lemma catOP_lforall2 T P Q : catOP P (Forall x : T, Q x) |-- Forall x : T, catOP P (Q x).
+Proof. t. Qed.
+
 Lemma catOP_O_starOP_O' O O' : catOP O (catOP (starOP O) O') |-- catOP (starOP O) O'.
 Proof.
   do !t'_safe.
