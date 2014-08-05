@@ -522,7 +522,7 @@ Hint Extern 0 (syntax_unify ?a ?b) => is_evar a; exact (Coq.Init.Logic.eq_refl a
 Hint Extern 0 (syntax_unify ?a ?b) => is_evar b; exact (Coq.Init.Logic.eq_refl a) : typeclass_instances.
 Hint Extern 0 (syntax_unify ?a ?a) => exact (Coq.Init.Logic.eq_refl a) : typeclass_instances.
 Hint Extern 0 (syntax_unify (opts := {| infer_constant_functions := true |}) (?f ?x) ?b)
-=> is_evar f; atomic x; not appears_in x b;
+=> is_evar f; atomic x; not is_evar x; not appears_in x b;
    let T := type_of x in
    unify f (fun _ : T => b);
      cbv beta;
