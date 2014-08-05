@@ -190,6 +190,7 @@ Ltac finish_logic_with tac := do ?[ finish_logic_with' tac
                                     match goal with
                                       | [ |- _ //\\ _ |-- _ ] => apply landL1; by finish_logic_with tac
                                       | [ |- _ //\\ _ |-- _ ] => apply landL2; by finish_logic_with tac
+                                      | _ => ilespecialize *; (** save evars for later *) last first; by finish_logic_with tac
                                     end ].
 Ltac finish_logic' := finish_logic_with' fail.
 Ltac finish_logic := finish_logic_with fail.

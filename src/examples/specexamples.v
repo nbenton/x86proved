@@ -234,14 +234,6 @@ Proof.
   simpl OPred_pred.
 
   finish_logic_with sbazooka.
-  (** TODO(t-jagro): There's probably a better way to do [eforalls] in the goal... *)
-  apply lentails_def1 => C H'.
-  eforalls H'.
-  rewrite -> H'; clear H'.
-
-  finish_logic_with sbazooka.
-  Grab Existential Variables.
-  assumption.
 Qed.
 
 Example safe_loop_forever_state_machine state (transition : state -> state)

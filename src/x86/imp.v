@@ -356,7 +356,7 @@ Section LogicRules.
     set (I := fun b:bool =>
       asn_denot ((blurb e b) //\\ P) **
       EDX? ** OF? ** SF? ** CF? ** PF?).
-    eapply basic_roc_post; first last; first apply (while_rule (I:=I)).
+    eapply basic_roc_post; first last; first apply (while_rule_const_io (I:=I)).
     - rewrite /asn_denot. specintros => s HP.
       have He := (@compile_condition_correct s e).
       autorewrite with push_at in He.
