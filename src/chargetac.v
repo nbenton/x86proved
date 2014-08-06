@@ -71,9 +71,9 @@ Ltac find_impl_to_apply :=
 
 (** like [move hyp at top] and [move hyp at bottom], except matches on
     type rather than name and is for ilogic *)
-Tactic Notation "ilmove" constr(hyp) "at" "bottom" :=
+Tactic Notation "ilmove" open_constr(hyp) "at" "bottom" :=
   do ?[ rewrite -> !(landC hyp) | rewrite -> !landA ].
-Tactic Notation "ilmove" constr(hyp) "at" "top" :=
+Tactic Notation "ilmove" open_constr(hyp) "at" "top" :=
   do ?[ rewrite <- !(landC hyp) | rewrite <- !landA ].
 
 (** Like [hyp_apply *], but it clears the hypothesis it applies, and
@@ -89,6 +89,48 @@ Ltac ilhyp_consume_apply :=
       | _ => idtac
     end;
     apply limplL; last by ilassumption.
+
+(** Look for a [Forall _, _] in an ilogic term [G] *)
+Ltac find_lforall_in G :=
+  match G with
+    | lforall _ => constr:(G)
+    | ?A //\\ ?B => find_lforall_in A
+    | ?A //\\ ?B => find_lforall_in B
+    | _ => fail 1 "Statement" G "does not contain a Forall _, _"
+  end.
+(** Find a [Forall _, _] in the hypothesis list *)
+Ltac find_lforall :=
+  let hyps := match goal with |- ?hyps |-- ?concl => constr:(hyps) end in
+  find_lforall_in hyps.
+
+Lemma land_lforallL {Frm ILOps'} `{@ILogic Frm ILOps'} {T} x (P : T -> Frm) (A C : Frm)
+: P x //\\ A |-- C -> (Forall x, P x) //\\ A |-- C.
+Proof.
+  move => H'.
+  rewrite <- H'.
+  ilsplit; last by ilassumption.
+  apply landL1.
+  eapply lforallL; reflexivity.
+Qed.
+
+(** [specialize] a hypothesis of a given type with an evar. *)
+Ltac ilespecialize type :=
+  ilmove type at top;
+  rewrite -> ?landA;
+  match type with
+    | lforall _ => idtac
+    | _ => fail 1 "The given hypothesis type" type "is not of the form Forall _, _"
+  end;
+  (lazymatch goal with
+     | [ |- _ //\\ _ |-- _ ] => eapply land_lforallL
+     | [ |- _ |-- _ ] => eapply lforallL
+     | [ |- ?G ] => fail "Goal" G "is not of the form _ |-- _"
+   end).
+
+Tactic Notation "ilespecialize" open_constr(type) := ilespecialize type.
+Tactic Notation "ilespecialize" "*" :=
+  let type := find_lforall in
+  ilespecialize type.
 
 Lemma strip_andL_impl {Frm ILOps'} `{@ILogic Frm ILOps'}
       {A B C B' C'}
