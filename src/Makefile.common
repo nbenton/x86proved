@@ -104,6 +104,7 @@ x86\instrrules.vo \
 x86\macros.vo \
 x86\call.vo \
 examples\specexamples.vo \
+examples\accumulate_example.vo \
 x86\inlinealloc.vo \
 x86\listspec.vo \
 x86\listimp.vo \
