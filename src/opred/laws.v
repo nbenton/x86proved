@@ -173,3 +173,13 @@ Proof.
   f_cancel;
   hyp_apply *.
 Qed.
+
+Lemma roll_starOP_def O n : roll_starOP O n -|- empOP \\// catOP (O n) (roll_starOP O (S n)).
+Proof.
+  t;
+  match goal with
+    | _ => by instantiate (1 := 0); t
+    | _ => by instantiate (1 := S _); t
+    | [ x : nat |- _ ] => induction x; by t
+  end.
+Qed.
