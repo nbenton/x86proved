@@ -541,3 +541,63 @@ Definition while (ptest: program)
 
 
 End While.
+
+Section Until.
+  (** A macro for a structured "until" loop with parameters:
+      - ptest: code that performs the loop test
+      - cond: the Condition to test the flags for when deciding whether to loop
+      - value: whether the test is inverted (usually false)
+      - pbody: the loop body
+   *)
+  Definition until (ptest: program)
+             (cond: Condition) (value: bool)
+             (pbody: program) : program :=
+    (pbody;;
+     while ptest cond value pbody).
+
+  (** general until rule *)
+  Lemma until_rule
+        ptest (cond : Condition) (value : bool) pbody
+        (PP : nat -> SPred -> Prop) (Obody : nat -> OPred) (IP : nat -> (bool -> SPred) -> Prop) Q S
+        (transition_test : forall P n, PP n P -> bool -> SPred)
+        (transition_body : forall I n, IP n I -> SPred)
+        (transition_test_correct : forall P n (H : PP n P), IP n (transition_test P n H))
+        (transition_body_correct : forall I n (H : IP n I), PP (n.+1) (transition_body I n H))
+        (Q_correct : forall n P (H : PP n P), transition_test P n H (~~value) |-- Q)
+        (Htest : forall P n (H' : PP n P) (I := transition_test P n H'),
+                   IP n I
+                   -> S |-- loopy_basic P ptest empOP (Exists b, I b ** ConditionIs cond b))
+        (Hbody : forall I n (H' : IP n I) (P := transition_body I n H'),
+                   PP (n.+1) P
+                   -> S |-- loopy_basic (I value ** ConditionIs cond value) pbody (Obody n) P)
+        (P0 : bool -> SPred) (start : nat) (H0 : IP start P0)
+        (Hbody_start : S |-- loopy_basic (P0 value) pbody (Obody start) (transition_body P0 start H0))
+  : S |-- (loopy_basic (P0 value)
+                       (until ptest cond value pbody)
+                       (catOP (Obody start) (roll_starOP Obody (start.+1)))
+                       (Q ** ConditionIs cond (~~value))).
+  Proof.
+    cbv zeta in *.
+    rewrite /until.
+    basicapply Hbody_start; clear Hbody_start; first by reflexivity.
+    rewrite empSPR.
+    eapply while_rule; try eassumption; instantiate; eauto.
+  Qed.
+
+  (** I/O-free while rule *)
+  Lemma until_rule_const_io ptest cond (value:bool) pbody (I:bool->_) P P0 S:
+    S |-- loopy_basic P0 pbody empOP P ->
+    S |-- loopy_basic P ptest empOP (Exists b, I b ** ConditionIs cond b) ->
+    S |-- loopy_basic (I value ** ConditionIs cond value) pbody empOP P ->
+    S |-- loopy_basic P0 (until ptest cond value pbody) empOP
+                (I (~~value) ** ConditionIs cond (~~value)).
+  Proof.
+    move => Hbody_start Htest Hbody.
+    cbv zeta in *.
+    rewrite /until.
+    basicapply Hbody_start; clear Hbody_start.
+    rewrite empSPR.
+    eapply while_rule_const_io; assumption.
+  Qed.
+
+End Until.
