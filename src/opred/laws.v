@@ -183,3 +183,19 @@ Proof.
     | [ x : nat |- _ ] => induction x; by t
   end.
 Qed.
+
+Lemma starOP_empOP : starOP empOP -|- empOP.
+Proof.
+  t;
+  match goal with
+    | [ H : nat |- _ ] => induction H
+    | [ |- context[?E] ] => is_evar E; unify E 0
+  end;
+  t.
+Qed.
+
+Lemma roll_starOP_empOP n : roll_starOP (fun _ => empOP) n -|- empOP.
+Proof.
+  rewrite -> roll_starOP__starOP.
+  exact starOP_empOP.
+Qed.
