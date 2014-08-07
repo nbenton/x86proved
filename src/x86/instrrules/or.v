@@ -2,13 +2,16 @@
 Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Lemma OR_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat) v :
+Lemma OR_RM_rule (pd:DWORD) (r1:Reg) (r2:Reg) (v1 v2:DWORD) (offset:nat) (v:DWORD) :
   orB v1 v2 = v ->
-  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
+  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (OR r1, [r2 + offset]) empOP
-            (r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
+            (r1 ~= v ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP false (msb v) (v == #0) false (lsb v)).
-Proof. change (stateIs r1) with (@DWORDorBYTEregIs true r1). move => ?; subst. do_instrrule_triple. Qed.
+Proof. move => ?; subst. 
+change (stateIs r1) with (@VRegIs OpSize4 r1). 
+do_instrrule_triple. 
+Qed.
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic

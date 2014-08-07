@@ -529,6 +529,51 @@ elim E: (split4 8 8 8 8 d) => [[[b3 b2] b1] b0].
 rewrite E in SE. rewrite -SE. apply pointsToDWORD_BYTES.
 Qed.
 
+Lemma pointsToWORD_BYTES (p:DWORD) (b0 b1:BYTE):
+  p :-> [::b0;b1] -|- p :-> (b1 ## b0).
+Proof.
+rewrite {2}/pointsTo.
+rewrite /memIs/readerMemIs/readNext/readWORD.
+split => //.
+
+ssplit.
+
+rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE. ssplit.
+rewrite cursorPointsTo_consBYTE. sdestructs => p0 H0. rewrite pointsToBYTE_byteIs.
+rewrite seqPointsToNil.
+rewrite H0. setoid_rewrite interpReader_bindBYTE. ssplit.
+setoid_rewrite interpReader_retn.
+rewrite /bytesToWORD.
+sbazooka.
+have H0':= (nextIsInc H0).
+subst. reflexivity.
+
+
+sdestruct => q.
+rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE.
+sdestruct => b0'.
+case E: (next p) => [p' |].
+rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE.
+sdestruct => b1'.
+rewrite interpReader_retn.
+rewrite -> seqPointsToNil.
+rewrite /bytesToWORD.
+sdestructs => H1 H2. ssimpl.
+destruct (catB_inj (n1:=8) (n2:=8) H2) as [H2c H2d].
+subst. by ssimpl.
+
+rewrite interpReader_bindBYTE_top. by ssimpl.
+Qed.
+
+Corollary pointsToWORD_asBYTES (d: WORD) (p:DWORD):
+  let: (b1,b0) := split2 8 8 d in
+  p :-> [::b0;b1] -|- p :-> d.
+Proof.
+(*have SE := @split2eta 8 8 d.*)
+elim E: (split2 8 8 d) => [b1 b0].
+admit. (*rewrite SE. apply pointsToWORD_BYTES. rewrite E in SE. rewrite -SE. apply pointsToDWORD_BYTES.*)
+Qed.
+
 
 Lemma fixedSizeReader_bind T1 T2 (r1: Reader T1) (r2: T1 -> Reader T2) n1 n2 :
   fixedSizeReader r1 n1 ->

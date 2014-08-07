@@ -73,15 +73,30 @@ Canonical Structure BYTERegEqType := Eval hnf in EqType _ BYTERegEqMixin.
 Instance BYTERegEMB : EMB _ _ := Emb encBYTERegK.
 Coercion injBYTEReg := (@inj _ _ BYTERegEMB).
 
-Definition decDWORDorBYTEReg dword :=
-  if dword as dword return BITS 3 -> DWORDorBYTEReg dword then decReg else decBYTEReg.
-Definition encDWORDorBYTEReg dword : DWORDorBYTEReg dword -> BITS 3 :=
-  if dword as dword return DWORDorBYTEReg dword -> BITS 3 then encReg else encBYTEReg.
-Lemma encDWORDorBYTERegK dword : cancel (@encDWORDorBYTEReg dword) (decDWORDorBYTEReg dword).
-Proof. destruct dword; [apply encRegK | apply encBYTERegK]. Qed.
+Definition decWORDReg (b: BITS 3) := mkWordReg (decReg b).
+Definition encWORDReg wr := let: mkWordReg r := wr in encReg r. 
+Lemma encWORDRegK : cancel encWORDReg decWORDReg.
+Proof. case => r/=. rewrite /decWORDReg. by rewrite encRegK. Qed. 
 
-Instance DWORDorBYTERegEMB dword : EMB _ _ := Emb (@encDWORDorBYTERegK dword).
-Coercion injDWORDorBYTEReg dword := (@inj _ _ (DWORDorBYTERegEMB dword)).
+Definition decVReg s :=
+  match s as s return BITS 3 -> VReg s with
+  | OpSize1 => decBYTEReg
+  | OpSize2 => decWORDReg
+  | OpSize4 => decReg
+  end.
+
+Definition encVReg s : VReg s -> BITS 3 :=
+  match s as s return  VReg s -> BITS 3 with
+  | OpSize1 => encBYTEReg 
+  | OpSize2 => encWORDReg
+  | OpSize4 => encReg
+  end.
+
+Lemma encVRegK s : cancel (@encVReg s) (decVReg s).
+Proof. destruct s; [apply encBYTERegK | apply encWORDRegK | apply encRegK]. Qed.
+
+Instance VRegEMB dword : EMB _ _ := Emb (@encVRegK dword).
+Coercion injVReg dword := (@inj _ _ (VRegEMB dword)).
 
 (* It's important that these are notations so we can pattern-match against them *)
 Notation DISP0  := (#b"00") (only parsing).
@@ -96,7 +111,7 @@ Notation INCPREF    := (#b"01000") (only parsing).
 Notation DECPREF    := (#b"01001") (only parsing).
 Notation PUSHPREF   := (#b"01010") (only parsing).
 Notation POPPREF    := (#b"01011") (only parsing).
-Notation MOVIMMPREF := (#b"10111") (only parsing).
+Notation MOVIMMPREF := (#b"1011") (only parsing).
 
 Notation JCC8PREF   := (#b"0111") (only parsing).
 Notation JCC32PREF  := (#b"1000") (only parsing).

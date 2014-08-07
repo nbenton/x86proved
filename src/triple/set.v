@@ -353,6 +353,11 @@ Lemma triple_setBYTERegSep (r:BYTEReg) v w S
 Proof. rewrite /BYTEregIs/=/setBYTERegInProcState. elim E: (BYTERegToRegPiece r) => [r' b]. 
 triple_by_compute. apply: separateSetRegPiece; eassumption. Qed.
 
+Lemma triple_setWORDRegSep (r:WORDReg) v w S
+: TRIPLE (WORDregIs r v ** S) (setWORDRegInProcState r w) empOP (WORDregIs r w ** S).
+Proof. rewrite /WORDregIs/=/setWORDRegInProcState. elim: r => [r]. rewrite /WORDRegToReg. 
+triple_by_compute. admit. Qed.
+
 Lemma triple_setRegSepGen (r:AnyReg) v w P R:
   P |-- r~=v ** R ->
   TRIPLE P (setRegInProcState r w) empOP (r~=w ** R).
@@ -460,6 +465,36 @@ rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by
 rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
 Qed.
 
-Lemma triple_setDWORDorBYTESep dword (p:PTR) (v w: DWORDorBYTE dword) S :
-  TRIPLE (p:->v ** S) (setDWORDorBYTEInProcState p w) empOP (p:->w ** S).
-Proof. destruct dword. apply triple_setDWORDSep. apply triple_setBYTESep. Qed.
+Lemma triple_setWORDSep (p:PTR) (v w:WORD) S
+: TRIPLE (p:->v ** S) (setWORDInProcState p w) empOP (p:->w ** S).
+Proof.
+elim Ev: (@split2 8 8 v) => [v1 v0].
+elim Ew: (@split2 8 8 w) => [w1 w0].
+rewrite /setWORDInProcState/setInProcState.
+rewrite /writeNext/writeWORD/writeMem Ew.
+
+have PTv := pointsToWORD_asBYTES v.
+have PTw := pointsToWORD_asBYTES w.
+rewrite Ev in PTv.
+rewrite Ew in PTw.
+rewrite -PTv -PTw {PTv PTw}.
+
+rewrite 2!pointsTo_consBYTE 2!sepSPA.
+apply triple_setBYTEbind.
+
+destruct (next _).
+rewrite [in X in TRIPLE X _ _]sepSPC sepSPA pointsTo_consBYTE sepSPA.
+rewrite [in X in TRIPLE _ _ _ X]sepSPC sepSPA pointsTo_consBYTE sepSPA.
+apply triple_setBYTEbind.
+
+rewrite ->seqPointsToNil.
+rewrite /writeMem !empSPL.
+move => s pre. exists s. eexists _. by destruct s.
+
+rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
+Qed.
+
+Lemma triple_setVWORDSep s (p:PTR) (v w: VWORD s) S :
+  TRIPLE (p:->v ** S) (setVWORDInProcState p w) empOP (p:->w ** S).
+Proof. destruct s. 
+apply triple_setBYTESep. apply triple_setWORDSep. apply triple_setDWORDSep. Qed.

@@ -148,14 +148,16 @@ Lemma triple_letGetDWORDSep (p:PTR) (v:DWORD) c O Q :
   TRIPLE (p:->v ** S) (bind (getDWORDFromProcState p) c) O Q.
 Proof. apply triple_letGetSep. Qed.
 
+Lemma triple_letGetVWORDSep {s} (p:PTR) (v:VWORD s) c O Q :
+  forall S,
+  TRIPLE (p:->v ** S) (c v) O Q ->
+  TRIPLE (p:->v ** S) (bind (getVWORDFromProcState p) c) O Q.
+Proof. destruct s; apply triple_letGetSep. Qed.
+
 Lemma triple_letGetDWORDSepGen (p:PTR) (v:DWORD) P c O Q :
   P |-- p:->v ** ltrue ->
   TRIPLE P (c v) O Q ->
   TRIPLE P (bind (getDWORDFromProcState p) c) O Q.
 Proof. apply triple_letGetSepGen. Qed.
 
-Lemma triple_letGetBYTESep (p:PTR) (v:BYTE) c O Q :
-  forall S,
-  TRIPLE (p:->v ** S) (c v) O Q ->
-  TRIPLE (p:->v ** S) (bind (getBYTEFromProcState p) c) O Q.
-Proof. apply triple_letGetSep. Qed.
+

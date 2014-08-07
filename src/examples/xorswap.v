@@ -38,10 +38,10 @@ Proof.
   (* XOR r1, r2 *)
   do 3 do_basic'.
 
-  rewrite /OSZCP/stateIsAny; sbazooka.
+  rewrite /OSZCP/stateIsAny/stateIs; sbazooka.
   (* Now we're left reasoning about XOR *)
   rewrite {2}[X in xorB w X]xorBC.
-  rewrite [X in r2~=X]xorBA.
+  rewrite [X in regIs r2 X]xorBA.
   rewrite [X in xorB _ X]xorBC xorBA.
   by autorewrite with bitsHints.
 Qed.

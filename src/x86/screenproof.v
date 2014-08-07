@@ -90,7 +90,7 @@ Lemma inlineReadChar_correct col row char :
   |-- inlineReadChar_spec col row char inlineReadChar.
 Proof.
   move => NC NR.
-  rewrite /inlineReadChar_spec/inlineReadChar/memIs/interpProgram/charIs.
+  rewrite /inlineReadChar_spec/inlineReadChar/memIs/interpProgram/charIs{1}/stateIsAny.
 
   autorewrite with push_at.
   specintros => oldal.

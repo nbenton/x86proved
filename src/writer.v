@@ -148,9 +148,15 @@ Instance writeWORD : Writer WORD := fun w =>
   retn tt.
 
 (** This must go at a lower level/priority than [writeDWORD] and [writeBYTE] so it is picked up less eagerly. *)
-Instance writeDWORDorBYTE dw : Writer (DWORDorBYTE dw) | 1 :=
-  if dw as dw return Writer (DWORDorBYTE dw) then writeDWORD else writeBYTE.
+(*Instance writeVWORD s : Writer (VWORD s) | 1 :=
+  match s as s return Writer (VWORD s) with
+  | OpSize1 => writeBYTE
+  | OpSize2 => writeWORD
+  | OpSize4 => writeDWORD
+  | OpSize8 => writeQWORD
+  end.
 Implicit Arguments writeDWORDorBYTE [].
+*)
 
 Instance writeSkipBYTE : Writer unit :=
   fun _ => writerSkip (writerRetn tt).

@@ -76,13 +76,14 @@ Proof. move => d b/= H. by apply signTruncateK. Defined.
 Definition shortDWORDCodec: Codec DWORD :=
   BYTECodec ~~> shortDWORDEmb.
 
-Definition DWORDorBYTECodec dword : Codec (DWORDorBYTE dword) :=
+(*Definition DWORDorBYTECodec dword : Codec (DWORDorBYTE dword) :=
   if dword as dword return Codec (DWORDorBYTE dword)
   then DWORDCodec
   else BYTECodec.
 
 Lemma totalDWORDorBYTE d : total (DWORDorBYTECodec d).
 Proof. case d. apply totalDWORD. apply totalBITS. Qed.
+*)
 
 Fixpoint Const n : BITS n -> Codec unit :=
   if n is n'.+1

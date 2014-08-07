@@ -33,14 +33,14 @@ Definition inlineComputeCharPos_spec (col row:nat) (instrs: program) :=
 
 Definition inlineOutputChar_spec (col row: nat) (char: BYTE) (instrs: program) :=
   basic
-    (ECX ~= # col ** EDX ~= # row ** BYTEregIs AL char ** (Exists old, charIs (charPos col row) old))
+    (ECX ~= # col ** EDX ~= # row ** AL ~= char ** (Exists old, charIs (charPos col row) old))
     instrs empOP
-    (ECX?        ** EDX?        ** BYTEregIs AL char ** charIs (charPos col row) char)
+    (ECX?        ** EDX?        ** AL ~= char ** charIs (charPos col row) char)
   @ (OSZCP? ** EDI?).
 
 Definition inlineReadChar_spec (col row: nat) (char:BYTE) (instrs: program) :=
   basic
-    (ECX ~= # col ** EDX ~= # row ** (Exists b, BYTEregIs AL b) ** charIs (charPos col row) char)
+    (ECX ~= # col ** EDX ~= # row ** AL? ** charIs (charPos col row) char)
     instrs empOP
-    (ECX?        ** EDX?        ** BYTEregIs AL char ** charIs (charPos col row) char)
+    (ECX?        ** EDX?        ** AL ~= char ** charIs (charPos col row) char)
   @ (OSZCP? ** EDI?).

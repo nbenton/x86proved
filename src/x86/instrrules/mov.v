@@ -73,9 +73,9 @@ Lemma MOV_MR_rule (p: DWORD) (r1 r2: Reg) offset (v1 v2:DWORD) :
 Proof. do_basic'. Qed.
 
 (** ** Immediate to memory *)
-Lemma MOV_MI_rule dword (pd:DWORD) (r:Reg) offset (v w:DWORDorBYTE dword) :
+Lemma MOV_MI_rule s (pd:DWORD) (r:Reg) offset (v w:VWORD s) :
   |-- basic (r ~= pd ** pd +# offset :-> v)
-            (MOVOP _ (DstSrcMI dword (mkMemSpec (Some(r, None)) #offset) w)) empOP
+            (MOVOP _ (DstSrcMI _ (mkMemSpec (Some(r, None)) #offset) w)) empOP
             (r ~= pd ** pd +# offset :-> w).
 Proof. do_basic'. Qed.
 
@@ -93,25 +93,15 @@ Proof. do_basic'. Qed.
 
 
 Lemma MOV_MbR_rule (p: DWORD) (r1:Reg) (r2: BYTEReg) offset (v1:BYTE) (v2:BYTE) :
-  |-- basic (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v2)
+  |-- basic (r1 ~= p ** p +# offset :-> v1 ** r2 ~= v2)
             (MOV [r1 + offset], r2) empOP
-            (r1 ~= p ** p +# offset :-> v2 ** BYTEregIs r2 v2).
+            (r1 ~= p ** p +# offset :-> v2 ** r2 ~= v2).
 Proof. do_basic'. Qed.
 
-Lemma MOV_MbR_ruleGen d (p: DWORD) (r1:Reg) (r2: DWORDorBYTEReg d) offset (v1 v2:DWORDorBYTE d):
-  |-- basic (r1 ~= p ** p +# offset :-> v1 ** DWORDorBYTEregIs r2 v2)
-            (MOVOP d (DstSrcMR d (mkMemSpec (Some(r1,None)) #offset) r2)) empOP
-            (r1 ~= p ** p +# offset :-> v2 ** DWORDorBYTEregIs r2 v2).
-Proof.
-  destruct d.
-  { apply MOV_MR_rule. }
-  { apply MOV_MbR_rule. }
-Qed.
-
 Lemma MOV_RMb_rule (p: DWORD) (r1:Reg) (r2:BYTEReg) offset (v1:BYTE) (v2:BYTE) :
-  |-- basic (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v2)
+  |-- basic (r1 ~= p ** p +# offset :-> v1 ** r2 ~= v2)
             (MOV r2, [r1 + offset]) empOP
-            (r1 ~= p ** p +# offset :-> v1 ** BYTEregIs r2 v1).
+            (r1 ~= p ** p +# offset :-> v1 ** r2 ~= v1).
 Proof. do_basic'. Qed.
 
 Lemma MOV_MbI_rule (pd:DWORD) (r1:Reg) offset (v1 v2:BYTE) :

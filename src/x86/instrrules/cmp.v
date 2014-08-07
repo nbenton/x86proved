@@ -6,10 +6,10 @@ Require Import Coq.Classes.Morphisms.
 Require Import x86proved.spectac (* for [eforalls] *) x86proved.bitsprops (* for [low_catB] *) x86proved.septac (* for [ssplits] *).
 
 (** ** Generic rule *)
-Lemma CMP_rule d (ds:DstSrc d) v1 :
+Lemma CMP_rule sz (ds:DstSrc sz) v1 :
    |-- specAtDstSrc ds (fun D v2 =>
        basic (D v1 ** OSZCP?)
-             (BOP d OP_CMP ds) empOP
+             (BOP _ OP_CMP ds) empOP
              (let: (carry,v) := eta_expand (sbbB false v1 v2) in
               D v1 ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
@@ -56,9 +56,9 @@ Lemma CMP_RI_rule (r1:Reg) v1 (v2:DWORD):
 Proof. do_basic'. Qed.
 
 Lemma CMP_RbI_rule (r1:BYTEReg) (v1 v2:BYTE):
-  |-- basic (BYTEregIs r1 v1 ** OSZCP?) (CMP r1, v2) empOP
+  |-- basic (r1 ~= v1 ** OSZCP?) (CMP r1, v2) empOP
             (let: (carry,res) := eta_expand (sbbB false v1 v2) in
-  BYTEregIs r1 v1 ** OSZCP (computeOverflow v1 v2 res) (msb res) (res == #0) carry (lsb res)).
+  r1 ~= v1 ** OSZCP (computeOverflow v1 v2 res) (msb res) (res == #0) carry (lsb res)).
 Proof. rewrite /BYTEtoDWORD/makeBOP low_catB. do_basic'. Qed.
 
 Lemma CMP_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD) :
@@ -106,8 +106,8 @@ Lemma CMP_RI_ZC_rule (r1:Reg) v1 (v2:DWORD):
 Proof. basicCMP_ZC. Qed.
 
 Lemma CMP_MbR_ZC_rule (r1:Reg) (r2: BYTEReg) (p:DWORD) (v1 v2:BYTE):
-  |-- basic (r1 ~= p ** BYTEregIs r2 v2 ** p :-> v1 ** OSZCP?) (CMP [r1], r2) empOP
-            (r1 ~= p ** BYTEregIs r2 v2 ** p :-> v1 ** OF? ** SF? ** PF? **
+  |-- basic (r1 ~= p ** r2 ~= v2 ** p :-> v1 ** OSZCP?) (CMP [r1], r2) empOP
+            (r1 ~= p ** r2 ~= v2 ** p :-> v1 ** OF? ** SF? ** PF? **
                         CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed.
 
@@ -125,7 +125,7 @@ Proof. basicCMP_ZC. Qed.
 
 
 Lemma CMP_RbI_ZC_rule (r1:BYTEReg) (v1 v2:BYTE):
-  |-- basic (BYTEregIs r1 v1 ** OSZCP?) (BOP false OP_CMP (DstSrcRI false r1 v2)) empOP
-            (BYTEregIs r1 v1 ** OF? ** SF? ** PF? **
+  |-- basic (r1 ~= v1 ** OSZCP?) (BOP _ OP_CMP (DstSrcRI OpSize1 r1 v2)) empOP
+            (r1 ~= v1 ** OF? ** SF? ** PF? **
                          CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed.

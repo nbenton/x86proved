@@ -1,10 +1,10 @@
 (** * Macros for dealing with applying [basic] lemmas to less structured code *)
 (** Not sure if these should go here or in some other file, or how to
     structure dependencies on being able to unfold things like
-    [DWORDorBYTEregIs]... *)
+    [VRegIs]... *)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
 Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.septac x86proved.spectac.
-Require Import x86proved.x86.reg x86proved.x86.flags (* for EIP *) x86proved.x86.instrrules.core (* for [DWORDorBYTEregIs] *) x86proved.x86.program.
+Require Import x86proved.x86.reg x86proved.x86.flags (* for EIP *) x86proved.x86.instrrules.core (* for [VRegIs] *) x86proved.x86.program.
 Require Import x86proved.safe x86proved.opred x86proved.obs.
 Require Import x86proved.common_tactics.
 
@@ -33,7 +33,7 @@ Ltac locate_frame G :=
     | _         => fail 2 "No frame in" G
   end.
 Ltac locate_regIsReg regIsReg G :=
-  match eval cbv beta iota zeta delta [stateIs DWORDorBYTEregIs] in G with
+  match eval cbv beta iota zeta delta [stateIs VRegIs] in G with
     | regIsReg ?x     => constr:(x)
     | ?a ** _         => locate_regIsReg regIsReg a
     |  _ ** ?b        => locate_regIsReg regIsReg b

@@ -21,6 +21,9 @@ Definition setProcState (s: ProcState) : ST unit := EMT_lift _ _ (SMT_set _ (S:=
 Definition raiseUnspecified {X} : ST X := EMT_raise _ None.
 Definition raiseExn {X} (e:GeneralException) : ST X := EMT_raise _ (Some e).
 
+(*---------------------------------------------------------------------------
+    Register getters and setters
+  ---------------------------------------------------------------------------*)
 Definition getRegFromProcState r : ST DWORD :=
   let! s = getProcState;
   retn (registers s r).
@@ -29,41 +32,7 @@ Definition getRegPieceFromProcState rp :=
   let: AnyRegPiece r ix := rp in
   let! v = getRegFromProcState r;
   retn (getRegPiece v ix).
- 
-(* Retrieving a flag that is undefined leads to unspecified behaviour *)
-Definition getFlagFromProcState f :=
-  let! s = getProcState;
-  if flags s f is mkFlag b then
-    retn b
-  else
-    raiseUnspecified.
 
-(* This is wrong because wrap-around is under-specified *)
-Definition getFromProcState R {r:Reader R} (p: DWORD) : ST R :=
-  let! s = getProcState;
-  match readMem readNext (memory s) p with
-  | readerFail => raiseExn ExnGP
-  | readerWrap => raiseUnspecified
-  | readerOk v _ => retn v
-  end.
-
-Definition readFromProcState R {r:Reader R} (p: DWORD) : ST (R*DWORD) :=
-  let! s = getProcState;
-  match readMem readNext (memory s) p with
-  | readerOk v (mkCursor p) => retn (v,p)
-  | _ => raiseExn ExnGP
-  end.
-
-
-(* See Section 5.3 in Volume 3A of Intel manuals *)
-(* When effective segment limit is 0xffffffff then behaviour is unspecified for
-   reads that wrap around. Otherwise, it is "correct": no partial reads or writes *)
-Definition getBYTEFromProcState := getFromProcState (R:=BYTE).
-Definition getDWORDFromProcState := getFromProcState (R:=DWORD).
-Definition getWORDFromProcState := getFromProcState (R:=WORD).
-Definition getDWORDorBYTEFromProcState dword := getFromProcState (R:=DWORDorBYTE dword).
-
-(* Update monadic operations *)
 Definition setRegInProcState (r:AnyReg) d :=
   let! s = getProcState;
   setProcState (s!r:=d).
@@ -73,44 +42,10 @@ Definition setBYTERegInProcState (r: BYTEReg) (b: BYTE) :=
     let! d = getRegFromProcState r;
     setRegInProcState r (putRegPiece d ix b).
 
-Definition updateFlagInProcState (f:Flag) (b:bool) :=
-  let! s = getProcState;
-  setProcState (s!f:=b).
-
-Definition forgetFlagInProcState f :=
-  let! s = getProcState;
-  setProcState (s!f:=FlagUnspecified).
-
-Definition setInProcState {X} {W:Writer X} p (x:X) :=
-  let! s = getProcState;
-  match writeMem W (memory s) p x with
-  | Some (p', m') =>
-      setProcState (mkProcState (registers s) (flags s) m')
-  | None => raiseUnspecified
-  end.
-
-
-Definition setDWORDInProcState (p:DWORD) (d:DWORD) := setInProcState p d.
-Definition setBYTEInProcState (p:DWORD) (b:BYTE)   := setInProcState p b.
-Definition setDWORDorBYTEInProcState dword p  :=
-  if dword as dword return DWORDorBYTE dword -> _
-  then fun d => setDWORDInProcState p d else fun d => setBYTEInProcState p d.
-
-
-Definition outputOnChannel (c:Chan) (d:Data) : ST unit :=
-  EMT_lift _ _ (SMT_lift _ (Output_write (c,d))).
-
-(*
-Require Import bitsrep tuplehelp.
-Instance FlagStateUpdate : Update FlagState Flag bool.
-apply Build_Update.
-(* Same flag *)
-move => m k v w.
-rewrite /update /FlagStateUpdateOps /setFlag /setBit.
-induction k. simpl. rewrite beheadCons. done.
-rewrite /setBitAux-/setBitAux. rewrite !theadCons!beheadCons.
-rewrite IHk. simpl. done. simpl. rewrite
-*)
+Definition setWORDRegInProcState (wr: WORDReg) (w: WORD) :=
+    let: mkWordReg r := wr in
+    let! d = getRegFromProcState r;
+    setRegInProcState r (@high 16 16 d ## w).
 
 Lemma setRegGetRegDistinct Y r1 v r2 (f: _ -> ST Y) s :
   ~~(r1 == r2) ->
@@ -130,3 +65,89 @@ Lemma letGetReg {Y} (s: ProcState) r (f: DWORD -> ST Y):
   bind (getRegFromProcState r) f s = f (registers s r) s.
 Proof. rewrite /getRegFromProcState/getProcState assoc.
 by rewrite EMT_bind_lift SMT_bindGet id_l. Qed.
+
+(*---------------------------------------------------------------------------
+    Flag getters and setters
+  ---------------------------------------------------------------------------*)
+ 
+(* Retrieving a flag that is undefined leads to unspecified behaviour *)
+Definition getFlagFromProcState f :=
+  let! s = getProcState;
+  if flags s f is mkFlag b then
+    retn b
+  else
+    raiseUnspecified.
+
+Definition updateFlagInProcState (f:Flag) (b:bool) :=
+  let! s = getProcState;
+  setProcState (s!f:=b).
+
+Definition forgetFlagInProcState f :=
+  let! s = getProcState;
+  setProcState (s!f:=FlagUnspecified).
+
+(*---------------------------------------------------------------------------
+    Memory getters and setters
+  ---------------------------------------------------------------------------*)
+
+(* This is wrong because wrap-around is under-specified *)
+Definition getFromProcState R {r:Reader R} (p: DWORD) : ST R :=
+  let! s = getProcState;
+  match readMem readNext (memory s) p with
+  | readerFail => raiseExn ExnGP
+  | readerWrap => raiseUnspecified
+  | readerOk v _ => retn v
+  end.
+
+Definition readFromProcState R {r:Reader R} (p: DWORD) : ST (R*DWORD) :=
+  let! s = getProcState;
+  match readMem readNext (memory s) p with
+  | readerOk v (mkCursor p) => retn (v,p)
+  | _ => raiseExn ExnGP
+  end.
+
+(* See Section 5.3 in Volume 3A of Intel manuals *)
+(* When effective segment limit is 0xffffffff then behaviour is unspecified for
+   reads that wrap around. Otherwise, it is "correct": no partial reads or writes *)
+Definition getBYTEFromProcState := getFromProcState (R:=BYTE).
+Definition getWORDFromProcState := getFromProcState (R:=WORD).
+Definition getDWORDFromProcState := getFromProcState (R:=DWORD).
+Definition getVWORDFromProcState {s} := getFromProcState (R:=VWORD s).
+
+Definition setInProcState {X} {W:Writer X} p (x:X) :=
+  let! s = getProcState;
+  match writeMem W (memory s) p x with
+  | Some (p', m') =>
+      setProcState (mkProcState (registers s) (flags s) m')
+  | None => raiseUnspecified
+  end.
+
+Definition setBYTEInProcState (p:DWORD) (b:BYTE)   := setInProcState p b.
+Definition setWORDInProcState (p:DWORD) (d:WORD) := setInProcState p d.
+Definition setDWORDInProcState (p:DWORD) (d:DWORD) := setInProcState p d.
+Definition setVWORDInProcState {s} : DWORD -> VWORD s -> ST unit := 
+  match s with
+  | OpSize1 => setBYTEInProcState 
+  | OpSize2 => setWORDInProcState  
+  | OpSize4 => setDWORDInProcState 
+  end.
+
+(*---------------------------------------------------------------------------
+    I/O operations
+  ---------------------------------------------------------------------------*)
+
+Definition outputOnChannel (c:Chan) (d:Data) : ST unit :=
+  EMT_lift _ _ (SMT_lift _ (Output_write (c,d))).
+
+(*
+Require Import bitsrep tuplehelp.
+Instance FlagStateUpdate : Update FlagState Flag bool.
+apply Build_Update.
+(* Same flag *)
+move => m k v w.
+rewrite /update /FlagStateUpdateOps /setFlag /setBit.
+induction k. simpl. rewrite beheadCons. done.
+rewrite /setBitAux-/setBitAux. rewrite !theadCons!beheadCons.
+rewrite IHk. simpl. done. simpl. rewrite
+*)
+

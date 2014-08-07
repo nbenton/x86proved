@@ -3,9 +3,9 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 (** ** Generic increment/decrement rule *)
-Lemma INCDEC_rule d (dir: bool) (src:RegMem d) oldv o s z c pf:
+Lemma INCDEC_rule sz (dir: bool) (src:RegMem sz) oldv o s z c pf:
   |-- specAtRegMemDst src (fun V =>
-      basic (V oldv ** OSZCP o s z c pf) (if dir then UOP d OP_INC src else UOP d OP_DEC src)
+      basic (V oldv ** OSZCP o s z c pf) (if dir then UOP _ OP_INC src else UOP _ OP_DEC src)
       empOP
       (let w := if dir then incB oldv else decB oldv in
       V w ** OSZCP (msb oldv!=msb w) (msb w) (w == #0) c (lsb w))).
@@ -17,8 +17,8 @@ Proof. do_instrrule_triple. Qed.
 Global Instance: forall d (src : RegMem d), instrrule (UOP d OP_INC src) := fun d => @INCDEC_rule d true.
 Global Instance: forall d (src : RegMem d), instrrule (UOP d OP_DEC src) := fun d => @INCDEC_rule d false.
 
-Definition INC_rule := Eval hnf in @INCDEC_rule true true.
-Definition DEC_rule := Eval hnf in @INCDEC_rule true false.
+Definition INC_rule := Eval hnf in @INCDEC_rule OpSize4 true.
+Definition DEC_rule := Eval hnf in @INCDEC_rule OpSize4 false.
 
 (** Special case for increment register *)
 Corollary INC_R_rule (r:Reg) (v:DWORD) o s z c pf:

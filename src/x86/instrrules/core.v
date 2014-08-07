@@ -226,7 +226,7 @@ Definition interpJmpTgt (tgt: JmpTgt) (nextInstr: DWORD) (f: SPred -> DWORD -> s
     interpMemSpecSrc ms f
   end.
 
-Definition specAtMemSpecDst dword ms (f: (DWORDorBYTE dword -> SPred) -> spec) :=
+Definition specAtMemSpecDst s ms (f: (VWORD s -> SPred) -> spec) :=
     let: mkMemSpec optSIB offset := ms in
     if optSIB is Some(r,ixspec)
     then
@@ -244,7 +244,7 @@ Definition specAtMemSpecDst dword ms (f: (DWORDorBYTE dword -> SPred) -> spec) :
 
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 
-Definition specAtMemSpec dword ms (f: DWORDorBYTE dword -> spec) :=
+Definition specAtMemSpec s ms (f: VWORD s -> spec) :=
     let: mkMemSpec optSIB offset := ms in
     if optSIB is Some(r, ixspec)
     then
@@ -258,17 +258,21 @@ Definition specAtMemSpec dword ms (f: DWORDorBYTE dword -> spec) :=
         f v @ (regToAnyReg r ~= pbase ** addB pbase offset :-> v)
     else Forall v, f v @ (offset :-> v).
 
-Definition DWORDorBYTEregIs d : DWORDorBYTEReg d -> DWORDorBYTE d -> SPred :=
-  if d as d return DWORDorBYTEReg d -> DWORDorBYTE d -> SPred
-  then fun r v => r ~= v else fun r v => BYTEregIs r v.
+Definition VRegIs s : VReg s -> VWORD s -> SPred :=
+  match s as s return VReg s -> VWORD s -> SPred with
+  | OpSize1 => BYTEregIs 
+  | OpSize2 => WORDregIs 
+  | OpSize4 => regIs
+  end.  
+
 (** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
-Hint Unfold DWORDorBYTEregIs : finish_logic_unfolder.
+Hint Unfold VRegIs : finish_logic_unfolder.
 
 
-Definition specAtRegMemDst d (src: RegMem d) (f: (DWORDorBYTE d -> SPred) -> spec) :spec  :=
+Definition specAtRegMemDst s (src: RegMem s) (f: (VWORD s -> SPred) -> spec) :spec  :=
   match src with
   | RegMemR r =>
-    f (fun v => DWORDorBYTEregIs r v)
+    f (fun v => VRegIs r v)
 
   | RegMemM ms =>
     specAtMemSpecDst ms f
@@ -284,27 +288,27 @@ Definition specAtSrc src (f: DWORD -> spec) : spec :=
     (f v @ (regToAnyReg r ~= v))
 
   | SrcM ms =>
-    @specAtMemSpec true ms f
+    @specAtMemSpec _ ms f
   end.
 
-Definition specAtDstSrc dword (ds: DstSrc dword) (f: (DWORDorBYTE dword -> SPred) -> DWORDorBYTE dword -> spec) : spec :=
+Definition specAtDstSrc s (ds: DstSrc s) (f: (VWORD s -> SPred) -> VWORD s -> spec) : spec :=
   match ds with
   | DstSrcRR dst src =>
     Forall v,
-    f (fun w => DWORDorBYTEregIs dst w) v @ (DWORDorBYTEregIs src v)
+    f (fun w => VRegIs dst w) v @ (VRegIs src v)
 
   | DstSrcRI dst src =>
-    f (fun w => DWORDorBYTEregIs dst w) src
+    f (fun w => VRegIs dst w) src
 
   | DstSrcMI dst src =>
     specAtMemSpecDst dst (fun V => f V src)
 
   | DstSrcMR dst src =>
     Forall v,
-    specAtMemSpecDst dst (fun V => f V v) @ (DWORDorBYTEregIs src v)
+    specAtMemSpecDst dst (fun V => f V v) @ (VRegIs src v)
 
   | DstSrcRM dst src =>
-    specAtMemSpec src (fun v => f (fun w => DWORDorBYTEregIs dst w) v)
+    specAtMemSpec src (fun v => f (fun w => VRegIs dst w) v)
   end.
 
 Local Ltac specAt_morphism_step :=
@@ -322,32 +326,32 @@ Local Ltac specAt_morphism_step :=
 Local Ltac specAt_morphism_t :=
   rewrite /pointwise_relation => *; do !specAt_morphism_step.
 
-Add Parametric Morphism dword ms : (@specAtMemSpecDst dword ms)
+Add Parametric Morphism s ms : (@specAtMemSpecDst s ms)
 with signature pointwise_relation _ lentails ++> lentails
   as specAtMemSpecDst_entails_m.
 Proof. rewrite /specAtMemSpecDst. specAt_morphism_t. Qed.
 
-Add Parametric Morphism dword ms : (@specAtMemSpecDst dword ms)
+Add Parametric Morphism s ms : (@specAtMemSpecDst s ms)
 with signature pointwise_relation _ (Basics.flip lentails) ++> Basics.flip lentails
   as specAtMemSpecDst_flip_entails_m.
 Proof. rewrite /specAtMemSpecDst. specAt_morphism_t. Qed.
 
-Add Parametric Morphism dword ms : (@specAtMemSpec dword ms)
+Add Parametric Morphism s ms : (@specAtMemSpec s ms)
 with signature pointwise_relation _ lentails ++> lentails
   as specAtMemSpec_entails_m.
 Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
 
-Add Parametric Morphism dword ms : (@specAtMemSpec dword ms)
+Add Parametric Morphism s ms : (@specAtMemSpec s ms)
 with signature pointwise_relation _ (Basics.flip lentails) ++> Basics.flip lentails
   as specAtMemSpec_flip_entails_m.
 Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
 
-Add Parametric Morphism dword ms : (@specAtDstSrc dword ms)
+Add Parametric Morphism s ms : (@specAtDstSrc s ms)
 with signature pointwise_relation _ (pointwise_relation _ lentails) ++> lentails
   as specAtDstSrc_entails_m.
 Proof. rewrite /specAtDstSrc. specAt_morphism_t. Qed.
 
-Add Parametric Morphism dword ms : (@specAtDstSrc dword ms)
+Add Parametric Morphism s ms : (@specAtDstSrc s ms)
 with signature pointwise_relation _ (pointwise_relation _ (Basics.flip lentails)) ++> Basics.flip lentails
   as specAtDstSrc_flip_entails_m.
 Proof. rewrite /specAtDstSrc. specAt_morphism_t. Qed.
@@ -360,7 +364,12 @@ Hint Unfold OSZCP : finish_logic_unfolder.
 
 (** These hints are global *)
 (** TODO(t-jagro): Find a better place for this, or, better, generalize [InstrArg] *)
-Coercion InstrArg_of_DWORDorBYTEReg d : DWORDorBYTEReg d -> InstrArg := if d as d return DWORDorBYTEReg d -> InstrArg then RegArg else BYTERegArg.
+Coercion InstrArg_of_VReg s : VReg s -> InstrArg := 
+match s as s return VReg s -> InstrArg with
+| OpSize1 => BYTERegArg
+| OpSize2 => WORDRegArg
+| OpSize4 => RegArg
+end.
 
 (*---------------------------------------------------------------------------
     Helpers for pieces of evaluation (adapted from spechelpers and
@@ -376,8 +385,8 @@ Hint Unfold
   (** Maybe we should write [_rule]s for [evalShiftOp] and [evalCondition]. *)
   evalShiftOp
   makeBOP makeUOP
-  (** Having to unfold [InstrArg_of_DWORDorBYTEReg] is a hack *)
-  InstrArg_of_DWORDorBYTEReg
+  (** Having to unfold [InstrArg_of_VReg] is a hack *)
+  InstrArg_of_VReg
   OSZCP
   natAsDWORD
   (** Maybe we should find a better way to deal with [DWORDRegMemR], [evalShiftCount], [evalRegImm], and [SrcToRegImm] *)
@@ -408,33 +417,43 @@ Lemma evalReg_rule (r: Reg) v c O Q :
 Proof. by apply triple_letGetRegSep. Qed.
 Global Opaque evalReg.
 
-
-
-Lemma evalBYTEReg_rule (r: BYTEReg) v c O Q :
+Lemma evalBYTEReg_rule (r: BYTEReg) (v:BYTE) c O Q :
   forall S,
-  TRIPLE (BYTEregIs r v ** S) (c v) O Q ->
-  TRIPLE (BYTEregIs r v ** S) (bind (evalBYTEReg r) c) O Q.
+  TRIPLE (r ~= v ** S) (c v) O Q ->
+  TRIPLE (r ~= v ** S) (bind (evalBYTEReg r) c) O Q.
 Proof.
-move => S T. rewrite /BYTEregIs. 
+move => S T. rewrite /stateIs/BYTEregIs. 
 triple_apply triple_letGetRegPieceSep. 
 triple_apply T. 
 Qed.
 Global Opaque evalBYTEReg.
 
-Lemma evalDWORDorBYTEReg_rule d(r: DWORDorBYTEReg d) v c O Q :
+Lemma evalWORDReg_rule (r: WORDReg) (v:WORD) c O Q :
   forall S,
-  TRIPLE (DWORDorBYTEregIs r v ** S) (c v) O Q ->
-  TRIPLE (DWORDorBYTEregIs r v ** S) (bind (evalDWORDorBYTEReg _ r) c) O Q.
+  TRIPLE (r ~= v ** S) (c v) O Q ->
+  TRIPLE (r ~= v ** S) (bind (evalWORDReg r) c) O Q.
 Proof.
-destruct d; [apply evalReg_rule | apply evalBYTEReg_rule].
+move => S T. rewrite /stateIs/WORDregIs/WORDRegToReg/evalWORDReg. destruct r as [r]. 
+rewrite assoc. rewrite /stateIs/WORDregIs/WORDRegToReg in T.
+admit. 
 Qed.
-Opaque evalDWORDorBYTEReg.
+Global Opaque evalWORDReg.
 
-Lemma triple_setDWORDorBYTERegSep d (r: DWORDorBYTEReg d) v w :
-  forall S, TRIPLE (DWORDorBYTEregIs r v ** S) (setDWORDorBYTERegInProcState _ r w) empOP
-                   (DWORDorBYTEregIs r w ** S).
-Proof. destruct d; [apply triple_setRegSep | apply triple_setBYTERegSep]. Qed.
-Global Opaque setDWORDorBYTERegInProcState.
+Lemma evalVReg_rule s (r: VReg s) v c O Q :
+  forall S,
+  TRIPLE (VRegIs r v ** S) (c v) O Q ->
+  TRIPLE (VRegIs r v ** S) (bind (evalVReg r) c) O Q.
+Proof.
+destruct s; [apply evalBYTEReg_rule | apply evalWORDReg_rule | apply evalReg_rule].
+Qed.
+Opaque evalVReg.
+
+Lemma triple_setVRegSep s (r: VReg s) v w :
+  forall S, TRIPLE (VRegIs r v ** S) (setVRegInProcState r w) empOP
+                   (VRegIs r w ** S).
+Proof. destruct s; 
+  [apply triple_setBYTERegSep | apply triple_setWORDRegSep | apply triple_setRegSep]. Qed.
+Global Opaque setVRegInProcState.
 
 Lemma evalMemSpecNone_rule offset c O Q :
   forall S,
@@ -451,7 +470,7 @@ triple_apply triple_letGetRegSep.
 triple_apply T.
 Qed.
 
-Lemma evalMemSpec_rule (r:Reg) (ix:NonSPReg) sc p indexval offset c O Q :
+Lemma evalMemSpec_rule (r:Reg) (ix:NonSPReg) sc (p indexval offset:DWORD) c O Q :
   forall S,
   TRIPLE (r ~= p ** ix ~= indexval ** S) (c (addB (addB p offset) (scaleBy sc indexval))) O Q ->
   TRIPLE (r ~= p ** ix ~= indexval ** S) (bind (evalMemSpec (mkMemSpec (Some(r, Some (ix,sc))) offset)) c) O Q.
@@ -500,12 +519,12 @@ Lemma triple_updateZPS P n (v: BITS n) z p s:
 Proof. rewrite /updateZPS. move => H. do 3 triple_apply triple_setFlagSep. Qed.
 Global Opaque updateZPS.
 
-Lemma triple_letGetDWORDorBYTESep d (p:PTR) (v:DWORDorBYTE d) c O Q :
+Lemma triple_letVWORDSep s (p:PTR) (v:VWORD s) c O Q :
   forall S,
   TRIPLE (p:->v ** S) (c v) O Q ->
-  TRIPLE (p:->v ** S) (bind (getDWORDorBYTEFromProcState _ p) c) O Q.
-Proof. destruct d; [apply triple_letGetSep | apply triple_letGetBYTESep]. Qed.
-Global Opaque getDWORDorBYTEFromProcState.
+  TRIPLE (p:->v ** S) (bind (getVWORDFromProcState p) c) O Q.
+Proof. destruct s; apply triple_letGetSep. Qed.
+Global Opaque getVWORDFromProcState.
 
 Lemma basicForgetFlags T (MI: MemIs T) P (x:T) O Q o s z c p:
   |-- basic (P ** OSZCP?) x O (Q ** OSZCP o s z c p) ->
@@ -629,10 +648,12 @@ Ltac instrrule_triple_bazooka_step tac :=
   idtac;
   let tapply H := triple_apply H using tac in
   lazymatch goal with
-    | [ |- TRIPLE _ (bind (evalDWORDorBYTEReg ?d ?r) _) _ _ ]                                     => tapply (@evalDWORDorBYTEReg_rule d)
+    | [ |- TRIPLE _ (bind (@evalVReg ?s ?r) _) _ _ ]                                              => tapply (@evalVReg_rule s)
     | [ |- TRIPLE _ (bind (evalReg ?r) _) _ _ ]                                                   => tapply evalReg_rule
-    | [ |- TRIPLE _ (bind (evalPort (PortI ?r)) _) _ _ ]                                          => tapply evalPortI_rule
+    | [ |- TRIPLE _ (bind (evalWORDReg ?r) _) _ _ ]                                               => tapply evalWORDReg_rule
     | [ |- TRIPLE _ (bind (evalBYTEReg ?r) _) _ _ ]                                               => tapply evalBYTEReg_rule
+
+    | [ |- TRIPLE _ (bind (evalPort (PortI ?r)) _) _ _ ]                                          => tapply evalPortI_rule
     | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec None ?offset)) _) _ _ ]                         => tapply evalMemSpecNone_rule
     | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec (Some (?r, None)) ?offset)) _) _ _ ]            => tapply evalMemSpecSomeNone_rule
     | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec (Some (?r, Some (?ix, ?sc))) ?offset)) _) _ _ ] => tapply evalMemSpec_rule
@@ -645,13 +666,14 @@ Ltac instrrule_triple_bazooka_step tac :=
     | [ |- TRIPLE _ (updateFlagInProcState ?f ?w) _ _ ]                                           => tapply triple_setFlagSep
     | [ |- TRIPLE _ (updateZPS ?v) _ _ ]                                                          => tapply triple_updateZPS
     | [ |- TRIPLE _ (forgetFlagInProcState ?f) _ _ ]                                              => do [ tapply triple_forgetFlagSep | tapply triple_forgetFlagSep' ]
-    | [ |- TRIPLE _ (setDWORDorBYTERegInProcState ?b ?d ?p) _ _ ]                                 => tapply (@triple_setDWORDorBYTERegSep b)
-    | [ |- TRIPLE _ (@setDWORDorBYTEInProcState ?b ?p ?w) _ _ ]                                   => tapply (@triple_setDWORDorBYTESep b)
     | [ |- TRIPLE _ (setRegInProcState ?d ?p) _ _ ]                                               => tapply triple_setRegSep
+    | [ |- TRIPLE _ (setBYTERegInProcState ?d ?p) _ _ ]                                           => tapply triple_setBYTERegSep
+    | [ |- TRIPLE _ (setVRegInProcState ?d ?p) _ _ ]                                              => tapply triple_setVRegSep
+    | [ |- TRIPLE _ (setVWORDInProcState ?p ?w) _ _ ]                                             => tapply triple_setVWORDSep
     | [ |- TRIPLE _ (retn tt) _ _ ]                                                               => tapply triple_skip
     | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]                                      => do [ tapply triple_letGetFlagSep | tapply triple_letGetFlag ]
     | [ |- TRIPLE _ (bind (getRegFromProcState ?r) _) _ _ ]                                       => tapply triple_letGetRegSep
-    | [ |- TRIPLE _ (bind (getDWORDorBYTEFromProcState ?d ?p) _) _ _ ]                            => tapply (@triple_letGetDWORDorBYTESep d)
+    | [ |- TRIPLE _ (bind (@getVWORDFromProcState ?s ?p) _) _ _ ]                                 => tapply (@triple_letGetVWORDSep s)
     | [ |- TRIPLE _ (bind (getDWORDFromProcState ?p) _) _ _ ]                                     => tapply triple_letGetDWORDSep
     | [ |- TRIPLE _ (evalPush ?p) _ _ ]                                                           => tapply evalPush_rule
     (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
@@ -669,9 +691,9 @@ Ltac instrrule_triple_bazooka tac :=
 Tactic Notation "instrrule_triple_bazooka" "using" tactic3(tac) := instrrule_triple_bazooka tac.
 Tactic Notation "instrrule_triple_bazooka" := instrrule_triple_bazooka using idtac.
 
-Ltac change_stateIs_with_DWORDorBYTEregIs :=
+Ltac change_stateIs_with_VRegIs :=
   progress repeat match goal with
-                    | [ |- appcontext[stateIs (RegOrFlagR (regToAnyReg ?r))] ] => progress change (stateIs r) with (@DWORDorBYTEregIs true r)
+                    | [ |- appcontext[stateIs (RegOrFlagDWORD (regToAnyReg ?r))] ] => progress change (stateIs r) with (@VRegIs OpSize4 r)
                   end.
 
 (** TODO(t-jagro): Find a way to make this nicer. *)
@@ -693,7 +715,7 @@ Ltac do_instrrule_triple := do_instrrule instrrule_triple_bazooka.
 Hint Unfold
   specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
   DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
+  VRegIs natAsDWORD BYTEtoDWORD stateIs 
   makeMOV makeBOP makeUOP
   : instrrules_basicapply.
 

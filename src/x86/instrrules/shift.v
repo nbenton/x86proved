@@ -14,7 +14,7 @@ Lemma SHL_RI_rule (r:Reg) (v:DWORD) (count:nat):
   |-- basic (r~=v ** OSZCP?) (SHL r, count) empOP
             (r~=iter count shlB v ** OSZCP?).
 Proof.
-  change (stateIs r) with (@DWORDorBYTEregIs true r).
+  change (stateIs r) with (@VRegIs OpSize4 r).
   move => BOUND.
   (** We don't want to spin forever if something goes wrong, so we
       only allow [count] to be destructed 5 times.  We do it in the
@@ -30,7 +30,7 @@ Lemma SHR_RI_rule (r:Reg) (v:DWORD) (count:nat):
   |-- basic (r~=v ** OSZCP?) (SHR r, count) empOP
             (r~=iter count shrB v ** OSZCP?).
 Proof.
-  change (stateIs r) with (@DWORDorBYTEregIs true r).
+  change (stateIs r) with (@VRegIs OpSize4 r).
   move => BOUND.
   (** We don't want to spin forever if something goes wrong, so we
       only allow [count] to be destructed 5 times.  We do it in the

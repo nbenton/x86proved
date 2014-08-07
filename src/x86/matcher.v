@@ -220,7 +220,7 @@ Definition ifEqByter (b:BYTE) (dest:DWORD) : program :=
   JE dest.
 
 Lemma condbrByter (b:BYTE) dest :
-  |-- condbrspec ifEqByter (fun (p:unit) => fun (v:BYTE) => (BYTEregIs r v ** OSZCP?)) b dest.
+  |-- condbrspec ifEqByter (fun (p:unit) => fun (v:BYTE) => (r ~= v ** OSZCP?)) b dest.
 Proof.
 rewrite /ifEqByter /condbrspec.
 specintros => _ v i j.
@@ -282,13 +282,11 @@ Definition bytecurrent : program := (MOV r, [EAX + 0]).
 Definition bytenext : program := (INC EAX).
 
 Definition bytevalis (v : option NZBYTE) :=
- match v with | None => (BYTEregIs r #0)
-              | Some b => (BYTEregIs r (sval b))
+ match v with | None => (r ~= #0)
+              | Some b => (r ~= (sval b))
  end.
 
-Definition bytevalany := Exists v, BYTEregIs r v.
-
-Lemma bytevalisisany : forall v, bytevalis v |-- bytevalany.
+Lemma bytevalisisany : forall v, bytevalis v |-- r?.
 elim=> [a |]; rewrite /bytevalis /bytevalany; sbazooka.
 Qed.
 

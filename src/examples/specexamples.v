@@ -38,7 +38,7 @@ Proof.
 Qed.
 
 (* Show off the sequencing rule for [basic]. *)
-Example basic_inc3 x:
+Example basic_inc3 (x:DWORD):
   |-- basic (EAX ~= x)
             (INC EAX;; INC EAX;; INC EAX) empOP
             (EAX ~= x +# 3) @ OSZCP?.
@@ -46,7 +46,7 @@ Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
   do !do_basic'.
-  rewrite /OSZCP addIsIterInc/iter; sbazooka.
+  rewrite /OSZCP addIsIterInc/iter/stateIs; sbazooka.
 Qed.
 
 Example incdec_while c a:
@@ -78,13 +78,13 @@ Proof.
   - subst I; cbv beta; rewrite /ConditionIs/stateIsAny; specintros => *; subst.
     do_basic'.
     do_basic'.
-    rewrite /OSZCP/ConditionIs.
+    rewrite /OSZCP/ConditionIs/stateIs.
     sbazooka.
     by rewrite addB_decB_incB.
 Qed.
 
 
-Local Ltac t_after_specapply := ssimpl; try reflexivity; rewrite /ConditionIs/OSZCP/DWORDorBYTEregIs/stateIsAny/stateIs; cbv beta; ssimpl; try reflexivity; sbazooka.
+Local Ltac t_after_specapply := ssimpl; try reflexivity; rewrite /ConditionIs/OSZCP/VRegIs/stateIsAny/stateIs; cbv beta; ssimpl; try reflexivity; sbazooka.
 
 Local Ltac do_code_unfolder :=
   rewrite /makeUOP/makeBOP.
@@ -126,11 +126,11 @@ Example safe_loop_n P (pbody : program) O (n : nat) d
         (is_small : forall n, small_enough (n.+1) -> small_enough n)
         (small_is_good : forall n, small_enough n -> (#(n.+1) == @fromNat n32 0) = false)
         (Hn : small_enough n)
-        (H : forall n, small_enough n -> |--basic (ECX ~= #(n.+1) ** BYTEregIs AL d ** P (n.+1) ** OSZCP?) pbody (O (n.+1)) (ECX ~= #(n.+1) ** BYTEregIs AL d ** P n ** OSZCP?))
-: |-- (basic (ECX ~= #n ** BYTEregIs AL d ** P n)
+        (H : forall n, small_enough n -> |--basic (ECX ~= #(n.+1) ** AL ~= d ** P (n.+1) ** OSZCP?) pbody (O (n.+1)) (ECX ~= #(n.+1) ** AL ~= d ** P n ** OSZCP?))
+: |-- (basic (ECX ~= #n ** AL ~= d ** P n)
              (output_n_prog pbody n)
              (rollOP n O)
-             (ECX ~= #0 ** BYTEregIs AL d ** P 0))
+             (ECX ~= #0 ** AL ~= d ** P 0))
       @ OSZCP?.
 Proof.
   unfold output_n_prog.
@@ -156,11 +156,11 @@ Example safe_loop_n_const P (pbody : program) O (n : nat) d
         (is_small : forall n, small_enough (n.+1) -> small_enough n)
         (small_is_good : forall n, small_enough n -> (#(n.+1) == @fromNat n32 0) = false)
         (Hn : small_enough n)
-        (H : forall n, small_enough n -> |--basic (ECX ~= #(n.+1) ** BYTEregIs AL d ** P ** OSZCP?) pbody O (ECX ~= #(n.+1) ** BYTEregIs AL d ** P ** OSZCP?))
-: |-- (basic (ECX ~= #n ** BYTEregIs AL d ** P)
+        (H : forall n, small_enough n -> |--basic (ECX ~= #(n.+1) ** AL ~= d ** P ** OSZCP?) pbody O (ECX ~= #(n.+1) ** AL ~= d ** P ** OSZCP?))
+: |-- (basic (ECX ~= #n ** AL ~= d ** P)
              (output_n_prog pbody n)
              (repOP n O)
-             (ECX ~= #0 ** BYTEregIs AL d ** P))
+             (ECX ~= #0 ** AL ~= d ** P))
       @ OSZCP?.
 Proof.
   rewrite repOP_rollOP.
@@ -276,7 +276,7 @@ Proof.
 Qed.
 
 Example loop_forever_one al
-: |-- (loopy_basic (BYTEregIs AL al)
+: |-- (loopy_basic (AL ~= al)
                    (MOV AL, (#1 : DWORD);;
                     loop_forever_prog (OUT #0, AL))
                    (starOP (outOP (zeroExtend n8 (#0 : BYTE)) (#1 : BYTE)))

@@ -516,16 +516,29 @@ Definition regIs r (v:DWORD) : SPred :=
 ** regPieceIs (AnyRegPiece r RegIx2) (getRegPiece v RegIx2)
 ** regPieceIs (AnyRegPiece r RegIx3) (getRegPiece v RegIx3).
 
+Definition WORDregIs (r:WORDReg) (v:WORD) : SPred :=
+   regPieceIs (AnyRegPiece (WORDRegToReg r) RegIx0) (slice 0 8 8 v)
+** regPieceIs (AnyRegPiece (WORDRegToReg r) RegIx1) (slice 8 8 0 v).
+
 Inductive RegOrFlag :=
-| RegOrFlagR :> AnyReg -> RegOrFlag
+| RegOrFlagDWORD :> AnyReg -> RegOrFlag
+| RegOrFlagWORD :> WORDReg -> RegOrFlag 
+| RegOrFlagBYTE :> BYTEReg -> RegOrFlag 
 | RegOrFlagF :> Flag -> RegOrFlag.
 
 Definition RegOrFlag_target rf :=
-match rf with RegOrFlagR _ => DWORD | RegOrFlagF _ => FlagVal end.
+match rf with 
+| RegOrFlagDWORD _ => DWORD 
+| RegOrFlagWORD _  => WORD
+| RegOrFlagBYTE _  => BYTE
+| RegOrFlagF _     => FlagVal 
+end.
 
 Definition stateIs (x: RegOrFlag) : RegOrFlag_target x -> SPred :=
 match x with
-| RegOrFlagR r => regIs r
+| RegOrFlagDWORD r => regIs r
+| RegOrFlagWORD r => WORDregIs r
+| RegOrFlagBYTE r => BYTEregIs r
 | RegOrFlagF f => flagIs f
 end.
 
@@ -536,7 +549,7 @@ Definition stateIsAny x := lexists (stateIs x).
 Notation "x '~=' v" := (stateIs x v) (at level 55, no associativity, format "x '~=' v") : spred_scope.
 Notation "x '?'" := (stateIsAny x) (at level 2, format "x '?'"): spred_scope.
 
-Hint Unfold DWORDorBYTE RegOrFlag_target : spred.
+Hint Unfold VWORD RegOrFlag_target : spred.
 (** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
 Hint Unfold stateIsAny stateIs : finish_logic_unfolder.
 
@@ -700,7 +713,7 @@ destruct H1; by destruct H.
 by destruct H1.
 Qed.
 
-Lemma BYTEregIs_same (r:BYTEReg) v1 v2 : BYTEregIs r v1 ** BYTEregIs r v2 |-- lfalse.
+Lemma BYTEregIs_same (r:BYTEReg) (v1 v2:BYTE) : r ~= v1 ** r ~= v2 |-- lfalse.
 Proof. rewrite /BYTEregIs. apply regPieceIs_same. Qed. 
 
 Lemma sepRev4 P Q R S : P ** Q ** R ** S -|- S ** R ** Q ** P.

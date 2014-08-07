@@ -24,23 +24,24 @@ Inductive MemSpec :=
 
 (* 8-bit register *)
 (*=BYTEReg *)
-Definition DWORDorBYTEReg (d: bool) := if d then Reg else BYTEReg.
+Definition VReg (d: OpSize) := 
+  match d with OpSize1 => BYTEReg | OpSize2 => WORDReg | OpSize4 => Reg end.
 (*=End *)
 
 (* Register or memory *)
 (*=RegMem *)
-Inductive RegMem d :=
-| RegMemR (r: DWORDorBYTEReg d)
+Inductive RegMem s :=
+| RegMemR (r: VReg s)
 | RegMemM (ms: MemSpec).
-Inductive RegImm d :=
-| RegImmI (c: DWORDorBYTE d)
-| RegImmR (r: DWORDorBYTEReg d).
+Inductive RegImm s :=
+| RegImmI (c: VWORD s)
+| RegImmR (r: VReg s).
 (*=End *)
 
-Coercion DWORDRegMemR (r:Reg)       := RegMemR true r.
-Coercion BYTERegMemR  (r:BYTEReg)   := RegMemR false r.
-Coercion DWORDRegMemM (ms: MemSpec) := RegMemM true ms.
-Coercion DWORDRegImmI (d: DWORD)    := RegImmI true d.
+Coercion DWORDRegMemR (r:Reg)       := RegMemR OpSize4 r.
+Coercion BYTERegMemR  (r:BYTEReg)   := RegMemR OpSize1 r.
+Coercion DWORDRegMemM (ms: MemSpec) := RegMemM OpSize4 ms.
+Coercion DWORDRegImmI (d: DWORD)    := RegImmI OpSize4 d.
 
 (* Unary ops: immediate, register, or memory source *)
 (* Binary ops: five combinations of source and destination *)
@@ -49,12 +50,12 @@ Inductive Src :=
 | SrcI (c: DWORD)
 | SrcM (ms: MemSpec)
 | SrcR (r: Reg).
-Inductive DstSrc (d: bool) :=
-| DstSrcRR (dst src: DWORDorBYTEReg d)
-| DstSrcRM (dst: DWORDorBYTEReg d) (src: MemSpec)
-| DstSrcMR (dst: MemSpec) (src: DWORDorBYTEReg d)
-| DstSrcRI (dst: DWORDorBYTEReg d) (c: DWORDorBYTE d)
-| DstSrcMI (dst: MemSpec) (c: DWORDorBYTE d).
+Inductive DstSrc (s: OpSize) :=
+| DstSrcRR (dst src: VReg s)
+| DstSrcRM (dst: VReg s) (src: MemSpec)
+| DstSrcMR (dst: MemSpec) (src: VReg s)
+| DstSrcRI (dst: VReg s) (c: VWORD s)
+| DstSrcMI (dst: MemSpec) (c: VWORD s).
 (*=End *)
 Coercion SrcI : DWORD >-> Src.
 Coercion SrcR : Reg >-> Src.
@@ -98,24 +99,28 @@ Inductive Condition :=
 (* dword=true if 32-bits, dword=false if 8-bits *)
 (*=Instr *)
 Inductive Instr :=
-| UOP d (op: UnaryOp) (dst: RegMem d)
-| BOP d (op: BinOp ) (ds: DstSrc d)
-| BITOP (op: BitOp) (dst: RegMem true) (bit: Reg + BYTE)
-| TESTOP d (dst: RegMem d) (src: RegImm d)
-| MOVOP d (ds: DstSrc d)
-| MOVX (signextend w:bool) (dst: Reg) (src: RegMem w)
-| SHIFTOP d (op: ShiftOp) (dst: RegMem d) (count: ShiftCount)
-| MUL {d} (src: RegMem d)
-| IMUL (dst: Reg) (src: RegMem true)
-| LEA (reg: Reg) (src: RegMem true)
-| XCHG d (reg: DWORDorBYTEReg d) (src: RegMem d)
+| UOP s (op: UnaryOp) (dst: RegMem s)
+| BOP s (op: BinOp) (ds: DstSrc s)
+| BITOP (op: BitOp) (dst: RegMem OpSize4) (bit: Reg + BYTE)
+| TESTOP s (dst: RegMem s) (src: RegImm s)
+| MOVOP s (ds: DstSrc s)
+| MOVSegRM (dst: SegReg) (src: RegMem OpSize2)
+| MOVRMSeg (dst: RegMem OpSize2) (dst: SegReg)
+| MOVX (signextend:bool) s (dst: Reg) (src: RegMem s)
+| SHIFTOP s (op: ShiftOp) (dst: RegMem s) (count: ShiftCount)
+| MUL {s} (src: RegMem s)
+| IMUL (dst: Reg) (src: RegMem OpSize4)
+| LEA (reg: Reg) (src: RegMem OpSize4)
+| XCHG s (reg: VReg s) (src: RegMem s)
 | JCCrel (cc: Condition) (cv: bool) (tgt: Tgt)
 | PUSH (src: Src)
-| POP (dst: RegMem true)
+| PUSHSegR (r: SegReg)
+| POP (dst: RegMem OpSize4)
+| POPSegR (r: SegReg)
 | CALLrel (tgt: JmpTgt) | JMPrel (tgt: JmpTgt)
 | CLC | STC | CMC
 | RETOP (size: WORD)
-| OUTOP (d: bool) (port: Port)
-| INOP (d: bool) (port: Port)
+| OUTOP (s: OpSize) (port: Port)
+| INOP (s: OpSize) (port: Port)
 | HLT | BADINSTR.
 (*=End *)

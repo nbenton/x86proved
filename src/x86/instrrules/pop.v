@@ -3,7 +3,7 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 (** ** Generic POP *)
-Lemma POP_rule (rm:RegMem true) (sp:DWORD) (oldv v:DWORD):
+Lemma POP_rule (rm:RegMem OpSize4) (sp:DWORD) (oldv v:DWORD):
   |-- specAtRegMemDst rm (fun V =>
       basic (V oldv ** ESP ~= sp    ** sp:->v) (POP rm) empOP
             (V v    ** ESP ~= sp+#4 ** sp:->v)).
@@ -12,12 +12,12 @@ Proof. do_instrrule_triple. Qed.
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
     [get_instrrule_of]. *)
-Global Instance: forall (rm : RegMem true), instrrule (POP rm) := @POP_rule.
+Global Instance: forall (rm : RegMem _), instrrule (POP rm) := @POP_rule.
 
 
 (** ** POP r *)
 Corollary POP_R_rule (r:Reg) (sp oldv v:DWORD) :
-  |-- basic (r ~= oldv ** ESP ~= sp    ** sp:->v) (POP (RegMemR true r)) empOP
+  |-- basic (r ~= oldv ** ESP ~= sp    ** sp:->v) (POP (RegMemR OpSize4 r)) empOP
             (r ~= v    ** ESP ~= sp+#4 ** sp:->v).
 Proof. do_basic'. Qed.
 

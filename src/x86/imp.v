@@ -252,9 +252,9 @@ Section LogicLemmas.
              | |- _ |-- loopy_basic _ (prog_seq _ _) _ _ => eapply loopy_basic_seq
              | [ |- context[if ?E then _ else _] ] => case_eq E; intro
              | _ => match goal with
-                      | [ |- stack_denot _ ** _ |-- RegOrFlagR (regToAnyReg (var_reg _)) ~= _ ** _ ] => by rewrite ->regs_read_var; ssimpl
-                      | [ |- stack_denot _ |-- RegOrFlagR (regToAnyReg (var_reg _)) ~= _ ** _ ] => by rewrite ->regs_read_var; ssimpl
-                      | [ |- _ ** stack_denot _ |-- (RegOrFlagR (regToAnyReg (var_reg _)) ~= _ ** RegOrFlagR (regToAnyReg (var_reg _)) ~= _) ** _ ] => by rewrite ->regs_read_vars; try ssimpl; trivial
+                      | [ |- stack_denot _ ** _ |-- RegOrFlagDWORD (regToAnyReg (var_reg _)) ~= _ ** _ ] => by rewrite ->regs_read_var; ssimpl
+                      | [ |- stack_denot _ |-- RegOrFlagDWORD (regToAnyReg (var_reg _)) ~= _ ** _ ] => by rewrite ->regs_read_var; ssimpl
+                      | [ |- _ ** stack_denot _ |-- (RegOrFlagDWORD (regToAnyReg (var_reg _)) ~= _ ** RegOrFlagDWORD (regToAnyReg (var_reg _)) ~= _) ** _ ] => by rewrite ->regs_read_vars; try ssimpl; trivial
                       | _ => progress (rewrite /OSZCP/stateIsAny; sbazooka)
                       | [ |- context[?P -* ?Q] ] => by etransitivity; [ | eapply sepSPwand ]; sbazooka
                       | [ |- adcB ?b #(0) #(0) = _ ] => eexact (adcB_b_0_0 b)

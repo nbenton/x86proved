@@ -42,9 +42,32 @@ Canonical Structure AnyRegEqType := Eval hnf in EqType _ AnyRegEqMixin.
 
 (* Segment registers *)
 Inductive SegReg := CS | DS | SS | ES | FS | GS.
+Definition SegRegToNat r :=  
+  match r with CS => 0 | DS => 1 | SS => 2 | ES => 3 | FS => 4 | GS => 5 end. 
+Lemma SegRegToNat_inj : injective SegRegToNat.
+Proof. by case; case. Qed.
+Canonical Structure SegRegEqMixin := InjEqMixin SegRegToNat_inj.
+Canonical Structure SegRegEqType := Eval hnf in EqType _ SegRegEqMixin.
 
 (* Byte registers *)
 Inductive BYTEReg := AL|BL|CL|DL|AH|BH|CH|DH.
+
+(* 16-bit legacy registers; wrap underlying 32-bit registers *)
+Inductive WORDReg := mkWordReg (r:Reg).
+Notation AX := (mkWordReg EAX).
+Notation BX := (mkWordReg EBX).
+Notation CX := (mkWordReg ECX).
+Notation DX := (mkWordReg EDX).
+Notation SI := (mkWordReg ESI).
+Notation DI := (mkWordReg EDI).
+Notation BP := (mkWordReg EBP).
+Notation SP := (mkWordReg ESP).
+
+Definition WORDRegToReg (wr:WORDReg):Reg := let: mkWordReg r := wr in r.
+Lemma WORDRegToReg_inj : injective WORDRegToReg.
+Proof. by move => [x] [y] /= ->. Qed. 
+Canonical Structure WORDRegEqMixin := InjEqMixin WORDRegToReg_inj.
+Canonical Structure WORDRegEqType := Eval hnf in EqType _ WORDRegEqMixin.
 
 (* Standard numbering of registers *)
 Definition natToReg n : option Reg :=

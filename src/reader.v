@@ -135,8 +135,12 @@ Instance readWORD: Reader WORD :=
   retn (bytesToWORD b1 b0).
 
 (** This must go at a lower level/priority than [readDWORD] and [readBYTE] so it is picked up less eagerly. *)
-Instance readDWORDorBYTE dw : Reader (DWORDorBYTE dw) | 1 :=
-  if dw as dw return Reader (DWORDorBYTE dw) then readDWORD else readBYTE.
+Instance readVWORD s : Reader (VWORD s) | 1 :=
+  match s as s return Reader (VWORD s) with
+  | OpSize1 => readBYTE
+  | OpSize2 => readWORD
+  | OpSize4 => readDWORD
+  end.
 
 Fixpoint readPad (n:nat) : Reader unit :=
   if n is n'.+1

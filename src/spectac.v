@@ -128,12 +128,12 @@ Ltac eforalls H :=
    assertion where EIP appears, for example, on the left of a magic wand. But
    in practice, EIP is treated very schematically.
 
-   NOTE: to get the match to succeed, we need the RegOrFlagR constructor. Grrr. *)
+   NOTE: to get the match to succeed, we need the RegOrFlagDWORD constructor. Grrr. *)
 Ltac solve_code :=
   match goal with
     |- ?P |-- ?Q /\ _ =>
-      match P with context [RegOrFlagR EIP ~= ?eip] =>
-        match Q with context [RegOrFlagR EIP ~= ?evar] =>
+      match P with context [RegOrFlagDWORD EIP ~= ?eip] =>
+        match Q with context [RegOrFlagDWORD EIP ~= ?evar] =>
           unify eip evar
         end
       end

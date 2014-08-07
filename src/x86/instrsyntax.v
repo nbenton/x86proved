@@ -62,12 +62,14 @@ Notation "'[' r '+' i '*' '8' '+' n ']'" :=
   (mkMemSpec (Some(r:Reg, Some(i,S8))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
-Definition DWORDtoDWORDorBYTE dword : DWORD -> DWORDorBYTE dword :=
+(*Definition DWORDtoDWORDorBYTE dword : DWORD -> DWORDorBYTE dword :=
   match dword return DWORD -> DWORDorBYTE dword
   with true => fun d => d | false =>fun d => low 8 d end.
+*)
 
 Inductive InstrArg :=
 | BYTERegArg :> BYTEReg -> InstrArg
+| WORDRegArg :> WORDReg -> InstrArg
 | RegArg :> Reg -> InstrArg
 | MemSpecArg :> MemSpec -> InstrArg.
 
@@ -77,10 +79,10 @@ Inductive InstrSrc :=
 
 Definition SrcToRegImm src :=
   match src with
-  | SrcI c => RegImmI true c
-  | SrcR r => RegImmR true r
+  | SrcI c => RegImmI OpSize4 c
+  | SrcR r => RegImmR OpSize4 r
   (* Don't do it! *)
-  | SrcM m => RegImmI _ (#0: DWORDorBYTE true)
+  | SrcM m => RegImmI _ (#0: VWORD OpSize4)
   end.
 
 Bind Scope memspec_scope with MemSpec.
@@ -90,42 +92,44 @@ Bind Scope memspec_scope with MemSpec.
   ---------------------------------------------------------------------------*)
 Definition makeUOP op (i: InstrArg) :=
   match i with
-  | BYTERegArg r => UOP false op (RegMemR false r)
-  | RegArg r => UOP true op (RegMemR true r)
-  | MemSpecArg ms => UOP true op (RegMemM true ms)
+  | BYTERegArg r => UOP OpSize1 op (RegMemR OpSize1 r)
+  | WORDRegArg r => UOP OpSize2 op (RegMemR OpSize2 r)
+  | RegArg r => UOP OpSize4 op (RegMemR OpSize4 r)
+  | MemSpecArg ms => UOP OpSize4 op (RegMemM OpSize4 ms)
   end.
 
 Notation "'NOT' x"
   := (makeUOP OP_NOT x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'NOT' 'BYTE' m"
-  := (UOP false OP_NOT (RegMemM false m%ms)) (m at level 55, at level 60) : instr_scope.
+  := (UOP OpSize1 OP_NOT (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'NEG' x"
   := (makeUOP OP_NEG x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'NEG' 'BYTE' m"
-  := (UOP false OP_NEG (RegMemM false m%ms)) (m at level 55, at level 60) : instr_scope.
+  := (UOP OpSize1 OP_NEG (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'INC' x"
   := (makeUOP OP_INC x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'INC' 'BYTE' m"
-  := (UOP false OP_INC (RegMemM false m%ms)) (m at level 55, at level 60) : instr_scope.
+  := (UOP OpSize1 OP_INC (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'DEC' x"
   := (makeUOP OP_DEC x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'DEC' 'BYTE' m"
-  := (UOP false OP_DEC (RegMemM false m%ms)) (m at level 55, at level 60) : instr_scope.
+  := (UOP OpSize1 OP_DEC (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 
 (*---------------------------------------------------------------------------
     Binary operations
   ---------------------------------------------------------------------------*)
 Definition makeBOP op dst (src: InstrSrc) :=
   match dst, src with
-  | BYTERegArg dst, BYTERegArg src => BOP false op (DstSrcRR false dst src)
-  | BYTERegArg dst, MemSpecArg src => BOP false op (DstSrcRM false dst src)
-  | RegArg dst, RegArg src => BOP true op (DstSrcRR true dst src)
-  | BYTERegArg dst, ConstSrc n => BOP false op (DstSrcRI false dst (low 8 n))
-  | RegArg dst, ConstSrc n => BOP true op (DstSrcRI true dst n)
-  | MemSpecArg dst, RegArg src => BOP true op (DstSrcMR true dst src)
-  | MemSpecArg dst, BYTERegArg src => BOP false op (DstSrcMR false dst src)
-  | RegArg dst, MemSpecArg src => BOP true op (DstSrcRM true dst src)
-  | MemSpecArg dst, ConstSrc n => BOP true op (DstSrcMI true dst n)
+  | BYTERegArg dst, BYTERegArg src => BOP OpSize1 op (DstSrcRR OpSize1 dst src)
+  | WORDRegArg dst, WORDRegArg src => BOP OpSize2 op (DstSrcRR OpSize2 dst src)
+  | BYTERegArg dst, MemSpecArg src => BOP OpSize1 op (DstSrcRM OpSize1 dst src)
+  | RegArg dst, RegArg src => BOP OpSize4 op (DstSrcRR OpSize4 dst src)
+  | BYTERegArg dst, ConstSrc n => BOP OpSize1 op (DstSrcRI OpSize1 dst (low 8 n))
+  | RegArg dst, ConstSrc n => BOP OpSize4 op (DstSrcRI OpSize4 dst n)
+  | MemSpecArg dst, RegArg src => BOP OpSize4 op (DstSrcMR OpSize4 dst src)
+  | MemSpecArg dst, BYTERegArg src => BOP OpSize1 op (DstSrcMR OpSize1 dst src)
+  | RegArg dst, MemSpecArg src => BOP OpSize4 op (DstSrcRM OpSize4 dst src)
+  | MemSpecArg dst, ConstSrc n => BOP OpSize4 op (DstSrcMI OpSize4 dst n)
   | _, _=> BADINSTR
   end.
 
@@ -140,51 +144,51 @@ Notation "'CMP' x , y" := (makeBOP OP_CMP x%ms y%ms) (x,y at level 55, at level 
 
 (* Only need byte modifier for constant source, memspec destination *)
 Notation "'ADC' 'BYTE' x , y" :=
-  (BOP false OP_ADC (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (BOP OpSize1 OP_ADC (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 Notation "'ADD' 'BYTE' x , y" :=
-  (BOP false OP_ADD (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (BOP OpSize1 OP_ADD (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 Notation "'SUB' 'BYTE' x , y" :=
-  (BOP false OP_SUB (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (BOP OpSize1 OP_SUB (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 Notation "'SBB' 'BYTE' x , y" :=
-  (BOP false OP_SBB (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (BOP OpSize1 OP_SBB (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 Notation "'AND' 'BYTE' x , y" :=
-  (BOP false OP_AND (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (BOP OpSize1 OP_AND (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 Notation "'OR' 'BYTE' x , y" :=
-  (BOP false OP_OR (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (BOP OpSize1 OP_OR (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 Notation "'XOR' 'BYTE' x , y" :=
-  (BOP false OP_XOR (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (BOP OpSize1 OP_XOR (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 Notation "'CMP' 'BYTE' x , y" :=
-  (BOP false OP_CMP (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (BOP OpSize1 OP_CMP (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 
 (*---------------------------------------------------------------------------
     MOV operations
   ---------------------------------------------------------------------------*)
 Definition makeMOV dst (src: InstrSrc) :=
   match dst, src with
-  | BYTERegArg dst, BYTERegArg src => MOVOP false (DstSrcRR false dst src)
-  | BYTERegArg dst, MemSpecArg src => MOVOP false (DstSrcRM false dst src)
-  | RegArg dst, RegArg src => MOVOP true (DstSrcRR true dst src)
-  | BYTERegArg dst, ConstSrc n => MOVOP false (DstSrcRI false dst (low 8 n))
-  | RegArg dst, ConstSrc n => MOVOP true (DstSrcRI true dst n)
-  | MemSpecArg dst, RegArg src => MOVOP true (DstSrcMR true dst src)
-  | MemSpecArg dst, BYTERegArg src => MOVOP false (DstSrcMR false dst src)
-  | RegArg dst, MemSpecArg src => MOVOP true (DstSrcRM true dst src)
-  | MemSpecArg dst, ConstSrc n => MOVOP true (DstSrcMI true dst n)
+  | BYTERegArg dst, BYTERegArg src => MOVOP OpSize1 (DstSrcRR OpSize1 dst src)
+  | BYTERegArg dst, MemSpecArg src => MOVOP OpSize1 (DstSrcRM OpSize1 dst src)
+  | RegArg dst, RegArg src => MOVOP OpSize4 (DstSrcRR OpSize4 dst src)
+  | BYTERegArg dst, ConstSrc n => MOVOP OpSize1 (DstSrcRI OpSize1 dst (low 8 n))
+  | RegArg dst, ConstSrc n => MOVOP OpSize4 (DstSrcRI OpSize4 dst n)
+  | MemSpecArg dst, RegArg src => MOVOP OpSize4 (DstSrcMR OpSize4 dst src)
+  | MemSpecArg dst, BYTERegArg src => MOVOP OpSize1 (DstSrcMR OpSize1 dst src)
+  | RegArg dst, MemSpecArg src => MOVOP OpSize4 (DstSrcRM OpSize4 dst src)
+  | MemSpecArg dst, ConstSrc n => MOVOP OpSize4 (DstSrcMI OpSize4 dst n)
   | _, _=> BADINSTR
   end.
 
 Notation "'MOV' x , y" := (makeMOV x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
 Notation "'MOV' 'BYTE' x , y" :=
-  (MOVOP false (DstSrcMI false x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+  (MOVOP OpSize1 (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 
 (*---------------------------------------------------------------------------
     MOV operations
   ---------------------------------------------------------------------------*)
 
-Notation "'TEST' x , y"       := (TESTOP true  x%ms (SrcToRegImm y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'TEST' 'BYTE' x , y":= (TESTOP false x%ms (SrcToRegImm y)) (x,y at level 55, at level 60) : instr_scope.
-Notation "'MOVZX' x , y" := (MOVX false true x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
-Notation "'MOVSX' x , y" := (MOVX true true x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
+Notation "'TEST' x , y"       := (TESTOP OpSize4  x%ms (SrcToRegImm y)) (x,y at level 55, at level 60) : instr_scope.
+Notation "'TEST' 'BYTE' x , y":= (TESTOP OpSize1 x%ms (SrcToRegImm y)) (x,y at level 55, at level 60) : instr_scope.
+Notation "'MOVZX' x , y" := (MOVX OpSize1 OpSize4 x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
+Notation "'MOVSX' x , y" := (MOVX OpSize4 OpSize4 x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
 
 (*---------------------------------------------------------------------------
     Shift and rotate
@@ -201,21 +205,21 @@ Notation "'ROR' x , c" := (SHIFTOP _ OP_ROR x%ms (ShiftCountI c)) (x, c at level
 
 Notation "'IMUL' x , y" := (IMUL x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
 
-Notation "'LEA' x , y" := (LEA x (RegMemM true y%ms)) (x,y at level 55, at level 60) : instr_scope.
+Notation "'LEA' x , y" := (LEA x (RegMemM OpSize4 y%ms)) (x,y at level 55, at level 60) : instr_scope.
 
 Notation "'RET' x" := (RETOP x) (at level 60, x at level 55, format "'RET' x") : instr_scope.
 
-Notation "'OUT' 'DX' ',' 'AL'" := (OUTOP false PortDX) : instr_scope.
-Notation "'OUT' 'DX' ',' 'EAX'" := (OUTOP true PortDX) : instr_scope.
-Notation "'IN'  'DX' ',' 'AL'" := (INOP false PortDX) : instr_scope.
-Notation "'IN' 'DX' ',' 'EAX'" := (INOP true PortDX) : instr_scope.
+Notation "'OUT' 'DX' ',' 'AL'" := (OUTOP OpSize1 PortDX) : instr_scope.
+Notation "'OUT' 'DX' ',' 'EAX'" := (OUTOP OpSize4 PortDX) : instr_scope.
+Notation "'IN'  'DX' ',' 'AL'" := (INOP OpSize1 PortDX) : instr_scope.
+Notation "'IN' 'DX' ',' 'EAX'" := (INOP OpSize4 PortDX) : instr_scope.
 
-Notation "'OUT' x ',' 'AL'" := (OUTOP false (PortI x)) : instr_scope.
-Notation "'OUT' x ',' 'EAX'" := (OUTOP true (PortI x)) : instr_scope.
-Notation "'IN'  x ',' 'AL'" := (INOP false (PortI x)) : instr_scope.
-Notation "'IN' x ',' 'EAX'" := (INOP true (PortI x)) : instr_scope.
+Notation "'OUT' x ',' 'AL'" := (OUTOP OpSize1 (PortI x)) : instr_scope.
+Notation "'OUT' x ',' 'EAX'" := (OUTOP OpSize4 (PortI x)) : instr_scope.
+Notation "'IN'  x ',' 'AL'" := (INOP OpSize1 (PortI x)) : instr_scope.
+Notation "'IN' x ',' 'EAX'" := (INOP OpSize4 (PortI x)) : instr_scope.
 
-Definition NOP := XCHG true EAX (RegMemR true EAX).
+Definition NOP := XCHG OpSize4 EAX (RegMemR OpSize4 EAX).
 
 Arguments PUSH (src)%ms.
 Arguments POP (dst)%ms.
@@ -234,6 +238,7 @@ Example ex5 (a:DWORD) := MOV EDI, a.
 Example ex6 (r:BYTEReg) := MOV AL, r.
 Example ex7 (r:Reg) := POP [r + #x"0000001C"].
 Example ex8 := CMP AL, (#c"!":BYTE).
+Example ex9 := MOV DX, BP. 
 
 Close Scope instr_scope.
 End Examples.

@@ -92,9 +92,10 @@ Qed.
 (*---------------------------------------------------------------------------
    DWORDorBYTE reading and writing
   ---------------------------------------------------------------------------*)
-Instance RoundtripDWORDorBYTE dw : Roundtrip (readDWORDorBYTE dw) (writeDWORDorBYTE dw) :=
+(*Instance RoundtripDWORDorBYTE dw : Roundtrip (readDWORDorBYTE dw) (writeDWORDorBYTE dw) :=
   if dw as dw return Roundtrip (readDWORDorBYTE dw) (writeDWORDorBYTE dw)
   then RoundtripDWORD else RoundtripBYTE.
+*)
 
 Instance RoundtripPadWith b m : Roundtrip (readPad m) (writePadWith b m).
 Proof.

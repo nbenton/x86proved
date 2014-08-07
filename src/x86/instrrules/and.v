@@ -3,10 +3,10 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 (** ** Generic AND *)
-Lemma AND_rule (ds:DstSrc true) (v1: DWORD) :
+Lemma AND_rule sz (ds:DstSrc sz) (v1: VWORD sz) :
    |-- specAtDstSrc ds (fun D v2 =>
        basic (D v1 ** OSZCP?)
-             (BOP true OP_AND ds) empOP
+             (BOP _ OP_AND ds) empOP
              (let v := andB v1 v2 in
               D v ** OSZCP false (msb v) (v == #0) false (lsb v))).
 Proof. do_instrrule_triple. Qed.
@@ -14,7 +14,7 @@ Proof. do_instrrule_triple. Qed.
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
     [get_instrrule_of]. *)
-Global Instance: forall (ds : DstSrc true), instrrule (BOP true OP_AND ds) := @AND_rule.
+Global Instance: forall sz (ds : DstSrc sz), instrrule (BOP sz OP_AND ds) := @AND_rule.
 
 (** ** AND r1, r2 *)
 Corollary AND_RR_rule (r1 r2:Reg) v1 (v2:DWORD) :

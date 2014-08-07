@@ -39,17 +39,21 @@ Definition n24 := 24.
 Arguments n24 : simpl never.
 Opaque n24.
 Definition NIBBLE := BITS n4.
-Definition WORD   := BITS n16.
-Definition QWORD  := BITS n64.
-Definition DWORDorBYTE (d: bool) := BITS (if d then n32 else n8).
-Definition DWORD  := DWORDorBYTE true.
-Definition BYTE   := DWORDorBYTE false.
+
+Inductive OpSize := OpSize1 | OpSize2 | OpSize4 (* | OpSize8 *). 
+Definition VWORD s := 
+  BITS (match s with OpSize1 => n8 | OpSize2 => n16 | OpSize4 => n32 (* | OpSize8 => n64 *) end).
+Definition BYTE   := VWORD OpSize1.
+Definition WORD   := VWORD OpSize2.
+Definition DWORD  := VWORD OpSize4.
+(*Definition QWORD  := VWORD OpSize8.*)
 (*=End *)
 
-Identity Coercion DWORDorBYTEtoBITS : DWORDorBYTE >-> BITS.
-Identity Coercion DWORDtoDWORDorBYTE : DWORD >-> DWORDorBYTE.
-Identity Coercion BYTEtoDWORDorBYTE : BYTE >-> DWORDorBYTE.
-Identity Coercion WORDtoBITS16 : WORD >-> BITS.
+Identity Coercion VWORDtoBITS : VWORD >-> BITS.
+Identity Coercion BYTEtoVWORD : BYTE >-> VWORD.
+Identity Coercion WORDtoVWORD : WORD >-> VWORD.
+Identity Coercion DWORDtoVWORD : DWORD >-> VWORD.
+(*Identity Coercion QWORDtoVWORD : QWORD >-> VWORD.*)
 
 (* Construction *)
 Notation "'nilB'" := (nil_tuple _).
@@ -75,6 +79,7 @@ Arguments fromNat n m : simpl never.
 
 Definition toNat {n} (p: BITS n) := foldr (fun (b:bool) n => b + n.*2) 0 p.
 
+(*Coercion natAsQWORD := @fromNat _ : nat -> QWORD.*)
 Coercion natAsDWORD := @fromNat _ : nat -> DWORD.
 Coercion natAsWORD := @fromNat _ : nat -> WORD.
 Coercion natAsBYTE := @fromNat _ : nat -> BYTE.
