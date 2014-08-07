@@ -20,7 +20,7 @@ Next Obligation. move=> k P P' [R HR] Hsafe s Hs.
   apply lentails_eq. rewrite ->Hs. by ssimpl.
 Qed.
 
-Local Transparent ILFun_Ops ILPre_Ops.
+Local Transparent ILFun_Ops ILPre_Ops lentails.
 
 Lemma safeAtState (s: ProcState):
   |-- safe @ eq_pred s <-> runsForever s.

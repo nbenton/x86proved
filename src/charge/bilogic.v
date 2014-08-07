@@ -209,6 +209,7 @@ Section BISepAlg.
   Local Existing Instance ILFun_Ops.
   Local Existing Instance ILFun_ILogic.
   Local Transparent ILFun_Ops.
+  Local Transparent lentails ltrue lfalse limpl land lor lforall lexists.
 
   Definition SABILogic : BILogic (ILFunFrm A B).
   Proof.
@@ -267,3 +268,5 @@ Section BISepAlg.
 End BISepAlg.
 
 Global Opaque SABIOps.
+(** We make these connectives [Opaque] to speed up unification and [apply] *)
+Global Opaque sepSP empSP wandSP.

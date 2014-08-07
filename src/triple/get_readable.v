@@ -12,7 +12,7 @@ Import Prenex Implicits.
 
 Local Transparent PStateSepAlgOps.
 
-Local Transparent ILFun_Ops SABIOps PStateSepAlgOps.
+Local Transparent ILFun_Ops SABIOps PStateSepAlgOps sepLogicOps sepSP lentails lexists land ltrue sepILogicOps.
 
 Local Ltac pre_let :=
   eapply valued_triple_seqcat; first by apply cat0s.

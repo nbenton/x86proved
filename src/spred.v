@@ -387,6 +387,7 @@ Local Existing Instance SABILogic.
 Instance sepILogicOps : ILogicOps SPred | 1 := _.
 Instance sepLogicOps : BILOperators SPred | 1 := _.
 Instance sepLogic : BILogic SPred | 1 := _.
+Global Opaque sepILogicOps sepLogicOps sepLogic.
 
 Implicit Arguments mkILFunFrm [[e] [ILOps]].
 
@@ -396,6 +397,7 @@ Definition mkSPred (P : PState -> Prop)
 
 Implicit Arguments mkSPred [].
 
+Local Transparent lentails sepILogicOps.
 Program Definition eq_pred s := mkSPred (fun s' => s === s') _.
 Next Obligation.
   rewrite <- H; assumption.
@@ -466,12 +468,12 @@ specialize (SPLIT f x). specialize (EQ f x). specialize (EQ' f x). specialize (E
 destruct (s1 f x); destruct (s2 f x); congruence.
 Qed.
 
-Local Transparent ILFun_Ops SABIOps.
+Local Transparent ILFun_Ops SABIOps ltrue.
 
 Lemma emp_unit : empSP -|- eq_pred sa_unit.
   split; simpl; move => x H.
   + destruct H as [H _]; assumption.
-  + exists H; tauto.
+  + exists H; constructor.
 Qed.
 
 Lemma eqPredTotal_sepSP_trueR s :
@@ -481,7 +483,7 @@ Proof.
 move => TOT.
 split => s'.
 - apply lentails_eq. exists s, emptyPState. split => //; first apply stateSplitsAs_s_s_emp.
-- move => /= [s1 [s2 [H1 [H2 H3]]]]. setoid_rewrite <- H2 in H1.
+- move => /= [s1 [s2 [H1 [H2 H3]]]]. hnf in H2, H1. setoid_rewrite <- H2 in H1.
   apply (stateSplitsTotal TOT) in H1. by rewrite H1.
 Qed.
 
@@ -511,7 +513,7 @@ Definition flagIs f b : SPred := eq_pred (addFlagToPState emptyPState f b).
 Definition BYTEregIs r v : SPred := regPieceIs (BYTERegToRegPiece r) v.
 
 Definition regIs r (v:DWORD) : SPred :=
-   regPieceIs (AnyRegPiece r RegIx0) (getRegPiece v RegIx0)              
+   regPieceIs (AnyRegPiece r RegIx0) (getRegPiece v RegIx0)
 ** regPieceIs (AnyRegPiece r RegIx1) (getRegPiece v RegIx1)
 ** regPieceIs (AnyRegPiece r RegIx2) (getRegPiece v RegIx2)
 ** regPieceIs (AnyRegPiece r RegIx3) (getRegPiece v RegIx3).
@@ -612,8 +614,8 @@ by rewrite (stateSplitsAsExtends H1) (stateSplitsAsExtends H1').
 Qed.
 
 Instance StrictlyExactRegIs r v: StrictlyExact (regIs r v).
-Proof. rewrite /regIs. do 3 (apply StrictlyExactSep; first apply StrictlyExactRegPieceIs). 
-apply StrictlyExactRegPieceIs. Qed. 
+Proof. rewrite /regIs. do 3 (apply StrictlyExactSep; first apply StrictlyExactRegPieceIs).
+apply StrictlyExactRegPieceIs. Qed.
 
 Instance StrictlyExactEmpSP : StrictlyExact empSP.
 Proof. move => s s' H H'.
@@ -701,17 +703,17 @@ by destruct H1.
 Qed.
 
 Lemma BYTEregIs_same (r:BYTEReg) v1 v2 : BYTEregIs r v1 ** BYTEregIs r v2 |-- lfalse.
-Proof. rewrite /BYTEregIs. apply regPieceIs_same. Qed. 
+Proof. rewrite /BYTEregIs. apply regPieceIs_same. Qed.
 
 Lemma sepRev4 P Q R S : P ** Q ** R ** S -|- S ** R ** Q ** P.
-Proof. rewrite (sepSPC P). rewrite (sepSPC Q). rewrite (sepSPC R). 
-by rewrite !sepSPA. Qed. 
+Proof. rewrite (sepSPC P). rewrite (sepSPC Q). rewrite (sepSPC R).
+by rewrite !sepSPA. Qed.
 
 Lemma regIs_same (r:AnyReg) v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse.
-Proof. rewrite /stateIs/regIs. 
-rewrite sepRev4. rewrite sepSPA. 
+Proof. rewrite /stateIs/regIs.
+rewrite sepRev4. rewrite sepSPA.
 rewrite sepRev4. rewrite -!sepSPA. rewrite -> (@regPieceIs_same (AnyRegPiece r RegIx0)).
-by rewrite !sepSP_falseL. Qed. 
+by rewrite !sepSP_falseL. Qed.
 
 Lemma flagIs_same (f:Flag) v1 v2 : f ~= v1 ** f ~= v2 |-- lfalse.
 Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]].

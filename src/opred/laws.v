@@ -10,12 +10,7 @@ Require Import x86proved.common_tactics.
 Generalizable All Variables.
 Set Implicit Arguments.
 
-(** [catOP] has [empOP] as left and right unit, and is associative *)
-
-(** We need to [move H at bottom] first because otherwise [progress]
-    will pick up the fact that [rewrite /foo in H] moves [H] at bottom
-    even if it does nothing else. *)
-Local Transparent ILFun_Ops ILPre_Ops.
+Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists.
 
 Create HintDb opred_laws_t discriminated.
 
@@ -75,6 +70,7 @@ Proof. t. Qed.
 Add Parametric Morphism : catOP with signature lequiv ==> lequiv ==> lequiv as catOP_equiv_m.
 Proof. t. Qed.
 
+(** [catOP] has [empOP] as left and right unit, and is associative *)
 Lemma empOPR P : catOP P empOP -|- P.
 Proof. t. Qed.
 

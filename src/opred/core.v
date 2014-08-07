@@ -21,6 +21,7 @@ Local Existing Instance ILFun_ILogic.
 (** Giving these cost 1 ensures that they are preferred over spec/Prop instances *)
 Instance osepILogicOps : ILogicOps OPred | 1 := _.
 Instance osepILogic : ILogic OPred | 1 := _.
+Global Opaque osepILogicOps osepILogic.
 
 Definition mkOPred (P : Actions -> Prop) : OPred
   := @mkILFunFrm Actions _ Prop _ P (fun t t' H => (eq_rect _ _ (reflexivity _) _ (f_equal P H))).

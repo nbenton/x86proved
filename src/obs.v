@@ -26,7 +26,7 @@ Next Obligation. move=> O k P P' [R HR] Hsafe s Hs.
   apply lentails_eq. rewrite ->Hs. by ssimpl.
 Qed.
 
-Local Transparent ILFun_Ops ILPre_Ops.
+Local Transparent ILFun_Ops ILPre_Ops lentails.
 
 (* Morphism for obs *)
 Instance obs_entails_m: Proper (lentails ==> lentails) obs.
@@ -94,6 +94,8 @@ split. by apply catOP_eq_opred.
 exists s1. eexists _. split; last first. eexists s', o, o1.
 intuition. by apply cat_preActions.
 Qed.
+
+Local Transparent lforall.
 
 Instance AtEx_obs O: AtEx (obs O).
 Proof.

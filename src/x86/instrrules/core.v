@@ -54,7 +54,7 @@ triple_apply T.
 Qed.
 
 Section UnfoldSpec.
-  Transparent ILPre_Ops.
+  Local Transparent ILPre_Ops lentails.
 
   Lemma TRIPLE_safe_gen (instr:Instr) P o Q (i j: DWORD) sij:
     eq_pred sij |-- i -- j :-> instr ->
@@ -459,7 +459,7 @@ Lemma evalMemSpec_rule (r:Reg) (ix:NonSPReg) sc p indexval offset c O Q :
   TRIPLE (r ~= p ** ix ~= indexval ** S) (bind (evalMemSpec (mkMemSpec (Some(r, Some (ix,sc))) offset)) c) O Q.
 Proof. move => S T. rewrite /evalMemSpec.
 triple_apply triple_letGetRegSep.
-triple_apply triple_letGetRegSep; sbazooka.
+triple_apply triple_letGetRegSep.
 triple_apply T.
 Qed.
 Global Opaque evalMemSpec.
@@ -469,6 +469,7 @@ Lemma evalPush_rule sp (v w:DWORD) (S:SPred) :
          (evalPush w) nil
          (ESP~=sp -# 4 ** (sp -# 4) :-> w ** S).
 Proof.
+rewrite/evalPush.
 triple_apply triple_letGetRegSep.
 triple_apply triple_setRegSep.
 triple_apply triple_setDWORDSep.

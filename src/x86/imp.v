@@ -159,18 +159,49 @@ Section LogicDefinitions.
 
    Require Import Coq.Logic.FunctionalExtensionality.
 
-   Program Definition asn_subst (f : substitution) (E : stack -> Prop) : asn:=
+   Program Definition asn_subst (f : substitution) (E : asn) : asn:=
      mkAsn (subst f E) _.
    Next Obligation.
-     assert (subst f E t = subst f E t').
+     assert (H1 : subst f E t = subst f E t').
      apply f_equal; apply functional_extensionality; apply H.
-     rewrite <- H1; assumption.
+     rewrite <- H1; reflexivity.
    Qed.
 
 End LogicDefinitions.
 
 Notation "E [ e // x ]" := (subst (subst1 e x) E)
   (at level 7, left associativity, format "E [ e  //  x ]").
+
+Section asn_logic_lemmas.
+   (** Prove how [asn_subst] behaves with respect to ilogic things *)
+   Local Transparent ILFun_Ops asn_ops lentails ltrue.
+
+   Local Hint Extern 2 => split.
+   Local Hint Extern 0 => move => ?.
+
+   Lemma asn_subst_ltrue f : asn_subst f ltrue -|- ltrue.
+   Proof. auto. Qed.
+
+   Lemma asn_subst_lfalse f : asn_subst f lfalse -|- lfalse.
+   Proof. auto. Qed.
+
+   Lemma asn_subst_limpl f E1 E2 : asn_subst f (E1 -->> E2) -|- asn_subst f E1 -->> asn_subst f E2.
+   Proof. auto. Qed.
+
+   Lemma asn_subst_land f E1 E2 : asn_subst f (E1 //\\ E2) -|- asn_subst f E1 //\\ asn_subst f E2.
+   Proof. auto. Qed.
+
+   Lemma asn_subst_lor f E1 E2 : asn_subst f (E1 \\// E2) -|- asn_subst f E1 \\// asn_subst f E2.
+   Proof. auto. Qed.
+
+   Lemma asn_subst_lforall f T E : asn_subst f (Forall x : T, E x) -|- Forall x : T, asn_subst f (E x).
+   Proof. auto. Qed.
+
+   Lemma asn_subst_lexists f T E : asn_subst f (Exists x : T, E x) -|- Exists x : T, asn_subst f (E x).
+   Proof. auto. Qed.
+
+End asn_logic_lemmas.
+
 
 Section LogicLemmas.
   (* It's possible to pull out one stack variable, change it, and then get back
@@ -396,7 +427,7 @@ Section LogicRules.
       rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.
   Qed.
 
-  Local Transparent ILFun_Ops.
+  Local Transparent ILFun_Ops lentails.
   Lemma subst_true_special_case (e : expr) (x: var): |-- (asn_subst (subst1 e x) (ltrue:asn)).
   Proof. move=> s _. apply I. Qed.
 

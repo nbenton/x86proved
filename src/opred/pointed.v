@@ -25,6 +25,8 @@ Canonical default_PointedOPred O `{IsPointed_OPred O} : PointedOPred
 
 Arguments mkPointedOPred : clear implicits.
 
+Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists.
+
 Lemma inhabitedOP (O: PointedOPred) : exists s, O s.
 Proof. by destruct O. Qed.
 

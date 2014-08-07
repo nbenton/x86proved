@@ -714,3 +714,5 @@ Proof. intros x y [H'1 H'2] x' y' H''; subst. exact (H'2 _). Qed.
 
 Global Opaque ILPre_Ops.
 Global Opaque ILFun_Ops.
+(** We make these connectives [Opaque] to speed up unification and [apply] *)
+Global Opaque lentails ltrue lfalse limpl land lor lforall lexists.
