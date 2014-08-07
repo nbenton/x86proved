@@ -38,7 +38,7 @@ Proof.
   (* XOR r1, r2 *)
   do 3 do_basic'.
 
-  rewrite /OSZCP/stateIsAny/stateIs; sbazooka.
+  rewrite /OSZCP/stateIsAny/stateIs/VRegIs; sbazooka.
   (* Now we're left reasoning about XOR *)
   rewrite {2}[X in xorB w X]xorBC.
   rewrite [X in regIs r2 X]xorBA.
@@ -51,11 +51,6 @@ Lemma tmpSwapCorrect (r1 r2 rt: Reg) :
 Proof.
   rewrite /tmpSwapImpl/basicSwap. specintros => v w. autorewrite with push_at.
 
-  (* Good example where automatic opening and pulling out of existentials would be helpful *)
-  (* MOV rt, r1 *)
-  basicapply MOV_RanyR_rule.
-
-  (* MOV r1, r2 *)
-  (* MOV r2, r1 *)
-  do 2 do_basic'.
+  rewrite /stateIsAny. specintros => t.
+  do 3 do_basic'.
 Qed.

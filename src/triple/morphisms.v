@@ -9,29 +9,29 @@ Import Prenex Implicits.
 
 Local Transparent ILFun_Ops ILPre_Ops.
 
+Local Ltac fin_solve_morphism :=
+  do !(idtac;
+       match goal with
+         | [ s : ProcState, H : forall _ : ProcState, _ |- _ ] => specialize (H s)
+         | [ H : _ |- _ ] => (eapply H; eassumption)
+         | [ H : _, H' : _ |- _ ] => (rewrite -> H in H'; clear H)
+         | [ H : _, H' : _ |- _ ] => (rewrite <- H in H'; clear H)
+         | [ H : _, H' : _ |- _ ] => (setoid_rewrite -> H in H'; clear H)
+         | [ H : _, H' : _ |- _ ] => (setoid_rewrite <- H in H'; clear H)
+         | [ H : _ |- _ ] => eapply H; eassumption
+       end).
+
 Local Ltac solve_morphism :=
-  rewrite /TRIPLE; do ?[ split | move => ? ];
-  do 6?[ by do !esplit; eauto with nocore
-       | by do !esplit; try hyp_rewrite <- *; eauto with nocore
-       | progress destruct_head_hnf ex
-       | progress destruct_head_hnf and
-       | progress hnf in *; unfold lentails, ILFun_Ops, ILPre_Ops in *; hnf in *
-       | progress specialize_all_ways ].
+  (rewrite /valued_TRIPLE/pointwise_relation => *; do ?move => ?);
+  fin_solve_morphism.
 
 (** Triples behave contravariantly in the precondition and covariantly
     in the postcondition wrt entailment *)
-Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lentails --> eq ==> lentails ==> lentails ==> impl as TRIPLE_mor2.
-Proof. solve_morphism. Qed.
-
-Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lentails --> eq ==> eq ==> lentails ==> impl as TRIPLE_mor3.
-Proof. solve_morphism. Qed.
-
-(** Unfortunately we need special case for equivalence *)
-Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lequiv ==> eq ==> lequiv ==> lequiv ==> iff as TRIPLE_mor.
+Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lentails --> eq ==> eq ==> lentails ==> impl as TRIPLE_mor2.
 Proof. solve_morphism. Qed.
 
 Global Add Parametric Morphism T v : (@valued_TRIPLE T v) with signature lequiv ==> eq ==> eq ==> lequiv ==> iff as TRIPLE_mor4.
-Proof. solve_morphism. Qed.
+Proof. move => *; split => ?; fin_solve_morphism. Qed.
 
 (** For dealing with programs *)
 Global Add Parametric Morphism T v P : (@valued_TRIPLE T v P) with signature (pointwise_relation ProcState eq) ==> eq ==> eq ==> impl as TRIPLE_morprogram.

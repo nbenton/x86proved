@@ -121,6 +121,18 @@ Proof. t. Qed.
 Lemma catOP_lfalseR P : catOP P lfalse -|- lfalse.
 Proof. t. Qed.
 
+Lemma catOP_lexists1 T P Q : catOP (Exists x : T, P x) Q -|- Exists x : T, catOP (P x) Q.
+Proof. t. Qed.
+
+Lemma catOP_lexists2 T P Q : catOP P (Exists x : T, Q x) -|- Exists x : T, catOP P (Q x).
+Proof. t. Qed.
+
+Lemma catOP_lforall1 T P Q : catOP (Forall x : T, P x) Q |-- Forall x : T, catOP (P x) Q.
+Proof. t. Qed.
+
+Lemma catOP_lforall2 T P Q : catOP P (Forall x : T, Q x) |-- Forall x : T, catOP P (Q x).
+Proof. t. Qed.
+
 Lemma catOP_O_starOP_O' O O' : catOP O (catOP (starOP O) O') |-- catOP (starOP O) O'.
 Proof.
   do !t'_safe.
@@ -160,4 +172,30 @@ Proof.
   rewrite /repOP-/repOP/partial_rollOP-/partial_rollOP;
   f_cancel;
   hyp_apply *.
+Qed.
+
+Lemma roll_starOP_def O n : roll_starOP O n -|- empOP \\// catOP (O n) (roll_starOP O (S n)).
+Proof.
+  t;
+  match goal with
+    | _ => by instantiate (1 := 0); t
+    | _ => by instantiate (1 := S _); t
+    | [ x : nat |- _ ] => induction x; by t
+  end.
+Qed.
+
+Lemma starOP_empOP : starOP empOP -|- empOP.
+Proof.
+  t;
+  match goal with
+    | [ H : nat |- _ ] => induction H
+    | [ |- context[?E] ] => is_evar E; unify E 0
+  end;
+  t.
+Qed.
+
+Lemma roll_starOP_empOP n : roll_starOP (fun _ => empOP) n -|- empOP.
+Proof.
+  rewrite -> roll_starOP__starOP.
+  exact starOP_empOP.
 Qed.

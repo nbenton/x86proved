@@ -569,10 +569,9 @@ Corollary pointsToWORD_asBYTES (d: WORD) (p:DWORD):
   let: (b1,b0) := split2 8 8 d in
   p :-> [::b0;b1] -|- p :-> d.
 Proof.
-(*have SE := @split2eta 8 8 d.*)
-elim E: (split2 8 8 d) => [b1 b0].
-admit. (*rewrite SE. apply pointsToWORD_BYTES. rewrite E in SE. rewrite -SE. apply pointsToDWORD_BYTES.*)
-Qed.
+split; rewrite pointsToWORD_BYTES. rewrite {3}(@split2eta 8 8 d); reflexivity. 
+rewrite {1}(@split2eta 8 8 d); reflexivity. 
+Qed. 
 
 
 Lemma fixedSizeReader_bind T1 T2 (r1: Reader T1) (r2: T1 -> Reader T2) n1 n2 :

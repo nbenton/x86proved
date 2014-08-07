@@ -461,21 +461,6 @@ Definition isHLT : CAST unit Instr.
 apply: MakeCast (fun _ => HLT) (fun i => if i is HLT then Some tt else None) _; by elim; elim.
 Defined.
 
-(*
-Definition unBOPMRI w : CAST ({d:bool & (BinOp * RegMem (prefAndBoolToOpSize w d) * VWORD (prefAndBoolToOpSize w d))%type}) Instr.
-Admitted. (*Defined.
-eapply (MakeCast
-  (fun (p:BinOp * {d:bool & (RegMem (prefAndBoolToOpSize w d) * VWORD (prefAndBoolToOpSize w d))%type}) => let: existT d (rm,c) := p.2 in 
-    match rm with RegMemR y => BOP _ p.1 (DstSrcRI _ y c)
-                | RegMemM y => BOP _ p.1 (DstSrcMI _ y c) end) 
- (fun i => match i with BOP os op (DstSrcRI y c) => if prefAndOpSizeToBool5 w y c is Some (existT _ (x,c)) then Some(op,existT _ (DstSrcRI _ x c)) else None
-                      | BOP os op (DstSrcMI y c) => if prefAndOpSizeToBool4 w y c is Some x then Some(op,x) else None
-                      | _ => None end) _).
-by elim: w; elim => //; elim => //; elim => // => ? ? ? H; inversion H. 
-Defined.
-*)
-*)
-
 Require Import Coq.Program.Equality.
 
 (*

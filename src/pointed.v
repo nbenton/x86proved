@@ -31,6 +31,7 @@ Instance IsPointed_reflexive `{@Reflexive T R} {a} : IsPointed (R a a) := reflex
 
 (** TODO(t-jagro): Should this be an instance? *)
 Instance IsPointed_list {A} : IsPointed (list A) := nil.
+Instance IsPointed_nat : IsPointed nat := 0.
 
 (** We don't make the [or] versions instances, because they're not unique *)
 Definition IsPointed_sum_inl {A B} `{IsPointed A} : IsPointed (A + B) := inl (point A).

@@ -71,7 +71,7 @@ Theorem gcd_safe: forall endAddr: DWORD,
        <@ (codeAddr -- endAddr :-> gcd_bytes).
 Proof.
   move=> endAddr. specintros => O. rewrite /gcd_bytes. 
-  rewrite ->assemble_correct; last first. admit. (*by vm_compute.*)
+  rewrite ->assemble_correct; last first. by vm_compute.
   rewrite /gcd_program.
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
   specapply H.

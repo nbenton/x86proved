@@ -82,6 +82,7 @@ x86\instrrules\addsub.vo \
 x86\instrrules\and.vo \
 x86\instrrules\callrel.vo \
 x86\instrrules\cmp.vo \
+x86\instrrules\in.vo \
 x86\instrrules\incdec.vo \
 x86\instrrules\jccrel.vo \
 x86\instrrules\jmprel.vo \

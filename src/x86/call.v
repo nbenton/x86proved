@@ -3,7 +3,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spectac x86proved.spec x86proved.obs x86proved.pointsto x86proved.cursor x86proved.x86.instr.
 Require Import x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.instrsyntax x86proved.x86.macros x86proved.x86.instrrules.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
-Require Import x86proved.common_tactics.
+Require Import x86proved.common_tactics x86proved.basicspectac x86proved.chargetac.
 
 Definition retreg := EBP.
 
@@ -46,17 +46,20 @@ Lemma loopy_toyfun_call (f:DWORD) P (O:PointedOPred) Q:
   |>loopy_toyfun f P O Q |-- loopy_basic P (call_toyfun f) O Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
-  apply basic_local => iret. rewrite /stateIsAny. specintros => old.
-  basicapply MOV_RI_rule.
+  rewrite /stateIsAny; specintros => *.
+  do_basic' => iret.
+  do_basic'.
 
-  rewrite /loopy_basic. specintros => i j O'. unfold_program. specintros => _ <- -> {j}.
-  specapply JMP_I_loopy_rule. by ssimpl.
+  rewrite /loopy_basic. specintros => i j O'. unfold_program. specintros => *; do !subst.
 
-  rewrite <-spec_reads_frame. autorewrite with push_at.
+  loopy_specapply *; first by ssimpl.
+
   rewrite /loopy_toyfun.
+  rewrite <-spec_reads_frame. autorewrite with push_at.
   autorewrite with push_later; last by apply _. apply lforallL with iret.
   autorewrite with push_later; last by apply _. apply lforallL with O'.
-  rewrite /stateIsAny. autorewrite with push_later; last by apply _.
+  rewrite /stateIsAny.
+  autorewrite with push_later; last by apply _.
   rewrite <- spec_later_weaken.
   cancel2. cancel1. by ssimpl. reflexivity.
 Qed.
@@ -66,19 +69,24 @@ Lemma toyfun_call (f:DWORD) P (O:OPred) Q:
   toyfun f P O Q |-- basic P (call_toyfun f) O Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
-  apply basic_local => iret. rewrite /stateIsAny. specintros => old.
-  basicapply MOV_RI_rule.
+  do_basic' => iret.
+  rewrite /stateIsAny. specintros => *.
+  do_basic'.
 
-  rewrite /basic. specintros => i j O'. unfold_program. specintros => _ <- -> {j}.
-  specapply JMP_I_rule. by ssimpl.
+  rewrite /basic. specintros => i j O'. unfold_program. specintros => *; do !subst.
+  specapply *; first by ssimpl.
 
   rewrite <-spec_reads_frame. autorewrite with push_at.
   rewrite /toyfun.
   apply lforallL with iret.
   apply lforallL with O'.
-  rewrite /stateIsAny.
+  rewrite /stateIsAny/stateIs/VRegIs.
   cancel2. cancel1. by ssimpl.
 Qed.
+
+Global Opaque call_toyfun.
+Global Instance: forall f : DWORD, loopy_instrrule (call_toyfun f) := @loopy_toyfun_call.
+Global Instance: forall f : DWORD, instrrule (call_toyfun f) := @toyfun_call.
 
 Lemma toyfun_mkbody {T_OPred proj} (f f': DWORD) P p (O : OPred) Q:
   (Forall iret, @parameterized_basic T_OPred proj _ _ P p O Q @ (retreg ~= iret))
@@ -91,7 +99,7 @@ Proof.
   eapply safe_safe_ro; first reflexivity. reflexivity.
   - apply lforallL with f. apply lforallL with i1. apply lforallL with O'. reflexivity.
   - split; sbazooka.
-    specapply JMP_R_rule. by ssimpl.
+    specapply *; first by ssimpl.
     rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
     rewrite /stateIsAny. autorewrite with push_at.
     cancel1. by sbazooka.
@@ -167,12 +175,12 @@ Example toyfun_example_caller_correct a (f:DWORD):
 Proof.
   rewrite /toyfun_example_caller. rewrite /RegOrFlag_target.
   autorewrite with push_at.
-  have H := toyfun_call. setoid_rewrite spec_at_basic in H.
   eapply basic_seq; first by done.
   { apply lforallL with a.
-    eapply basic_basic_context; first (by apply H); try syntax_unify_reflexivity; sbazooka. }
+    do_basic'. }
   { apply lforallL with (a +# 2).
-    eapply basic_basic_context; first (by apply H); try syntax_unify_reflexivity; sbazooka.
+    do_basic'.
+    ssimpl.
     rewrite -addB_addn. reflexivity. }
 Qed.
 
@@ -245,7 +253,7 @@ Example toyfun_apply_correct (f f' g: DWORD) P O Q:
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
   specintro => iret. specintros => O'. rewrite limpland.
-  specapply JMP_R_rule. by ssimpl.
+  specapply *; first by ssimpl.
   autorewrite with push_at.
   rewrite <-spec_reads_frame. rewrite -limpland. apply limplValid.
   rewrite /toyfun. eapply lforallL. eapply lforallL.

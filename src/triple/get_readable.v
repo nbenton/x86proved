@@ -15,7 +15,7 @@ Local Transparent PStateSepAlgOps.
 Local Transparent ILFun_Ops SABIOps PStateSepAlgOps.
 
 Local Ltac pre_let :=
-  eapply valued_triple_seqcat; first by apply empOPL.
+  eapply valued_triple_seqcat; first by apply cat0s.
 
 Local Ltac triple_by_compute_using lem
   := pre_let; triple_by_compute; trivial;

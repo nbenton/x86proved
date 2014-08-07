@@ -669,6 +669,43 @@ Proof.
   - firstorder; subst; assumption.
 Qed.
 *)
+
+(** NOTE(JasonGross): The type of this lemma was derived by carefully
+                      inspecting the output of a [setoid_rewrite]
+                      failure with [Typeclasses eauot := debug] and
+                      [Set Printing Implicit].  There's probably a
+                      nicer way to phrase it, but it lets us do
+                      [setoid_rewrite] with a functional [lentails]
+                      treated as an implication.  Magic! *)
+
+Global Instance lentails_sub_impl T e `{@csetoid.type T e} `{ILogicOps (@ILFunFrm T e Prop ILogicOps_Prop)}
+: @Proper
+    (@ILFunFrm T e Prop _ -> T -> Prop)
+    (@lentails _ (@ILFun_Ops T e _ Prop ILogicOps_Prop ILogic_Prop) ==> @eq T ==> impl)
+    (@ILFunFrm_pred T e Prop ILogicOps_Prop).
+Proof. intros x y H' x' y' H''; subst. exact (H' _). Qed.
+
+Global Instance lequiv_sub_iff T e `{@csetoid.type T e} `{ILogicOps (@ILFunFrm T e Prop ILogicOps_Prop)}
+: @Proper
+    (@ILFunFrm T e Prop _ -> T -> Prop)
+    (@lequiv _ (@ILFun_Ops T e _ Prop ILogicOps_Prop ILogic_Prop) ==> @eq T ==> iff)
+    (@ILFunFrm_pred T e Prop ILogicOps_Prop).
+Proof. intros x y [H'1 H'2] x' y' H''; subst. split; [ exact (H'1 _) | exact (H'2 _) ]. Qed.
+
+Global Instance lequiv_sub_impl T e `{@csetoid.type T e} `{ILogicOps (@ILFunFrm T e Prop ILogicOps_Prop)}
+: @Proper
+    (@ILFunFrm T e Prop _ -> T -> Prop)
+    (@lequiv _ (@ILFun_Ops T e _ Prop ILogicOps_Prop ILogic_Prop) ==> @eq T ==> impl)
+    (@ILFunFrm_pred T e Prop ILogicOps_Prop).
+Proof. intros x y [H'1 H'2] x' y' H''; subst. exact (H'1 _). Qed.
+
+Global Instance lequiv_sub_flip_impl T e `{@csetoid.type T e} `{ILogicOps (@ILFunFrm T e Prop ILogicOps_Prop)}
+: @Proper
+    (@ILFunFrm T e Prop _ -> T -> Prop)
+    (@lequiv _ (@ILFun_Ops T e _ Prop ILogicOps_Prop ILogic_Prop) ==> @eq T ==> flip impl)
+    (@ILFunFrm_pred T e Prop ILogicOps_Prop).
+Proof. intros x y [H'1 H'2] x' y' H''; subst. exact (H'2 _). Qed.
+
 (* Coq tends to unfold lentails on [simpl], which triggers unfolding of
    several other connectives. When that happens, the goal can become quite
    unreadable. The workaround is to make the definition of entailment and

@@ -1,7 +1,8 @@
 (** * Inhabitation (pointedness) of predicates over observations. *)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
 Require Import x86proved.bitsrep x86proved.x86.ioaction.
-Require Import x86proved.pointed x86proved.ilogic_pointed x86proved.opred.core.
+Require Import x86proved.ilogic_pointed x86proved.opred.core.
+Require Export x86proved.pointed. (** We want all the pointed instances *)
 Require Import Coq.Classes.RelationClasses.
 
 Generalizable All Variables.

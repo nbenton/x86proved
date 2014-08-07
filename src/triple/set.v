@@ -345,34 +345,34 @@ Proof.
 Qed.
 
 Lemma triple_setRegSep (r:AnyReg) v w S
-: TRIPLE (r~=v ** S) (setRegInProcState r w) empOP (r~=w ** S).
+: TRIPLE (r~=v ** S) (setRegInProcState r w) nil (r~=w ** S).
 Proof. triple_by_compute. apply: separateSetReg; eassumption. Qed.
 
 Lemma triple_setBYTERegSep (r:BYTEReg) v w S
-: TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) empOP (BYTEregIs r w ** S).
+: TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) nil (BYTEregIs r w ** S).
 Proof. rewrite /BYTEregIs/=/setBYTERegInProcState. elim E: (BYTERegToRegPiece r) => [r' b]. 
 triple_by_compute. apply: separateSetRegPiece; eassumption. Qed.
 
 Lemma triple_setWORDRegSep (r:WORDReg) v w S
-: TRIPLE (WORDregIs r v ** S) (setWORDRegInProcState r w) empOP (WORDregIs r w ** S).
-Proof. rewrite /WORDregIs/=/setWORDRegInProcState. elim: r => [r]. rewrite /WORDRegToReg. 
+: TRIPLE (WORDregIs r v ** S) (setWORDRegInProcState r w) nil (WORDregIs r w ** S).
+Proof. rewrite /WORDregIs/=/setWORDRegInProcState. elim: r => [r]. 
 triple_by_compute. admit. Qed.
 
 Lemma triple_setRegSepGen (r:AnyReg) v w P R:
   P |-- r~=v ** R ->
-  TRIPLE P (setRegInProcState r w) empOP (r~=w ** R).
+  TRIPLE P (setRegInProcState r w) nil (r~=w ** R).
 Proof. move=> HP. rewrite ->HP. apply: triple_setRegSep. Qed.
 
 Lemma triple_setFlagSep (f:Flag) v (w:bool) S
-: TRIPLE (f~=v ** S) (updateFlagInProcState f w) empOP (f~=w ** S).
+: TRIPLE (f~=v ** S) (updateFlagInProcState f w) nil (f~=w ** S).
 Proof. triple_by_compute. apply: separateSetFlag; eassumption. Qed.
 
 Lemma triple_forgetFlagSep (f:Flag) v S
-: TRIPLE (f~=v ** S) (forgetFlagInProcState f) empOP (f? ** S).
+: TRIPLE (f~=v ** S) (forgetFlagInProcState f) nil (f? ** S).
 Proof. triple_by_compute. apply: separateForgetFlag; eassumption. Qed.
 
 Lemma triple_forgetFlagSep' (f : Flag) v S
-: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) empOP ((Exists v, f ~= v) ** S).
+: TRIPLE (f ~= v ** S) (forgetFlagInProcState f) nil ((Exists v, f ~= v) ** S).
 Proof. exact (@triple_forgetFlagSep f v S). Qed.
 
 Lemma byteIsMapped (p:PTR) (v: BYTE) S s :
@@ -388,7 +388,7 @@ inversion H4. rewrite /isMapped H0. done.
 Qed.
 
 Lemma triple_setBYTESep (p:PTR) (v w:BYTE) S
-: TRIPLE (p:->v ** S) (setBYTEInProcState p w) empOP (p:->w ** S).
+: TRIPLE (p:->v ** S) (setBYTEInProcState p w) nil (p:->w ** S).
 Proof.
   rewrite 2!pointsToBYTE_byteIs.
   triple_by_compute; erewrite byteIsMapped by eassumption; do ?split.
@@ -401,14 +401,14 @@ Lemma triple_setBYTEbind (v w: BYTE) (p: DWORD) Q (W: WriterTm unit) Q' :
   (let!s = getProcState;
    if writeMemTm W s (next p) is Some(_, m')
    then setProcState {| registers := s; flags := s; memory := m' |}
-   else raiseUnspecified) empOP
+   else raiseUnspecified) nil
   (p :-> w ** Q') ->
  TRIPLE
  (p :-> v ** Q)
   (let!s = getProcState;
    if writeMemTm (do! writeNext w; W) s p is Some(_, m')
    then setProcState {| registers := s; flags := s; memory := m' |}
-   else raiseUnspecified) empOP
+   else raiseUnspecified) nil
   (p :-> w ** Q').
 Proof.
 rewrite 2!pointsToBYTE_byteIs.
@@ -418,14 +418,14 @@ simpl.
 rewrite (byteIsMapped pre).
 have post := separateSetBYTE w pre.
 specialize (H _ post).
-destruct H as [f' [o' H]]. simpl in H.
-exists f', o'.
+destruct H as [f' H]. simpl in H.
+exists f'.
 case E: (writeMemTm W _ _) => [[p' m] |]. by rewrite E in H.
 rewrite E in H. by destruct H. Qed.
 
 (** TODO(t-jagro): Maybe write [separateSetDWORD] and make this proof shorter. *)
 Lemma triple_setDWORDSep (p:PTR) (v w:DWORD) S
-: TRIPLE (p:->v ** S) (setDWORDInProcState p w) empOP (p:->w ** S).
+: TRIPLE (p:->v ** S) (setDWORDInProcState p w) nil (p:->w ** S).
 Proof.
 elim Ev: (@split4 8 8 8 8 v) => [[[v3 v2] v1] v0].
 elim Ew: (@split4 8 8 8 8 w) => [[[w3 w2] w1] w0].
@@ -458,7 +458,7 @@ apply triple_setBYTEbind.
 
 rewrite ->seqPointsToNil.
 rewrite /writeMem !empSPL.
-move => s pre. exists s. eexists _. by destruct s.
+move => s pre. exists s. by destruct s.
 
 rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
 rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
@@ -466,7 +466,7 @@ rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by
 Qed.
 
 Lemma triple_setWORDSep (p:PTR) (v w:WORD) S
-: TRIPLE (p:->v ** S) (setWORDInProcState p w) empOP (p:->w ** S).
+: TRIPLE (p:->v ** S) (setWORDInProcState p w) nil (p:->w ** S).
 Proof.
 elim Ev: (@split2 8 8 v) => [v1 v0].
 elim Ew: (@split2 8 8 w) => [w1 w0].
@@ -489,12 +489,12 @@ apply triple_setBYTEbind.
 
 rewrite ->seqPointsToNil.
 rewrite /writeMem !empSPL.
-move => s pre. exists s. eexists _. by destruct s.
+move => s pre. exists s. by destruct s.
 
 rewrite topPointsTo_consBYTE. eapply triple_roc_pre. instantiate (1:=lfalse); by ssimpl. done.
 Qed.
 
 Lemma triple_setVWORDSep s (p:PTR) (v w: VWORD s) S :
-  TRIPLE (p:->v ** S) (setVWORDInProcState p w) empOP (p:->w ** S).
+  TRIPLE (p:->v ** S) (setVWORDInProcState p w) nil (p:->w ** S).
 Proof. destruct s. 
 apply triple_setBYTESep. apply triple_setWORDSep. apply triple_setDWORDSep. Qed.

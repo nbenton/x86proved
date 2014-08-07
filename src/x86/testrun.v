@@ -28,6 +28,7 @@ Definition initializedMemory :=
 Definition initialState :=
   mkProcState ((initialReg ! EIP:=codeAddr ! regToAnyReg ESP:=stackAddr)) initialFlagState initializedMemory.
 
+(*
 Definition runFor n s :=
   let: (output,r) := doMany n step s
   in (output, fst r).
@@ -38,6 +39,7 @@ Fixpoint outputToString (s: seq (Chan*Data)) :=
   else "")%string.
 
 Definition resultToString r := (outputToString (fst r) ++ procStateToString (snd r))%string.
+*)
 
 (* We need some better pretty-printing! *)
 (*

@@ -13,7 +13,7 @@ Import Prenex Implicits.
 Local Open Scope update_scope.
 
 (* Output monad at bottom, wrapped with error monad, then state monad *)
-Definition ST := errorMT (SMT (OutputM (Chan*Data)) ProcState) (option GeneralException).
+Definition ST := errorMT (SMT (IOM Chan Data) ProcState) (option GeneralException).
 
 Definition getProcState: ST ProcState := EMT_lift _ _ (SMT_get _ (S:=_)).
 Definition setProcState (s: ProcState) : ST unit := EMT_lift _ _ (SMT_set _ (S:=ProcState) s).
@@ -137,7 +137,11 @@ Definition setVWORDInProcState {s} : DWORD -> VWORD s -> ST unit :=
   ---------------------------------------------------------------------------*)
 
 Definition outputOnChannel (c:Chan) (d:Data) : ST unit :=
-  EMT_lift _ _ (SMT_lift _ (Output_write (c,d))).
+  EMT_lift _ _ (SMT_lift _ (IO_write c d)).
+
+Definition inputOnChannel (c:Chan) : ST Data :=
+  EMT_lift _ _ (SMT_lift _ (IO_read _ c)).
+
 
 (*
 Require Import bitsrep tuplehelp.

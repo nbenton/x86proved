@@ -129,15 +129,19 @@ Definition scaleBy s (d: DWORD) :=
 
 (* Evaluation functions for various syntactic entities *)
 Definition evalReg (r: Reg) := getRegFromProcState r.
-Definition evalBYTEReg (r: BYTEReg) :=
-  let: AnyRegPiece r b := BYTERegToRegPiece r in
+Definition evalRegPiece rp :=
+  let: AnyRegPiece r b := rp in
   let! d = getRegFromProcState r;
   retn (getRegPiece d b).
+  
+Definition evalBYTEReg (r: BYTEReg) :=
+  evalRegPiece (BYTERegToRegPiece r).  
 
 Definition evalWORDReg (wr: WORDReg) :=
   let: mkWordReg r := wr in
-  let! d = getRegFromProcState r;
-  retn (low 16 d).
+  let! b0 = evalRegPiece (AnyRegPiece r RegIx0);
+  let! b1 = evalRegPiece (AnyRegPiece r RegIx1);
+  retn (b1 ## b0).
 
 Definition evalVReg {s:OpSize} : VReg s -> ST (VWORD s) :=
   match s with
@@ -423,11 +427,10 @@ Definition evalInstr instr : ST unit :=
     setRegInProcState EIP IP'
 (*=End *)
 
-(*
-  | IN dword port =>
-    let! d = inputST port;
-    setRegInProcState EAX (zeroExtend _ d)
-*)
+  | INOP OpSize1 port =>
+    let! p = evalPort port;
+    let! d = inputOnChannel p;
+    setBYTERegInProcState AL d
 
   | OUTOP OpSize1 port =>
     let! p = evalPort port;
