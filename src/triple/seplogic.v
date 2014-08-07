@@ -7,7 +7,7 @@ Require Import x86proved.common_tactics.
 
 Import Prenex Implicits.
 
-Local Transparent ILFun_Ops SABIOps PStateSepAlgOps.
+Local Transparent ILFun_Ops SABIOps PStateSepAlgOps sepILogicOps lexists.
 
 Local Ltac t hyp :=
   do ![ move => ?

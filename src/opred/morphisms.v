@@ -8,7 +8,7 @@ Require Import common_tactics.
 Generalizable All Variables.
 Set Implicit Arguments.
 
-Local Transparent ILFun_Ops ILPre_Ops.
+Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists.
 
 Local Ltac t :=
   do ![ move => ?

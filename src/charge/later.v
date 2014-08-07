@@ -91,6 +91,7 @@ Local Transparent ILPre_Ops.
 Local Existing Instance ILLaterPreOps.
 Local Existing Instance ILPre_Ops.
 Local Existing Instance ILPre_ILogic.
+Local Transparent lentails ltrue lfalse limpl land lor lforall lexists.
 
   Definition ILLaterPre : ILLater (ILPreFrm ge A).
   Proof.

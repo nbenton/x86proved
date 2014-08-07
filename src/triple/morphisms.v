@@ -18,6 +18,10 @@ Local Ltac fin_solve_morphism :=
          | [ H : _, H' : _ |- _ ] => (rewrite <- H in H'; clear H)
          | [ H : _, H' : _ |- _ ] => (setoid_rewrite -> H in H'; clear H)
          | [ H : _, H' : _ |- _ ] => (setoid_rewrite <- H in H'; clear H)
+         | [ H : _ |- _ ] => (rewrite -> H; clear H)
+         | [ H : _ |- _ ] => (rewrite <- H; clear H)
+         | [ H : _ |- _ ] => (setoid_rewrite -> H; clear H)
+         | [ H : _ |- _ ] => (setoid_rewrite <- H; clear H)
          | [ H : _ |- _ ] => eapply H; eassumption
        end).
 

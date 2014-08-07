@@ -57,6 +57,7 @@ Lemma triple_letGetRegPiece rp (v:BYTE) (P Q:SPred) O c:
   TRIPLE P (bind (getRegPieceFromProcState rp) c) O Q.
 Proof. move => ?. pre_let. triple_by_compute. apply: getRegPieceSep; eassumption. Qed.
 
+Local Transparent sepLogicOps sepSP ltrue lexists lentails land.
 
 Lemma getFlagSep (fl : Flag) (v : bool) (P : SPred) (s : ProcState)
 : P |-- fl ~= v ** ltrue -> P s -> v = flags s fl :> FlagVal.
@@ -126,7 +127,7 @@ Proof. move => S T. apply: triple_letGetFlag. cancel2. reflexivity. done. Qed.
 Lemma triple_doGetReg (r:AnyReg) (P Q: SPred) O c :
   TRIPLE P c O Q ->
   TRIPLE P (do! getRegFromProcState r; c) O Q.
-Proof. move => T s pre. move: (T s pre) => [f [eq H']]. eexists f. 
+Proof. move => T s pre. move: (T s pre) => [f [eq H']]. eexists f.
 simpl. by destruct (c s). Qed.
 
 Lemma triple_doGetFlag (f:Flag) (v:bool) (Q: SPred) O c :

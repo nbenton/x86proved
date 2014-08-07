@@ -104,6 +104,7 @@ Local Obligation Tactic := try solve [Tactics.program_simpl|auto].
 
 (* This uses 'refine' instead of Program Definition to work around a Coq 8.4
    bug. *)
+Local Transparent lentails.
 Definition mkspec (f: nat -> SPred -> Prop)
   (Hnat: forall k P, f (S k) P -> f k P)
   (HSPred: forall k P P', extSP P P' -> f k P -> f k P') : spec.
@@ -206,6 +207,7 @@ Qed.
 Lemma spec_at_forall {T} F R: (Forall x:T, F x) @ R -|- Forall x:T, (F x @ R).
 Proof. split; rewrite /= /spec_fun /=; auto. Qed.
 
+Local Transparent lexists.
 Lemma spec_at_exists {T} F R: (Exists x:T, F x) @ R -|- Exists x:T, (F x @ R).
 Proof. split; rewrite /= /spec_fun /= => k P [x Hx]; eauto. Qed.
 
@@ -227,6 +229,7 @@ Proof. split; rewrite /= /spec_fun /=; auto. Qed.
 Lemma spec_at_propand p S R: (p /\\ S) @ R -|- p /\\ (S @ R).
 Proof. split; rewrite /= /spec_fun /=; auto. Qed.
 
+Local Transparent limpl lforall.
 Lemma spec_at_impl S S' R: (S -->> S') @ R -|- (S @ R) -->> (S' @ R).
 Proof.
   split.

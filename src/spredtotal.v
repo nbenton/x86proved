@@ -34,7 +34,7 @@ destruct s1 as [s1r s1f s1m].
 destruct s2 as [s2r s2f s2m].
 unfold "===", toPState in H.
 simpl in H.
-have E1: s1r = s2r. extensionality x. 
+have E1: s1r = s2r. extensionality x.
 have H0 := H Registers (AnyRegPiece x RegIx0).
 have H1 := H Registers (AnyRegPiece x RegIx1).
 have H2 := H Registers (AnyRegPiece x RegIx2).
@@ -56,6 +56,7 @@ Proof. rewrite (eqPredTotal_sepSP_trueR _); last by apply totalProcState. by ssi
 Definition isClosed (P: SPred) :=
   forall s s', stateIncludedIn s s' -> P s -> P s'.
 
+Local Transparent lentails sepILogicOps.
 Lemma isClosed_sepSP_ltrue P:
   isClosed P -> P ** ltrue -|- P.
 Proof.

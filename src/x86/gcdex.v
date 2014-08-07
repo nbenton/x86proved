@@ -40,9 +40,9 @@ Proof.
   - reflexivity.
   - reflexivity.
   - eapply triple_roc; last apply triple_assign; last reflexivity.
-    move=> s H. apply I.
+    by rewrite -> asn_subst_ltrue; apply ltrueR.
   - eapply triple_roc; last apply triple_assign; last reflexivity.
-    move=> s H. apply I.
+    by rewrite -> asn_subst_ltrue; apply ltrueR.
 Qed.
 
 Definition gcd_program : program := compile_cmd Cgcd.
