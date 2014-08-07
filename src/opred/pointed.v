@@ -33,6 +33,7 @@ Proof. by destruct O. Qed.
 Instance IsPointed_Actions : IsPointed Actions := nil.
 Instance IsPointed_eq_opred x : IsPointed_OPred (eq_opred x) := ex_intro _ x (reflexivity _).
 Instance IsPointed_empOP : IsPointed_OPred empOP := _.
+Instance IsPointed_inOP c d : IsPointed_OPred (inOP c d) := _.
 Instance IsPointed_outOP c d : IsPointed_OPred (outOP c d) := _.
 Instance IsPointed_catOP `{IsPointed_OPred P, IsPointed_OPred Q} : IsPointed_OPred (catOP P Q).
 Proof.
@@ -91,3 +92,20 @@ Instance IsPointed_roll_starOP f start : IsPointed_OPred (roll_starOP f start) :
 (** Common case *)
 Instance IsPointed_lorLempOP {Q} : IsPointed_OPred (empOP \\// Q) := _.
 Instance IsPointed_lorRempOP {P} : IsPointed_OPred (P \\// empOP) := _.
+
+Instance IsPointed_foldrOP A B C f g (init : A * B) `{IsPointed_OPred (g init)}
+         `{forall a acc, IsPointed_OPred (g acc) -> IsPointed_OPred (g (f a acc))}
+         (ls : seq C)
+: IsPointed_OPred (g (foldr f init ls)).
+Proof.
+  induction ls; simpl in *; auto.
+Qed.
+
+Instance IsPointed_foldlOP A B C f g (init : A * B) `{IsPointed_OPred (g init)}
+         `{forall a acc, IsPointed_OPred (g acc) -> IsPointed_OPred (g (f acc a))}
+         (ls : seq C)
+: IsPointed_OPred (g (foldl f init ls)).
+Proof.
+  generalize dependent init.
+  induction ls; simpl in *; auto.
+Qed.
