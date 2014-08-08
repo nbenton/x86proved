@@ -47,13 +47,18 @@ Definition always (t: eqType) x : Codec t :=
     Emp ~~> unConst x.
 
 (* Use one bit to dispatch to left or right summand *)
-Definition Cond T U (c: Codec T) (d: Codec U) : Codec (T+U) :=
+Definition SumCond T U (c: Codec T) (d: Codec U) : Codec (T+U) :=
     Sym false .$ c ~~> unInl _ _
 ||| Sym true  .$ d ~~> unInr _ _.
 
 (* Codec for sigma type whose first component is a boolean *)
-Definition BoolDep F (c: forall x:bool, Codec (F x)) : Codec {x:bool & F x}:=
-    Cond (c false) (c true) ~~> sumCast F.
+Definition DepCond F (c: forall x:bool, Codec (F x)) : Codec {x:bool & F x}:=
+    SumCond (c false) (c true) ~~> sumCast F.
+
+(* Non-dependent conditional *)
+Definition Cond X (c:bool->Codec X) : Codec X :=
+    Sym false .$ c false
+||| Sym true  .$ c true.
 
 (*
 Definition SimpleDep (T:finType) U (c: Codec T) (d: T -> Codec U) : Codec (T*U) :=

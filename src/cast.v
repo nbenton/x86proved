@@ -110,6 +110,13 @@ apply: MakeCast (fun (x: t1*(t2*t3)) => ((x.1,x.2.1),x.2.2))
 move => [[x1 x2] x3] [y1 [y2 y3]]. by move => [-> -> -> ].
 Defined.
 
+Definition pairAssocCastOp t1 t2 t3 : CAST ((t1*t2)*t3) (t1*(t2*t3)).
+apply: MakeCast (fun (x: (t1*t2)*t3) => (x.1.1, (x.1.2, x.2))) 
+                (fun (x: t1*(t2*t3)) => Some ((x.1,x.2.1),x.2.2))
+                _.
+move => [x1 [x2 x3]] [[y1 y2] y3]. by move => [-> -> -> ].
+Defined.
+
 Definition swapPairCast t u : CAST (t*u) (u*t).
 apply: MakeCast (fun (x:t*u) => (x.2,x.1)) (fun (x:u*t) => Some (x.2,x.1)) _.
 by move => [x1 x2] [y1 y2] [-> ->].

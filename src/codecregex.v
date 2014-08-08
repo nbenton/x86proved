@@ -33,7 +33,7 @@ by rewrite /finiteCodec.
 Qed.
 
 Lemma CondToRegex t u (c: Codec t) (d: Codec u):
-codecToRegex (Cond c d) =
+codecToRegex (SumCond c d) =
   rAlt (rSeq (RSym false) (codecToRegex c)) (rSeq (RSym true) (codecToRegex d)).
 Proof. done. Qed.
 

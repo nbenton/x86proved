@@ -2,7 +2,7 @@
   Instruction codec
   ======================================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.seq Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.fintype.
-Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops Ssreflect.eqtype Ssreflect.tuple.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsopsprops x86proved.bitsops Ssreflect.eqtype Ssreflect.tuple.
 Require Import Coq.Strings.String.
 Require Import x86proved.cast x86proved.codec x86proved.bitscodec.
 Require Import x86proved.x86.instr x86proved.x86.encdechelp x86proved.x86.reg.
@@ -26,6 +26,14 @@ Definition unRegMemR d : CAST (VReg d) (RegMem d).
 apply: MakeCast (RegMemR d) (fun rm => if rm is RegMemR r then Some r else None) _.
 by elim; congruence. Defined.
 
+Definition unRegImmR d : CAST (VReg d) (RegImm d).
+apply: MakeCast (RegImmR d) (fun rm => if rm is RegImmR r then Some r else None) _.
+by elim; congruence. Defined.
+
+Definition unRegImmI d : CAST (VWORD d) (RegImm d).
+apply: MakeCast (RegImmI d) (fun rm => if rm is RegImmI v then Some v else None) _.
+by elim; congruence. Defined.
+
 Definition unJmpTgtI : CAST Tgt JmpTgt.
 apply: MakeCast JmpTgtI (fun t => if t is JmpTgtI d then Some d else None) _.
 elim; elim; congruence. Defined.
@@ -37,10 +45,8 @@ elim => //. move => m. elim => // ms. by move => [<-].
 by move => r y [<-].
 Defined.
 
-Require Import x86proved.bitsopsprops.
 Definition unTgt : CAST DWORD Tgt.
-apply: MakeCast mkTgt
-                (fun t => let: mkTgt d := t in Some d) _.
+apply: MakeCast mkTgt (fun t => let: mkTgt d := t in Some d) _.
 by move => [d] y [<-].
 Defined.
 
@@ -243,11 +249,7 @@ Qed.
 Definition RegMemOpCodec (op: BITS 3) dword :=
   RegMemCodec (Const op) dword ~~> sndUnitCast _.
 
-Definition boolToOpSize b := if b then OpSize4 else OpSize1.
-Definition prefAndBoolToOpSize p b := if b then if p then OpSize2 else OpSize4 else OpSize1.
-
-Definition RegMemOpDepCodec (op: BITS 3) :=
-  BoolDep (fun d => RegMemCodec (Const op) (boolToOpSize d) ~~> sndUnitCast _).
+Definition mkOpSize p b := if b then if p then OpSize2 else OpSize4 else OpSize1.
 
 Definition unDstSrcRMR d : CAST (VReg d * RegMem d) (DstSrc d).
 apply: (MakeCast
@@ -277,6 +279,13 @@ apply: (MakeCast
 move => ds [rm c].
 elim: ds => //. by move => ? ? [<- ->]. by move => ? ? [<- ->]. Defined.
 
+Definition unDstSrcRI d : CAST (VReg d * VWORD d) (DstSrc d).
+apply: (MakeCast (fun p => DstSrcRI _ p.1 p.2)
+       (fun ds => match ds with DstSrcRI x y => Some (x, y)
+                              | _ => None end) _).
+move => ds [rm c].
+elim: ds => //. by move => ? ? [<- ->]. Defined.
+
 (*---------------------------------------------------------------------------
     Casts for instructions
   ---------------------------------------------------------------------------*)
@@ -288,81 +297,9 @@ Definition prefAndOpSizeToBool (w: bool) (os: OpSize) :=
   | _, _ => None
   end.
 
-Definition unOpsize : CAST bool OpSize.
-apply: MakeCast (fun b => boolToOpSize b) 
- (fun s => match s with OpSize1 => Some false | OpSize4 => Some true | _ => None end) _.
-elim => //; elim => //. 
-Defined. 
-
 Definition opSizePrefixCodec X (c : bool -> Codec X) : Codec X :=
     #x"66" .$ (c true)
 ||| c false.
-
-Definition prefAndOpSizeToBool1 pref (os: OpSize)  (r: VReg os) (rm: RegMem os) :=
-            match os, pref return VReg os -> RegMem os -> option
-                      {d : bool &
-                      (VReg (prefAndBoolToOpSize pref d) *
-                       RegMem (prefAndBoolToOpSize pref d))%type}
-            with
-            | OpSize1, _     => fun r rm => Some (existT _ false (r,rm))
-            | OpSize2, true  => fun r rm => Some (existT _ true (r, rm))
-            | OpSize4, false => fun r rm => Some (existT _ true (r, rm))
-            | _,       _     => fun r rm => None
-            end r rm.  
-   
-Definition prefAndOpSizeToBool4 pref (os: OpSize)  (rm: RegMem os) (ri: VWORD os) :=
-            match os, pref return RegMem os -> VWORD os -> option
-                      {d : bool &
-                      (RegMem (prefAndBoolToOpSize pref d) *
-                       VWORD (prefAndBoolToOpSize pref d))%type}
-            with
-            | OpSize1, _     => fun rm ri => Some (existT _ false (rm,ri))
-            | OpSize2, true  => fun rm ri => Some (existT _ true (rm, ri))
-            | OpSize4, false => fun rm ri => Some (existT _ true (rm, ri))
-            | _,       _     => fun rm ri => None
-            end rm ri.  
-   
-Definition prefAndOpSizeToBool2 pref (os: OpSize) (rm: RegMem os) :=
-            match os, pref return RegMem os -> option
-                      {d : bool & (RegMem (prefAndBoolToOpSize pref d))%type}
-            with
-            | OpSize1, _     => fun rm => Some (existT _ false rm)
-            | OpSize2, true  => fun rm => Some (existT _ true rm)
-            | OpSize4, false => fun rm => Some (existT _ true rm)
-            | _,       _     => fun rm => None
-            end rm.  
-   
-Definition prefAndOpSizeToBool3 pref (os: OpSize) (x: DstSrc os) :=
-            match os, pref return DstSrc os -> option
-                      {d : bool & (DstSrc (prefAndBoolToOpSize pref d))%type}
-            with
-            | OpSize1, _     => fun x => Some (existT _ false x)
-            | OpSize2, true  => fun x => Some (existT _ true x)
-            | OpSize4, false => fun x => Some (existT _ true x)
-            | _,       _     => fun x => None
-            end x.  
-   
-
-Definition prefAndOpSizeToBool5 pref (os: OpSize) (x: VReg os) (y: VWORD os) :=
-            match os, pref return VReg os -> VWORD os -> option
-                      {d : bool & (VReg (prefAndBoolToOpSize pref d) * VWORD (prefAndBoolToOpSize pref d))%type}
-            with
-            | OpSize1, _     => fun x y => Some (existT _ false (x,y))
-            | OpSize2, true  => fun x y => Some (existT _ true (x,y))
-            | OpSize4, false => fun x y => Some (existT _ true (x,y))
-            | _,       _     => fun x y => None
-            end x y.  
-   
-Definition prefAndOpSizeToBool6 pref (os: OpSize) (x: MemSpec) (y: VWORD os) :=
-            match os, pref return MemSpec -> VWORD os -> option
-                      {d : bool & (MemSpec * VWORD (prefAndBoolToOpSize pref d))%type}
-            with
-            | OpSize1, _     => fun x y => Some (existT _ false (x,y))
-            | OpSize2, true  => fun x y => Some (existT _ true (x,y))
-            | OpSize4, false => fun x y => Some (existT _ true (x,y))
-            | _,       _     => fun x y => None
-            end x y.  
-   
 
 Definition isCMC : CAST unit Instr.
 apply: MakeCast (fun _ => CMC) (fun i => if i is CMC then Some tt else None) _; by elim; elim.
@@ -380,93 +317,8 @@ Definition isHLT : CAST unit Instr.
 apply: MakeCast (fun _ => HLT) (fun i => if i is HLT then Some tt else None) _; by elim; elim.
 Defined.
 
-Require Import Coq.Program.Equality.
-
-(*
-Definition unBOPMRId w : CAST (BinOp * RegMem (prefAndBoolToOpSize w true) * VWORD (prefAndBoolToOpSize w true)) Instr.
-eapply (MakeCast (fun (p:BinOp * RegMem (prefAndBoolToOpSize w true) * VWORD (prefAndBoolToOpSize w true)) =>
-  let: (op,rm,c) := p in
-    match rm with RegMemR y => BOP _ op (DstSrcRI _ y c)
-                | RegMemM y => BOP _ op (DstSrcMI _ y c) end)
-                 (fun i =>
-                  match i with BOP _ op (DstSrcRI y c) => Some (op,RegMemR _ y,c)
-                             | BOP _ op (DstSrcMI y c) => Some (op,RegMemM _ y,c)
-                             | _ => None end) _).
-elim => //.
-elim => //.
-move => op.
-elim => //.
-+ move => dst c [[op' rm] c']. move => [H2 H3 H4]. by subst.
-+ move => dst c [[op' rm] c']. move => [H2 H3 H4]. by subst.
-Defined.
-*)
-
-Definition BOPCodecRMR w : Codec {d: bool & DstSrc (prefAndBoolToOpSize w d)} :=
-  BoolDep (fun d => RegMemCodec (VRegCodec _) _ ~~> unDstSrcRMR _).
-Definition BOPCodecMRR w : Codec {d: bool & DstSrc (prefAndBoolToOpSize w d)} :=
-  BoolDep (fun d => RegMemCodec (VRegCodec _) _ ~~> unDstSrcMRR _).
-Definition MOVCodecMRI w : Codec {d: bool & DstSrc (prefAndBoolToOpSize w d)} :=
-  BoolDep (fun d => RegMemOpCodec #0 _ $ VWORDCodec _ ~~> unDstSrcMRI _).
-
-(*
-Definition BOPCodecMRI : Codec Instr :=
-  BoolDep (fun d =>
-    RegMemCodec opCodec d $ DWORDorBYTECodec d) ~~> unBOPMRI.
-
-*)
-
-(*
-Definition unMOVZX w : CAST ({d:bool & (VReg (prefAndBoolToOpSize w d) * RegMem (prefAndBoolToOpSize w d))%type}) Instr.
-  eapply (MakeCast (fun p => let: existT d v := p in MOVX false _ v.1 v.2)). (RegMemR _ v.2))).
-  (fun i => if i is TESTOP os x (RegImmR y) then prefAndOpSizeToBool1 w y x else None) _).
-  elim:w; elim => //; elim => //; move => r; elim => // s; move => q H; by inversion H. 
-apply: MakeCast (fun p => MOVX false OpSize4 p.1 p.2) (fun i => if i is MOVX false OpSize4 x y then Some(x,y) else None) _.
-elim => //. elim => //. elim => //. by move => ? ? ? [<-]. Defined.
-
-Definition unMOVZXB : CAST (Reg * RegMem OpSize4) Instr.
-apply: MakeCast (fun p => MOVX false OpSize4 p.1 p.2) (fun i => if i is MOVX false OpSize4 x y then Some(x,y) else None) _.
-elim => //. elim => //. elim => //. by move => ? ? [? ?] [-> ->]. Defined.
-
-Definition unMOVSX : CAST (Reg * RegMem true) Instr.
-apply: MakeCast (fun p => MOVX true true p.1 p.2) (fun i => if i is MOVX true true x y then Some(x,y) else None) _.
-elim => //. elim => //. elim => //. by move => ? ? [? ?] [-> ->]. Defined.
-
-Definition unMOVSXB : CAST (Reg * RegMem false) Instr.
-apply: MakeCast (fun p => MOVX true false p.1 p.2) (fun i => if i is MOVX true false x y then Some(x,y) else None) _.
-elim => //. elim => //. elim => //. by move => ? ? [? ?] [-> ->]. Defined.
-*)
-
 Definition TgtCodec : Codec Tgt := DWORDCodec ~~> unTgt.
 Definition ShortTgtCodec : Codec Tgt := shortDWORDCodec ~~> unTgt.
-
-(*
-Definition unEAXimm : CAST (DWORDorBYTE true) (DstSrc true).
-apply: (MakeCast
-       (fun c => DstSrcRI true EAX c)
-       (fun ds => if ds is DstSrcRI EAX y then Some y else None) _).
-elim => //. elim => //. elim => //. by move => c y [->]. Defined.
-
-Definition unALimm : CAST (DWORDorBYTE false) (DstSrc false).
-apply: (MakeCast
-       (fun c => DstSrcRI false AL c)
-       (fun ds => if ds is DstSrcRI AL y then Some y else None) _).
-elim => //. elim => //. by move => c y [->].
-Defined.
-
-Definition EAXimmCodec : Codec {d: bool & DstSrc d} :=
-  BoolDep (fun d => DWORDorBYTECodec d ~~> if d then unEAXimm else unALimm).
-
-*)
-
-(* RegMemOp codec with lsb [d] of opcode + optional 0x66 prefix [w] determining operand size *)
-Definition VRegMemCodec T w (opcode: BYTE) (c: Codec T) :=
-  droplsb opcode .$ BoolDep (fun d => RegMemCodec c (prefAndBoolToOpSize w d)).
-
-Definition VRegMemOpCodec w (opcode: BYTE) (op: BITS 3) :=
-  droplsb opcode .$ BoolDep (fun d => RegMemOpCodec op (prefAndBoolToOpSize w d)).
-
-Definition VRegMemRegCodec w (opcode: BYTE) :=
-  droplsb opcode .$ BoolDep (fun d => RegMemCodec (VRegCodec (prefAndBoolToOpSize w d)) (prefAndBoolToOpSize w d)).
 
 Definition VAXCodec os : Codec (VReg os) :=
 match os return Codec (VReg os) with
@@ -476,40 +328,37 @@ match os return Codec (VReg os) with
 end.
 
 Definition opcodeWithSizeCodec X (opcode:BYTE) (c : bool -> Codec X) : Codec X :=
-  droplsb opcode .$ (#b"1" .$ (c true) ||| #b"0" .$ (c false)).
+  droplsb opcode .$ Cond c.
 
 (*---------------------------------------------------------------------------
     TEST instruction
   ---------------------------------------------------------------------------*)
-Definition unTESTI os : CAST (RegMem os * VWORD os) Instr.
-apply: (MakeCast (fun p => TESTOP os p.1 (RegImmI os p.2))
-                 (fun i => 
-  match i, os with
-  | TESTOP OpSize1 x (RegImmI d), OpSize1 => Some(x,d) 
-  | TESTOP OpSize2 x (RegImmI d), OpSize2 => Some(x,d)
-  | TESTOP OpSize4 x (RegImmI d), OpSize4 => Some(x,d)
-  | _, _ => None end) _).
-elim:os; elim => //; elim => //; move => ? src [? ?]; case src => // ?; by move => [-> ->].
-Defined.
+Definition tryEqOpSize F (s1 s2: OpSize): F s1 -> option (F s2) :=
+  match s1, s2 with
+  | OpSize1, OpSize1 => fun x => Some x
+  | OpSize2, OpSize2 => fun x => Some x
+  | OpSize4, OpSize4 => fun x => Some x
+  | _, _ => fun x => None
+  end. 
 
-Definition unTESTR w: 
-  CAST {d:bool & (VReg (prefAndBoolToOpSize w d) * RegMem (prefAndBoolToOpSize w d))%type} Instr. 
-Proof.
-  apply: (MakeCast (fun p => let: existT d v := p in TESTOP _ v.2 (RegImmR _ v.1))
-  (fun i => if i is TESTOP os x (RegImmR y) then prefAndOpSizeToBool1 w y x else None) _).
-  elim:w; elim => //; elim => //; move => r; elim => // s; move => q H; by inversion H. 
+Definition unTEST s : CAST (RegMem s * RegImm s) Instr.
+apply (MakeCast (fun p => TESTOP s p.1 p.2)
+                (fun i => if i is TESTOP s1 x d
+  then tryEqOpSize (F:= fun s=> (RegMem s * RegImm s)%type) s (x,d) else None)). 
+elim:s; elim => //; elim => //; move => ? src [? ?]; case src => // ?; by move => [-> ->].
 Defined.
 
 Definition TESTCodec :=
   opSizePrefixCodec (fun w =>
     (* Short form for TEST AL/AX/EAX, imm8/imm16/imm32 *)
         opcodeWithSizeCodec #x"A8" (fun d => 
-        (VAXCodec (prefAndBoolToOpSize w d) ~~> unRegMemR _) $ VWORDCodec _ ~~> unTESTI _)
+        (VAXCodec (mkOpSize w d) ~~> unRegMemR _) $ (VWORDCodec _ ~~> unRegImmI _) ~~> unTEST _)
     (* TEST r/m8, imm8 | TEST r/m16, r16 | TEST r/m32, r32 *)
     ||| opcodeWithSizeCodec #x"F6" (fun d =>
-        RegMemOpCodec #0 (prefAndBoolToOpSize w d) $ VWORDCodec _ ~~> unTESTI _)
+        RegMemOpCodec #0 (mkOpSize w d) $ (VWORDCodec _ ~~> unRegImmI _) ~~> unTEST _)
     (* TEST r/m8, r8 | TEST r/m16, r16 | TEST r/m32, r32 *)
-    ||| VRegMemRegCodec _ #x"84" ~~> unTESTR w
+    ||| opcodeWithSizeCodec #x"84" (fun d =>
+        RegMemCodec (VRegCodec _ ~~> unRegImmR _) _ ~~> swapPairCast _ _ ~~> unTEST (mkOpSize w d))
     ).
 
 (*---------------------------------------------------------------------------
@@ -615,18 +464,6 @@ Definition POPCodec :=
 (*---------------------------------------------------------------------------
     MOV instruction
   ---------------------------------------------------------------------------*)
-Definition unMOV w : CAST ({d:bool & DstSrc (prefAndBoolToOpSize w d)}) Instr.
-apply: (MakeCast (fun (p:{d:bool & DstSrc (prefAndBoolToOpSize w d)}) => let: existT d v := p in MOVOP _ v)
-                 (fun i => if i is MOVOP os v then prefAndOpSizeToBool3 w v else None) _). 
-elim: w; elim => //; elim => // ds y H; by inversion H. Defined.
-
-Definition unMOVRI w : CAST ({d:bool & (VReg (prefAndBoolToOpSize w d) * VWORD (prefAndBoolToOpSize w d))%type}) Instr.
-apply: (MakeCast
-  (fun (p:{d:bool & (VReg (prefAndBoolToOpSize w d) * VWORD (prefAndBoolToOpSize w d))%type}) => let: existT d (x,y) := p in MOVOP _ (DstSrcRI _ x y))
- (fun i => if i is MOVOP os (DstSrcRI r d) then prefAndOpSizeToBool5 w r d else None) _).
-by elim: w; elim => //; elim => //; elim => // => ? ? ? H; inversion H. 
-Defined.
-
 Definition unMOVRMSeg : CAST (SegReg * RegMem OpSize2) Instr.
 apply: (MakeCast (fun p => MOVRMSeg p.2 p.1) (fun i => if i is MOVRMSeg x y then Some(y,x) else None) _).
 by elim => // ? ? [? ?] [-> ->]. 
@@ -637,15 +474,53 @@ apply: (MakeCast (fun p => MOVSegRM p.1 p.2) (fun i => if i is MOVSegRM x y then
 by elim => // ? ? [? ?] [-> ->]. 
 Defined.
 
+Definition unMOV w d : CAST (DstSrc (mkOpSize w d)) Instr.
+apply (MakeCast (MOVOP _) (fun i => if i is MOVOP _ d then tryEqOpSize _ d else None)). 
+by elim:w; elim:d; elim => //; elim => //; move => ? src [->]. 
+Defined. 
 
 Definition MOVCodec :=
-    opSizePrefixCodec (fun w => droplsb #x"8A" .$ BOPCodecRMR w ~~> unMOV w)
-||| opSizePrefixCodec (fun w => droplsb #x"88" .$ BOPCodecMRR w ~~> unMOV w)
-||| opSizePrefixCodec (fun w => droplsb #x"C6" .$ MOVCodecMRI w ~~> unMOV w)
-||| opSizePrefixCodec (fun w => #x"B" .$ 
-              BoolDep (fun d => VRegCodec _ $ VWORDCodec _) ~~> unMOVRI w)
+  opSizePrefixCodec (fun w =>
+      (* MOV r/m8, r8 | MOV r/m16, r16 | MOV r/m32, r32 *)
+      opcodeWithSizeCodec #x"88" (fun d =>
+        RegMemCodec (VRegCodec _) _ ~~> unDstSrcMRR _ ~~> unMOV w d)
+      (* MOV r8, r/m8 | MOV r16, r/m16 | MOV r32, r/m32 *)
+  ||| opcodeWithSizeCodec #x"8A" (fun d =>   
+        RegMemCodec (VRegCodec _) _  ~~> unDstSrcRMR _ ~~> unMOV w d)
+      (* MOV r/m8, imm8 | MOV r/m16, imm16 | MOV r/m32, imm32 *)
+  ||| opcodeWithSizeCodec #x"C6" (fun d =>
+        RegMemOpCodec #0 _ $ VWORDCodec _ ~~> unDstSrcMRI _ ~~> unMOV w d)
+      (* MOV r8, imm8 | MOV r16, imm16 | MOV r32, imm32 *)
+  ||| #x"B" .$ Cond (fun d => 
+        VRegCodec _ $ VWORDCodec _ ~~> unDstSrcRI _ ~~> unMOV w d)
+  )
+  (* MOV r/m16, Sreg *)
 ||| #x"8C" .$ RegMemCodec sreg3Codec _ ~~> unMOVRMSeg
+
+  (* MOV Sreg, r/m16 *)
 ||| #x"8E" .$ RegMemCodec sreg3Codec _ ~~> unMOVSegRM.
+
+(*---------------------------------------------------------------------------
+    MOVX instruction
+  ---------------------------------------------------------------------------*)
+(*
+Definition unMOVZX s : CAST (Reg * RegMem s) Instr.
+  apply (MakeCast (fun v => MOVX false _ v.1 v.2)) (RegMemR _ v.2))).
+  (fun i => if i is TESTOP os x (RegImmR y) then prefAndOpSizeToBool1 w y x else None) _).
+  elim:w; elim => //; elim => //; move => r; elim => // s; move => q H; by inversion H. 
+apply: MakeCast (fun p => MOVX false OpSize4 p.1 p.2) (fun i => if i is MOVX false OpSize4 x y then Some(x,y) else None) _.
+elim => //. elim => //. elim => //. by move => ? ? ? [<-]. Defined.
+
+Definition unMOVSX : CAST (Reg * RegMem true) Instr.
+apply: MakeCast (fun p => MOVX true true p.1 p.2) (fun i => if i is MOVX true true x y then Some(x,y) else None) _.
+elim => //. elim => //. elim => //. by move => ? ? [? ?] [-> ->]. Defined.
+
+Definition MOVXCodec :=
+    opSizePrefixCodec (fun w => #x"0F" .$ VRegMemRegCodec _ #x"B6" ~~> unMOVZX w)
+||| #x"0F" .$ #x"B7" .$ RegMemCodec regCodec true ~~> unMOVZX
+||| #x"0F" .$ #x"BE" .$ RegMemCodec regCodec false ~~> unMOVSXB
+||| #x"0F" .$ #x"BF" .$ RegMemCodec regCodec true ~~> unMOVSX.
+*)
 
 (*---------------------------------------------------------------------------
     BT, BTC, BTR, BTS instructions
@@ -682,131 +557,138 @@ apply: MakeCast ShiftCountI (fun c => if c is ShiftCountI b then Some b else Non
 elim; congruence.
 Defined.
 
-Definition unSHIFT pref : CAST ({d:bool & (ShiftOp * RegMem (prefAndBoolToOpSize pref d))%type} * ShiftCount) Instr.
-eapply (MakeCast (fun (p:{d:bool & (ShiftOp * RegMem (prefAndBoolToOpSize pref d))%type} * ShiftCount) =>
-                  let: (existT _ (op,v), count) := p in SHIFTOP _ op v count)
-                 (fun i => if i is SHIFTOP d op v count then
-   if prefAndOpSizeToBool2 pref v is Some (existT d x) then Some (existT _ _ (op,x), count) else None else None)). 
-elim: pref => //; elim => //; elim => //; move => op dst count q H; by inversion H. 
+Definition unSHIFT s : CAST (ShiftOp * RegMem s * ShiftCount) Instr.
+eapply (MakeCast (fun p => let: (op,v,count) := p in SHIFTOP _ op v count)
+                 (fun i => if i is SHIFTOP s1 op v count 
+  then tryEqOpSize (F:= fun s=> (ShiftOp*RegMem s*ShiftCount)%type) s (op,v,count) else None)).
+elim:s; elim => //; elim => //; move => ? ? src [[? ?] ?]; by move => [-> -> ->]. 
 Defined.
 
 Definition SHIFTCodec :=
   opSizePrefixCodec (fun w => 
     (
-      VRegMemCodec _ #x"C0" shiftOpCodec $ (BYTECodec ~~> unShiftCountI) |||
-      VRegMemCodec _ #x"D0" shiftOpCodec $ (always #1 ~~> unShiftCountI) |||
-      VRegMemCodec _ #x"D2" shiftOpCodec $ (Emp ~~> unShiftCountCL)
-    ) ~~> unSHIFT w
+      opcodeWithSizeCodec #x"C0" (fun d => 
+        RegMemCodec shiftOpCodec (mkOpSize w d) $ (BYTECodec ~~> unShiftCountI) ~~> unSHIFT _) |||
+      opcodeWithSizeCodec #x"D0" (fun d =>
+        RegMemCodec shiftOpCodec (mkOpSize w d) $ (always #1 ~~> unShiftCountI) ~~> unSHIFT _) |||
+      opcodeWithSizeCodec #x"D2" (fun d =>
+        RegMemCodec shiftOpCodec (mkOpSize w d) $ (Emp ~~> unShiftCountCL) ~~> unSHIFT _)
+    )
   ).
 
 (*---------------------------------------------------------------------------
     ADC/ADD/SUB/SBB/OR/AND/XOR/CMP instructions
   ---------------------------------------------------------------------------*)
-Definition unBOP w : CAST (BinOp * {d:bool & DstSrc (prefAndBoolToOpSize w d)}) Instr.
-apply: (MakeCast (fun p:BinOp * {d:bool & DstSrc (prefAndBoolToOpSize w d)} => 
-                  let: existT d v := p.2 in BOP _ p.1 v)
-                 (fun i => if i is BOP d op v 
-                  then if prefAndOpSizeToBool3 w v is Some x then Some (op,x) else None else None) _).
-elim:w; elim => //; elim => //; move => op ds [op' p] H; by inversion H. 
+Definition unBOP s : CAST (BinOp * DstSrc s) Instr.
+apply: (MakeCast (fun p => BOP _ p.1 p.2))
+                 (fun i => if i is BOP s1 op v 
+                  then tryEqOpSize (F:=fun s => (BinOp*DstSrc s)%type) s (op,v) else None) _.  elim:s; elim => //; elim => //; move => ? src [? ?]; by move => [-> ->]. 
 Defined.
 
-Definition unBOPMRI w : CAST ({d:bool & (BinOp * RegMem (prefAndBoolToOpSize w d) * VWORD (prefAndBoolToOpSize w d))%type}) Instr.
-apply: (MakeCast (fun (p:{d:bool & (BinOp * RegMem (prefAndBoolToOpSize w d) * VWORD (prefAndBoolToOpSize w d))%type}) =>
-  let: existT d (op,rm,c) := p in
-    match rm with RegMemR y => BOP _ op (DstSrcRI _ y c)
-                | RegMemM y => BOP _ op (DstSrcMI _ y c) end)
-                 (fun i =>
-                  match i with BOP os op (DstSrcRI y c) =>
-                    if prefAndOpSizeToBool5 w y c is Some (existT _ (y,c))
-                    then Some (existT _ _ (op,RegMemR _ y,c)) else None           
-                             | BOP os op (DstSrcMI y c) => 
-                    if prefAndOpSizeToBool6 w y c is Some (existT _ (y,c))
-                    then Some (existT _ _ (op,RegMemM _ y,c)) else None
-                             | _ => None end) _).
-elim: w; elim => //; elim => // ?; elim => // ? ? ? H; by inversion H. 
+Definition shortVWORDEmb w : CAST BYTE (VWORD (if w then OpSize2 else OpSize4)).
+destruct w. 
+apply: MakeCast (@signExtend 8 7) (@signTruncate 8 7) _.
+- move => d b/= H. by apply signTruncateK. 
+apply: MakeCast (@signExtend 24 7) (@signTruncate 24 7) _.
+- move => d b/= H. by apply signTruncateK. 
 Defined.
+
+Definition shortVWORDCodec w: Codec _ :=
+  BYTECodec ~~> shortVWORDEmb w.
 
 Definition BINOPCodec :=
-(* Binary operations *)
-(*
-||| #b"00" .$ opCodec $ #b"10" .$ EAXimmCodec ~~> unBOPMRI
-*)
-    opSizePrefixCodec (fun w => #b"00" .$ opCodec $ #b"00" .$ BOPCodecMRR w ~~> unBOP w)
-||| opSizePrefixCodec (fun w => #b"00" .$ opCodec $ #b"01" .$ BOPCodecRMR w ~~> unBOP w)
-||| opSizePrefixCodec (fun w => droplsb #x"80" .$ 
-              BoolDep (fun d => RegMemCodec opCodec _ $ VWORDCodec _) ~~> unBOPMRI w)
-(*||| opSizePrefixCodec (fun w => #x"83" .$ RegMemCodec opCodec _ $ shortDWORDCodec ~~> unBOPMRId w)*)
+    opSizePrefixCodec (fun w => 
+      (* OP AL, imm8 | OP AX, imm16 | OP EAX, imm32 *)
+    #b"00" .$ opCodec $ #b"100" .$ 
+      (VAXCodec _ $ VWORDCodec _ ~~> unDstSrcRI _) ~~> unBOP (mkOpSize w false)
+||| #b"00" .$ opCodec $ #b"101" .$ 
+      (VAXCodec _ $ VWORDCodec _ ~~> unDstSrcRI _) ~~> unBOP (mkOpSize w true)
+
+    (* OP r/m8, r8 | OP r/m16, r16 | OP r/m32, r32 *)
+||| #b"00" .$ opCodec $ #b"000" .$ 
+      (RegMemCodec (VRegCodec _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w false)
+||| #b"00" .$ opCodec $ #b"001" .$ 
+      (RegMemCodec (VRegCodec _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w true)
+
+    (* OP r8, r/m8 | OP r16, r/m16 | OP r32, r/m32 *)
+||| #b"00" .$ opCodec $ #b"010" .$ 
+      (RegMemCodec (VRegCodec _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w false)
+||| #b"00" .$ opCodec $ #b"011" .$ 
+      (RegMemCodec (VRegCodec _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w true)
+
+    (* OP r/m8, imm8 | OP r/m16, imm16 | OP r/m32, imm32 *)
+||| opcodeWithSizeCodec #x"80" (fun d => RegMemCodec opCodec _ $ VWORDCodec _
+    ~~> pairAssocCastOp _ _ _ ~~> pairOfCasts (idCast _) (unDstSrcMRI _) ~~> unBOP (mkOpSize w d))
+
+    (* OP r/m16, imm8 | OP r/m32, imm8 (sign-extended) *)
+||| #x"83" .$ (RegMemCodec opCodec _ $ shortVWORDCodec w) 
+    ~~> pairAssocCastOp _ _ _ ~~> pairOfCasts (idCast _) (unDstSrcMRI _) ~~> unBOP _ 
+
+    )
 .
 
 (*---------------------------------------------------------------------------
     INC/DEC/NOT/NEG instructions
   ---------------------------------------------------------------------------*)
-Definition unINCR w : CAST (VReg (if w then OpSize2 else OpSize4)) Instr.
-apply: (MakeCast (fun r => UOP _ OP_INC (RegMemR _ r))
-                (fun i => if i is UOP os OP_INC (RegMemR r) then
-                          (match os, w return VReg os -> option (VReg (if w then OpSize2 else OpSize4)) with 
-                            OpSize4, false => fun r => Some r
-                          | OpSize2, true => fun r => Some r
-                          | _, _ => fun _ => None end) r else None) _).
-by elim: w; elim => //; elim => //; elim => //; elim => // => ? ? [->]. Defined.
+Definition unINC s : CAST (RegMem s) Instr.
+apply: MakeCast (fun v => UOP _ OP_INC v)
+                (fun i => if i is UOP s1 OP_INC v then tryEqOpSize s v else None) _.
+elim: s; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
 
-Definition unDECR w : CAST (VReg (if w then OpSize2 else OpSize4)) Instr.
-apply: (MakeCast (fun r => UOP _ OP_DEC (RegMemR _ r))
-                (fun i => if i is UOP os OP_DEC (RegMemR r) then
-                          (match os, w return VReg os -> option (VReg (if w then OpSize2 else OpSize4)) with 
-                            OpSize4, false => fun r => Some r
-                          | OpSize2, true => fun r => Some r
-                          | _, _ => fun _ => None end) r else None) _).
-by elim: w; elim => //; elim => //; elim => //; elim => // => ? ? [->]. Defined.
+Definition unDEC s : CAST (RegMem s) Instr.
+apply: MakeCast (fun v => UOP _ OP_DEC v)
+                (fun i => if i is UOP s1 OP_DEC v then tryEqOpSize s v else None) _.
+elim: s; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
 
-Definition unINC pref : CAST {d:bool & RegMem (prefAndBoolToOpSize pref d)} Instr.
-apply: MakeCast (fun p => let: existT d v := p in UOP _ OP_INC v)
-                (fun i => if i is UOP s OP_INC v then prefAndOpSizeToBool2 pref v else None) _.
-elim: pref; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
+Definition unNEG s : CAST (RegMem s) Instr.
+apply: MakeCast (fun v => UOP _ OP_NEG v)
+                (fun i => if i is UOP s1 OP_NEG v then tryEqOpSize s v else None) _.
+elim: s; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
 
-Definition unDEC pref : CAST {d:bool & RegMem (prefAndBoolToOpSize pref d)} Instr.
-apply: MakeCast (fun p => let: existT d v := p in UOP _ OP_DEC v)
-                (fun i => if i is UOP s OP_DEC v then prefAndOpSizeToBool2 pref v else None) _.
-elim: pref; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
-
-Definition unNOT pref : CAST {d:bool & RegMem (prefAndBoolToOpSize pref d)} Instr.
-apply: MakeCast (fun p => let: existT d v := p in UOP _ OP_NOT v)
-                (fun i => if i is UOP s OP_NOT v then prefAndOpSizeToBool2 pref v else None) _.
-elim: pref; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
-
-Definition unNEG pref : CAST {d:bool & RegMem (prefAndBoolToOpSize pref d)} Instr.
-apply: MakeCast (fun p => let: existT d v := p in UOP _ OP_NEG v)
-                (fun i => if i is UOP s OP_NEG v then prefAndOpSizeToBool2 pref v else None) _.
-elim: pref; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
+Definition unNOT s : CAST (RegMem s) Instr.
+apply: MakeCast (fun v => UOP _ OP_NOT v)
+                (fun i => if i is UOP s1 OP_NOT v then tryEqOpSize s v else None) _.
+elim: s; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
 
 Definition UOPCodec :=
-    opSizePrefixCodec (fun w => VRegMemOpCodec _ #x"FE" #0 ~~> unINC w)
-||| opSizePrefixCodec (fun w => VRegMemOpCodec _ #x"FE" #1 ~~> unDEC w)
-||| opSizePrefixCodec (fun w => VRegMemOpCodec _ #x"F6" #2 ~~> unNOT w)
-||| opSizePrefixCodec (fun w => VRegMemOpCodec _ #x"F6" #3 ~~> unNEG w)
-||| opSizePrefixCodec (fun w => INCPREF .$ VRegCodec _ ~~> unINCR w)
-||| opSizePrefixCodec (fun w => DECPREF .$ VRegCodec _ ~~> unDECR w).
+  opSizePrefixCodec (fun w => 
+    opcodeWithSizeCodec #x"FE" (fun d =>
+    RegMemOpCodec #0 _ ~~> unINC (mkOpSize w d))
+
+||| opcodeWithSizeCodec #x"FE" (fun d =>
+    RegMemOpCodec #1 _ ~~> unDEC (mkOpSize w d))
+
+||| opcodeWithSizeCodec #x"F6" (fun d =>
+    RegMemOpCodec #2 _ ~~> unNOT (mkOpSize w d))
+
+||| opcodeWithSizeCodec #x"F6" (fun d =>
+    RegMemOpCodec #3 _ ~~> unNEG (mkOpSize w d))
+
+||| INCPREF .$ VRegCodec _ ~~> unRegMemR _ ~~> unINC (mkOpSize w false)
+||| DECPREF .$ VRegCodec _ ~~> unRegMemR _ ~~> unDEC (mkOpSize w false)
+  ).
 
 
 (*---------------------------------------------------------------------------
     IN/OUT instructions
   ---------------------------------------------------------------------------*)
 Definition unINI (w:bool) : CAST (bool*BYTE) Instr.
-apply: (MakeCast (fun p => INOP (prefAndBoolToOpSize w p.1) (PortI p.2)) (fun i => if i is INOP os (PortI p) then if prefAndOpSizeToBool w os is Some d then Some(d,p) else None else None) _).
+apply: (MakeCast (fun p => INOP (mkOpSize w p.1) (PortI p.2)) 
+       (fun i => if i is INOP os (PortI p) then if prefAndOpSizeToBool w os is Some d then Some(d,p) else None else None) _).
 elim: w; elim => //; elim => //; elim => // => ? [? ?] H; by inversion H. Defined.
 
 Definition unOUTI (w:bool) : CAST (bool*BYTE) Instr.
-apply: (MakeCast (fun p => OUTOP (prefAndBoolToOpSize w p.1) (PortI p.2)) (fun i => if i is OUTOP os (PortI p) then if prefAndOpSizeToBool w os is Some d then Some(d,p) else None else None) _).
+apply: (MakeCast (fun p => OUTOP (mkOpSize w p.1) (PortI p.2)) (fun i => if i is OUTOP os (PortI p) then if prefAndOpSizeToBool w os is Some d then Some(d,p) else None else None) _).
 elim: w; elim => //; elim => //; elim => // => ? [? ?] H; by inversion H. Defined.
 
 Definition unINR (w:bool) : CAST bool Instr.
-apply: MakeCast (fun p => INOP (prefAndBoolToOpSize w p) PortDX) 
+apply: MakeCast (fun p => INOP (mkOpSize w p) PortDX) 
   (fun i => if i is INOP os PortDX then prefAndOpSizeToBool w os else None) _.
 elim: w; elim => //; elim => //; elim => // => ? H; by inversion H. 
 Defined. 
 
 Definition unOUTR (w:bool) : CAST bool Instr.
-apply: MakeCast (fun p => OUTOP (prefAndBoolToOpSize w p) PortDX) 
+apply: MakeCast (fun p => OUTOP (mkOpSize w p) PortDX) 
   (fun i => if i is OUTOP os PortDX then prefAndOpSizeToBool w os else None) _.
 elim: w; elim => //; elim => //; elim => // => ? H; by inversion H. 
 Defined. 
@@ -825,15 +707,18 @@ apply: (MakeCast (fun p => IMUL p.1 p.2)
                  (fun i => if i is IMUL dst src then Some (dst,src) else None) _).
 elim => //. by move => dst src [dst' src'] [<-] ->.  Defined.
 
-Definition unMUL w : CAST {d:bool & RegMem (prefAndBoolToOpSize w d)} Instr.
-apply: (MakeCast (fun p => let: existT d v := p in MUL v)
-                 (fun i => if i is MUL os v then prefAndOpSizeToBool2 w v else None) _).
-elim: w; elim => //; elim => //; move => r q H; by inversion H.  
+Definition unMUL s : CAST (RegMem s) Instr.
+apply: (MakeCast (@MUL s)
+                 (fun i => if i is MUL s1 v 
+                  then tryEqOpSize s v else None) _).  
+elim: s; elim => //; elim => //; move => r q H; by inversion H.  
 Defined.
 
 Definition MULCodec :=
 (*||| #x"0F" .$ #x"AF" .$ RegMemCodec regCodec _ ~~> unIMUL*)
-   opSizePrefixCodec (fun w => VRegMemOpCodec _ #x"F6" #5 ~~> unMUL w).
+   opSizePrefixCodec (fun w => 
+   opcodeWithSizeCodec #x"F6" (fun d =>  
+   RegMemOpCodec #5 _ ~~> unMUL (mkOpSize w d))).
 
 (*---------------------------------------------------------------------------
     LEA instruction 
@@ -848,18 +733,22 @@ Definition LEACodec :=
 (*---------------------------------------------------------------------------
     XCHG instruction 
   ---------------------------------------------------------------------------*)
-Definition unXCHG pref : 
-  CAST {d:bool & (VReg (prefAndBoolToOpSize pref d) * RegMem (prefAndBoolToOpSize pref d))%type} Instr. 
+Definition unXCHG s : CAST (VReg s * RegMem s) Instr. 
 Proof. 
-  apply: MakeCast (fun p => let: existT d v := p in XCHG _ v.1 v.2)
-  (fun i => if i is XCHG os x y then prefAndOpSizeToBool1 pref x y else None) _. 
-  elim: pref; elim => //; elim => //; move => r s q H; by inversion H.
+  apply: MakeCast (fun p => XCHG s p.1 p.2) 
+  (fun i => if i is XCHG s1 x y 
+            then tryEqOpSize (F:=fun s => (VReg s * RegMem s)%type) s (x,y) else None) _.  
+elim:s; elim => //; elim => //; move => ? src [? ?]; case src => // ?; by move => [-> ->].
 Defined. 
 
 Definition XCHGCodec :=
-(*||| opSizePrefixCodec (fun w => #b"10010" .$ always (if w then AX else (EAX:Reg)) $ (VRegCodec _ ~~> unRegMemR _) ~~> unXCHG w)
-*)
-    opSizePrefixCodec (fun w => VRegMemRegCodec _ #x"86" ~~> unXCHG w).
+    opSizePrefixCodec (fun w => 
+      (* XCHG AX, r16 | XCHG EAX, r32 *)
+      #b"10010" .$ VAXCodec _ $ (VRegCodec _ ~~> unRegMemR _) ~~> unXCHG (mkOpSize w true)
+      (* XCHG r8, r/m8 | XCHG r16, r/m16 | XCHG r32, r/m32 *)
+  ||| opcodeWithSizeCodec #x"86" (fun d =>
+        RegMemCodec (VRegCodec _) _ ~~> unXCHG (mkOpSize w d))
+  ).
 
 (*---------------------------------------------------------------------------
     All instructions
@@ -873,10 +762,6 @@ Definition InstrCodec : Codec Instr :=
 (* Everything else *)
 (* MOVX *)
 (*
-||| opSizePrefixCodec (fun w => #x"0F" .$ VRegMemRegCodec _ #x"B6" ~~> unMOVZX w)
-||| #x"0F" .$ #x"B7" .$ RegMemCodec regCodec true ~~> unMOVZX
-||| #x"0F" .$ #x"BE" .$ RegMemCodec regCodec false ~~> unMOVSXB
-||| #x"0F" .$ #x"BF" .$ RegMemCodec regCodec true ~~> unMOVSX
 *)
 ||| JMPCodec ||| CALLCodec ||| TESTCodec ||| PUSHCodec ||| POPCodec ||| RETCodec
 ||| MOVCodec ||| BITCodec ||| SHIFTCodec ||| JCCCodec ||| BINOPCodec ||| UOPCodec
@@ -998,7 +883,7 @@ Proof. induction xs => //. Qed.
 (*
 Module Examples.
 Require Import instrsyntax. Open Scope instr_scope.
-Definition exinstr := (TESTOP OpSize2 (RegMemM OpSize2 (mkMemSpec (Some (nonSPReg EBX, Some(EDX, S4))) (#x"12345678"))) (RegImmR OpSize2 BP)).
+Definition exinstr := (BOP OpSize2 OP_ADD (DstSrcMR OpSize2 (mkMemSpec (Some (nonSPReg EBX, Some(EDX, S4))) (#x"12345678")) BP)).
 
 Compute bytesToHex (snd (fromBin (if enc InstrCodec exinstr is Some bs then bs else nil))).
 
