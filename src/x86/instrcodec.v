@@ -715,10 +715,13 @@ elim: s; elim => //; elim => //; move => r q H; by inversion H.
 Defined.
 
 Definition MULCodec :=
-(*||| #x"0F" .$ #x"AF" .$ RegMemCodec regCodec _ ~~> unIMUL*)
-   opSizePrefixCodec (fun w => 
-   opcodeWithSizeCodec #x"F6" (fun d =>  
-   RegMemOpCodec #5 _ ~~> unMUL (mkOpSize w d))).
+    (* IMUL r32, r/m32 *)
+    #x"0F" .$ #x"AF" .$ RegMemCodec regCodec _ ~~> unIMUL
+
+    (* MUL r/m8 | MUL r/m16 | MUL r/m32 *)
+||| opSizePrefixCodec (fun w => 
+    opcodeWithSizeCodec #x"F6" (fun d =>  
+    RegMemOpCodec #4 _ ~~> unMUL (mkOpSize w d))).
 
 (*---------------------------------------------------------------------------
     LEA instruction 
