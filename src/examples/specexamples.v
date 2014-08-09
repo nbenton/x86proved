@@ -45,7 +45,7 @@ Example basic_inc3 (x:DWORD):
 Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  do !do_basic'.
+  do !basic apply *.
   rewrite /OSZCP addIsIterInc/iter/stateIs/VRegIs; sbazooka.
 Qed.
 
@@ -74,10 +74,10 @@ Proof.
   - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.
     rewrite ->(eqP Hzero) in *. rewrite add0B in Hadd.
     subst a'. rewrite /ConditionIs/stateIsAny. by sbazooka.
-  - subst I; cbv beta; specintros => *; subst. rewrite /ConditionIs. do_basic'.
+  - subst I; cbv beta; specintros => *; subst. rewrite /ConditionIs. basic apply *.
   - subst I; cbv beta; rewrite /ConditionIs/stateIsAny; specintros => *; subst.
-    do_basic'.
-    do_basic'.
+    basic apply *.
+    basic apply *.
     rewrite /OSZCP/ConditionIs/stateIs/VRegIs.
     sbazooka.
     by rewrite addB_decB_incB.
@@ -274,10 +274,10 @@ Example loop_forever_one al
                    (starOP (outOP (zeroExtend n8 (#0 : BYTE)) (#1 : BYTE)))
                    lfalse).
 Proof.
-  do_loopy_basic'.
+  basic apply loopy *.
   change (@low 24 8 (@fromNat n32 1)) with (@fromNat n8 1).
   eapply safe_loop_forever_constant.
-  do_basic'.
+  basic apply *.
 Qed.
 
 Definition echo_once in_c out_c :=
@@ -297,8 +297,8 @@ Example safe_echo_once al in_c out_c
                       (AL ~= v).
 Proof.
   specintros => v. rewrite /echo_once/echo_once_OP_helper.
-  do_basic'; first by reflexivity.
-  do_basic'.
+  basic apply *.
+  basic apply *.
 Qed.
 
 Instance: forall in_c out_c, instrrule (echo_once in_c out_c) := fun in_c out_c al => @safe_echo_once al in_c out_c.
@@ -310,9 +310,9 @@ Example safe_echo_once_clean (al in_c out_c : BYTE) v
              (AL ~= al)).
 Proof.
   rewrite /echo_once_clean/echo_once_OP_helper.
-  do_basic'.
-  do_basic'. rewrite /stateIs/VRegIs.
-  rewrite low_catB. by ssimpl.
+  basic apply *.
+  basic apply *.
+  by rewrite low_catB.
 Qed.
 
 Instance: forall al in_c out_c, instrrule (echo_once_clean al in_c out_c) := @safe_echo_once_clean.
@@ -343,10 +343,7 @@ Proof.
   apply H; [ by intuition | by intuition | by intuition | ].
   move => n' [ Hsmall Hle ].
   clear H.
-  pre_basic_apply;
-    (let R := get_next_instrrule_for_basic in
-     try_basicapply R).
-  simpl.
+  attempt basic apply *.
   rewrite /echo_once_OP_helper.
   rewrite /list_to_in_out.
   erewrite nth_map; first by reflexivity.

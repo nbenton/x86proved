@@ -262,10 +262,10 @@ Definition specAtMemSpec s ms (f: VWORD s -> spec) :=
 
 Definition VRegIs s : VReg s -> VWORD s -> SPred :=
   match s as s return VReg s -> VWORD s -> SPred with
-  | OpSize1 => BYTEregIs 
-  | OpSize2 => WORDregIs 
+  | OpSize1 => BYTEregIs
+  | OpSize2 => WORDregIs
   | OpSize4 => regIs
-  end.  
+  end.
 
 (** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
 Hint Unfold VRegIs : finish_logic_unfolder.
@@ -364,9 +364,14 @@ Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= 
 (** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
 Hint Unfold OSZCP : finish_logic_unfolder.
 
+(** We never want to see these when solving a goal, but they're
+    convenient for statements *)
+Hint Unfold makeBOP makeUOP makeMOV : instrrules_all.
+Hint Unfold OSZCP scaleBy VRegIs : instrrules_side_conditions_spred.
+
 (** These hints are global *)
 (** TODO(t-jagro): Find a better place for this, or, better, generalize [InstrArg] *)
-Coercion InstrArg_of_VReg s : VReg s -> InstrArg := 
+Coercion InstrArg_of_VReg s : VReg s -> InstrArg :=
 match s as s return VReg s -> InstrArg with
 | OpSize1 => BYTERegArg
 | OpSize2 => WORDRegArg
@@ -424,9 +429,9 @@ Lemma evalRegPiece_rule (rp: RegPiece) (v:BYTE) c O Q :
   TRIPLE (regPieceIs rp v ** S) (c v) O Q ->
   TRIPLE (regPieceIs rp v ** S) (bind (evalRegPiece rp) c) O Q.
 Proof.
-move => S T. rewrite /stateIs/BYTEregIs. 
-triple_apply triple_letGetRegPieceSep. 
-triple_apply T. 
+move => S T. rewrite /stateIs/BYTEregIs.
+triple_apply triple_letGetRegPieceSep.
+triple_apply T.
 Qed.
 Global Opaque evalRegPiece.
 
@@ -442,21 +447,21 @@ Lemma evalWORDReg_rule (r: WORDReg) (v:WORD) c O Q :
   TRIPLE (r ~= v ** S) (c v) O Q ->
   TRIPLE (r ~= v ** S) (bind (evalWORDReg r) c) O Q.
 Proof.
-move => S T. rewrite /stateIs/WORDregIs/WORDRegToReg/evalWORDReg. destruct r as [r]. 
-triple_apply evalRegPiece_rule. 
+move => S T. rewrite /stateIs/WORDregIs/WORDRegToReg/evalWORDReg. destruct r as [r].
 triple_apply evalRegPiece_rule.
-replace (slice 8 8 0 v ## slice 0 8 8 v) with v. 
-try_triple_apply T. 
+triple_apply evalRegPiece_rule.
+replace (slice 8 8 0 v ## slice 0 8 8 v) with v.
+try_triple_apply T.
 rewrite /stateIs/WORDregIs/WORDRegToReg. by ssimpl.
 
 (* @TODO: this should be in bitsprops *)
 apply allBitsEq => i LT.
-setoid_rewrite -> getBit_catB. rewrite /slice/split3/split2. 
-rewrite !getBit_high !getBit_low. 
+setoid_rewrite -> getBit_catB. rewrite /slice/split3/split2.
+rewrite !getBit_high !getBit_low.
 case E: (i < 8). by rewrite addn0 E.
 rewrite subnK. by rewrite LT.
-rewrite ltnNge. by rewrite -ltnS E. 
-Qed. 
+rewrite ltnNge. by rewrite -ltnS E.
+Qed.
 Global Opaque evalWORDReg.
 
 Lemma evalVReg_rule s (r: VReg s) v c O Q :
@@ -471,7 +476,7 @@ Opaque evalVReg.
 Lemma triple_setVRegSep s (r: VReg s) v w :
   forall S, TRIPLE (VRegIs r v ** S) (setVRegInProcState r w) nil
                    (VRegIs r w ** S).
-Proof. destruct s; 
+Proof. destruct s;
   [apply triple_setBYTERegSep | apply triple_setWORDRegSep | apply triple_setRegSep]. Qed.
 Global Opaque setVRegInProcState.
 
@@ -547,12 +552,10 @@ Lemma triple_letVWORDSep s (p:PTR) (v:VWORD s) c O Q :
 Proof. destruct s; apply triple_letGetSep. Qed.
 Global Opaque getVWORDFromProcState.
 
-Lemma basicForgetFlags T (MI: MemIs T) P (x:T) O Q o s z c p:
-  |-- basic (P ** OSZCP?) x O (Q ** OSZCP o s z c p) ->
-  |-- basic P x O Q @ OSZCP?.
-Proof. move => H. autorewrite with push_at.
-basicapply H. rewrite /OSZCP/stateIsAny. sbazooka.
-Qed.
+Lemma basicForgetFlags T (MI: MemIs T) P (x:T) O Q o s z c p
+      (H : |-- basic (P ** OSZCP?) x O (Q ** OSZCP o s z c p))
+: |-- basic P x O Q @ OSZCP?.
+Proof. basic apply H. Qed.
 
 Lemma sbbB_ZC n (r : BITS n) carry (v1 v: BITS n) :
   sbbB false v1 v = (carry, r) ->
@@ -736,153 +739,6 @@ Ltac do_instrrule_triple := do_instrrule instrrule_triple_bazooka.
 Hint Unfold
   specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
   DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  natAsDWORD BYTEtoDWORD  
+  natAsDWORD BYTEtoDWORD
   makeMOV makeBOP makeUOP
-  : instrrules_basicapply.
-
-(** Allow us to unfold with a database inside of a term *)
-Class instrrules_unfold_helper {T} (A : T) := do_instrrules_unfold_helper : T.
-
-Hint Extern 0 (instrrules_unfold_helper ?A)
-=> let H := fresh in
-   (pose A as H);
-     do ?(autounfold with basicapply instrrules_basicapply in H);
-     let B := (eval unfold H in H) in
-     clear H;
-       exact B
-     : typeclass_instances.
-Ltac eval_repeat_autounfold_with_basicapply_instrrules_basicapply_in H :=
-  let ret := constr:(_ : instrrules_unfold_helper H) in
-  let ret' := (eval cbv zeta in ret) in
-  ret'.
-
-Ltac instrrules_unfold H :=
-  let T := type_of H in
-  let T' := eval_repeat_autounfold_with_basicapply_instrrules_basicapply_in T in
-  constr:(H : T').
-
-Hint Rewrite
-     addB0 low_catB : instrrules_basicapply.
-
-Hint Unfold
-     OSZCP stateIsAny scaleBy OPred_pred default_PointedOPred stateIs VRegIs : instrrules_spred.
-
-Tactic Notation "instrrules_basicapply" open_constr(R) "using" tactic3(tac) :=
-  let R' := instrrules_unfold R in
-  basicapply R' using (tac) side conditions by try solve_simple_basicapply; repeat autounfold with spred instrrules_spred instrrules_basicapply; basicapply_default_tacfin; sbazooka.
-Tactic Notation "instrrules_basicapply" open_constr(R) :=
-  instrrules_basicapply R using (fun Hlem => autorewrite with basicapply instrrules_basicapply in Hlem; basicapply_default_hyp_tac Hlem).
-
-(** We use a type class to ask for a rule for a given instruction,
-    parameterized _only_ on the arguments it needs to reduce to
-    something of the form [|-- basic ...], and the things that appear
-    in the instr. *)
-Class instrrule {T} (instr : T) {ruleT} := make_instrrule : ruleT.
-Class loopy_instrrule {T} (instr : T) {ruleT} := make_loopy_instrrule : ruleT.
-Instance instrrule_weaken_loopy {T instr ruleT} `{x : @instrrule T instr ruleT} : @loopy_instrrule T instr ruleT | 1000 := x.
-Definition get_instrrule_of {T} (instr : T) {ruleT} `{x : @instrrule T instr ruleT} : ruleT := x.
-Arguments get_instrrule_of {_} _ {_ _}.
-Definition get_loopy_instrrule_of {T} (instr : T) {ruleT} `{x : @loopy_instrrule T instr ruleT} : ruleT := x.
-Arguments get_loopy_instrrule_of {_} _ {_ _}.
-
-(** We add instances from basicprog *)
-(** TODO: Should they go here, or elsewhere? *)
-Instance: instrrule program.prog_skip := fun {T_OPred} {proj} => @basic_skip T_OPred proj empSP.
-Instance: forall c, instrrule (program.prog_declabel c) := fun c {T_OPred} {proj} S P => @basic_local T_OPred proj S P c.
-
-(** We have a tactic that unfolds things in instrrules until we see something like [|-- basic _ _ _ _] *)
-Ltac unfold_to_basic_rule_helper term :=
-  let term' := (eval cbv beta iota zeta in term) in
-  match term' with
-    | ?f ?x => let f' := unfold_to_basic_rule_helper f in
-               (** We need to invoke the call again in case [f] unfolded to a [λ], and we need to reduce it, but only in the case that [f] changed *)
-               let f'x := (eval cbv beta iota zeta in (f' x)) in
-               match f' with
-                 | f => f'x
-                 | _ => unfold_to_basic_rule_helper f'x
-               end
-    | @ltrue => term'
-    | @lfalse => term'
-    | @limpl => term'
-    | @land => term'
-    | @lor => term'
-    | @lforall => term'
-    | @lexists => term'
-    | @spec_reads => term'
-    | @spec_at => term'
-    | @parameterized_basic => term'
-    | ?term' => let term'' := (eval unfold term' in term') in
-                unfold_to_basic_rule_helper term''
-    | ?term' => constr:(term')
-    end.
-
-Class unfold_to_basic_rule_class {T} (term : T) {retT : Type} := make_unfold_to_basic_rule_class : retT.
-Hint Extern 0 (unfold_to_basic_rule_class (@lentails ?Frm ?ILO ?C ?term))
-=> let term' := unfold_to_basic_rule_helper term in
-   exact (@lentails Frm ILO C term')
-   : typeclass_instances.
-
-Ltac unfold_rule_until_basic rule :=
-  let rule' := (eval unfold get_loopy_instrrule_of, get_instrrule_of in rule) in
-  (** unfold the instance name, if possible *)
-  let rule'' := match True with
-                  | _ => unfold_head rule'
-                  | _ => constr:(rule')
-                end in
-  (** Get the original type of the rule, or else we'll end up with [instrrule] rather than the type we want *)
-  let T := type_of rule in
-  let T' := do_under_many_forall_binders (@unfold_to_basic_rule_class) T in
-  constr:(rule'' : T').
-
-Ltac get_instrrule_of instr :=
-  let rule := match True with
-                | _ => constr:(get_instrrule_of instr)
-                | _ => fail 1 "Could not find a non-loopy rule for instruction" instr
-              end in
-  unfold_rule_until_basic rule.
-
-Ltac get_loopy_instrrule_of instr :=
-  let rule := match True with
-                | _ => constr:(get_loopy_instrrule_of instr)
-                | _ => fail 1 "Could not find a rule for instruction" instr
-              end in
-  unfold_rule_until_basic rule.
-
-Ltac get_next_instrrule_for_basic :=
-  let G := match goal with |- ?G => constr:(G) end in
-  let prog := get_basic_program_from G in
-  let instr := get_first_instr prog in
-  get_instrrule_of instr.
-
-Ltac get_next_loopy_instrrule_for_basic :=
-  let G := match goal with |- ?G => constr:(G) end in
-  let prog := get_basic_program_from G in
-  let instr := get_first_instr prog in
-  get_loopy_instrrule_of instr.
-
-(** Apply any matching basic rule *)
-(** [pre_basic_apply] does some clean up for pulling out the rule. *)
-Ltac pre_basic_apply :=
-  rewrite /makeBOP/makeUOP/makeMOV;
-  cbv beta iota zeta;
-  do ?((test progress intros); move => ?).
-Tactic Notation "instrrules_basicapply" "*" "using" tactic3(tac) :=
-  pre_basic_apply;
-  let R := get_next_instrrule_for_basic in
-  instrrules_basicapply R using tac.
-Tactic Notation "instrrules_basicapply" "*" :=
-  pre_basic_apply;
-  let R := get_next_instrrule_for_basic in
-  instrrules_basicapply R.
-Ltac do_basic' :=
-  pre_basic_apply;
-  let R := get_next_instrrule_for_basic in
-  first [ instrrules_basicapply R using (fun H => idtac)
-        | instrrules_basicapply R
-        | fail 1 "Failed to basicapply basic lemma" R ].
-Ltac do_loopy_basic' :=
-  pre_basic_apply;
-  let R := get_next_loopy_instrrule_for_basic in
-  first [ instrrules_basicapply R using (fun H => idtac)
-        | instrrules_basicapply R
-        | fail 1 "Failed to basicapply basic lemma" R ].
+  : instrrules_all.

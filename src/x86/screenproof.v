@@ -17,32 +17,11 @@ Lemma inlineComputeCharPos_correct col row :
   |-- inlineComputeCharPos_spec col row inlineComputeCharPos.
 Proof.
   move => NC NR.
-  rewrite /inlineComputeCharPos_spec/inlineComputeCharPos.
+  rewrite /inlineComputeCharPos_spec/inlineComputeCharPos/stateIsAny.
   autorewrite with push_at.
+  specintros => *.
 
-  (* We don't unfold OSZCP? anywhere because no rules talk about flags *)
-
-  (* MOV EDI, screenBase *)
-  rewrite {1}/stateIsAny. specintros => olddi.
-  basicapply MOV_RI_rule.
-
-  (* SHL EDX, 5 *)
-  basicapply SHL_RI_rule => //.
-
-  (* ADD EDI, EDX *)
-  basicapply ADD_RR_ruleNoFlags.
-
-  (* SHL EDX, 2 *)
-  basicapply SHL_RI_rule => //.
-
-  (* ADD EDI, EDX *)
-  basicapply ADD_RR_ruleNoFlags.
-
-  (* SHL ECX, 1 *)
-  basicapply SHL_RI_rule => //.
-
-  (* ADD EDI, ECX *)
-  basicapply ADD_RR_ruleNoFlags; rewrite /stateIsAny; sbazooka.
+  do !basic apply * => //.
 
   rewrite /charPos/iter !shlB_asMul.
 
@@ -67,21 +46,8 @@ Proof.
   autorewrite with push_at. rewrite {1}/stateIsAny.
   specintros => olddi oldchar.
 
-  have ICCP := inlineComputeCharPos_correct NC NR.
-  rewrite /inlineComputeCharPos_spec in ICCP.
-  try_basicapply ICCP.
-
-  rewrite /stateIsAny.
-  sbazooka.
-
-  (* MOV BYTE [EDI + 0], EAX *)
-  try_basicapply MOV_MbR_rule.
-  rewrite -> addB0.
-  sbazooka.
-
-  rewrite /stateIsAny.
-  rewrite -> addB0.
-  sbazooka.
+  have ICCP := (inlineComputeCharPos_correct NC NR : instrrule inlineComputeCharPos).
+  do 2 basic apply *.
 Qed.
 
 Lemma inlineReadChar_correct col row char :
@@ -95,14 +61,6 @@ Proof.
   autorewrite with push_at.
   specintros => oldal.
 
-  have ICCP := inlineComputeCharPos_correct NC NR.
-  rewrite /inlineComputeCharPos_spec in ICCP.
-  basicapply ICCP.
-
-  (* MOV EAX, BYTE [EDI + 0] *)
-  try_basicapply MOV_RMb_rule.
-  rewrite -> addB0. sbazooka.
-
-  rewrite /stateIsAny addB0.
-  sbazooka.
+  have ICCP := (inlineComputeCharPos_correct NC NR : instrrule inlineComputeCharPos).
+  do 2 basic apply *.
 Qed.

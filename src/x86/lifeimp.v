@@ -5,6 +5,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.opred x86proved.x86.basic x86proved.x86.program x86proved.x86.basicprog x86proved.x86.macros x86proved.x86.call.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.screenspec.
+Require Import x86proved.common_tactics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -32,26 +33,13 @@ Proof.
   move => NR.
   rewrite /inlineComputeLine_spec/inlineComputeLinePos.
   autorewrite with push_at.
+  rewrite /stateIsAny.
+  specintros => *.
 
-  (* We don't unfold OSZCP? anywhere because no rules talk about flags *)
-
-  (* SHL EDX, 5 *)
-  basicapply SHL_RI_rule => //.
-
-  (* ADD EDI, EDX *)
-  basicapply ADD_RR_ruleNoFlags.
-
-  (* SHL EDX, 2 *)
-  basicapply SHL_RI_rule => //.
-
-  (* ADD EDI, EDX *)
-  basicapply ADD_RR_ruleNoFlags.
-
-  (* SHR EDX, 7 *)
-  basicapply SHR_RI_rule => //.
+  do !basic apply * => //.
 
   rewrite /iter. autorewrite with bitsHints. (*rewrite -addB_addn. rewrite !shlB_asMul. *)
-  do 6 rewrite -[in X in EDI~=X]mulB_muln.
+  do 6 rewrite -[in X in (regIs EDI X)]mulB_muln.
   rewrite !fromNat_mulBn.
   replace (2 * _) with 32 => //.
   replace (32 * (2*2)) with 128 => //.
@@ -97,32 +85,36 @@ Proof.
   rewrite /decModN.
 
   (* CMP r, 0 *)
-  basicapply CMP_RI_ZC_rule.
+  basic apply *.
 
   apply: basic_roc_pre;
   last apply (if_rule_const_io
     (P:= fun b =>
-    (m == 0) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?)).
+    (m == 0) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?));
+  do ?basic apply *.
 
-  rewrite /ConditionIs. replace CF? with (Exists v, CF ~= v) by done. sbazooka.
+  rewrite /ConditionIs/stateIsAny/OSZCP. sbazooka.
+  rewrite subB0.
 
   apply fromNatBounded_eq => //.
   by apply (ltn_trans LT2).
 
+  by rewrite /VRegIs/stateIs.
+
   specintros => /eqP->.
-  try_basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny; sbazooka.
-  rewrite /stateIsAny. rewrite /ConditionIs/natAsDWORD. rewrite add0n modn_small.
-  sbazooka.
+  rewrite /stateIsAny/ConditionIs; specintros => *.
+  basic apply *.
+  rewrite add0n modn_small.
+  reflexivity.
   destruct n => //.
 
-  simpl (~~ _). specintros => H.
-  try_basicapply DEC_R_ruleNoFlags.
-  rewrite /stateIsAny/ConditionIs. sbazooka.
+  simpl (~~ _).
+  rewrite /stateIsAny/ConditionIs; specintros => *.
+  basic apply *.
   destruct m => //.
   rewrite decB_fromSuccNat.
   destruct n => //. rewrite succnK. rewrite addSnnS. rewrite modnDr.
   rewrite modn_small => //.
-  sbazooka.
   apply (leq_ltn_trans (leq_pred _) LT2).
 Qed.
 
@@ -135,34 +127,35 @@ move => LT1 LT2.
   rewrite /incModN.
 
   (* CMP r, 0 *)
-  basicapply CMP_RI_ZC_rule.
+  basic apply *.
 
   apply: basic_roc_pre;
   last apply (if_rule_const_io
     (P:= fun b =>
-    (m == n.-1) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?)).
+    (m == n.-1) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?));
+  (rewrite /stateIsAny/ConditionIs/OSZCP/VRegIs/stateIs; try specintros => *; idtac);
+  do ?basic apply *;
+  try match goal with
+        | [ H : (_ == _) = true |- _ ] => move/eqP in H; progress subst
+        | [ H : (_ == _.-1) = ~~true |- _ ] => rewrite -eqSS prednK in H
+      end.
 
-  rewrite /ConditionIs. sbazooka.
+
+  sbazooka.
   have B2: m < 2^32.
   by apply (ltn_trans LT2).
-  apply fromNatBounded_eq => //.
 
-  by apply (leq_ltn_trans (leq_pred _)).
-  rewrite /stateIsAny. sbazooka.
+  { rewrite subB_eq add0B.
+    apply fromNatBounded_eq; try eassumption; by apply (leq_ltn_trans (leq_pred _)). }
 
-  specintros => /eqP->.
-  try_basicapply MOV_RanyI_rule. rewrite {5}/stateIsAny. sbazooka.
-  rewrite /stateIsAny. rewrite /ConditionIs/natAsDWORD.
-  rewrite (ltn_predK LT2). sbazooka. by rewrite modnn.
+  { destruct n => //.
+      by rewrite modnn. }
 
-  simpl (~~ _). specintros => H.
-  try_basicapply  INC_R_ruleNoFlags.
-  rewrite /stateIsAny/ConditionIs. sbazooka.
-  sbazooka.
-  rewrite incB_fromNat. rewrite modn_small => //.
-  rewrite ltn_neqAle. rewrite LT2 andbT.
-  rewrite -eqSS in H. rewrite prednK in H. by rewrite H.
-  by destruct n.
+  { rewrite incB_fromNat. rewrite modn_small => //.
+    rewrite ltn_neqAle. rewrite LT2 andbT.
+    by hyp_rewrite *. }
+
+  { by destruct n. }
 Qed.
 
 (* Move ECX one column left, wrapping around if necessary *)

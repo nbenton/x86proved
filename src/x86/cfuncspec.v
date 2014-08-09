@@ -166,12 +166,11 @@ Lemma pushpop_rule (r:NonSPReg) c P (O : PointedOPred) Q :
   |-- Forall esp:DWORD, Forall v:DWORD, basic P (PUSH r;; c;; POP r) O Q @ (r ~= v ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
 Proof.
 move => H.
-specintro => esp. specintro => v.
-autorewrite with push_at. specintro => old.
-eapply basic_seq. setoid_rewrite -> empOPL. reflexivity.
-basicapply PUSH_R_rule.
-basicapply H.
-try_basicapply POP_R_rule.
+specintro => ?. specintro => ?.
+autorewrite with push_at.
+specintros => *.
+pose proof (H : instrrule c).
+do !basic apply *.
 autorewrite with bitsHints.
 reflexivity.
 Qed.
@@ -183,15 +182,9 @@ Lemma stackframe_rule c P (O : PointedOPred) Q ebp esp :
   |-- basic P (PUSH EBP;; MOV EBP, ESP;; c;; POP EBP) O Q @ (EBP ~= ebp ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
 Proof.
 move => H.
-
-autorewrite with push_at. specintro => old.
-eapply basic_seq. setoid_rewrite -> empOPL. reflexivity.
-basicapply PUSH_R_rule.
-eapply basic_seq. setoid_rewrite -> empOPL. reflexivity.
-try_basicapply MOV_RanyR_rule. rewrite /stateIsAny. sbazooka.
-basicapply H.
-unhideReg EBP => oldebp.
-try_basicapply POP_R_rule.
+autorewrite with push_at. specintros => *.
+pose proof (H : instrrule c) as H'.
+do ![ basic apply * | clear H' | rewrite /stateIsAny; progress specintros => * ].
 autorewrite with bitsHints. reflexivity.
 Qed.
 
@@ -248,13 +241,11 @@ Proof.
 rewrite /incSpec/incBody/stacked_nonvoid1_impMeetsSpec/pre/post.
 specintros => arg ebp.
 autorewrite with push_at.
-try_basicapply MOV_RanyM_rule.
-rewrite /OSZCP{3 4 5 6 7}/stateIsAny.
-specintros => f1 f2 f3 f4 f5.
-eapply basic_basic.  apply INC_R_rule.
-rewrite /OSZCP. sbazooka.
-rewrite /OSZCP/stateIsAny/fst/snd.
-sbazooka.
+rewrite /stateIsAny. specintros => *.
+do !basic apply *.
+simpl snd.
+ssimpl.
+reflexivity.
 Qed.
 
 Corollary incImpDefCorrect (f f':DWORD) :

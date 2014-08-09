@@ -44,7 +44,7 @@ Ltac basicCMP_ZC :=
   let R := lazymatch goal with
              | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?O ?q => constr:(@CMP_ruleZC d a)
            end in
-  instrrules_basicapply R.
+  basic apply R.
 
 
 (** ** Special cases *)
@@ -53,13 +53,14 @@ Lemma CMP_RI_rule (r1:Reg) v1 (v2:DWORD):
             (let: (carry,res) := eta_expand (sbbB false v1 v2) in
              r1 ~= v1 ** OSZCP (computeOverflow v1 v2 res) (msb res)
                          (res == #0) carry (lsb res)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
+(** Too bad there are no hint databases for ssr [rewrite] *)
 Lemma CMP_RbI_rule (r1:BYTEReg) (v1 v2:BYTE):
   |-- basic (r1 ~= v1 ** OSZCP?) (CMP r1, v2) empOP
             (let: (carry,res) := eta_expand (sbbB false v1 v2) in
   r1 ~= v1 ** OSZCP (computeOverflow v1 v2 res) (msb res) (res == #0) carry (lsb res)).
-Proof. rewrite /BYTEtoDWORD/makeBOP low_catB. do_basic'. Qed.
+Proof. basic apply *. by rewrite low_catB. Qed.
 
 Lemma CMP_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
@@ -68,7 +69,7 @@ Lemma CMP_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD) :
              r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP (computeOverflow v1 v2 res) (msb res)
                    (res == #0) carry (lsb res)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Lemma CMP_MR_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
@@ -77,7 +78,7 @@ Lemma CMP_MR_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
              r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP (computeOverflow v2 v1 res) (msb res)
                    (res == #0) carry (lsb res)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Lemma CMP_MR_ZC_rule (pd: DWORD) (r1 r2:Reg) offset (v1 v2:DWORD):
   |-- basic (r1 ~= pd ** r2 ~= v2 ** pd +# offset :-> v1 ** OSZCP?) (CMP [r1+offset], r2) empOP
@@ -97,7 +98,7 @@ Lemma CMP_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
              r1 ~= v1 ** r2 ~= v2 **
               OSZCP (computeOverflow v1 v2 res) (msb res)
                     (res == #0) carry (lsb res)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 
 Lemma CMP_RI_ZC_rule (r1:Reg) v1 (v2:DWORD):

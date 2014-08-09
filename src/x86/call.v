@@ -38,7 +38,7 @@ Proof.
   rewrite /parameterized_toyfun.
   autorewrite with push_at. cancel1 => iret.
   autorewrite with push_at. cancel1 => O'.
-  autorewrite with push_at. rewrite !sepSPA. by cancel1.
+  autorewrite with push_at. rewrite -> !sepSPA. by cancel1.
 Qed.
 Hint Rewrite @spec_at_toyfun : push_at.
 
@@ -47,8 +47,8 @@ Lemma loopy_toyfun_call (f:DWORD) P (O:PointedOPred) Q:
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
   rewrite /stateIsAny; specintros => *.
-  do_basic' => iret.
-  do_basic'.
+  basic apply * => iret.
+  basic apply *.
 
   rewrite /loopy_basic. specintros => i j O'. unfold_program. specintros => *; do !subst.
 
@@ -69,9 +69,9 @@ Lemma toyfun_call (f:DWORD) P (O:OPred) Q:
   toyfun f P O Q |-- basic P (call_toyfun f) O Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
-  do_basic' => iret.
+  basic apply * => iret.
   rewrite /stateIsAny. specintros => *.
-  do_basic'.
+  basic apply *.
 
   rewrite /basic. specintros => i j O'. unfold_program. specintros => *; do !subst.
   specapply *; first by ssimpl.
@@ -139,16 +139,15 @@ Proof.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
+  do ?attempt basic apply *;
   repeat match goal with
            | _ => progress intros
            | [ |- context[proj mkEmpOP] ]              => rewrite HempOP
            | [ |- proj _ -|- catOP (proj _) (proj _) ] => by rewrite -> HcOP
-           | [ |- catOP empOP (proj _) |-- empOP ]     => by rewrite -> HempOP
-           | [ |- |-- parameterized_basic _ (prog_instr (INC _ _)%asm;; _) _ _ ] => try_basicapply INC_R_rule
-           | [ |- |-- parameterized_basic _ (prog_instr (INC _ _)%asm) _ _ ] => try_basicapply INC_R_rule
-           | _ => progress rewrite /OSZCP; sbazooka
+           | [ |- proj _ |-- empOP ]     => by rewrite -> HempOP
+           | _ => evar_safe_syntax_unify_reflexivity
          end.
-  rewrite addIsIterInc /OSZCP /iter; sbazooka.
+  by rewrite addIsIterInc /iter.
 Qed.
 
 Definition toyfun_example_callee_correct (f f': DWORD):
@@ -176,10 +175,11 @@ Proof.
   rewrite /toyfun_example_caller. rewrite /RegOrFlag_target.
   autorewrite with push_at.
   eapply basic_seq; first by done.
+  (** FIXME: make [basic apply *] not take forever *)
   { apply lforallL with a.
-    do_basic'. }
+    simple basic apply *; try evar_safe_syntax_unify_reflexivity; ssimpl. }
   { apply lforallL with (a +# 2).
-    do_basic'.
+    simple basic apply *; try evar_safe_syntax_unify_reflexivity; ssimpl.
     ssimpl.
     rewrite -addB_addn. reflexivity. }
 Qed.

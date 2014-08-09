@@ -25,19 +25,19 @@ Corollary INC_R_rule (r:Reg) (v:DWORD) o s z c pf:
   let w := incB v in
   |-- basic (r~=v ** OSZCP o s z c pf) (INC r) empOP
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Corollary INC_M_rule (r:Reg) (offset:nat) (v pbase:DWORD) o s z c pf:
   let w := incB v in
   |-- basic (r ~= pbase ** pbase +# offset :-> v ** OSZCP o s z c pf) (INC [r + offset]) empOP
             (r ~= pbase ** pbase +# offset :-> w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Lemma INC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (INC r) empOP (r~=incB v) @ OSZCP?.
 Proof.
   autorewrite with push_at. rewrite /stateIsAny. specintros => *.
-  do_basic'.
+  basic apply *.
 Qed.
 
 (* Special case for decrement *)
@@ -45,11 +45,11 @@ Lemma DEC_R_rule (r:Reg) (v:DWORD) o s z c pf :
   let w := decB v in
   |-- basic (r~=v ** OSZCP o s z c pf) (DEC r) empOP
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Lemma DEC_R_ruleNoFlags (r:Reg) (v:DWORD):
   |-- basic (r~=v) (DEC r) empOP (r~=decB v) @ OSZCP?.
 Proof.
   autorewrite with push_at. rewrite /stateIsAny. specintros => *.
-  do_basic'.
+  basic apply *.
 Qed.

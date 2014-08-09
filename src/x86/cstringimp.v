@@ -82,7 +82,7 @@ Proof.
   unhideReg ECX => oldecx.
 
   (* MOV ECX, 0 *)
-  basicapply MOV_RI_rule. rewrite /stateIsAny. sbazooka.
+  basic apply MOV_RI_rule.
 
   (* WHILE *)
   (* Loop invariant is most easily expressed by splitting the string into

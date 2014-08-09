@@ -21,4 +21,4 @@ Instance: forall (r1 r2 : Reg) (offset : nat), instrrule (OR r1, [r2 + offset]) 
 Corollary OR_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (OR r1, [r2 + offset]) empOP (r1~=orB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
-Proof. autorewrite with push_at. do_basic'. Qed.
+Proof. autorewrite with push_at. basic apply *. Qed.

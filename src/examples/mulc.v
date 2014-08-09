@@ -34,12 +34,12 @@ Proof.
 
   (* nbits = 0 *)
   destruct m => //. autorewrite with bitsHints push_at.
-  do_basic'.
+  basic apply *.
 
   (* nbits != 0 *)
 
-  (** Tell Coq about the induction hypothesis, so [do_basic'] can use it *)
-  pose proof (fun r1 r2 m => IHnbits r1 r2 m : instrrule (add_mulc nbits r1 r2 m)).
+  (** Tell Coq about the induction hypothesis, so [basic apply *] can use it *)
+  instrrule remember IHnbits as IHnbits_instrrule.
 
   have H: m./2 < 2 ^nbits.
   rewrite expnS mul2n in LT.
@@ -48,24 +48,14 @@ Proof.
   apply (ltn_addl (odd m)) in LT.
   by rewrite -(ltn_add2l (odd m)).
 
-  case ODD: (odd m).
+  case ODD: (odd m);
+    do !basic apply * => //.
 
-  (* lsb is 1 *)
-  (* ADD r1, r2 *)
-  do_basic'.
-  do_basic' => //.
-  do_basic' => //.
-
-  ssimpl.
   rewrite /iter -addBA shlB_asMul -mulB_muln mul2n.
-  rewrite -{2}(odd_double_half m). rewrite /stateIs.
+  rewrite -{2}(odd_double_half m).
   by rewrite ODD mulB_addn mulB1.
 
-  do_basic' => //.
-  do_basic' => //.
-
-  ssimpl.
-  by rewrite /stateIs /iter shlB_asMul -mulB_muln mul2n -{2}(odd_double_half m) ODD add0n.
+  by rewrite /iter shlB_asMul -mulB_muln mul2n -{2}(odd_double_half m) ODD add0n.
 Qed.
 
 Global Instance: forall nbits r1 r2 m, instrrule (add_mulc nbits r1 r2 m) := @add_mulcCorrect.
@@ -94,13 +84,13 @@ Proof.
   rewrite /add_mulcAux; fold add_mulcAux; specintros => v w.
 
   (* nbits = 0 *)
-  destruct m => //. autorewrite with bitsHints push_at.
-  do_basic'.
+  destruct m => //. autorewrite with bitsHints.
+  basic apply *.
 
   (* nbits != 0 *)
 
   (** Tell Coq about the induction hypothesis, so [do_basic'] can use it *)
-  pose proof (fun c r1 r2 m => IHnbits c r1 r2 m : instrrule (add_mulcAux nbits c r1 r2 m)).
+  instrrule remember IHnbits as IHnbits_instrrule.
 
   have H: m./2 < 2 ^nbits.
   rewrite expnS mul2n in LT3.
@@ -109,18 +99,14 @@ Proof.
   apply (ltn_addl (odd m)) in LT3.
   by rewrite -(ltn_add2l (odd m)).
 
-  autorewrite with push_at.
-
-  case ODD: (odd m).
+  case ODD: (odd m); first case ZERO: (c == 0);
+  do !basic apply * => //.
 
   (* lsb is 1 *)
 
-  case ZERO: (c == 0).
   (* c is 0 *)
 
   (* ADD r1, r2 *)
-  do_basic'.
-  do_basic' => //.
   rewrite (eqP ZERO).  rewrite expn0 muln1 expn1.
   rewrite muln2. rewrite -{2}(odd_double_half m) ODD. rewrite /stateIs mulB_addn mulB1. rewrite -> addBA.
   sbazooka.
@@ -130,11 +116,8 @@ Proof.
   (* c is not 0 *)
 
   (* SHL r2, c *)
-  do_basic' => //.
 
   (* ADD r1, r2 *)
-  do_basic' => //.
-  do_basic' => //.
 
   rewrite expn1 -{2}(odd_double_half m) ODD. rewrite muln2. rewrite -addBA.
   rewrite mulnDl mul1n. rewrite mulB_addn. rewrite mulnC.
@@ -149,7 +132,6 @@ Proof.
 
 
   (* lsb is 0 *)
-  do_basic' => //.
   rewrite expnS.
   rewrite -{2}(odd_double_half m) ODD add0n.
   rewrite mulnA. rewrite muln2. rewrite /stateIs.
@@ -183,25 +165,18 @@ rewrite /add_mulcOpt.
 move => LT. specintros => v w.
 autorewrite with push_at.
 
-case EQ2: (m == 2).
+case EQ2: (m == 2); last case EQ4: (m == 4); last case EQ8: (m == 8);
+do !basic apply * => //.
 
-do_basic' => //.
-rewrite /eval.scaleBy shlB_asMul. rewrite -> addB0. rewrite /stateIsAny/stateIs (eqP EQ2).
-by sbazooka.
+by rewrite /eval.scaleBy shlB_asMul (eqP EQ2).
 
-case EQ4: (m == 4).
+rewrite /eval.scaleBy !shlB_asMul (eqP EQ4) -mulB_muln.
+by change (2*2) with 4.
 
-do_basic' => //.
-rewrite /eval.scaleBy !shlB_asMul. rewrite -> addB0. rewrite /stateIsAny/stateIs (eqP EQ4) -mulB_muln.
-change (2*2) with 4. by sbazooka.
+rewrite /eval.scaleBy !shlB_asMul (eqP EQ8) -!mulB_muln.
+by change (2*_) with 8.
 
-case EQ8: (m == 8).
-do_basic' => //.
-rewrite /eval.scaleBy !shlB_asMul. rewrite -> addB0. rewrite /stateIsAny/stateIs (eqP EQ8) -!mulB_muln.
-change (2*_) with 8. by sbazooka.
-
-do_basic' => //.
-ssimpl. by rewrite /stateIs expn0 muln1.
+by rewrite /stateIs expn0 muln1.
 Qed.
 
 Global Instance: forall r1 r2 m, instrrule (add_mulcOpt r1 r2 m) := @add_mulcOptCorrect.
@@ -239,12 +214,12 @@ Proof.
 
   (* nbits = 0 *)
   destruct m => //. autorewrite with bitsHints.
-  do_basic'.
+  basic apply *.
 
   (* nbits != 0 *)
 
   (** Tell Coq about the induction hypothesis, so [do_basic'] can use it *)
-  pose proof (fun c r1 r2 m => IHnbits c r1 r2 m : instrrule (gen nbits c r1 r2 m)).
+  instrrule remember IHnbits as IHnbits_instrrule.
 
   have H: m./2 < 2 ^nbits.
   rewrite expnS mul2n in LT3.
@@ -253,42 +228,27 @@ Proof.
   apply (ltn_addl (odd m)) in LT3.
   by rewrite -(ltn_add2l (odd m)).
 
-  autorewrite with push_at.
+  case ODD: (odd m); first destruct c as [|[|[|[|]]]];
+  do ?basic apply * => //.
 
-  case ODD: (odd m).
+  (* lsb is 1 *)
 
-(* lsb is 1 *)
-
-  destruct c.
   (* c is 0 *)
 
   (* ADD r1, r2 *)
-  do_basic'.
-  do_basic' => //.
-  ssimpl.
   rewrite expn0 muln1 expn1.
-  rewrite muln2. rewrite -{2}(odd_double_half m) ODD. by rewrite /stateIs mulB_addn mulB1; rewrite -> addBA.
-
-  destruct c.
+  rewrite muln2. rewrite -{2}(odd_double_half m) ODD. by rewrite mulB_addn mulB1; rewrite -> addBA.
 
   (* c is 1 *)
-  do_basic'.
-  rewrite -> addB0. rewrite /eval.scaleBy shlB_asMul.
+  rewrite /eval.scaleBy shlB_asMul.
 
-  do_basic' => //.
-  ssimpl.
   rewrite expn1 -{2}(odd_double_half m) ODD. rewrite muln2. rewrite -addBA.
   replace (2^2) with (2*2) by done. rewrite mulnA. rewrite -mulB_addn. rewrite !muln2.
-  rewrite -(odd_double_half m). by rewrite /stateIs ODD mulB_addn.
-
-  destruct c.
+  rewrite -(odd_double_half m). by rewrite ODD mulB_addn.
 
   (* c is 2 *)
-  do_basic'.
-  rewrite -> addB0. rewrite /eval.scaleBy shlB_asMul.
+  rewrite /eval.scaleBy shlB_asMul.
 
-  do_basic' => //.
-  ssimpl.
   rewrite shlB_asMul.
   rewrite -addBA. rewrite <-mulBA. rewrite <- (mulBDr w).
   rewrite 3!expnS expn0 muln1 mulnA.
@@ -298,12 +258,8 @@ Proof.
   rewrite -ODD. rewrite !muln2. rewrite -> (odd_double_half m).
   rewrite -!muln2 /stateIs. by rewrite mulnA.
 
-  destruct c.
-
   (* c is 3 *)
-  do_basic'.
-  do_basic' => //.
-  rewrite -> addB0. rewrite /eval.scaleBy !shlB_asMul.
+  rewrite /eval.scaleBy !shlB_asMul.
 
   rewrite -addBA. rewrite <-!mulBA. rewrite <- (mulBDr w).
   rewrite 4!expnS expn0 muln1 mulnA.
@@ -318,12 +274,8 @@ Proof.
   (* c is something else *)
 
   (* SHL r2, c *)
-  do_basic' => //.
 
   (* ADD r1, r2 *)
-  do_basic'.
-  do_basic' => //.
-  ssimpl.
   rewrite expn1 -{2}(odd_double_half m) ODD. rewrite muln2. rewrite -addBA.
   rewrite mulnDl mul1n. rewrite mulB_addn. rewrite /stateIs mulnC.
   by rewrite shlB_mul2exp mulB_muln.
@@ -333,15 +285,13 @@ Proof.
   rewrite -{1}(add0n (1+nbits)). by rewrite leq_add2r.
   apply: leq_trans LT1.
   rewrite -addn1. by rewrite leq_add2l.
-(* lsb is 0 *)
+  (* lsb is 0 *)
 
-  do_basic'.
   rewrite expnS.
   rewrite -{2}(odd_double_half m) ODD add0n.
   rewrite mulnA. rewrite muln2. rewrite /stateIs.
   by sbazooka.
   by rewrite -(addn1 c) -addnA add1n.
-  done.
 Qed.
 
 Global Instance: forall nbits c r1 r2 m, instrrule (gen nbits c r1 r2 m) := @genCorrect.
@@ -357,8 +307,7 @@ Proof.
   specintros => v w.
 
   have LT: toNat d < 2^32 by apply toNatBounded.
-  autorewrite with push_at.
-  do_basic' => //.
+  basic apply * => //.
     by ssimpl; rewrite /stateIs expn0 muln1 toNatK.
 Qed.
 

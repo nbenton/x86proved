@@ -233,7 +233,7 @@ Definition ifthenelse (cond: Condition) (value: bool)
       (try specintros => *; idtac);
       (** handle the locals *)
       rewrite /ifthenelse;
-      do 2(do_basic' => ?);
+      do 2(basic apply * => *; idtac);
       (rewrite /parameterized_basic; specintros => *; unfold_program);
       (specintros => *; do! subst);
       (** Tell the instrrule machinery about the "then" and "else" cases. *)
@@ -277,7 +277,19 @@ Definition ifthenelse (cond: Condition) (value: bool)
                 Q.
   Proof.
     move => Hthen Helse. specintro => ?.
-    do_basic'; cbv beta; assumption.
+Ltac appears_in subterm superterm :=
+  idtac;
+  match superterm with
+    | appcontext[subterm] => idtac
+    | _ => fail 1 "Term" subterm "does not appear in term" superterm
+  end.
+Hint Extern 0 (syntax_unify (opts := {| infer_constant_functions := true |}) (?f ?x) ?b)
+=> is_evar f; atomic x; not is_evar x; not appears_in x b;
+   let T := type_of x in
+   unify f (fun _ : T => b);
+     cbv beta;
+     exact (Coq.Init.Logic.eq_refl b) : typeclass_instances.
+    basic apply *; cbv beta; assumption.
   Qed.
 
   Lemma if_loopy_rule_const_io cond (value:bool) pthen pelse P (O : PointedOPred) Q S:
@@ -288,7 +300,7 @@ Definition ifthenelse (cond: Condition) (value: bool)
                 Q.
   Proof.
     move => Hthen Helse. specintro => ?.
-    do_loopy_basic'; cbv beta; assumption.
+    basic apply loopy *; cbv beta; assumption.
   Qed.
 
 End If.
@@ -579,7 +591,7 @@ Section Until.
   Proof.
     cbv zeta in *.
     rewrite /until.
-    basicapply Hbody_start; clear Hbody_start; first by reflexivity.
+    basic apply Hbody_start; clear Hbody_start.
     rewrite empSPR.
     eapply while_rule; try eassumption; instantiate; eauto.
   Qed.
@@ -595,7 +607,7 @@ Section Until.
     move => Hbody_start Htest Hbody.
     cbv zeta in *.
     rewrite /until.
-    basicapply Hbody_start; clear Hbody_start.
+    basic apply Hbody_start; clear Hbody_start.
     rewrite empSPR.
     eapply while_rule_const_io; assumption.
   Qed.

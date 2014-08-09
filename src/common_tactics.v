@@ -412,6 +412,20 @@ Ltac set_evars :=
            | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)
          end.
 
+(** Run [set (fresh_name := e)] for any evar [e] in the hypothesis [H], or
+    in it's type. *)
+Ltac set_evars_in H :=
+  repeat first [ match eval unfold H in H with
+                   | appcontext[?E] => is_evar E; let e := fresh "e" in
+                                                  first [ set (e := E) in H
+                                                        | revert H; set (e := E); intro H ]
+                 end
+               | match type_of H with
+                   | appcontext[?E] => is_evar E; let e := fresh "e" in
+                                                  first [ set (e := E) in H
+                                                        | revert H; set (e := E); intro H ]
+                 end ].
+
 (** Run [subst] on any evar that is in the hypotheses.  Roughly the inverse of [set_evars] *)
 Ltac subst_evars :=
   repeat match goal with
@@ -505,6 +519,7 @@ Tactic Notation "open_unify" open_constr(term1) open_constr(term2) :=
 
 (** Checks if [subterm] appears in [superterm] *)
 Ltac appears_in subterm superterm :=
+  idtac;
   match superterm with
     | appcontext[subterm] => idtac
     | _ => fail 1 "Term" subterm "does not appear in term" superterm
@@ -581,6 +596,20 @@ Ltac evar_safe_syntax_unify_reflexivity :=
         not has_evar f;
         first [ is_evar b; unify a b
               | is_evar a; unify a b ]
+    | [ |- ?R (?f ?a) ?b ]
+      => not has_evar R;
+        not has_evar a;
+        not has_evar b;
+        atomic a;
+        is_evar f;
+        syntax_unify (f a) b
+    | [ |- ?R ?b (?f ?a) ]
+      => not has_evar R;
+        not has_evar a;
+        not has_evar b;
+        atomic a;
+        is_evar f;
+        syntax_unify (f a) b
   end;
   syntax_unify_reflexivity.
 

@@ -25,7 +25,7 @@ Corollary ADD_RI_rule (r:Reg) v1 (v2:DWORD):
             (let: (carry,v) := eta_expand (adcB false v1 v2) in
              r~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) carry (lsb v)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Corollary ADD_RI_ruleNoFlags (r1:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1) (ADD r1, v2) empOP (r1~=addB v1 v2) @ OSZCP?.
@@ -37,12 +37,12 @@ Corollary ADD_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
             (let: (carry,v) := eta_expand (adcB false v1 v2) in
              r1~=v ** r2~=v2 ** OSZCP (computeOverflow v1 v2 v) (msb v)
                             (v == #0) carry (lsb v)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Corollary ADD_RR_ruleNoFlags (r1 r2:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** r2~=v2 ** OSZCP?) (ADD r1, r2) empOP
             (r1~=addB v1 v2 ** r2~=v2 ** OSZCP?).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Corollary ADD_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
@@ -50,12 +50,12 @@ Corollary ADD_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
             (let: (carry,v) := eta_expand (adcB false v1 v2) in
              r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Corollary ADD_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (ADD r1, [r2 + offset]) empOP (r1~=addB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
-Proof. autorewrite with push_at. do_basic'. Qed.
+Proof. autorewrite with push_at. basic apply *. Qed.
 
 Lemma SUB_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
@@ -63,21 +63,21 @@ Lemma SUB_RM_rule (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
             (let: (carry,v) := eta_expand (sbbB false v1 v2) in
              r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Corollary SUB_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (SUB r1, [r2 + offset]) empOP (r1~=subB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
-Proof. autorewrite with push_at. do_basic'. Qed.
+Proof. autorewrite with push_at. basic apply *. Qed.
 
 Lemma SUB_RR_rule (r1 r2:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** r2~=v2 ** OSZCP?) (SUB r1, r2) empOP
             (let: (carry,v) := eta_expand (sbbB false v1 v2) in r1~=v  ** r2~=v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.
 
 Lemma SUB_RI_rule (r1:Reg) v1 (v2:DWORD):
   |-- basic (r1~=v1 ** OSZCP?) (SUB r1, v2) empOP
             (let: (carry,v) := eta_expand (sbbB false v1 v2) in
              r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
-Proof. do_basic'. Qed.
+Proof. basic apply *. Qed.

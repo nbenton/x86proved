@@ -36,7 +36,7 @@ Proof.
   (* XOR r1, r2 *)
   (* XOR r2, r1 *)
   (* XOR r1, r2 *)
-  do 3 do_basic'.
+  do 3 basic apply *.
 
   rewrite /OSZCP/stateIsAny/stateIs/VRegIs; sbazooka.
   (* Now we're left reasoning about XOR *)
@@ -52,5 +52,5 @@ Proof.
   rewrite /tmpSwapImpl/basicSwap. specintros => v w. autorewrite with push_at.
 
   rewrite /stateIsAny. specintros => t.
-  do 3 do_basic'.
+  do 3 basic apply *.
 Qed.

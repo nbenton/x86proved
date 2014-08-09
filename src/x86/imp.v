@@ -251,47 +251,39 @@ Section LogicLemmas.
       by destruct b.
   Qed.
 
+  Hint Rewrite adcB_b_0_0 : instrrules_side_conditions_spred.
   Lemma compile_expr_correct s e:
     |-- loopy_basic EDX? (compile_expr e) empOP (EDX ~= eeval e s)
         @ (stack_denot s ** OSZCP?).
   Proof.
     autorewrite with push_at.
-    case: e; rewrite /compile_expr/eeval/natAsDWORD;
+    case: e; rewrite /compile_expr/eeval/natAsDWORD/stateIsAny;
     intros;
-    repeat repeat
-           lazymatch goal with
+    (specintros => *; idtac);
+    do ?[ attempt basic apply *
+        | idtac; match goal with |- context[if ?E then _ else _] => case_eq E => ? end ];
+      by repeat
+           match goal with
              | [ |- ?x |-- ?x ] => reflexivity
              | [ H : (?x == ?y) = _ |- _ ] => move /eqP in H; subst
              | [ H : ltB ?x ?x = true |- _ ] => rewrite ltB_nat lt_irreflexive in H; by inversion H
              | [ |- context[ltB ?x ?x] ] => rewrite (ltB_nat x x) lt_irreflexive
              | [ |- ?P ** (?P -* ?Q) |-- _ ] => rewrite -> sepSPwand
              | [ |- ?P ** ((?P -* ?Q) ** _) |-- _ ] => rewrite <- sepSPA, -> sepSPwand
-             | [ |- context[OPred_pred (default_PointedOPred ?x)] ] => change (OPred_pred (default_PointedOPred x)) with x
-             | [ |- context[catOP empOP ?x] ] => rewrite -> empOPL
-             | [ |- context[catOP ?x empOP] ] => rewrite -> empOPR
              | [ H : context[ltB ?x ?y] |- _ ] => rewrite leBltB_neg in H
              | [ H : is_true (leB ?x ?y), H' : context[leB ?x ?y] |- _ ] => rewrite H in H'; simpl in H'
              | [ H : is_true (~~leB ?x ?y), H' : context[leB ?x ?y] |- _ ] => rewrite H in H'; simpl in H'
              | [ H : false = true |- _ ] => by inversion H
              | [ H : true = false |- _ ] => by inversion H
-             | [ |- _ |-- parameterized_basic _ (prog_instr (MOV RegArg _, ArgSrc (RegArg _))) _ _ ] => try_basicapply MOV_RanyR_rule
-             | [ |- _ |-- parameterized_basic _ (prog_instr (SUB RegArg _, ArgSrc (RegArg _))) _ _ ] => try_basicapply SUB_RR_rule
-             | [ |- _ |-- parameterized_basic _ (prog_instr (CMP RegArg _, ArgSrc (RegArg _))) _ _ ] => try_basicapply CMP_RR_rule
-             | [ |- _ |-- parameterized_basic _ (prog_instr (MOV RegArg _, ConstSrc _)) _ _ ]        => try_basicapply MOV_RanyI_rule
-             | [ |- _ |-- parameterized_basic _ (prog_instr (ADC RegArg _, ConstSrc _)) _ _ ]        => try_basicapply ADC_RI_rule
-             | |- _ |-- basic _ (prog_seq _ _) _ _       => eapply basic_seq
-             | |- _ |-- loopy_basic _ (prog_seq _ _) _ _ => eapply loopy_basic_seq
-             | [ |- context[if ?E then _ else _] ] => case_eq E; intro
-             | _ => match goal with
-                      | [ |- stack_denot _ ** _ |-- RegOrFlagDWORD (regToAnyReg (var_reg _)) ~= _ ** _ ] => by rewrite ->regs_read_var; ssimpl
-                      | [ |- stack_denot _ |-- RegOrFlagDWORD (regToAnyReg (var_reg _)) ~= _ ** _ ] => by rewrite ->regs_read_var; ssimpl
-                      | [ |- _ ** stack_denot _ |-- (RegOrFlagDWORD (regToAnyReg (var_reg _)) ~= _ ** RegOrFlagDWORD (regToAnyReg (var_reg _)) ~= _) ** _ ] => by rewrite ->regs_read_vars; try ssimpl; trivial
-                      | _ => progress (rewrite /OSZCP/stateIsAny; sbazooka)
-                      | [ |- context[?P -* ?Q] ] => by etransitivity; [ | eapply sepSPwand ]; sbazooka
-                      | [ |- adcB ?b #(0) #(0) = _ ] => eexact (adcB_b_0_0 b)
-                      | [ |- context[carry_subB ?x ?y] ] => generalize (sbbB_ltB_leB x y); case_eq (carry_subB x y); intros
-                    end
-      end.
+             | [ |- stack_denot _ ** _ |-- regIs (regToAnyReg (var_reg _)) _ ** _ ] => by rewrite ->regs_read_var; rewrite /stateIs; ssimpl
+             | [ |- stack_denot _ |-- regIs (regToAnyReg (var_reg _)) _ ** _ ] => by rewrite ->regs_read_var; rewrite /stateIs; ssimpl
+             | [ |- _ ** stack_denot _ |-- (regIs (regToAnyReg (var_reg _)) _ ** regIs (regToAnyReg (var_reg _)) _) ** _ ] => by rewrite ->regs_read_vars; rewrite /stateIs; try ssimpl; trivial
+             | _ => progress (simpl fst; simpl snd)
+             | _ => progress (rewrite /OSZCP/stateIsAny/stateIs; sbazooka)
+             | [ |- context[?P -* ?Q] ] => by etransitivity; [ | eapply sepSPwand ]; sbazooka
+             | [ |- context[carry_subB ?x ?y] ] => generalize (sbbB_ltB_leB x y); case_eq (carry_subB x y); intros
+             | [ H : context[carry_subB ?x ?y] |- _ ] => revert H; generalize (sbbB_ltB_leB x y); destruct (carry_subB x y); intros
+           end.
   Qed.
 
   Lemma compile_condition_correct s e:
