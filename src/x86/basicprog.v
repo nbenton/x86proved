@@ -764,22 +764,22 @@ Ltac pre_instrrules_default_side_condition_seq_opred :=
   instrrules_default_common_side_conditions_with
     ltac:(progress eauto with nocore instrrules_all instrrules_side_conditions instrrules_side_conditions_opred instrrules_side_conditions_seq_opred)
            ltac:(do [ progress autounfold with instrrules_side_conditions_opred instrrules_side_conditions_seq_opred
-                    | progress autorewrite with instrrules_side_conditions_opred instrrules_side_conditions_seq_opred ]).
+                    | set_evars; progress autorewrite with instrrules_side_conditions_opred instrrules_side_conditions_seq_opred; subst_evars ]).
 Ltac pre_instrrules_default_side_condition_non_seq_opred :=
   instrrules_default_common_side_conditions_with
     ltac:(progress eauto with nocore instrrules_all instrrules_side_conditions instrrules_side_conditions_opred instrrules_side_conditions_non_seq_opred)
     ltac:(do [ progress autounfold with instrrules_side_conditions_opred instrrules_side_conditions_non_seq_opred
-             | progress autorewrite with instrrules_side_conditions_opred instrrules_side_conditions_non_seq_opred ]).
+             | set_evars; progress autorewrite with instrrules_side_conditions_opred instrrules_side_conditions_non_seq_opred; subst_evars ]).
 Ltac pre_instrrules_default_side_condition_spec :=
   instrrules_default_common_side_conditions_with
     ltac:(progress eauto with nocore instrrules_all instrrules_side_conditions instrrules_side_conditions_spec)
            ltac:(do [ progress autounfold with instrrules_side_conditions_spec
-                    | progress autorewrite with instrrules_side_conditions_spec ]).
+                    | set_evars; progress autorewrite with instrrules_side_conditions_spec; subst_evars ]).
 Ltac pre_instrrules_default_side_condition_spred :=
   instrrules_default_common_side_conditions_with
     ltac:(progress eauto with nocore instrrules_all instrrules_side_conditions instrrules_side_conditions_sped)
            ltac:(do [ progress autounfold with instrrules_side_conditions_spred
-                    | progress autorewrite with instrrules_side_conditions_spred ]).
+                    | set_evars; progress autorewrite with instrrules_side_conditions_spred; subst_evars ]).
 
 (** This is a convenience tactic, mostly for debugging purposes *)
 Ltac progress_side_conditions_basicapply :=
