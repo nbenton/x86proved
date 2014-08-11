@@ -530,49 +530,81 @@ Ltac appears_in subterm superterm :=
     - [infer_constant_functions] - when faced with a unification
       problem of the form [?1 x ≡ y] for [x] atomic and syntactically
       free in [y] and [?1] an evar, instantiate [?1] to be the constant function *)
-Record syntax_unify_options := { infer_constant_functions : bool }.
+Record red_opts := { red_beta : bool ; red_iota : bool ; red_zeta : bool }.
+Record syntax_unify_options := { infer_constant_functions : bool ; do_red : red_opts }.
+
+Ltac red_using opts a :=
+  let do_red := constr:((red_beta opts, red_iota opts, red_zeta opts)) in
+  match eval compute in do_red with
+    | (true, true, true) => eval cbv beta iota zeta in a
+    | (true, true, false) => eval cbv beta iota in a
+    | (true, false, true) => eval cbv beta zeta in a
+    | (true, false, false) => eval cbv beta in a
+    | (false, true, true) => eval cbv iota zeta in a
+    | (false, true, false) => eval cbv iota in a
+    | (false, false, true) => eval cbv zeta in a
+    | (false, false, false) => a
+  end.
+
+Ltac syntax_unify_helper_helper opts do_unify_under_binders a b :=
+  idtac;
+  let rec_unify := syntax_unify_helper_helper opts do_unify_under_binders in
+  (** If [a] or [b] is an evar, then we can just instantiate it *)
+  first [ is_evar a; unify a b
+        | is_evar b; unify a b
+        | ((** Otherwise, if either has an evar, we need to recurse. *)
+          first [ first [ has_evar a | has_evar b ];
+                  first [ match constr:((a, b)) with
+                            | (?x, ?x) => idtac
+                            | (?f ?x, ?g)
+                              => (unify (infer_constant_functions opts) true; is_evar f; atomic x; not is_evar x; not appears_in x g;
+                                  let T := type_of x in unify f (fun _ : T => b))
+                            | (?g, ?f ?x)
+                              => (unify (infer_constant_functions opts) true; is_evar f; atomic x; not is_evar x; not appears_in x g;
+                                  let T := type_of x in unify f (fun _ : T => b))
+                            | (?f ?x, ?f ?y) => first [ rec_unify x y | fail 1 ]
+                            | (?f ?x, ?g ?x) => first [ rec_unify f g | fail 1 ]
+                            | (?f ?x, ?g ?y) => first [ (rec_unify f g; rec_unify x y) | fail 1 ]
+                            | (fun x : ?T => @?f x, ?g) => first [ do_unify_under_binders f g | fail 1 ]
+                            | (?f, fun x : ?T => @?g x) => first [ do_unify_under_binders f g | fail 1 ]
+                          end
+                        | fail 1]
+                | ( (** No evars, try the fast path (hopefully [constr_eq] is fast?) *)
+                  constr_eq a b)
+                | ((** Or maybe we need to eta-expand, so we should do so *)
+                  match constr:((a, b)) with
+                    | (fun x : ?T => @?f x, ?g) => first [ do_unify_under_binders f g | fail 1 ]
+                    | (?f, fun x : ?T => @?g x) => first [ do_unify_under_binders f g | fail 1 ]
+                  end) ]) ].
+
+Ltac syntax_unify_helper opts do_unify_under_binders a b :=
+  idtac;
+  let a' := red_using (do_red opts) a in
+  let b' := red_using (do_red opts) b in
+  syntax_unify_helper_helper opts do_unify_under_binders a' b'.
 
 Class syntax_unify {T} {opts : syntax_unify_options} (a : T) (b : T) := unif : a = b.
-Hint Extern 0 (syntax_unify ?a ?b) => is_evar a; exact (Coq.Init.Logic.eq_refl a) : typeclass_instances.
-Hint Extern 0 (syntax_unify ?a ?b) => is_evar b; exact (Coq.Init.Logic.eq_refl a) : typeclass_instances.
-Hint Extern 0 (syntax_unify ?a ?a) => exact (Coq.Init.Logic.eq_refl a) : typeclass_instances.
-Hint Extern 0 (syntax_unify (opts := {| infer_constant_functions := true |}) (?f ?x) ?b)
-=> is_evar f; atomic x; not is_evar x; not appears_in x b;
-   let T := type_of x in
-   unify f (fun _ : T => b);
-     cbv beta;
-     exact (Coq.Init.Logic.eq_refl b) : typeclass_instances.
-Hint Extern 0 (syntax_unify (opts := {| infer_constant_functions := true |}) ?b (?f ?x))
-=> is_evar f; atomic x; not appears_in x b;
-   let T := type_of x in
-   unify f (fun _ : T => b);
-     cbv beta;
-     exact (Coq.Init.Logic.eq_refl b) : typeclass_instances.
-Hint Extern 1 (syntax_unify (opts := ?opts) (?f ?a) (?f ?b)) => first [ has_evar a | has_evar b ];
-                                                              let pf := constr:(_ : syntax_unify (opts := opts) a b) in
-                                                              exact (Coq.Init.Logic.eq_refl (f a)) : typeclass_instances.
-Hint Extern 1 (syntax_unify (opts := ?opts) (?f ?a) (?g ?a)) => first [ has_evar f | has_evar g ];
-                                                               let pf := constr:(_ : syntax_unify (opts := opts) f g) in
-                                                               exact (Coq.Init.Logic.eq_refl (f a)) : typeclass_instances.
-Hint Extern 2 (syntax_unify (opts := ?opts) (?f ?a) (?g ?b)) => first [ has_evar f | has_evar g ];
-                                                               first [ has_evar a | has_evar b ];
-                                                               let pf1 := constr:(_ : syntax_unify (opts := opts) f g) in
-                                                               let pf2 := constr:(_ : syntax_unify (opts := opts) a b) in
-                                                               exact (Coq.Init.Logic.eq_refl (f a)) : typeclass_instances.
-Ltac syntax_unif_under_binders A opts f g :=
-  first [ has_evar f | has_evar g ];
-  let T := constr:(fun x : A => syntax_unify (opts := opts) (f x) (g x)) in
+
+Ltac syntax_unify_under_binders opts a b :=
+  idtac;
+  (** check that at least one function is syntactically a lambda *)
+  first [ match a with fun _ => _ => idtac end
+        | match b with fun _ => _ => idtac end ];
+  let T := constr:(fun x => syntax_unify (opts := opts) (a x) (b x)) in
   let T' := (eval cbv beta in T) in
   let pf := constr:(fun x => _ : T' x) in
-  exact (Coq.Init.Logic.eq_refl f).
-Hint Extern 1 (syntax_unify (opts := ?opts) (fun x : ?A => x) ?g) => syntax_unif_under_binders A opts (fun x : A => x) g : typeclass_instances.
-Hint Extern 1 (syntax_unify (opts := ?opts) ?f (fun x : ?A => x)) => syntax_unif_under_binders A opts f (fun x : A => x) : typeclass_instances.
-Hint Extern 1 (syntax_unify (opts := ?opts) (fun x : ?A => @?f x) ?g) => syntax_unif_under_binders A opts f g : typeclass_instances.
-Hint Extern 1 (syntax_unify (opts := ?opts) ?f (fun x : ?A => @?g x)) => syntax_unif_under_binders A opts f g : typeclass_instances.
-Ltac syntax_unify opts a b := first [ let unif := constr:(_ : syntax_unify (opts := opts) a b) in idtac
+  idtac.
+
+Ltac syntax_unify opts a b := first [ syntax_unify_helper opts ltac:(syntax_unify_under_binders opts) a b
                                     | fail 1 "The terms" a "and" b "do not unify syntactically" ].
+
+Hint Extern 0 (syntax_unify (opts := ?opts) ?a ?b) => syntax_unify opts a b; cbv beta; exact Coq.Init.Logic.eq_refl : typeclass_instances.
+
+
 Tactic Notation "syntax_unify" open_constr(a) open_constr(b) "using" constr(opts) := syntax_unify opts a b.
-Tactic Notation "syntax_unify" open_constr(a) open_constr(b) := syntax_unify a b using {| infer_constant_functions := true |}.
+Tactic Notation "syntax_unify" open_constr(a) open_constr(b) :=
+  syntax_unify a b using {| infer_constant_functions := true ;
+                            do_red := {| red_beta := true ; red_iota := true ; red_zeta := true |} |}.
 
 (** Run [reflexivity], but only if the terms are syntactically equal up to evars *)
 Ltac syntax_unify_reflexivity :=
