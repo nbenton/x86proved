@@ -671,6 +671,21 @@ Hint Extern 1 (OPred_pred ?e |-- _) => is_evar e; reflexivity : instrrules_side_
 Hint Extern 1 => progress f_cancel; [] : instrrules_side_conditions_opred.
 
 Module Import BasicProgInternalsSideConditions.
+  (** Apparently [set_evars; progress rewrite -> ?empOPL, -> ?empOPR,
+  -> ?empSPL, -> ?empSPR; subst_evars] is rather slow.  So we
+  special-case the ones we care about. *)
+  Ltac rewrite_emp :=
+    repeat match goal with
+             | [ |- _ |-- ?A ** empSP ] => (etransitivity; [ | exact (proj2 (empSPR A)) ])
+             | [ |- ?A ** empSP |-- _ ] => (etransitivity; [ exact (proj1 (empSPR A)) | ])
+             | [ |- _ |-- empSP ** ?A ] => (etransitivity; [ | exact (proj2 (empSPL A)) ])
+             | [ |- empSP ** ?A |-- _ ] => (etransitivity; [ exact (proj1 (empSPL A)) | ])
+             | [ |- _ |-- catOP ?A empOP ] => (etransitivity; [ | exact (proj2 (empOPR A)) ])
+             | [ |- catOP ?A empOP |-- _ ] => (etransitivity; [ exact (proj1 (empOPR A)) | ])
+             | [ |- _ |-- catOP empOP ?A ] => (etransitivity; [ | exact (proj2 (empOPL A)) ])
+             | [ |- catOP empOP ?A |-- _ ] => (etransitivity; [ exact (proj1 (empOPL A)) | ])
+           end.
+
   (** A tactic for solving the side conditions when the basicapplied lemma is completely unconstrained. *)
   Ltac simplify_basicapply_side_condititions_with' tac :=
     do [ ((** Try to solve the goal by [reflexivity], but not if it's
@@ -683,7 +698,7 @@ Module Import BasicProgInternalsSideConditions.
            | [ |- _ |-- ltrue ] => solve [ apply ltrueR ]
            | [ |- lfalse |-- _ ] => solve [ apply lfalseL ]
          end
-       | set_evars; progress rewrite -> ?empOPL, -> ?empOPR, -> ?empSPL, -> ?empSPR; subst_evars
+       | progress rewrite_emp
        | progress tac ].
 
   Ltac simplify_basicapply_side_condititions_with tac := do ?simplify_basicapply_side_condititions_with' tac.
