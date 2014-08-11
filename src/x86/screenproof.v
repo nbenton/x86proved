@@ -6,7 +6,6 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.basic.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.instrrules x86proved.x86.macros.
 Require Import x86proved.x86.screenspec x86proved.x86.screenimp.
-Reset Profile.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -22,9 +21,7 @@ Proof.
   rewrite <- spec_at_basic_directionalized1.
   specintros => *.
 
-  start profiling.
   do !basic apply * => //.
-  stop profiling.
 
   rewrite /charPos/iter !shlB_asMul.
 
@@ -50,9 +47,7 @@ Proof.
   specintros => olddi oldchar.
 
   have ICCP := (inlineComputeCharPos_correct NC NR : instrrule inlineComputeCharPos).
-  start profiling.
   do 2 basic apply *.
-  Stop Profiling.
 Qed.
 
 Lemma inlineReadChar_correct col row char :
@@ -67,8 +62,5 @@ Proof.
   specintros => oldal.
 
   have ICCP := (inlineComputeCharPos_correct NC NR : instrrule inlineComputeCharPos).
-  start profiling.
   do 2 basic apply *.
-  Stop Profiling.
 Qed.
-Show Profile.

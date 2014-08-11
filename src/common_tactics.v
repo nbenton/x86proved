@@ -595,13 +595,8 @@ Ltac syntax_unify_under_binders opts a b :=
   let pf := constr:(fun x => _ : T' x) in
   idtac.
 
-Require Export Timing.
-
-Ltac syntax_unify opts a b := first [ start_timer "syntax_unify";
-                                      syntax_unify_helper opts ltac:(syntax_unify_under_binders opts) a b;
-                                      stop_timer "syntax_unify"
-                                    | stop_timer "syntax_unify";
-                                      fail 1 "The terms" a "and" b "do not unify syntactically" ].
+Ltac syntax_unify opts a b := first [ syntax_unify_helper opts ltac:(syntax_unify_under_binders opts) a b
+                                    | fail 1 "The terms" a "and" b "do not unify syntactically" ].
 
 Hint Extern 0 (syntax_unify (opts := ?opts) ?a ?b) => syntax_unify opts a b; cbv beta; exact Coq.Init.Logic.eq_refl : typeclass_instances.
 
