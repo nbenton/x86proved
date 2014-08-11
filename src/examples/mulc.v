@@ -5,7 +5,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.opred x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.basic x86proved.x86.macros.
-
+Reset Profile.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
@@ -34,12 +34,16 @@ Proof.
 
   (* nbits = 0 *)
   destruct m => //. autorewrite with bitsHints push_at.
+  start profiling.
   basic apply *.
+  Stop Profiling.
 
   (* nbits != 0 *)
 
   (** Tell Coq about the induction hypothesis, so [basic apply *] can use it *)
+  start profiling.
   instrrule remember IHnbits as IHnbits_instrrule.
+  Stop Profiling.
 
   have H: m./2 < 2 ^nbits.
   rewrite expnS mul2n in LT.
@@ -48,8 +52,10 @@ Proof.
   apply (ltn_addl (odd m)) in LT.
   by rewrite -(ltn_add2l (odd m)).
 
+  start profiling.
   case ODD: (odd m);
-    do !basic apply * => //.
+    do ?basic apply * => //.
+  Stop Profiling.
 
   rewrite /iter -addBA shlB_asMul -mulB_muln mul2n.
   rewrite -{2}(odd_double_half m).
@@ -85,12 +91,16 @@ Proof.
 
   (* nbits = 0 *)
   destruct m => //. autorewrite with bitsHints.
+  start profiling.
   basic apply *.
+  Stop Profiling.
 
   (* nbits != 0 *)
 
   (** Tell Coq about the induction hypothesis, so [do_basic'] can use it *)
+  start profiling.
   instrrule remember IHnbits as IHnbits_instrrule.
+  Stop Profiling.
 
   have H: m./2 < 2 ^nbits.
   rewrite expnS mul2n in LT3.
@@ -99,8 +109,10 @@ Proof.
   apply (ltn_addl (odd m)) in LT3.
   by rewrite -(ltn_add2l (odd m)).
 
+  start profiling.
   case ODD: (odd m); first case ZERO: (c == 0);
-  do !basic apply * => //.
+  do ?basic apply * => //.
+  Stop Profiling.
 
   (* lsb is 1 *)
 
@@ -165,8 +177,10 @@ rewrite /add_mulcOpt.
 move => LT. specintros => v w.
 autorewrite with push_at.
 
+start profiling.
 case EQ2: (m == 2); last case EQ4: (m == 4); last case EQ8: (m == 8);
-do !basic apply * => //.
+do ?basic apply * => //.
+Stop Profiling.
 
 by rewrite /eval.scaleBy shlB_asMul (eqP EQ2).
 
@@ -214,12 +228,16 @@ Proof.
 
   (* nbits = 0 *)
   destruct m => //. autorewrite with bitsHints.
+  start profiling.
   basic apply *.
+  Stop Profiling.
 
   (* nbits != 0 *)
 
   (** Tell Coq about the induction hypothesis, so [do_basic'] can use it *)
+  start profiling.
   instrrule remember IHnbits as IHnbits_instrrule.
+  Stop Profiling.
 
   have H: m./2 < 2 ^nbits.
   rewrite expnS mul2n in LT3.
@@ -228,8 +246,10 @@ Proof.
   apply (ltn_addl (odd m)) in LT3.
   by rewrite -(ltn_add2l (odd m)).
 
+  start profiling.
   case ODD: (odd m); first destruct c as [|[|[|[|]]]];
   do ?basic apply * => //.
+  Stop Profiling.
 
   (* lsb is 1 *)
 
@@ -307,9 +327,12 @@ Proof.
   specintros => v w.
 
   have LT: toNat d < 2^32 by apply toNatBounded.
+  start profiling.
   basic apply * => //.
+  Stop Profiling.
     by ssimpl; rewrite /stateIs expn0 muln1 toNatK.
 Qed.
 
 Definition screenWidth:DWORD := Eval compute in #160.
 Eval showinstr in linearize (add_mulcFast EDI EDX screenWidth).
+Show Profile.

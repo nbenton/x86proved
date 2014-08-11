@@ -43,6 +43,22 @@ Section Basic.
       by rewrite -2!sepSPA.
   Qed.
 
+  (* We need to rewrite with [spec_at_basic] so much in applying
+     instrrules that it's worth creating a specialized version for use
+     in rewriting.  Rewriting with this one is about twice as fast as
+     rewriting with the other one. *)
+  Lemma spec_at_basic_directionalized1 P c O Q R :
+    parameterized_basic (P ** R) c O (Q ** R) |-- parameterized_basic P c O Q @ R.
+  Proof.
+    exact (proj2 (@spec_at_basic P c O Q R)).
+  Qed.
+
+  Lemma spec_at_basic_directionalized2 P c O Q R :
+    parameterized_basic P c O Q @ R |-- parameterized_basic (P ** R) c O (Q ** R).
+  Proof.
+    exact (proj1 (@spec_at_basic P c O Q R)).
+  Qed.
+
   (* Frame rule for Hoare triples *)
   Lemma basic_frame R S P c O Q :
     S |-- parameterized_basic P c O Q ->

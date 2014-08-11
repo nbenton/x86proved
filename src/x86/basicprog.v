@@ -5,6 +5,7 @@ Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import x86proved.x86.program x86proved.x86.basic x86proved.charge.ilogic.
 Require Import x86proved.common_tactics.
+Reset Profile. Start Profiling.
 
 (** Morphism for program equivalence *)
 Global Instance basic_progEq_m {T_OPred} {proj} :
@@ -214,12 +215,16 @@ Proof. done. Qed.
 
       - [spec_at_basic] - it is convenient to spec things using [@],
         but annoying to use them; we must push the [@]s inside the
-        lemmas
- *)
+        lemmas.  This is slow, so we use
+        [spec_at_basic_directionalized] instead, which is twice as
+        fast.  We manually specify one direction for the goal, and the
+        other direction for the hypotheses, again for speed.  *)
 
 Create HintDb instrrules_all.
+Create HintDb instrrules_hyp_all.
 Hint Unfold not : instrrules_all.
-Hint Rewrite @spec_at_basic low_catB addB0 add0B empOPL empOPR empSPL empSPR : instrrules_all.
+Hint Rewrite <- @spec_at_basic_directionalized1 : instrrules_all.
+Hint Rewrite -> @spec_at_basic_directionalized2 : instrrules_hyp_all.
 
 Ltac instrrule_pre_format_goal :=
   do ?[ set_evars; progress autorewrite with instrrules_all; subst_evars
@@ -598,13 +603,16 @@ End BasicProgInternalsApplication.
     WARNING: These tactics may leave side conditions. *)
 Ltac pose_instrrule_as R H :=
   (move: (R) => H);
+  set_evars_in H;
   do ?[ progress autounfold with instrrules_all in H
-      | set_evars_in H; progress autorewrite with instrrules_all in H; subst_evars
+      | progress autorewrite with instrrules_hyp_all in H
       | progress cbv beta iota zeta in H ];
   eforalls H;
+  set_evars_in H;
   do ?[ progress autounfold with instrrules_all in H
-      | set_evars_in H; progress autorewrite with instrrules_all in H; subst_evars
-      | progress cbv beta iota zeta in H ].
+      | progress autorewrite with instrrules_hyp_all in H
+      | progress cbv beta iota zeta in H ];
+  subst_evars.
 Tactic Notation "instrrule" "pose" open_constr(rule) "as" ident(H) := pose_instrrule_as rule H.
 
 (** Apply a given rule to the first instruction, and subsequently
@@ -660,12 +668,12 @@ Hint Unfold OPred_pred default_PointedOPred  : instrrules_side_conditions_opred.
 Hint Unfold stateIs stateIsAny : instrrules_side_conditions_spred.
 (** [Hint Rewrite] only supports one database at a time in 8.4.  In
     8.5, it'll be nicer and support multiple ones. *)
-Hint Rewrite @spec_at_basic eq_refl : instrrules_side_conditions.
-Hint Rewrite @spec_at_basic : instrrules_side_conditions_spec.
-Hint Rewrite @spec_at_basic : instrrules_side_conditions_seq_opred.
-Hint Rewrite @spec_at_basic : instrrules_side_conditions_non_seq_opred.
-Hint Rewrite @spec_at_basic : instrrules_side_conditions_opred.
-Hint Rewrite @spec_at_basic addB0 : instrrules_side_conditions_spred.
+Hint Rewrite eq_refl : instrrules_side_conditions.
+Hint Rewrite <- @spec_at_basic_directionalized1 : instrrules_side_conditions_spec.
+Hint Rewrite <- @spec_at_basic_directionalized1 : instrrules_side_conditions_seq_opred.
+Hint Rewrite <- @spec_at_basic_directionalized1 : instrrules_side_conditions_non_seq_opred.
+Hint Rewrite <- @spec_at_basic_directionalized1 : instrrules_side_conditions_opred.
+Hint Rewrite low_catB addB0 add0B : instrrules_side_conditions_spred.
 
 Hint Extern 1 (OPred_pred ?e |-- _) => is_evar e; reflexivity : instrrules_side_conditions_opred.
 Hint Extern 1 => progress f_cancel; [] : instrrules_side_conditions_opred.
