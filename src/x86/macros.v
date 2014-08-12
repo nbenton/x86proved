@@ -325,10 +325,10 @@ Definition while (ptest: program)
 (*=End *)
 
 
-  Section helper_ind.
+  Section helper.
     (** We need these opaque to speed up setoid rewriting. *)
     Local Opaque lforall limpl illater spec_at spec_reads.
-    Lemma safe_while_ind_later_helper_faster
+    Lemma safe_while_later_helper_faster
           {S T S1 c1 S2 c2 R}
           (H0 : S |-- ((Forall (x : T), ((((*|>*)S1) @ c1 -->> (|>S2 x) @ c2 x)))
                        -->>
@@ -350,7 +350,7 @@ Definition while (ptest: program)
       exact H0.
     Qed.
 
-    Lemma safe_while_ind_later_helper_drop_later
+    Lemma safe_while_later_helper_drop_later
           {S A T X1 X2 X3 X4 R}
           (H0 : S |-- (A //\\ (Forall (x : T), ((*|>*)X1 x) @ (X2 x)) -->> ((*|>*)X3) @ X4) <@ R)
     : S |-- (A //\\ (Forall (x : T), (|>X1 x) @ (X2 x)) -->> (|>X3) @ X4) <@ R.
@@ -366,28 +366,47 @@ Definition while (ptest: program)
              end.
     Qed.
 
-  End helper_ind.
+  End helper.
 
   (** general while rule *)
+  (** Make all dependent arguments implicit so we can pass them by name *)
   Lemma while_rule_ind {quantT}
-        ptest (cond : Condition) (value : bool) pbody
-        (P Q : quantT -> SPred) (I : quantT -> bool -> SPred) (Otest := fun _ : quantT => empOP) (Obody : quantT -> OPred) (O : quantT -> PointedOPred)
-        (transition_body : quantT -> quantT)
-        S
-        (Htest : S |-- Forall x : quantT, loopy_basic (P x) ptest (Otest x) (Exists b, I x b ** ConditionIs cond b))
-        (Hbody : S |-- Forall x : quantT, loopy_basic (I x value ** ConditionIs cond value) pbody (Obody x) (P (transition_body x)))
-        (HOloop : forall x, catOP ((*catOP (Otest x)*) (Obody x)) (O (transition_body x)) |-- O x)
-        (HOno_loop : forall x, Otest x |-- O x)
-  : S |-- Forall x : quantT, loopy_basic (P x) (while ptest cond value pbody) (O x) (Exists x', I x' (~~value) ** ConditionIs cond (~~value)).
+        {ptest} {cond : Condition} {value : bool} {pbody}
+        {S}
+        {transition_body : quantT -> quantT}
+        {P : quantT -> SPred} {Otest : quantT -> OPred} {Obody : quantT -> OPred} {O : quantT -> PointedOPred}
+        {O_after_test : quantT -> PointedOPred}
+        {I_state : quantT -> bool -> SPred}
+        {I_logic : quantT -> bool -> Prop}
+        {Q : SPred}
+        (Htest : S |-- (Forall (x : quantT),
+                        (loopy_basic (P x)
+                                     ptest
+                                     (Otest x)
+                                     (Exists b, I_logic x b /\\ I_state x b ** ConditionIs cond b))))
+        (Hbody : S |-- (Forall (x : quantT),
+                        (loopy_basic (I_logic x value /\\ I_state x value ** ConditionIs cond value)
+                                     pbody
+                                     (Obody x)
+                                     (P (transition_body x)))))
+        (H_after_test : forall x, catOP (Otest x) (O_after_test x) |-- O x)
+        (H_body_after_test : forall x, I_logic x value -> catOP (Obody x) (O (transition_body x)) |-- O_after_test x)
+        (H_empty : forall x, I_logic x (~~value) -> empOP |-- O_after_test x)
+        (Q_correct : Exists x', I_logic x' (~~value) /\\ I_state x' (~~value) ** ConditionIs cond (~~value) |-- Q)
+  : S |-- (Forall (x : quantT),
+           loopy_basic (P x)
+                       (while ptest cond value pbody)
+                       (O x)
+                       Q).
   Proof.
     rewrite /while.
     specintro => x.
+    rewrite <- Q_correct.
     do 2 basic apply loopy * => ?.
     rewrite /parameterized_basic.
     do ?[ progress subst
         | progress specintros => *
         | progress unfold_program ].
-    rewrite -> ?empSPL, -> ?empSPR.
 
     (** The jmp at the very beginning, to the test *)
     specapply *; first by ssimpl.
@@ -395,55 +414,46 @@ Definition while (ptest: program)
     lrevert x.
     apply spec_lob_context.
     apply landAdj.
-    apply safe_while_ind_later_helper_faster.
+    apply safe_while_later_helper_faster.
     do !setoid_rewrite lforall_limpl_commute.
     let H := match goal with |- _ |-- ((?A -->> ?B) -->> ?A -->> ?C) <@ _ => constr:(triple_limpl' A B C) end in
     setoid_rewrite <- H.
     specintros => x.
 
+    (** Remember the instrrules so [specapply *] knows about them. *)
     instrrule remember Htest.
     instrrule remember Hbody.
+    (** Pre-prove the side condition of the test [specapply *], so it's picked up automatically. *)
+    assert (forall x O', catOP (Otest x) (catOP (O_after_test x) O') |-- catOP (O x) O')
+      by by move => *; rewrite <- H_after_test, <- ?catOPA.
+    assert (forall x O', I_logic x value -> catOP (Obody x) (catOP (O (transition_body x)) O') |-- catOP (O_after_test x) O')
+      by by move => *; rewrite <- H_body_after_test, <- ?catOPA.
 
     (** the test *)
     specapply *; first by ssimpl.
-    (* [ | by ssimpl | .. ]. subst Otest; cbv beta. rewrite -> empOPL.   first (by f_cancel; eauto); first by ssimpl.*)
 
     (** the conditional jump (jcc) *)
     specintros => *.
-    loopy_specapply *; simpl OPred_pred; first by ssimpl.
+    loopy_specapply *; first by ssimpl.
 
     (** we split into the body case and the leaving case *)
     specsplit.
 
     { (** body case *)
       (** we need to drop the laters ([|>]), first *)
-      autorewrite with push_at push_later.
+      set_evars; autorewrite with push_at push_later; subst_evars.
       specintros. move/eqP => *; subst.
-      apply safe_while_ind_later_helper_drop_later.
-
-      specapply *.
-      { rewrite <- catOPA. f_cancel.
-        (* wtf? [reflexivity] fails, [apply reflexivity] succeeds, but
-           if I don't unify my evars first, then in either case I'll
-           get an extra [\\// empOP] in the uninstantiated
-           evar........ *)
-        2:let a := match goal with |- ?a |-- ?b => constr:(a) end in
-        let b := match goal with |- ?a |-- ?b => constr:(b) end in
-        unify a b.
-        1:eauto.
-        apply reflexivity. }
-      { by ssimpl. }
-
+      apply safe_while_later_helper_drop_later.
       simpl OPred_pred.
+
+      specapply *; try (by ssimpl); try (by eauto); simpl OPred_pred.
 
       finish_logic_with ltac:(autorewrite with push_at; eauto; ssimpl). }
 
     { (** leaving case *)
       specintros. move/eqP => *; subst.
-
-      rewrite <- HOno_loop; subst Otest; cbv beta.
-
-      eapply (@transitivity _ _ _ _ ltrue _ (ltrueR S)).
+      simpl OPred_pred.
+      rewrite <- H_empty, empOPL; try assumption.
 
       repeat match goal with
                | [ |- context[@lor ?Frm ?ILOps empOP ?Q] ] => rewrite <- (@lorR1 Frm ILOps _ empOP Q empOP (reflexivity _))
@@ -451,48 +461,6 @@ Definition while (ptest: program)
                | _ => by finish_logic_with ltac:(autorewrite with push_at; eauto; sbazooka)
              end. }
   Qed.
-
-  Section helper.
-    (** We need these opaque to speed up setoid rewriting. *)
-    Local Opaque lforall limpl illater spec_at spec_reads.
-    Lemma safe_while_later_helper_faster
-          {S T1 T2 T3 S1 c1 S2 c2 R}
-          (H0 : S |-- ((Forall (x : T1) (y : T2) (z : T3 x y), ((((*|>*)S1) @ c1 -->> (|>S2 x y z) @ c2 x y z)))
-                       -->>
-                       (Forall (x : T1) (y : T2) (z : T3 x y), ((S1 @ c1 -->> S2 x y z @ c2 x y z)))) <@ R)
-    : S |-- |>(Forall (x : T1) (y : T2) (z : T3 x y), ((S1 @ c1 -->> S2 x y z @ c2 x y z) <@ R))
-          -->>
-          (Forall (x : T1) (y : T2) (z : T3 x y), ((S1 @ c1 -->> S2 x y z @ c2 x y z) <@ R)).
-    Proof.
-      repeat match goal with
-               | _ => progress autorewrite with push_later; [|by typeclasses eauto..]
-               | [ |- context[|>(Forall _ : _, _)] ] => setoid_rewrite spec_later_forall
-               | [ |- context[|>(_ -->> _)] ]        => setoid_rewrite spec_later_impl
-               | [ |- context[|>(_ @ _)] ]           => setoid_rewrite <- spec_at_later
-               | [ |- context[|>(_ <@ ?R)] ]         => setoid_rewrite (fun S => proj2 (@spec_reads_later S R)) (* this case is slow *)
-               | _ => progress setoid_rewrite <- spec_reads_forall
-               | _ => progress setoid_rewrite <- spec_reads_impl
-             end.
-      setoid_rewrite <- (spec_later_weaken S1).
-      exact H0.
-    Qed.
-
-    Lemma safe_while_later_helper_drop_later
-          {S A T1 T2 T3 X1 X2 X3 X4 R}
-          (H0 : S |-- (A //\\ (Forall (x : T1) (y : T2) (z : T3 x y), ((*|>*)X1 x y z) @ (X2 x y z)) -->> ((*|>*)X3) @ X4) <@ R)
-    : S |-- (A //\\ (Forall (x : T1) (y : T2) (z : T3 x y), (|>X1 x y z) @ (X2 x y z)) -->> (|>X3) @ X4) <@ R.
-    Proof.
-      rewrite -> H0; clear H0.
-      do ![ f_cancel; [] ].
-      repeat match goal with
-               | [ |- context[Forall _ : _, |>_] ] => setoid_rewrite <- spec_later_forall
-               | [ |- context[(|>_) @ _] ]         => setoid_rewrite -> spec_at_later
-               | [ |- context[(|>_) -->> (|>_)] ]  => setoid_rewrite <- spec_later_impl
-               | [ |- ?A //\\ _ -->> _ |-- ?A //\\ _ -->> _ ] => apply strip_andL_impl
-               | [ |- ?A |-- |>?A ] => apply spec_later_weaken
-             end.
-    Qed.
-  End helper.
 
   (** general while rule *)
   Lemma while_rule
@@ -515,69 +483,37 @@ Definition while (ptest: program)
                        (roll_starOP Obody start)
                        (Q ** ConditionIs cond (~~value))).
   Proof.
-    rewrite /while.
-    autorewrite with push_at.
-    do ?(idtac;
-         match goal with
-           | [ |- _ |-- parameterized_basic _ (LOCAL _; _) _ _ ] => apply basic_local => ?
-         end).
-    rewrite /parameterized_basic.
-    do ?[ progress subst
-        | progress specintros => *
-        | progress unfold_program ].
-
-    (** The jmp at the very beginning, to the test *)
-    specapply *; first by ssimpl.
-
-    lrevert H0.
-    lrevert P0.
-    lrevert start.
-    apply spec_lob_context.
-    apply landAdj.
-    apply safe_while_later_helper_faster.
-    do !setoid_rewrite lforall_limpl_commute.
-    let H := match goal with |- _ |-- ((?A -->> ?B) -->> ?A -->> ?C) <@ _ => constr:(triple_limpl' A B C) end in
-    setoid_rewrite <- H.
-    specintros => start Pstart PPstart.
-    specialize (transition_test_correct Pstart start PPstart).
-
-    pose proof (Htest : instrrule ptest).
-    pose proof (Hbody : instrrule pbody).
-    cbv zeta in *.
-
-    (** the test *)
-    specapply *; simpl OPred_pred; try eassumption; first by ssimpl.
-
-    (** the conditional jump (jcc) *)
-    specintros => *.
-    loopy_specapply *; simpl OPred_pred; first by ssimpl.
-
-    (** we split into the body case and the leaving case *)
-    specsplit.
-
-    { (** body case *)
-      (** we need to drop the laters ([|>]), first *)
-      autorewrite with push_at push_later.
-      specintros. move/eqP => *; subst.
-      rewrite <- catOP_O_roll_starOP_O'.
-      apply safe_while_later_helper_drop_later.
-
-      specapply *; simpl OPred_pred; try (by eauto); first by ssimpl.
-
-      finish_logic_with ltac:(autorewrite with push_at; eauto; ssimpl). }
-
-    { (** leaving case *)
-      specintros. move/eqP => *; subst.
-      rewrite -> Q_correct.
-      rewrite -> roll_starOP_def.
+    move start at bottom.
+    move P0 at bottom.
+    pose (existT (fun start => PP (fst start) (snd start)) (start, P0) H0) as x.
+    change start with (fst (projT1 x)).
+    change P0 with (snd (projT1 x)).
+    clearbody x.
+    clear P0 H0 start.
+    lrevert x.
+    Local Opaque roll_starOP.
+    eapply @while_rule_ind
+    with (Otest := fun _ => empOP)
+           (Obody := fun nPH => Obody (fst (projT1 nPH)))
+           (I_logic := fun _ _ => True)
+           (I_state := fun nPH => transition_test (snd (projT1 nPH)) (fst (projT1 nPH)) _)
+           (transition_body := fun nPH => existT _ (_, transition_body _ _ _) _);
       repeat match goal with
-               | [ |- context[@lor ?Frm ?ILOps empOP ?Q] ] => rewrite <- (@lorR1 Frm ILOps _ empOP Q empOP (reflexivity _))
-               | [ |- context[catOP empOP ?P] ] => rewrite -> (empOPL P)
-               | _ => by finish_logic_with ssimpl
-             end. }
-
+               | _ => progress intros
+               | _ => progress (simpl projT1; simpl projT2; simpl fst; simpl snd; simpl OPred_pred)
+               | [ |- context[lpropand True _] ] => setoid_rewrite -> lpropandTrue
+               | [ |- _ |-- lforall _ ] => apply lforallR => ?
+               | [ |- lexists _ |-- _ ] => apply lexistsL => ?
+               | [ |- context[catOP _ (lexists _)] ] => rewrite -> catOP_lexists2
+               | _ => by try ssimpl; eauto
+               | [ |- _ |-- _ \\// _ ] => by apply lorR2; reflexivity
+               | [ |- _ |-- _ \\// _ ] => by apply lorR1; reflexivity
+               | [ |- _ |-- roll_starOP _ _ ] => etransitivity; last apply roll_starOP_def
+             end.
     Grab Existential Variables.
-    auto.
+    by simpl; eauto.
+    by simpl; eauto.
+    by apply projT2.
   Qed.
 
   (** I/O-free while rule *)
@@ -634,6 +570,10 @@ Definition while (ptest: program)
     rewrite /loopy_basic. specintros => i j O. unfold_program.
     specintros => _ _ <- ->  _ _ <- -> i1 i2 i3 -> ->. rewrite !empSPL.
 
+    instrrule remember Htest.
+    instrrule remember Hbody.
+    instrrule remember Hcoda.
+
     (* We need to set up Lob induction but not for this instruction. This is a
        bit awkward. *)
     assert (|> obs O @ (EIP ~= test ** P) -->>
@@ -648,16 +588,16 @@ Definition while (ptest: program)
 
     specsplit.
     (* JMP TEST *)
-    - specapply JMP_I_loopy_rule. by ssimpl.
+    - loopy_specapply *; first by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. apply: landL2. by (autorewrite with push_at; reflexivity).
 
     (* ptest *)
-    specapply Htest. by ssimpl.
+    specapply *; first by ssimpl.
 
     (* JCC cond value BODY *)
     specintro => b.
-    specapply JCC_loopy_rule. by ssimpl.
+    loopy_specapply *; first by ssimpl.
 
     (* Now there are two cases. Either we jumped to the loop body, or we fell
        through and exited the loop. *)
