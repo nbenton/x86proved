@@ -1,6 +1,7 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
 Require Import x86proved.spred.
-Require Import x86proved.common_tactics.
+Require Import x86proved.common_tactics x86proved.charge_lemmas.
+Require Import Coq.Classes.RelationClasses.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -233,40 +234,66 @@ Module Solving.
 
     Lemma eqn'P i j : reflect (i = j) (eqn' i j).
     Proof. apply eqnP. Qed.
+
+    Definition LOOKUP_FAILURE {T} {x : T} := x.
   End Indexes.
 
   Inductive term :=
   | t_atom (i: idx)
   | t_star (t1 t2: term)
+  | t_propand (i: idx) (t: term)
   | t_emp
   | t_false.
 
   (* Idea: reflect lhs first and choose index for each rhs term with a hole to
      be the first lhs atom that unifies. *)
 
-  Definition alist := seq (idx * SPred).
-  Definition env := (idx * alist)%type.
+  Definition spred_alist := seq (idx * SPred).
+  Definition prop_alist := seq (idx * Prop).
+  Definition env := (idx * spred_alist * prop_alist)%type.
 
-  Fixpoint lookup (a: alist) (i: idx) : SPred :=
+  Fixpoint spred_lookup (a: spred_alist) (i: idx) : SPred :=
     match a with
-    | (j,P) :: a' => if eqn' i j then P else lookup a' i
-    | [::] => empSP (* default value; shouldn't happen *)
+    | (j,P) :: a' => if eqn' i j then P else spred_lookup a' i
+    | [::] => @LOOKUP_FAILURE _ empSP (* default value; shouldn't happen *)
+    end.
+
+  Fixpoint prop_lookup (a: prop_alist) (i: idx) : Prop :=
+    match a with
+    | (j,P) :: a' => if eqn' i j then P else prop_lookup a' i
+    | [::] => @LOOKUP_FAILURE _ False (* default value; shouldn't happen *)
     end.
 
   Fixpoint eval (e: env) (t: term) : SPred :=
     match t with
-    | t_atom i => let (_, a) := e in lookup a i
+    | t_atom i => let: (_, a, _) := e in spred_lookup a i
     | t_star t1 t2 => eval e t1 ** eval e t2
+    | t_propand i t => (let: (_, _, a) := e in prop_lookup a i) /\\ eval e t
     | t_emp => empSP
     | t_false => lfalse
     end.
 
   (* Inserts an SPred into an environment. Calls its continuation with the
      updated environment and the index where the predicate was inserted. *)
-  Ltac insert_tac e(*:env*) P(*:SPred*) cont(*: env -> idx -> tactic *) :=
+  Definition spred_insert (e: env) (P: SPred) : env * idx :=
     match e with
-    | (?i, ?a) => cont (i.+1, (i,P)::a) i
+      | (i, a, a') => ((i.+1, (i,P)::a, a'), i)
     end.
+  Ltac spred_insert_tac e(*:env*) P(*:SPred*) cont(*: env -> idx -> tactic *) :=
+    let e'i := constr:(spred_insert e P) in
+    let e' := (eval hnf in e'i.1) in
+    let i := (eval hnf in e'i.2) in
+    cont e' i.
+
+  Definition prop_insert (e: env) (P: Prop) : env * idx :=
+    match e with
+      | (i, a, a') => ((i.+1, a, (i,P)::a'), i)
+    end.
+  Ltac prop_insert_tac e(*:env*) P(*:Prop*) cont(*: env -> idx -> tactic *) :=
+    let e'i := constr:(prop_insert e P) in
+    let e' := (eval hnf in e'i.1) in
+    let i := (eval hnf in e'i.2) in
+    cont e' i.
 
   (* Quote left-hand side of entailment. Duplicated terms don't get to share
      indices since this should not typically happen. *)
@@ -274,27 +301,32 @@ Module Solving.
      "returns" both an updated environment and a quoted term. Ltac doesn't make
      it easy to return tuples, but CPS is easy. *)
   Ltac lquote e(*:env*) P(*:SPred*) cont(*: env -> term -> tactic *) :=
-    match P with
+    idtac;
+    lazymatch P with
     | ?P1 ** ?P2 =>
         lquote e P1 ltac:(fun e t1 =>
         lquote e P2 ltac:(fun e t2 =>
         cont e (t_star t1 t2)))
+    | ?P /\\ ?T
+      => prop_insert_tac e P ltac:(fun e p =>
+         lquote e T ltac:(fun e t =>
+         cont e (t_propand p t)))
     | lfalse => cont e t_false
     | empSP => cont e t_emp
-    | _ => insert_tac e P ltac:(fun e i => cont e (t_atom i))
+    | _ => spred_insert_tac e P ltac:(fun e i => cont e (t_atom i))
     end.
 
   (*
   Goal forall P: SPred, True.
     move=> P.
-    lquote ((0, [::]) : env) (P ** empSP ** P ** lprop (0 + 0 = 0)) ltac:(fun e t =>
+    lquote ((0, [::], [::]) : env) (P ** empSP ** P ** lpropand (0 + 0 = 0) empSP) ltac:(fun e t =>
       idtac e; idtac t;
-      let P := eval cbv [eval lookup eqn'] in (eval e t) in idtac P
+      let P := eval cbv [eval spred_lookup prop_lookup eqn'] in (eval e t) in idtac P
     ).
     apply I. Qed.
   *)
 
-  (* Succeed iff t fails *)
+  (* Succeed iff t fails or completely solves the goal *)
   Tactic Notation "not" tactic1(t) := try (t; fail 1).
 
   (* This tactic succeeds if its two arguments are equal modulo alpha conversion
@@ -317,7 +349,7 @@ Module Solving.
      inside P and a. *)
   Ltac lookup_tac doUnify a(*:alist*) P(*:SPred*)
       found(*: idx -> tactic*) notfound(*: unit -> tactic*) :=
-    match a with
+    match eval hnf in a with
     | (?i, ?P') :: _ =>
       (* We don't unify with something that's entirely an evar. This would lead
          to very random behaviour. *)
@@ -333,31 +365,39 @@ Module Solving.
      the [unify] tactic (https://github.com/coq/coq/commit/18e6108339aaf18499).
    *)
   Ltac rquote doUnify e(*:env*) P(*:SPred*) cont(*: env -> term -> tactic *) :=
-    match P with
+    idtac;
+    lazymatch P with
     | ?P1 ** ?P2 =>
         rquote doUnify e P1 ltac:(fun e t1 =>
         rquote doUnify e P2 ltac:(fun e t2 =>
         cont e (t_star t1 t2)))
+    | ?P /\\ ?T =>
+        rquote doUnify e T ltac:(fun e t =>
+          let a' := match e with (_, ?a, ?a') => constr:(a') end in
+          lookup_tac doUnify a' P
+            ltac:(fun j => cont e (t_propand j t))
+            ltac:(fun _ => prop_insert_tac e P ltac:(fun e i => cont e (t_propand i t))))
     | empSP => cont e t_emp
     | lfalse => cont e t_false
     | ltrue =>
           (* We don't match up ltrue. We leave it untouched on the right-hand
              side and let the user decide what to do with it. *)
-           insert_tac e P ltac:(fun e i => cont e (t_atom i))
-    | ?dummy_name => is_evar P;
-          (* If an atom is entirely an evar, we don't touch it. Otherwise, it
-             would unify with the first thing it saw on the left, which is
-             probably not what the user expects. *)
-           insert_tac e P ltac:(fun e i => cont e (t_atom i))
-    | _ =>
-        match e with
-        | (_, ?a) =>
-          lookup_tac doUnify a P
-            ltac:(fun j => cont e (t_atom j))
-            ltac:(fun _ => insert_tac e P ltac:(fun e i => cont e (t_atom i)))
-        end
+           spred_insert_tac e P ltac:(fun e i => cont e (t_atom i))
+    | _ => first [ is_evar P;
+                   (* If an atom is entirely an evar, we don't touch it. Otherwise, it
+                      would unify with the first thing it saw on the left, which is
+                      probably not what the user expects. *)
+                   spred_insert_tac e P ltac:(fun e i => cont e (t_atom i))
+                 | idtac;
+                   match e with
+                     | (_, ?a, ?a') =>
+                       lookup_tac doUnify a P
+                         ltac:(fun j => cont e (t_atom j))
+                         ltac:(fun _ => spred_insert_tac e P ltac:(fun e i => cont e (t_atom i)))
+                   end ]
     end.
 
+  (** Remove one instance of the atom with index [i] *)
   Fixpoint remove_atom t i : option term :=
     match t with
     | t_atom i' => if eqn' i' i then Some t_emp else None
@@ -370,10 +410,37 @@ Module Solving.
             | None => None
             end
         end
+    | t_propand P t' =>
+      match remove_atom t' i with
+        | Some t'' => Some (t_propand P t'')
+        | None => None
+      end
     | t_emp => None
     | t_false => None
     end.
 
+  (** Remove all instances of the prop with index [i] *)
+  Fixpoint remove_prop t i : option term :=
+    match t with
+    | t_atom i' => None
+    | t_star t1 t2 =>
+        match remove_prop t1 i, remove_prop t2 i with
+        | Some t1', Some t2' => Some (t_star t1' t2')
+        | Some t1', None => Some (t_star t1' t2)
+        | None, Some t2' => Some (t_star t1 t2')
+        | None, None => None
+        end
+    | t_propand p t' => if eqn' p i
+                        then match remove_prop t' i with
+                               | Some t'' => Some t''
+                               | None => Some t'
+                             end
+                        else None
+    | t_emp => None
+    | t_false => None
+    end.
+
+  (** Remove all terms showing up in [tQ] from [tP]. *)
   Fixpoint remove (tP tQ: term) : option term :=
     match tQ with
     | t_atom i => remove_atom tP i
@@ -382,101 +449,192 @@ Module Solving.
         | Some tP' => remove tP' t2
         | None => None
         end
+    | t_propand P t =>
+        match remove tP t with
+        | Some tP' => remove_prop tP' P
+        | None => None
+        end
     | t_emp => Some tP
     | t_false => None
     end.
 
+  Local Ltac cancel_sepSP :=
+    idtac;
+    match goal with
+      | [ |- ?a ** ?b |-- ?a ** ?b' ] => (f_cancel; [])
+      | [ |- ?a ** ?b |-- ?a' ** ?b ] => (f_cancel; [])
+      | [ |- ?a ** ?b -|- ?a ** ?b' ] => (f_cancel; [])
+      | [ |- ?a ** ?b -|- ?a' ** ?b ] => (f_cancel; [])
+    end.
+
+  Local Ltac t_septac' :=
+    idtac;
+    match goal with
+      | _ => reflexivity
+      | _ => eassumption
+      | _ => progress simpl_paths
+      | _ => progress subst
+      | _ => progress simpl
+      | _ => progress rewrite ?eq_refl ?empSPL ?empSPR ?sepSPA
+      | _ => progress setoid_rewrite <- bilpropandL
+      | _ => progress setoid_rewrite <- bilpropandR
+      | _ => rewrite ?sepSPA; progress cancel_sepSP
+      | _ => rewrite -?sepSPA; progress cancel_sepSP
+      | _ => progress destruct_head ex
+      | _ => progress destruct_head and
+      | [ H : eval _ _ -|- _ |- _ ] => setoid_rewrite -> H; clear H
+      | [ H : context[?a == ?a] |- _ ] => rewrite eq_refl in H
+      | [ H : context[eqn' ?a ?b] |- _ ] => change (eqn' a b) with (a == b) in *; case_eq (a == b) => *
+      | [ H : (?a == ?b) = _, H' : context[?a == ?b] |- _ ] => rewrite H in H'
+      | [ H : (?a == ?b) = true |- _ ] => move/eqP in H
+      | [ |- _ /\\ _ |-- _ ] => apply lpropandL => *
+      | [ |- _ |-- _ /\\ _ ] => (apply lpropandR; try assumption)
+      | [ H : forall _, Some _ = Some _ -> _ |- _ ] => specialize (H _ (reflexivity _))
+      | [ H : forall _, None = Some _ -> _ |- _ ] => clear H
+      | [ H : forall _ _, (_, _) = (_, _) -> _ |- _ ] => specialize (H _ _ (reflexivity _))
+      | [ |- ?a ** ?b -|- ?b ** ?a ] => by rewrite sepSPC
+      | [ |- _ /\\ _ |-- _ ] => apply lpropandL => *
+      | [ |- _ |-- _ /\\ _ ] => (apply lpropandR; first by eassumption)
+    end.
+
+  Local Ltac t_remove' :=
+    idtac;
+    match goal with
+      | _ => t_septac'
+      | [ H : context[match remove_prop ?a ?b with _ => _ end] |- _ ]
+        => (destruct (remove_prop a b); try done)
+      | [ H : context[remove_atom ?a ?b] |- _ ]
+        => (destruct (remove_atom a b); try done)
+    end.
+
+  Local Ltac t_remove := do ?[ t_remove' | split; by t_remove ].
+
   Lemma remove_atom_correct e t i tR:
     remove_atom t i = Some tR ->
-    eval e t |-- eval e (t_atom i) ** eval e tR.
+    eval e t -|- eval e (t_atom i) ** eval e tR.
   Proof.
-    move: tR. elim: t; try done.
-    - move=> i' tR /=. case: eqn'P => // [->] [<-].
-      by rewrite empSPR.
-    - move=> t1 IHt1 t2 IHt2 tR /=.
-      destruct (remove_atom t1 i) as [t1'|].
-      - move=> [<-]. rewrite ->IHt1; last reflexivity. rewrite sepSPA.
-        reflexivity.
-      destruct (remove_atom t2 i) as [t1'|]; last done.
-      move=> [<-]. rewrite ->IHt2; last reflexivity.
-      rewrite -sepSPA [_ ** eval e (t_atom i)]sepSPC sepSPA. reflexivity.
+    move: tR.
+    (elim: t => /= *; try done);
+      t_remove.
+  Qed.
+
+  Lemma remove_prop_correct e t i tR:
+    remove_prop t i = Some tR ->
+    eval e t -|- eval e (t_propand i tR).
+  Proof.
+    move: tR.
+    (elim: t => /= *; try done);
+      t_remove.
   Qed.
 
   Lemma remove_correct e tP tQ tR:
     remove tP tQ = Some tR ->
-    eval e tP |-- eval e tQ ** eval e tR.
+    eval e tP -|- eval e tQ ** eval e tR.
   Proof.
     move: tP tR. elim: tQ.
-      move=> i tP tR /= HtR. exact: remove_atom_correct.
-
-      move=> t1 IHt1 t2 IHt2 tP tR /=.
+    { move=> i tP tR /= HtR. exact: remove_atom_correct. }
+    { move=> t1 IHt1 t2 IHt2 tP tR /=.
       specialize (IHt1 tP).
       destruct (remove tP t1) as [tP'|]; last done.
       move=> HtR. move/(_ _ _ HtR): IHt2 => Ht2.
-      rewrite sepSPA. rewrite <-Ht2. exact: IHt1.
+      rewrite sepSPA. rewrite <-Ht2. exact: IHt1. }
+    { move => /= i t IH tP *.
+      specialize (IH tP).
+      destruct (remove tP t); last by exfalso.
+      rewrite -> IH; clear IH; last by reflexivity.
+      let H := match goal with | [ H : remove_prop ?a ?b = Some _ |- _ ] => constr:(H) end in
+      rewrite -> (@remove_prop_correct _ _ _ _ H).
+      by do ![ progress simpl
+             | progress setoid_rewrite <- bilpropandL
+             | progress setoid_rewrite <- bilpropandR ]. }
 
-      move=> tP tR /= [<-]. by rewrite empSPL.
+    { move=> tP tR /= [<-]. by rewrite empSPL. }
 
-      move=> tP tR /=. done.
+    { move=> tP tR /=. done. }
   Qed.
 
-  Fixpoint simplify (tP tQ: term) : (term * term) :=
-    match tQ with
+  (** We have the option to remove matched [Prop] bits from the
+      hypotheses; we choose not to do so.  We treat [tH] as the
+      hypotheses and [tC] as the conclusions. *)
+  Fixpoint simplify (tC tH: term) : (term * term) :=
+    match tH with
     | t_atom i =>
-        match remove_atom tP i with
-        | Some tP' => (tP', t_emp)
-        | None => (tP, tQ)
+        match remove_atom tC i with
+        | Some tC' => (tC', t_emp)
+        | None => (tC, tH)
         end
     | t_star t1 t2 =>
-        let (tP', t1')  := simplify tP t1 in
-        let (tP'', t2') := simplify tP' t2 in
-        (tP'', t_star t1' t2')
-    | t_emp => (tP, tQ)
-    | t_false => (tP, tQ)
+        let (tC', t1')  := simplify tC t1 in
+        let (tC'', t2') := simplify tC' t2 in
+        (tC'', t_star t1' t2')
+    | t_propand P t =>
+        let (tC', t') := eta_expand (simplify tC t) in
+        match remove_prop tC' P with
+          | Some tC'' => (tC'', t_propand P t')
+          | None => (tC', t_propand P t')
+        end
+    | t_emp => (tC, tH)
+    | t_false => (tC, tH)
     end.
 
+  Local Ltac t_simplify_correct' :=
+    idtac;
+    match goal with
+      | [ e : env, H : context[match remove_atom ?a ?b with _ => _ end] |- _ ]
+        => pose proof (@remove_atom_correct e a b); destruct (remove_atom a b)
+      | [ e : env, H : context[match remove_prop ?a ?b with _ => _ end] |- _ ]
+        => pose proof (@remove_prop_correct e a b); destruct (remove_prop a b)
+      | _ => t_septac'
+    end.
+
+  Local Ltac t_simplify_correct :=
+    do ![ t_simplify_correct'
+        | eexists (t_propand _ _); by t_simplify_correct
+        | eexists (t_star _ _); by t_simplify_correct
+        | eexists (t_atom _); by t_simplify_correct
+        | exists t_emp; by t_simplify_correct
+        | eexists; by t_simplify_correct
+        | split; by t_simplify_correct ].
+
   (* Correctness theorem strong enough for induction. *)
-  (* This theorem could probably be strengthened to biimplication if that
-     seems useful at some point. *)
-  Lemma simplify_correct e tP tQ tP' tQ' :
-    simplify tP tQ = (tP', tQ') -> exists tR,
-    (eval e tP |-- eval e tP' ** eval e tR)  /\
-    (eval e tQ' ** eval e tR |-- eval e tQ).
+  Lemma simplify_correct e tH tC tH' tC' :
+    simplify tC tH = (tC', tH') -> exists tR,
+    (eval e tH -|- eval e tH' ** eval e tR)  /\
+    (eval e tC -|- eval e tC' ** eval e tR).
   Proof.
-    move: tP tP' tQ'. elim: tQ.
-    - move=> i tP tP' tQ' /=.
-      have Hatom := @remove_atom_correct e tP i.
-      destruct (remove_atom tP i).
-      - move=> [<- <-]. exists (t_atom i). rewrite ->Hatom; last reflexivity.
-        rewrite empSPL. split; last reflexivity. by rewrite sepSPC.
-      - move=> [<- <-]. exists t_emp. rewrite !empSPR. split; reflexivity.
-    - move=> t1 IHt1 t2 IHt2 tP tP'' tQ' /=.
-      specialize (IHt1 tP). destruct (simplify tP t1) as [tP' t1'].
-      specialize (IHt2 tP'). destruct (simplify tP' t2) as [ttmp t2'].
+    move: tC tC' tH'.
+    elim: tH.
+    { move => /= *; t_simplify_correct. }
+    { move=> t1 IHt1 t2 IHt2 tC tC'' tH' /=.
+      specialize (IHt1 tC). destruct (simplify tC t1) as [tC' t1'].
+      specialize (IHt2 tC'). destruct (simplify tC' t2) as [ttmp t2'].
       move=> [Htmp <-] /=. subst ttmp.
       edestruct IHt1 as [tR1 [Hpre1 Hpost1]]; first reflexivity.
       edestruct IHt2 as [tR2 [Hpre2 Hpost2]]; first reflexivity.
-      clear IHt1 IHt2. exists (t_star tR1 tR2) => /=. split.
-      - rewrite ->Hpre1, Hpre2. by rewrite sepSPA [eval e tR2 ** _]sepSPC.
-      - rewrite <-Hpost1. rewrite <-Hpost2. rewrite -sepSPA.
-        rewrite [_ ** eval e tR1]sepSPA [_ ** eval e tR1]sepSPC.
-        by rewrite !sepSPA.
-    - move=> tP tP' tQ' /= [<- <-]. exists t_emp.
-      rewrite !empSPR. split; reflexivity.
-    - move=> tP tP' tQ' /= [<- <-]. exists t_emp.
-      rewrite !empSPR. split; reflexivity.
+      clear IHt1 IHt2. exists (t_star tR1 tR2) => /=.
+      t_simplify_correct. }
+    { move => /= P t IH tC *.
+      have Hprop := @remove_prop_correct e (simplify tC t).1 P.
+      specialize (IH tC _ _ (prod_eta _ _ _)).
+      edestruct remove_prop; simpl_paths; subst;
+      (specialize (Hprop _ (reflexivity _)) || clear Hprop);
+      t_simplify_correct. }
+    { move=> tP tP' tQ' /= [<- <-]. exists t_emp.
+      rewrite !empSPR. split; reflexivity. }
+    { move=> tP tP' tQ' /= [<- <-]. exists t_emp.
+      rewrite !empSPR. split; reflexivity. }
   Qed.
 
   (* Weaker version of correctness theorem. *)
-  Corollary simplify_sufficient e tP tQ tP' tQ' :
-    simplify tP tQ = (tP', tQ') ->
-    eval e tP' |-- eval e tQ'  ->  eval e tP |-- eval e tQ.
+  Corollary simplify_sufficient e tH tC tH' tC' :
+    simplify tC tH = (tC', tH') ->
+    eval e tH' |-- eval e tC'  ->  eval e tH |-- eval e tC.
   Proof.
     move=> Heq H. have [tR [H1 H2]] := simplify_correct e Heq.
-    rewrite ->H1, <-H2. cancel2.
+    rewrite ->H1, ->H2. by f_cancel.
   Qed.
 
-  (* remove emp *)
+  (* remove emp, pull false *)
   Fixpoint clean t :=
     match t with
     | t_star t1 t2 =>
@@ -489,21 +647,81 @@ Module Solving.
         | t', t_emp => t'
         | _, _ => t_star t1' t2'
         end
+    | t_propand P t' =>
+        let t'' := clean t' in
+        match t'' with
+          | t_false => t_false
+          | _ => t_propand P t''
+        end
     | _ => t
     end.
 
   Lemma clean_correct e t : eval e (clean t) -|- eval e t.
   Proof.
-    induction t; try reflexivity; []. rewrite /=.
-    destruct (clean t1); destruct (clean t2); rewrite -IHt1 -IHt2;
+    induction t; try reflexivity.
+    { rewrite /=.
+      destruct (clean t1); destruct (clean t2); rewrite -IHt1 -IHt2;
       try rewrite empSPL; try rewrite empSPR;
-      try rewrite sepSP_falseL; try rewrite sepSP_falseR; reflexivity.
+      try rewrite sepSP_falseL; try rewrite sepSP_falseR; reflexivity. }
+    { simpl; destruct (clean t); simpl in *; rewrite <- IHt; try reflexivity.
+      split; do ?[ reflexivity
+                 | apply lfalseL
+                 | apply lpropandL ]. }
   Qed.
 
-  Lemma do_simplify e tP tQ tP' tQ':
-    simplify tP tQ = (tP', tQ') ->
-    eval e (clean tP') |-- eval e (clean tQ')  ->  eval e tP |-- eval e tQ.
-  Proof. rewrite !clean_correct. apply simplify_sufficient. Qed.
+  (** bring lpropand to the top *)
+  (** I'm lazy, so I'll just count how many t_propands there are, and give the procedure that much fuel *)
+  Definition addn' := Eval lazy in addn.
+  Fixpoint count_t_propand t :=
+    match t with
+      | t_star t1 t2 => addn' (count_t_propand t1) (count_t_propand t2)
+      | t_propand _ t' => (count_t_propand t').+1
+      | _ => 0
+    end.
+
+  Fixpoint pull1_t_propand t :=
+    match t with
+      | t_star t1 t2
+        => let t1' := pull1_t_propand t1 in
+           let t2' := pull1_t_propand t2 in
+           match t1', t2' with
+             | t_propand P1 t1'', t_propand P2 t2'' => t_propand P1 (t_propand P2 (t_star t1'' t2''))
+             | t_propand P t1'', t2'' => t_propand P (t_star t1'' t2'')
+             | t1'', t_propand P t2'' => t_propand P (t_star t1'' t2'')
+             | t1'', t2'' => t_star t1'' t2''
+           end
+      | t_propand P t' => t_propand P (pull1_t_propand t')
+      | _ => t
+    end.
+
+  Fixpoint rep {T} (f : T -> T) x n :=
+    if n is n.+1 then f (rep f x n) else x.
+
+  Definition pull_t_propand t := rep pull1_t_propand t (count_t_propand t).
+
+  Lemma pull1_t_propand_correct e t : eval e (pull1_t_propand t) -|- eval e t.
+  Proof.
+    induction t; try reflexivity;
+    simpl; do !hyp_rewrite <- *; clear; try reflexivity.
+    do 2 edestruct pull1_t_propand;
+      do ![ reflexivity
+          | progress setoid_rewrite <- bilpropandL
+          | progress setoid_rewrite <- bilpropandR ].
+  Qed.
+
+  Lemma pull_t_propand_correct e t : eval e (pull_t_propand t) -|- eval e t.
+  Proof.
+    unfold pull_t_propand.
+    generalize (count_t_propand t) => n.
+    move: t.
+    induction n => * //=.
+    by rewrite -> pull1_t_propand_correct.
+  Qed.
+
+  Lemma do_simplify e tH tC tH' tC':
+    simplify tC tH = (tC', tH') ->
+    eval e (clean (pull_t_propand tH')) |-- eval e (clean (pull_t_propand tC'))  ->  eval e tH |-- eval e tC.
+  Proof. rewrite !clean_correct !pull_t_propand_correct. apply simplify_sufficient. Qed.
 
   (* If speed is an issue at some point, we could make rquote take two
      environments: one to insert into and one to lookup in. Our decision
@@ -511,20 +729,30 @@ Module Solving.
      in common between left and right.
 
      We first try to do unification up to syntax, and try again after we've simpled *)
-  Ltac ssimpl_with doUnify :=
+  Ltac pre_ssimpl_with doUnify :=
     first [ syntax_unify_reflexivity
           | match goal with
               | [ |- ?P |-- ?Q ] =>
-                lquote ((0, [::]) : env) P ltac:(fun e tP =>
+                lquote ((0, [::], [::]) : env) P ltac:(fun e tP =>
                   rquote doUnify e Q ltac:(fun e tQ =>
                     eapply (@do_simplify e tP tQ);
                     [ cbv; reflexivity
-                    | cbv [eval lookup eqn' clean]
+                    | cbv [eval spred_lookup prop_lookup eqn' clean pull_t_propand pull1_t_propand rep count_t_propand addn']
                     ]
                   )
                 )
             end;
             try syntax_unify_reflexivity ].
+
+  (** After we're done, we want to move the things involving
+      [lpropand] in the hypothesis list into the Coq context.  They're
+      all at the top, so we can just apply [lpropandL] repeatedly. *)
+  Ltac post_ssimpl :=
+    repeat match goal with
+             | [ |- _ /\\ _ |-- _ ] => apply lpropandL => *
+           end.
+
+  Ltac ssimpl_with doUnify := pre_ssimpl_with doUnify; post_ssimpl.
 
   Ltac ssimpl := ssimpl_with cheap_unify.
 
@@ -533,21 +761,21 @@ Module Solving.
   Proof. move=> P Q. eexists. ssimpl. done. Qed.
 
   (* TODO: probably subsumed by do_simplify, but this should be faster *)
-  Lemma solve_uc e tP tQ:
-    if remove tP tQ is Some _
-    then eval e tP |-- eval e tQ ** ltrue
+  Lemma solve_uc e tH tC:
+    if remove tH tC is Some _
+    then eval e tH |-- eval e tC ** ltrue
     else True.
   Proof.
-    move Hresult: (remove tP tQ) => result.
+    move Hresult: (remove tH tC) => result.
     destruct result; last done.
-    have Hcorrect := remove_correct Hresult.
-    etransitivity; [apply Hcorrect|]. cancel2.
+    have Hcorrect := remove_correct e Hresult.
+    rewrite -> Hcorrect. by f_cancel.
   Qed.
 
   Ltac solve_uc :=
     match goal with
     |- ?P |-- ?Q ** ltrue =>
-        lquote ((0, [::]) : env) P ltac:(fun e tP =>
+        lquote ((0, [::], [::]) : env) P ltac:(fun e tP =>
           rquote cheap_unify e Q ltac:(fun e tQ =>
             apply (@solve_uc e tP tQ)
           )

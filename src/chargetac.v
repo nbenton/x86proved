@@ -5,6 +5,7 @@ Require Import x86proved.charge.ilogic x86proved.charge.sepalg x86proved.charge.
 Require Import x86proved.spec.
 Require Import x86proved.charge.iltac.
 Require Import Coq.Setoids.Setoid.
+Require Export x86proved.charge_lemmas.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -233,10 +234,4 @@ Proof.
            | _ => progress finish_logic
            | _ => syntax_unify_reflexivity
          end.
-Qed.
-
-(** TODO(t-jagro): Figure out if this already exists somewhere *)
-Lemma lentails_def1  `{@ILogic Frm ILOps'} P Q (H' : forall C, C |-- P -> C |-- Q) : P |-- Q.
-Proof.
-  rewrite <- H'; reflexivity.
 Qed.

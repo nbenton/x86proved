@@ -218,6 +218,15 @@ Ltac ssr_autorewrite_with_matchdb := do !ssr_autorewrite_with_matchdb'.
 Definition paths_prod A B (x y : A * B) (H : x = y) : fst x = fst y /\ snd x = snd y
   := conj (f_equal (@fst _ _) H) (f_equal (@snd _ _) H).
 
+Definition paths_option T (x y : option T) (H : x = y) : match x, y with
+                                                           | Some x', Some y' => x' = y'
+                                                           | None, None => True
+                                                           | _, _ => False
+                                                         end.
+Proof.
+  destruct H, x; constructor.
+Defined.
+
 Definition specialize_forall {A B C} (H : forall x : A, B x -> C x) : (forall x : A, B x) -> (forall x : A, C x)
   := fun f x => H x (f x).
 Definition specialize_ex {A} {B C : A -> Prop} (H : forall x, B x -> C x) : (exists x : A, B x) -> (exists x : A, C x)

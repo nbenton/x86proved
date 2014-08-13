@@ -816,17 +816,20 @@ Section test_do_under_many_binders.
   Abort.
 End test_do_under_many_binders.
 
+Ltac hyp_simpl_paths :=
+  repeat
+    match goal with
+      | [ H : _ = _ :> _ * _ |- _ ] => apply paths_prod in H; simpl fst in H; simpl snd in H; destruct H
+      | [ H : False |- _ ] => solve [ destruct H ]
+      | [ H : True |- _ ] => clear H || destruct H
+      | [ H : _ = _ :> option _ |- _ ] => apply paths_option in H
+    end.
+
 Ltac simpl_paths :=
   repeat
     match goal with
       | [ |- _ = _ :> _ * _ ] => apply injective_projections
-      | [ H : _ = _ :> _ * _ |- _ ] => apply paths_prod in H; destruct H
-    end.
-
-Ltac hyp_simpl_paths :=
-  repeat
-    match goal with
-      | [ H : _ = _ :> _ * _ |- _ ] => apply paths_prod in H; destruct H
+      | _ => progress hyp_simpl_paths
     end.
 
 (** Take goals like [(A -> B) -> (A -> C)] and turn them into goals like [A -> B -> C] *)
