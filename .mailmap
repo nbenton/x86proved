@@ -1,0 +1,7 @@
+## This file allows joining different accounts of a single person.
+## Cf for instance: git shortlog -nse. More details via: man git shortlog
+
+Jason Gross <jgross@mit.edu>               Jason Gross <t-jagro@microsoft.com>
+Jason Gross <jgross@mit.edu>               Jason Gross <jasongross9@gmail.com>
+Andrew Kennedy <akenn@microsoft.com>       andrewjkennedy <akenn@microsoft.com>
+Andrew Kennedy <akenn@microsoft.com>       andrewjkennedy <akenn@MSRC-3617024.europe.corp.microsoft.com>
