@@ -605,13 +605,13 @@ Definition while (ptest: program)
     - autorewrite with push_at. rewrite ->landL2; last reflexivity.
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
-      specapply (Hbody SKIP).
+      specapply *.
       - sdestruct. move/eqP => ->. by ssimpl.
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
 
     (* End of loop *)
-    specapply Hcoda.
+    specapply *.
     sdestructs => EQ. rewrite (eqP EQ). sbazooka.
     rewrite <-spec_reads_frame. apply: limplAdj.
     apply: landL2. apply: landL1. autorewrite with push_at.

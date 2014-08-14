@@ -36,7 +36,8 @@ Ltac locate_regIsReg regIsReg G :=
   match eval cbv beta iota zeta delta [stateIs VRegIs] in G with
     | regIsReg ?x     => constr:(x)
     | ?a ** _         => locate_regIsReg regIsReg a
-    |  _ ** ?b        => locate_regIsReg regIsReg b
+    | _  ** ?b        => locate_regIsReg regIsReg b
+    | _ /\\ ?b        => locate_regIsReg regIsReg b
     | ?G'             => fail 1 "No (unique)" regIsReg "found in" G'
   end.
 Ltac locate_code codeIs F :=
@@ -44,6 +45,7 @@ Ltac locate_code codeIs F :=
     | codeIs ?last ?code => constr:(code)
     | ?a ** _            => locate_code codeIs a
     | _  ** ?b           => locate_code codeIs b
+    | _ /\\ ?b           => locate_code codeIs b
     | ?G'                => fail 1 "No (unique) code at" codeIs "found in" G'
   end.
 
