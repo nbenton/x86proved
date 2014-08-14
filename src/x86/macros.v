@@ -370,7 +370,7 @@ Definition while (ptest: program)
 
   (** general while rule *)
   (** Make all dependent arguments implicit so we can pass them by name *)
-  Lemma while_rule_ind {quantT}
+  Lemma while_rule_pre_ind {quantT}
         {ptest} {cond : Condition} {value : bool} {pbody}
         {S}
         {transition_body : quantT -> quantT}
@@ -460,6 +460,63 @@ Definition while (ptest: program)
                | [ |- context[catOP empOP ?P] ] => rewrite -> (empOPL P)
                | _ => by finish_logic_with ltac:(autorewrite with push_at; eauto; sbazooka)
              end. }
+  Qed.
+
+  (** Now we talk about the while rule where the post condition is allowed to depend on what we're quantifying over, but only if it doesn't change when we transition. *)
+  Lemma while_rule_ind {quantT}
+        {ptest} {cond : Condition} {value : bool} {pbody}
+        {S}
+        {transition_body : quantT -> quantT}
+        {P : quantT -> SPred} {Otest : quantT -> OPred} {Obody : quantT -> OPred} {O : quantT -> PointedOPred}
+        {O_after_test : quantT -> PointedOPred}
+        {I_state : quantT -> bool -> SPred}
+        {I_logic : quantT -> bool -> Prop}
+        {Q : quantT -> SPred}
+        (Htest : S |-- (Forall (x : quantT),
+                        (loopy_basic (P x)
+                                     ptest
+                                     (Otest x)
+                                     (Exists b, I_logic x b /\\ I_state x b ** ConditionIs cond b))))
+        (Hbody : S |-- (Forall (x : quantT),
+                        (loopy_basic (I_logic x value /\\ I_state x value ** ConditionIs cond value)
+                                     pbody
+                                     (Obody x)
+                                     (P (transition_body x)))))
+        (H_after_test : forall x, catOP (Otest x) (O_after_test x) |-- O x)
+        (H_body_after_test : forall x, I_logic x value -> catOP (Obody x) (O (transition_body x)) |-- O_after_test x)
+        (H_empty : forall x, I_logic x (~~value) -> empOP |-- O_after_test x)
+        (Q_correct : forall x, I_logic x (~~value) /\\ I_state x (~~value) ** ConditionIs cond (~~value) |-- Q x)
+        (Q_safe : forall x, Q (transition_body x) |-- Q x)
+  : S |-- (Forall (x : quantT),
+           loopy_basic (P x)
+                       (while ptest cond value pbody)
+                       (O x)
+                       (Q x)).
+  Proof.
+    specintro => x0.
+    pose (existT (fun x => Q x |-- Q x0) x0 (reflexivity _)) as xH.
+    change x0 with (projT1 xH) at 1 2.
+    clearbody xH.
+    lrevert xH.
+    eapply @while_rule_pre_ind
+    with (P := fun xH => P (projT1 xH))
+           (Otest := fun xH => Otest (projT1 xH))
+           (Obody := fun xH => Obody (projT1 xH))
+           (O := fun xH => O (projT1 xH))
+           (O_after_test := fun xH => O_after_test (projT1 xH))
+           (I_state := fun xH => I_state (projT1 xH))
+           (I_logic := fun xH b => I_logic (projT1 xH) b /\ Q (projT1 xH) |-- Q x0)
+           (transition_body := fun xH => existT (fun x => Q x |-- Q x0) (transition_body (projT1 xH)) _);
+      simpl projT1; simpl projT2;
+      (try specintros; move => *; destruct_head_hnf sigT; destruct_head and);
+      eauto.
+    { basic apply Htest. }
+    { basic apply Hbody. }
+    { apply lexistsL => *; ssimpl; destruct_head_hnf sigT; destruct_head and.
+      etransitivity; try eassumption.
+      rewrite <- Q_correct; by ssimpl. }
+    Grab Existential Variables.
+    destruct xH; simpl; etransitivity; eauto.
   Qed.
 
   (** general while rule *)
