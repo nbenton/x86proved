@@ -750,6 +750,7 @@ Module Solving.
   Ltac post_ssimpl :=
     repeat match goal with
              | [ |- _ /\\ _ |-- _ ] => apply lpropandL => *
+             | [ H : ?T |- _ |-- ?T /\\ _ ] => apply lpropandR; first by exact H
            end.
 
   Ltac ssimpl_with doUnify := pre_ssimpl_with doUnify; post_ssimpl.
