@@ -6,6 +6,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.septac x86proved.spectac.
 Require Import x86proved.x86.reg x86proved.x86.flags (* for EIP *) x86proved.x86.instrrules.core (* for [VRegIs] *) x86proved.x86.program.
 Require Import x86proved.safe x86proved.opred x86proved.obs.
+Require Import x86proved.pointsto (* for [memIs] *).
 Require Import x86proved.common_tactics.
 
 
