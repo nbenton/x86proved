@@ -38,3 +38,7 @@ Definition IsPointed_sum_inl {A B} `{IsPointed A} : IsPointed (A + B) := inl (po
 Definition IsPointed_sum_inr {A B} `{IsPointed B} : IsPointed (A + B) := inr (point B).
 Definition IsPointed_or_introl {A B : Prop} `{IsPointed A} : IsPointed (A \/ B) := or_introl (point A).
 Definition IsPointed_or_intror {A B : Prop} `{IsPointed B} : IsPointed (A \/ B) := or_intror (point B).
+
+Instance IsPointed_if b {A B} `{IsPointed A, IsPointed B}
+: IsPointed (if b then A else B)
+  := if b as b return IsPointed (if b then A else B) then _ else _.

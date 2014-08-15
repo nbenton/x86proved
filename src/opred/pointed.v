@@ -109,3 +109,7 @@ Proof.
   generalize dependent init.
   induction ls; simpl in *; auto.
 Qed.
+
+Instance IsPointed_ifOP b A B `{IsPointed_OPred A, IsPointed_OPred B}
+: IsPointed_OPred (if b then A else B).
+Proof. by destruct b. Qed.
