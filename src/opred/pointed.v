@@ -113,3 +113,14 @@ Qed.
 Instance IsPointed_ifOP b A B `{IsPointed_OPred A, IsPointed_OPred B}
 : IsPointed_OPred (if b then A else B).
 Proof. by destruct b. Qed.
+
+Instance IsPointed_foldl_catOP C f (init : OPred) `{IsPointed_OPred init, forall x, IsPointed_OPred (f x)}
+         (ls : seq C)
+: IsPointed_OPred (foldl (fun x v => catOP x (f v)) init ls).
+Proof.
+  generalize dependent init.
+  induction ls; simpl in *; eauto.
+  intros.
+  apply IHls.
+  typeclasses eauto.
+Qed.
