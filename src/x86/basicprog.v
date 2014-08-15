@@ -152,8 +152,15 @@ Proof. done. Qed.
        can be fully solved, but will not error if there are remaining
        side conditions.
 
-    There are also [general *] variants of each tactic that take
-    tactic code for how to perform each step.
+    The preferred way of working is to do all of the necessary
+    rewriting before you run [basic apply *], and to never use
+    [attempt basic apply *] except when figuring out what rewriting is
+    left to do.  For convenience, the tactic
+    [basic_side_conditions] will run side-condition-solving
+    code of [basic apply *] on the current goal, allowing you to see
+    what would happen had you done the relevant rewriting earlier.  It
+    is possible, though disadvised, to leave this tactic in final
+    proof scripts.
 
     To debug a failure of these tactics, you should run each piece
     separately; figure out if it's preformatting that's failing (or
@@ -811,6 +818,12 @@ Ltac progress_side_conditions_basicapply :=
                         pre_instrrules_default_side_condition_spec
                         pre_instrrules_default_side_condition_spred
                         pre_instrrules_default_side_condition_non_seq_opred.
+
+(** This is a convenience tactic, for debugging and developing purposes. *)
+Ltac basic_side_conditions :=
+  try solve_simple_basicapply;
+  progress_side_conditions_basicapply.
+
 
 (** *** Putting it all together *)
 (** Finally, we have the tactics that combine the above pieces to
