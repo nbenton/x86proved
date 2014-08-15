@@ -27,3 +27,9 @@ Proof.
   setoid_rewrite -> sepSPC.
   apply: bilpropandR.
 Qed.
+
+Lemma lpropandtrue `{@ILogic Frm ILO} (P : Frm) : true /\\ P -|- P.
+Proof. split; by [ apply lexistsL | apply lexistsR ]. Qed.
+
+Lemma lpropandfalse `{@ILogic Frm ILO} (P : Frm) : false /\\ P -|- lfalse.
+Proof. split; by [ apply lexistsL | apply lfalseL ]. Qed.

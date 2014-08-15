@@ -462,7 +462,9 @@ Definition while (ptest: program)
              end. }
   Qed.
 
-  (** Now we talk about the while rule where the post condition is allowed to depend on what we're quantifying over, but only if it doesn't change when we transition. *)
+  (** Now we talk about the while rule where the post condition is
+      allowed to depend on what we're quantifying over, but only if it
+      doesn't change when we transition. *)
   Lemma while_rule_ind {quantT}
         {ptest} {cond : Condition} {value : bool} {pbody}
         {S}
@@ -470,7 +472,7 @@ Definition while (ptest: program)
         {P : quantT -> SPred} {Otest : quantT -> OPred} {Obody : quantT -> OPred} {O : quantT -> PointedOPred}
         {O_after_test : quantT -> PointedOPred}
         {I_state : quantT -> bool -> SPred}
-        {I_logic : quantT -> bool -> Prop}
+        {I_logic : quantT -> bool -> bool}
         {Q : quantT -> SPred}
         (Htest : S |-- (Forall (x : quantT),
                         (loopy_basic (P x)
@@ -486,7 +488,7 @@ Definition while (ptest: program)
         (H_body_after_test : forall x, I_logic x value -> catOP (Obody x) (O (transition_body x)) |-- O_after_test x)
         (H_empty : forall x, I_logic x (~~value) -> empOP |-- O_after_test x)
         (Q_correct : forall x, I_logic x (~~value) /\\ I_state x (~~value) ** ConditionIs cond (~~value) |-- Q x)
-        (Q_safe : forall x, Q (transition_body x) |-- Q x)
+        (Q_safe : forall x, I_logic x value -> Q (transition_body x) |-- Q x)
   : S |-- (Forall (x : quantT),
            loopy_basic (P x)
                        (while ptest cond value pbody)
@@ -506,20 +508,25 @@ Definition while (ptest: program)
            (O_after_test := fun xH => O_after_test (projT1 xH))
            (I_state := fun xH => I_state (projT1 xH))
            (I_logic := fun xH b => I_logic (projT1 xH) b /\ Q (projT1 xH) |-- Q x0)
-           (transition_body := fun xH => existT (fun x => Q x |-- Q x0) (transition_body (projT1 xH)) _);
+           (transition_body := fun xH => existT _ (if I_logic (projT1 xH) value then transition_body (projT1 xH) else projT1 xH) _);
       simpl projT1; simpl projT2;
       (try specintros; move => *; destruct_head_hnf sigT; destruct_head and);
       eauto.
     { basic apply Htest. }
-    { basic apply Hbody. }
+    { basic apply Hbody. by hyp_rewrite *. }
+    { by hyp_rewrite *; auto. }
     { apply lexistsL => *; ssimpl; destruct_head_hnf sigT; destruct_head and.
       etransitivity; try eassumption.
-      rewrite <- Q_correct; by ssimpl. }
+      by rewrite <- Q_correct; ssimpl. }
     Grab Existential Variables.
-    destruct xH; simpl; etransitivity; eauto.
+    { destruct xH; simpl; etransitivity; [ | eassumption ].
+      case E:(I_logic _ _); auto. }
   Qed.
 
+
   (** general while rule *)
+  (** grumble, grumble, if we don't do this, rewriting doesn't pick things up right *)
+  Local Opaque roll_starOP.
   Lemma while_rule
         ptest (cond : Condition) (value : bool) pbody
         (PP : nat -> SPred -> Prop) (Obody : nat -> OPred) (IP : nat -> (bool -> SPred) -> Prop) Q S
@@ -548,17 +555,16 @@ Definition while (ptest: program)
     clearbody x.
     clear P0 H0 start.
     lrevert x.
-    Local Opaque roll_starOP.
     eapply @while_rule_ind
     with (Otest := fun _ => empOP)
            (Obody := fun nPH => Obody (fst (projT1 nPH)))
-           (I_logic := fun _ _ => True)
+           (I_logic := fun _ _ => true)
            (I_state := fun nPH => transition_test (snd (projT1 nPH)) (fst (projT1 nPH)) _)
            (transition_body := fun nPH => existT _ (_, transition_body _ _ _) _);
       repeat match goal with
                | _ => progress intros
                | _ => progress (simpl projT1; simpl projT2; simpl fst; simpl snd; simpl OPred_pred)
-               | [ |- context[lpropand True _] ] => setoid_rewrite -> lpropandTrue
+               | [ |- context[lpropand (is_true true) _] ] => setoid_rewrite -> lpropandtrue
                | [ |- _ |-- lforall _ ] => apply lforallR => ?
                | [ |- lexists _ |-- _ ] => apply lexistsL => ?
                | [ |- context[catOP _ (lexists _)] ] => rewrite -> catOP_lexists2
