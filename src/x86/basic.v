@@ -133,6 +133,21 @@ Section Basic.
     S |-- parameterized_basic (lexists P) c O Q.
   Proof. rewrite /parameterized_basic => H. specintros => *. eforalls H. simple apply H. Qed.
 
+  Lemma basic_post_exists A S P c O Q:
+    (S |-- Exists a : A, parameterized_basic P c O (Q a)) ->
+    S |-- parameterized_basic P c O (lexists Q).
+  Proof.
+    rewrite /parameterized_basic => H. rewrite -> H; clear H.
+    repeat match goal with
+             | [ |- lexists _ |-- _ ] => apply lexistsL => ?
+             | _ => progress specintros => *
+             | [ |- lforall _ |-- _ ] => eapply lforallL
+             | [ |- _ ?a |-- _ ?b ] => unify a b; cancel2
+             | [ |- ?f _ |-- ?g _ ] => unify f g; cancel1
+             | [ |- _ |-- lexists _ ] => eapply lexistsR
+           end.
+  Qed.
+
   Global Instance AtEx_basic P c O Q : AtEx (parameterized_basic P c O Q).
   Proof. rewrite /parameterized_basic. apply AtEx_forall => i.
          apply AtEx_forall => j. apply AtEx_forall => O'. apply _. Qed.
