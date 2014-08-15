@@ -524,16 +524,16 @@ Definition WORDregIs (r:WORDReg) (v:WORD) : SPred :=
 
 Inductive RegOrFlag :=
 | RegOrFlagDWORD :> AnyReg -> RegOrFlag
-| RegOrFlagWORD :> WORDReg -> RegOrFlag 
-| RegOrFlagBYTE :> BYTEReg -> RegOrFlag 
+| RegOrFlagWORD :> WORDReg -> RegOrFlag
+| RegOrFlagBYTE :> BYTEReg -> RegOrFlag
 | RegOrFlagF :> Flag -> RegOrFlag.
 
 Definition RegOrFlag_target rf :=
-match rf with 
-| RegOrFlagDWORD _ => DWORD 
+match rf with
+| RegOrFlagDWORD _ => DWORD
 | RegOrFlagWORD _  => WORD
 | RegOrFlagBYTE _  => BYTE
-| RegOrFlagF _     => FlagVal 
+| RegOrFlagF _     => FlagVal
 end.
 
 Definition stateIs (x: RegOrFlag) : RegOrFlag_target x -> SPred :=
@@ -548,7 +548,7 @@ Implicit Arguments stateIs [].
 
 Definition stateIsAny x := lexists (stateIs x).
 
-Notation "x '~=' v" := (stateIs x v) (at level 55, no associativity, format "x '~=' v") : spred_scope.
+Notation "x '~=' v" := (stateIs x v) (at level 70, no associativity, format "x '~=' v") : spred_scope.
 Notation "x '?'" := (stateIsAny x) (at level 2, format "x '?'"): spred_scope.
 
 Hint Unfold VWORD RegOrFlag_target : spred.
@@ -716,7 +716,7 @@ by destruct H1.
 Qed.
 
 Lemma BYTEregIs_same (r:BYTEReg) (v1 v2:BYTE) : r ~= v1 ** r ~= v2 |-- lfalse.
-Proof. rewrite /BYTEregIs. apply regPieceIs_same. Qed. 
+Proof. rewrite /BYTEregIs. apply regPieceIs_same. Qed.
 
 Lemma sepRev4 P Q R S : P ** Q ** R ** S -|- S ** R ** Q ** P.
 Proof. rewrite (sepSPC P). rewrite (sepSPC Q). rewrite (sepSPC R).
