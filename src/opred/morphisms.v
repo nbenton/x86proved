@@ -2,8 +2,8 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
 Require Import x86proved.bitsrep x86proved.x86.ioaction.
 Require Import x86proved.opred.core.
-Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses.
-Require Import common_tactics.
+Require Import x86proved.common_tactics x86proved.list_relations.
+Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Generalizable All Variables.
 Set Implicit Arguments.
@@ -26,3 +26,11 @@ Proof. t. Qed.
 
 Add Parametric Morphism : catOP with signature lequiv ==> lequiv ==> lequiv as catOP_equiv_m.
 Proof. t. Qed.
+
+Lemma foldr_catOP_map_respects_lentails {T} o0 f g (ls : seq T)
+      (H : forall x, f x |-- g x)
+: foldr catOP o0 (map f ls) |-- foldr catOP o0 (map g ls).
+Proof.
+  change ((pointwise_relation T (@lentails OPred _))%signature f g) in H.
+  by rewrite -> H.
+Qed.

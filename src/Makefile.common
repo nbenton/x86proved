@@ -51,6 +51,7 @@ opred/morphisms.vo \
 opred/laws.vo \
 septac.vo \
 chargetac.vo \
+list_relations.vo \
 charge_lemmas.vo \
 spec.vo \
 safe.vo \

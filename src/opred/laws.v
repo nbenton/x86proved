@@ -195,3 +195,84 @@ Proof.
   rewrite -> roll_starOP__starOP.
   exact starOP_empOP.
 Qed.
+
+Local Ltac t_catOP_fold :=
+    repeat match goal with
+           | _ => reflexivity
+           | _ => progress rewrite ?empOPL ?empOPR ?catOPA
+           | _ => (test intros) => ?
+           | _ => progress simpl in *
+           | [ IH : _ |- context[?a] ] => not constr_eq a empOP; rewrite -> (IH a)
+         end.
+
+Lemma foldl_catOP_pull xs
+: forall x, foldl catOP x xs -|- catOP x (foldl catOP empOP xs).
+Proof. induction xs; t_catOP_fold. Qed.
+Lemma foldr_catOP_pull xs
+: forall x, foldr catOP x xs -|- catOP (foldr catOP empOP xs) x.
+Proof. induction xs; t_catOP_fold. Qed.
+
+Lemma foldl_flip_catOP_pull xs
+: forall x, foldl (Basics.flip catOP) x xs -|- catOP (foldl (Basics.flip catOP) empOP xs) x.
+Proof. induction xs; t_catOP_fold. Qed.
+Lemma foldr_flip_catOP_pull xs
+: forall x, foldr (Basics.flip catOP) x xs -|- catOP x (foldr (Basics.flip catOP) empOP xs).
+Proof. rewrite /Basics.flip; induction xs; t_catOP_fold. Qed.
+
+Lemma foldl_fun_catOP_pull {T} (xs : seq T) f
+: forall x, foldl (fun x (y : T) => catOP x (f y)) x xs -|- catOP x (foldl (fun x (y : T) => catOP x (f y)) empOP xs).
+Proof. induction xs; t_catOP_fold. Qed.
+Lemma foldr_fun_catOP_pull {T} (xs : seq T) f
+: forall x, foldr (fun (x : T) y => catOP y (f x)) x xs -|- catOP x (foldr (fun (x : T) y => catOP y (f x)) empOP xs).
+Proof. induction xs; t_catOP_fold. Qed.
+
+Lemma foldl_fun_flip_catOP_pull {T} (xs : seq T) f
+: forall x, foldl (fun x (y : T) => catOP (f y) x) x xs -|- catOP (foldl (fun x (y : T) => catOP (f y) x) empOP xs) x.
+Proof. induction xs; t_catOP_fold. Qed.
+Lemma foldr_fun_flip_catOP_pull {T} (xs : seq T) f
+: forall x, foldr (fun (x : T) y => catOP (f x) y) x xs -|- catOP (foldr (fun (x : T) y => catOP (f x) y) empOP xs) x.
+Proof. induction xs; t_catOP_fold. Qed.
+
+(** This tactic pulls the initial value of a [foldl] or [foldr] out *)
+Ltac fold_catOP_pull' :=
+  idtac;
+  match goal with
+    | [ |- context[catOP empOP ?a] ] => rewrite -> (empOPL a)
+    | [ |- context[catOP ?a empOP] ] => rewrite -> (empOPR a)
+    | [ |- context[foldl catOP ?a ?xs] ] => not constr_eq a empOP; rewrite -> (foldl_catOP_pull xs a)
+    | [ |- context[foldr catOP ?a ?xs] ] => not constr_eq a empOP; rewrite -> (foldr_catOP_pull xs a)
+    | [ |- context[foldl (Basics.flip catOP) ?a ?xs] ] => not constr_eq a empOP; rewrite -> (foldl_flip_catOP_pull xs a)
+    | [ |- context[foldr (Basics.flip catOP) ?a ?xs] ] => not constr_eq a empOP; rewrite -> (foldr_flip_catOP_pull xs a)
+    | [ |- context[foldl (fun x y => catOP x (@?f y)) ?a ?xs] ] => not constr_eq a empOP; rewrite -> (foldl_fun_catOP_pull xs f a)
+    | [ |- context[foldr (fun x y => catOP y (@?f x)) ?a ?xs] ] => not constr_eq a empOP; rewrite -> (foldr_fun_catOP_pull xs f a)
+    | [ |- context[foldl (fun x y => catOP (@?f y) x) ?a ?xs] ] => not constr_eq a empOP; rewrite -> (foldl_fun_flip_catOP_pull xs f a)
+    | [ |- context[foldr (fun x y => catOP (@?f x) y) ?a ?xs] ] => not constr_eq a empOP; rewrite -> (foldr_fun_flip_catOP_pull xs f a)
+  end.
+
+Ltac fold_catOP_pull := do !fold_catOP_pull'.
+
+Local Ltac foldl_catOP_foldr_t :=
+  let ls := match goal with ls : seq _ |- _ => constr:(ls) end in
+  (induction ls => //=; []);
+    repeat match goal with
+             | [ IHls : context[ls] |- _ ] => rewrite <- IHls; clear IHls
+             | _ => progress fold_catOP_pull
+             | _ => done
+             | _ => rewrite /Basics.flip
+           end.
+
+Lemma foldl_catOP_foldr ls
+: foldl catOP empOP ls -|- foldr catOP empOP ls.
+Proof. foldl_catOP_foldr_t. Qed.
+
+Lemma foldl_flip_catOP_foldr ls
+: foldl (Basics.flip catOP) empOP ls -|- foldr (Basics.flip catOP) empOP ls.
+Proof. foldl_catOP_foldr_t. Qed.
+
+Lemma foldl_fun_catOP_foldr {T} (ls : seq T) f
+: foldl (fun x (y : T) => catOP x (f y)) empOP ls -|- foldr (fun (x : T) y => catOP (f x) y) empOP ls.
+Proof. foldl_catOP_foldr_t. Qed.
+
+Lemma foldl_fun_flip_catOP_foldr {T} (ls : seq T) f
+: foldl (fun x (y : T) => catOP (f y) x) empOP ls -|- foldr (fun (x : T) y => catOP y (f x)) empOP ls.
+Proof. foldl_catOP_foldr_t. Qed.

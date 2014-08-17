@@ -8,8 +8,8 @@ Require Import Coq.Classes.RelationClasses.
 Generalizable All Variables.
 Set Implicit Arguments.
 
-Notation IsPointed_OPred P := (IsPointed (exists x : Actions, (P : OPred) x)).
-Notation point_OPred P := (@point _ (_ : IsPointed_OPred P)).
+Notation IsPointed_OPred P := (IsPointed (exists x : Actions, ILFunFrm_pred P x)).
+Notation point_OPred P := (@point (exists x : Actions, ILFunFrm_pred P x) _).
 
 (* We require predicates on observations to be non-empty i.e. for there to be
    some sequence of actions for which it holds *)
@@ -42,6 +42,7 @@ Proof.
   eexists (_ ++ _), _, _.
   do !esplit; eassumption.
 Qed.
+Instance IsPointed_flip_catOP `{IsPointed_OPred P, IsPointed_OPred Q} : IsPointed_OPred (Basics.flip catOP P Q) := IsPointed_catOP.
 Instance IsPointed_repOP0 P : IsPointed_OPred (repOP 0 P) | 0 := _.
 Instance IsPointed_rollOP0 f : IsPointed_OPred (rollOP 0 f) | 0 := _.
 Instance IsPointed_partial_rollOP0 f start : IsPointed_OPred (partial_rollOP f start 0) | 0 := _.
@@ -101,6 +102,24 @@ Proof.
   induction ls; simpl in *; auto.
 Qed.
 
+Instance IsPointed_ifOP b A B `{IsPointed_OPred A, IsPointed_OPred B}
+: IsPointed_OPred (if b then A else B).
+Proof. by destruct b. Qed.
+
+Instance IsPointedOP_foldr {T} (ls : seq T) f o0 `{IsPointed_OPred o0, forall x y, IsPointed_OPred y -> IsPointed_OPred (f x y)}
+: IsPointed_OPred (foldr f o0 ls).
+Proof.
+  generalize dependent o0.
+  induction ls; simpl in *; typeclasses eauto.
+Qed.
+
+Instance IsPointedOP_foldl {T} (ls : seq T) f o0 `{IsPointed_OPred o0, forall x y, IsPointed_OPred x -> IsPointed_OPred (f x y)}
+: IsPointed_OPred (foldl f o0 ls).
+Proof.
+  generalize dependent o0.
+  induction ls; simpl in *; typeclasses eauto.
+Qed.
+
 Instance IsPointed_foldlOP A B C f g (init : A * B) `{IsPointed_OPred (g init)}
          `{forall a acc, IsPointed_OPred (g acc) -> IsPointed_OPred (g (f acc a))}
          (ls : seq C)
@@ -110,17 +129,61 @@ Proof.
   induction ls; simpl in *; auto.
 Qed.
 
-Instance IsPointed_ifOP b A B `{IsPointed_OPred A, IsPointed_OPred B}
-: IsPointed_OPred (if b then A else B).
-Proof. by destruct b. Qed.
+Fixpoint all_IsPointed_OPred (ls : seq OPred) :=
+  if ls is x::xs return Type
+  then (IsPointed_OPred x * all_IsPointed_OPred xs)%type
+  else unit.
+Existing Class all_IsPointed_OPred.
 
-Instance IsPointed_foldl_catOP C f (init : OPred) `{IsPointed_OPred init, forall x, IsPointed_OPred (f x)}
-         (ls : seq C)
-: IsPointed_OPred (foldl (fun x v => catOP x (f v)) init ls).
-Proof.
-  generalize dependent init.
-  induction ls; simpl in *; eauto.
-  intros.
-  apply IHls.
-  typeclasses eauto.
-Qed.
+Instance map_all_IsPointed_OPred {T} (ls : seq T) (f : T -> OPred)
+         `{forall x, IsPointed_OPred (f x)}
+: all_IsPointed_OPred (map f ls).
+Proof. induction ls => //=. Qed.
+
+Instance map_map_all_IsPointed_OPred {A B} (ls : seq A) (f : B -> OPred) (g : A -> B)
+         `{all_IsPointed_OPred (map (f \o g) ls)}
+: all_IsPointed_OPred (map f (map g ls)).
+Proof. by rewrite -map_comp. Qed.
+
+Hint Extern 1 => match goal with
+                   | [ H : all_IsPointed_OPred _ |- _ ] => destruct H
+                 end : typeclass_instances.
+
+Local Opaque catOP IsPointed.
+
+Local Obligation Tactic :=
+  intros;
+  try match goal with
+        | [ |- @ex Actions ?P ] => change (IsPointed (ex P))
+      end;
+  repeat match goal with
+           | [ O : OPred |- _ ] => generalize dependent O
+         end;
+  try typeclasses eauto;
+  try (let ls := match goal with ls : seq _ |- _ => constr:(ls) end in
+       induction ls => //=);
+  try typeclasses eauto.
+
+Program Instance IsPointed_foldl_map_catOP {T} (ls : seq T) f (o0 : OPred) `{IsPointed_OPred o0, all_IsPointed_OPred (map f ls)}
+: IsPointed_OPred (foldl catOP o0 (map f ls)).
+Program Instance IsPointed_foldr_map_catOP {T} (ls : seq T) f (o0 : OPred) `{IsPointed_OPred o0, all_IsPointed_OPred (map f ls)}
+: IsPointed_OPred (foldr catOP o0 (map f ls)).
+
+Program Instance IsPointed_foldl_map_flip_catOP {T} (ls : seq T) f (o0 : OPred) `{IsPointed_OPred o0, all_IsPointed_OPred (map f ls)}
+: IsPointed_OPred (foldl (Basics.flip catOP) o0 (map f ls)).
+Program Instance IsPointed_foldr_map_flip_catOP {T} (ls : seq T) f (o0 : OPred) `{IsPointed_OPred o0, all_IsPointed_OPred (map f ls)}
+: IsPointed_OPred (foldr (Basics.flip catOP) o0 (map f ls)).
+
+Program Instance IsPointed_foldr_map_fun_catOP {T} (ls : seq T) f g (o0 : OPred)
+        `{IsPointed_OPred o0, forall x y, IsPointed_OPred y -> IsPointed_OPred (g x y), all_IsPointed_OPred (map f ls)}
+: IsPointed_OPred (foldr (fun (x : T) y => catOP (f x) (g x y)) o0 ls).
+Program Instance IsPointed_foldl_map_fun_catOP {T} (ls : seq T) f g (o0 : OPred)
+        `{IsPointed_OPred o0, forall x y, IsPointed_OPred y -> IsPointed_OPred (g x y), all_IsPointed_OPred (map f ls)}
+: IsPointed_OPred (foldl (fun x (y : T) => catOP (g y x) (f y)) o0 ls).
+
+Program Instance IsPointed_foldr_map_fun_flip_catOP {T} (ls : seq T) f g (o0 : OPred)
+        `{IsPointed_OPred o0, forall x y, IsPointed_OPred y -> IsPointed_OPred (g x y), all_IsPointed_OPred (map f ls)}
+: IsPointed_OPred (foldr (fun (x : T) y => catOP (g x y) (f x)) o0 ls).
+Program Instance IsPointed_foldl_map_fun_flip_catOP {T} (ls : seq T) f g (o0 : OPred)
+        `{IsPointed_OPred o0, forall x y, IsPointed_OPred y -> IsPointed_OPred (g x y), all_IsPointed_OPred (map f ls)}
+: IsPointed_OPred (foldl (fun x (y : T) => catOP (f y) (g y x)) o0 ls).
