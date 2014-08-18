@@ -2,13 +2,16 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
 Require Import x86proved.bitsrep x86proved.x86.ioaction.
 Require Import x86proved.opred.core.
-Require Import x86proved.common_tactics x86proved.list_relations.
+Require Import x86proved.common_tactics.
+(** We want access to the relations about lists in any file that might fold [catOP] *)
+Require Export x86proved.list_relations.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Generalizable All Variables.
 Set Implicit Arguments.
 
 Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists.
+Local Transparent catOP eq_opred.
 
 Local Ltac t :=
   do ![ move => ?

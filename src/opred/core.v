@@ -62,3 +62,5 @@ Fixpoint partial_rollOP (f : nat -> OPred) (start : nat) (count : nat)  : OPred 
 
 (** ** Rolling a function any number of places from a given starting location *)
 Definition roll_starOP (f : nat -> OPred) (start : nat) : OPred := Exists n, partial_rollOP f start n.
+
+Global Opaque catOP inOP outOP eq_opred empOP repOP starOP rollOP partial_rollOP roll_starOP.

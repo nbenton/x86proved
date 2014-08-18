@@ -11,6 +11,7 @@ Generalizable All Variables.
 Set Implicit Arguments.
 
 Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists.
+Local Transparent catOP empOP eq_opred starOP repOP roll_starOP partial_rollOP.
 
 Create HintDb opred_laws_t discriminated.
 
