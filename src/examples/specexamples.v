@@ -46,7 +46,7 @@ Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
   do !basic apply *.
-  rewrite /OSZCP addIsIterInc/iter/stateIs/VRegIs; sbazooka.
+  by rewrite addIsIterInc/iter.
 Qed.
 
 Example incdec_while c a:
@@ -62,27 +62,20 @@ Example incdec_while c a:
     @ OSZCP?.
 Proof.
   autorewrite with push_at.
-  set (I := fun b => Exists c', Exists a',
+  instrrule remember (while_rule_ro (I := fun b => Exists c', Exists a',
     (c' == #0) = b /\\ addB c' a' = addB c a /\\
     ECX ~= c' ** EAX ~= a' **
-    OF? ** SF? ** CF? ** PF?).
-  eapply basic_basic_context; first apply (while_rule_ro (I:=I));
-      first 2 last.
-  - reflexivity.
-  - subst I. rewrite /stateIsAny/ConditionIs. sbazooka.
-  - reflexivity.
-  - subst I; cbv beta. sdestructs => c' a' Hzero Hadd.
-    rewrite ->(eqP Hzero) in *. rewrite add0B in Hadd.
-    subst a'. rewrite /ConditionIs/stateIsAny. by sbazooka.
-  - subst I; cbv beta; specintros => *; subst. rewrite /ConditionIs. basic apply *.
-  - subst I; cbv beta; rewrite /ConditionIs/stateIsAny; specintros => *; subst.
-    basic apply *.
-    basic apply *.
-    rewrite /OSZCP/ConditionIs/stateIs/VRegIs.
-    sbazooka.
-    by rewrite addB_decB_incB.
+    OF? ** SF? ** CF? ** PF?)).
+  do ![ rewrite /stateIsAny; specintros => * | basic apply * ].
+  { repeat match goal with
+             | [ H : (_ == _) = true |- _ ] => move/eqP in H
+             | _ => progress subst
+             | _ => progress simpl in *
+             | _ => progress ssimpl
+             | [ H : context[addB #0 _] |- _ ] => rewrite add0B in H
+           end. }
+  { by rewrite addB_decB_incB. }
 Qed.
-
 
 Local Ltac t_after_specapply := ssimpl; try reflexivity; rewrite /ConditionIs/OSZCP/VRegIs/stateIsAny/stateIs; cbv beta; ssimpl; try reflexivity; sbazooka.
 
@@ -143,8 +136,8 @@ Proof.
     specialize (small_is_good _ (is_small _ Hn)).
     specialize (H _ (is_small _ Hn)).
     (** Get the instance so that [specapply *] picks it up *)
-    pose proof (H : instrrule pbody).
-    do ?[ progress rewrite ?subB0 ?eq_refl ?small_is_good ?catOPA ?decB_fromSuccNat /rollOP-/rollOP/ConditionIs
+    instrrule remember H.
+    do ![ progress rewrite ?subB0 ?eq_refl ?small_is_good ?rollOP_defS ?catOPA ?decB_fromSuccNat /ConditionIs
         | rewrite /OSZCP/stateIsAny; specintros => *
         | progress change (false == true) with false; cbv iota
         | solve [ check_eip_hyp_and_do IHn ]

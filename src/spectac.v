@@ -104,17 +104,43 @@ Proof. apply. Qed.
 
 (* This tactic attempts to instantiate universals in a hypothesis with evars. *)
 (* We must explicitly create evars to force Coq to not do typeclass resolution >:-( *)
+Ltac eforalls_helper H do_on_evar :=
+  try (let e := fresh "e" in
+       match type_of H with
+         | _ |-- Forall pf : ?T, ?A => (cut T; [ intro e; eapply (@lforallE_spec _ _ _ e) in H;
+                                                     cbv beta in H; clear e
+                                                   | ])
+         | _ |-- (Forall pf: ?T, ?A) @ _ => (cut T; [ intro e; eapply (@lforallE_at_spec _ _ _ _ e) in H;
+                                                          cbv beta in H; clear e
+                                                        | ])
+         | _ |-- (Forall pf: ?T, ?A) <@ _ => (cut T; [ intro e; eapply (@lforallE_reads_spec _ _ _ _ e) in H;
+                                                           cbv beta in H; clear e
+                                                         | ])
+         | _ |-- Forall _: ?T, _ => (evar (e : T); eapply (@lforallE_spec _ _ _ e) in H; do_on_evar e; cbv beta in H)
+         | _ |-- (Forall _: ?T, _) @ _ => (evar (e : T); eapply (@lforallE_at_spec _ _ _ _ e) in H; do_on_evar e; cbv beta in H)
+         | _ |-- (Forall _: ?T, _) <@ _ => (evar (e : T); eapply (@lforallE_reads_spec _ _ _ _ e) in H; do_on_evar e; cbv beta in H)
+       end;
+       [ eforalls_helper H do_on_evar | .. ]).
 Ltac eforalls H :=
-  let e := fresh in
   try match type_of H with
-  | forall _:_, _ => eapply spec_evars in H
-  end; [
-    repeat match type_of H with
-    | _ |-- Forall _: ?T, _ => evar (e : T); eapply (@lforallE_spec _ _ _ e) in H; subst e; cbv beta in H
-    | _ |-- (Forall _: ?T, _) @ _ => evar (e : T); eapply (@lforallE_at_spec _ _ _ _ e) in H; subst e; cbv beta in H
-    | _ |-- (Forall _: ?T, _) <@ _ => evar (e : T); eapply (@lforallE_reads_spec _ _ _ _ e) in H; subst e; cbv beta in H
-    end
-  | .. ].
+        | forall _:_, _ => eapply spec_evars in H
+      end;
+  [ eforalls_helper H ltac:(fun e => subst e) | .. ].
+(** We make a variant that allows us to not [subst] evars if we don't
+    want to.  This is primarily for speed. *)
+Ltac pre_eforalls_do_on_evar H do_on_evar :=
+  try (let e := fresh "e" in
+       match type_of H with
+         | ?A -> ?B => (cut A; [ intro e; specialize (H e); cbv beta in H; clear e
+                               | ])
+         | forall _:?A, _ => (evar (e : A); specialize (H e); do_on_evar e; cbv beta in H)
+       end;
+       [ pre_eforalls_do_on_evar H do_on_evar | .. ]).
+Ltac eforalls_do_on_evar H do_on_evar :=
+  pre_eforalls_do_on_evar H do_on_evar;
+  eforalls_helper H do_on_evar.
+Ltac eforalls_no_subst_evars H :=
+  eforalls_do_on_evar H ltac:(fun e => idtac).
 
 (* This tactic works on the conjunctive premise of safe_safe_ro.
    To get the evars instantiated in the correct order when we later run the

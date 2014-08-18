@@ -609,13 +609,12 @@ End BasicProgInternalsApplication.
 
     WARNING: These tactics may leave side conditions. *)
 Ltac pose_instrrule_as R H :=
-  (move: (R) => H);
+  (have H := R);
   set_evars_in H;
   do ?[ progress autounfold with instrrules_all in H
       | progress autorewrite with instrrules_hyp_all in H
       | progress cbv beta iota zeta in H ];
-  eforalls H;
-  set_evars_in H;
+  eforalls_no_subst_evars H;
   do ?[ progress autounfold with instrrules_all in H
       | progress autorewrite with instrrules_hyp_all in H
       | progress cbv beta iota zeta in H ];

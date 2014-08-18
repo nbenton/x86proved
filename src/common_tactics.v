@@ -408,23 +408,28 @@ Ltac split_safe_goals := repeat split_safe_goals'.
 (** Run [set (fresh_name := e)] for any evar [e] in the goal; useful
     for tactics that deal poorly with evars. *)
 Ltac set_evars :=
-  repeat match goal with
-           | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)
-         end.
+  repeat (goal_has_evar;
+          match goal with
+            | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)
+          end).
 
 (** Run [set (fresh_name := e)] for any evar [e] in the hypothesis [H], or
     in it's type. *)
 Ltac set_evars_in H :=
-  repeat first [ match eval unfold H in H with
-                   | appcontext[?E] => is_evar E; let e := fresh "e" in
-                                                  first [ set (e := E) in H
-                                                        | revert H; set (e := E); intro H ]
-                 end
-               | match type_of H with
-                   | appcontext[?E] => is_evar E; let e := fresh "e" in
-                                                  first [ set (e := E) in H
-                                                        | revert H; set (e := E); intro H ]
-                 end ].
+  repeat first [ let H' := (eval unfold H in H) in
+                 has_evar H';
+                   match H' with
+                     | appcontext[?E] => is_evar E; let e := fresh "e" in
+                                                    first [ set (e := E) in H
+                                                          | revert H; set (e := E); intro H ]
+                   end
+               | let T := type_of H in
+                 has_evar T;
+                   match T with
+                     | appcontext[?E] => is_evar E; let e := fresh "e" in
+                                                    first [ set (e := E) in H
+                                                          | revert H; set (e := E); intro H ]
+                   end ].
 
 (** Run [subst] on any evar that is in the hypotheses.  Roughly the inverse of [set_evars] *)
 Ltac subst_evars :=

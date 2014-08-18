@@ -11,7 +11,7 @@ Generalizable All Variables.
 Set Implicit Arguments.
 
 Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists.
-Local Transparent catOP empOP eq_opred starOP repOP roll_starOP partial_rollOP.
+Local Transparent catOP empOP eq_opred starOP repOP roll_starOP partial_rollOP rollOP.
 
 Create HintDb opred_laws_t discriminated.
 
@@ -105,6 +105,18 @@ Proof.
     | [ x : nat |- _ ] => induction x; by t
   end.
 Qed.
+
+Lemma rollOP_def n f : rollOP n f = match n with
+                                      | 0 => empOP
+                                      | S n' => catOP (f (S n')) (rollOP n' f)
+                                    end.
+Proof. by destruct n. Qed.
+
+Lemma rollOP_def0 f : rollOP 0 f = empOP.
+Proof. reflexivity. Qed.
+
+Lemma rollOP_defS n f : rollOP (S n) f = catOP (f (S n)) (rollOP n f).
+Proof. reflexivity. Qed.
 
 Lemma catOP_landL P Q R : catOP (P//\\Q) R |-- (catOP P R) //\\ (catOP Q R).
 Proof. t. Qed.

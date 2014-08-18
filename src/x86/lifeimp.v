@@ -87,35 +87,24 @@ Proof.
   (* CMP r, 0 *)
   basic apply *.
 
-  apply: basic_roc_pre;
-  last apply (if_rule_const_io
+  basic apply (if_rule_const_io
     (P:= fun b =>
     (m == 0) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?));
-  do ?basic apply *.
+    (rewrite /stateIsAny; try specintros => *; idtac);
+    do ?basic apply *.
 
-  rewrite /ConditionIs/stateIsAny/OSZCP. sbazooka.
-  rewrite subB0.
+  { rewrite subB0.
+    apply fromNatBounded_eq => //.
+      by apply (ltn_trans LT2). }
 
-  apply fromNatBounded_eq => //.
-  by apply (ltn_trans LT2).
+  { destruct m, n => //.
+    rewrite decB_fromSuccNat.
+    rewrite succnK addSnnS modnDr.
+    rewrite modn_small => //.
+    apply (leq_ltn_trans (leq_pred _) LT2). }
 
-  by rewrite /VRegIs/stateIs.
-
-  specintros => /eqP->.
-  rewrite /stateIsAny/ConditionIs; specintros => *.
-  basic apply *.
-  rewrite add0n modn_small.
-  reflexivity.
-  destruct n => //.
-
-  simpl (~~ _).
-  rewrite /stateIsAny/ConditionIs; specintros => *.
-  basic apply *.
-  destruct m => //.
-  rewrite decB_fromSuccNat.
-  destruct n => //. rewrite succnK. rewrite addSnnS. rewrite modnDr.
-  rewrite modn_small => //.
-  apply (leq_ltn_trans (leq_pred _) LT2).
+  { destruct m, n => //.
+    rewrite add0n modn_small => //. }
 Qed.
 
 Definition incModN_correct (r:Reg) n m : n < 2^32 -> m < n ->
@@ -129,33 +118,31 @@ move => LT1 LT2.
   (* CMP r, 0 *)
   basic apply *.
 
-  apply: basic_roc_pre;
-  last apply (if_rule_const_io
+  basic apply (if_rule_const_io
     (P:= fun b =>
     (m == n.-1) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?));
-  (rewrite /stateIsAny/ConditionIs/OSZCP/VRegIs/stateIs; try specintros => *; idtac);
-  do ?basic apply *;
-  try match goal with
-        | [ H : (_ == _) = true |- _ ] => move/eqP in H; progress subst
-        | [ H : (_ == _.-1) = ~~true |- _ ] => rewrite -eqSS prednK in H
-      end.
+    (rewrite /stateIsAny; try specintros => *; idtac);
+    do ?basic apply *;
+    try match goal with
+          | [ H : (_ == _) = true |- _ ] => move/eqP in H; progress subst
+          | [ H : (_ == _.-1) = ~~true |- _ ] => rewrite -eqSS prednK in H
+        end.
 
 
-  sbazooka.
-  have B2: m < 2^32.
-  by apply (ltn_trans LT2).
+  { have B2: m < 2^32.
+    { by apply (ltn_trans LT2). }
 
-  { rewrite subB_eq add0B.
+    rewrite subB_eq add0B.
     apply fromNatBounded_eq; try eassumption; by apply (leq_ltn_trans (leq_pred _)). }
-
-  { destruct n => //.
-      by rewrite modnn. }
 
   { rewrite incB_fromNat. rewrite modn_small => //.
     rewrite ltn_neqAle. rewrite LT2 andbT.
     by hyp_rewrite *. }
 
   { by destruct n. }
+
+  { destruct n => //.
+      by rewrite modnn. }
 Qed.
 
 (* Move ECX one column left, wrapping around if necessary *)

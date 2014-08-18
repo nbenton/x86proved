@@ -367,7 +367,7 @@ Hint Unfold OSZCP : finish_logic_unfolder.
 (** We never want to see these when solving a goal, but they're
     convenient for statements *)
 Hint Unfold makeBOP makeUOP makeMOV : instrrules_all.
-Hint Unfold OSZCP scaleBy VRegIs : instrrules_side_conditions_spred.
+Hint Unfold OSZCP scaleBy VRegIs BYTE DWORD WORD VWORD RegOrFlag_target : instrrules_side_conditions_spred.
 
 (** These hints are global *)
 (** TODO(t-jagro): Find a better place for this, or, better, generalize [InstrArg] *)
@@ -377,6 +377,8 @@ match s as s return VReg s -> InstrArg with
 | OpSize2 => WORDRegArg
 | OpSize4 => RegArg
 end.
+
+Hint Unfold InstrArg_of_VReg : instrrules_all.
 
 (*---------------------------------------------------------------------------
     Helpers for pieces of evaluation (adapted from spechelpers and
@@ -586,6 +588,8 @@ Definition ConditionIs cc cv : SPred :=
   | CC_LE => Exists sf f zf, cv = (xorb sf f) || zf /\\ SF ~= sf ** OF ~= f ** ZF ~= zf
   end.
 
+Hint Unfold ConditionIs : instrrules_side_conditions_spred.
+
 Local Ltac triple_op_helper :=
   idtac;
   match goal with
@@ -622,7 +626,6 @@ Proof.
                                 end).
 Qed.
 Global Opaque evalCondition.
-Global Opaque ConditionIs.
 
 Lemma evalArithUnaryOpNoCarry_rule o s z p n f arg c' O Q S
 : let result := f arg in
