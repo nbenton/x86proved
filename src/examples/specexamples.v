@@ -25,6 +25,15 @@ Proof.
   etransitivity; [|apply H]. apply: landR; [sbazooka | reflexivity].
 Qed.
 
+(* Example: It is safe to sit in a less tight loop forever. *)
+Example safe_loop_while eax :
+  |-- loopy_basic (EAX ~= eax ** OSZCP?) (while (TEST EAX, EAX) CC_O false prog_skip) empOP lfalse.
+Proof.
+  basic apply (while_rule_ro (I := fun b => b == false /\\ EAX? ** SF? ** ZF? ** CF? ** PF?)) => //=;
+    rewrite /stateIsAny; specintros => *;
+    basic apply *.
+Qed.
+
 (* We can package up jumpy code in a triple by using labels. *)
 Example basic_loop:
   |-- loopy_basic empSP (LOCAL l; l:;; JMP l) empOP lfalse.

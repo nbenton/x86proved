@@ -5,7 +5,6 @@ Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import x86proved.x86.program x86proved.x86.basic x86proved.charge.ilogic.
 Require Import x86proved.common_tactics.
-Reset Profile. Start Profiling.
 
 (** Morphism for program equivalence *)
 Global Instance basic_progEq_m {T_OPred} {proj} :
