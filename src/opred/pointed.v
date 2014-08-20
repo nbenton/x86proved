@@ -3,6 +3,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.
 Require Import x86proved.bitsrep x86proved.x86.ioaction.
 Require Import x86proved.ilogic_pointed x86proved.opred.core.
 Require Export x86proved.pointed. (** We want all the pointed instances *)
+Require Coq.Lists.Streams.
 Require Import Coq.Classes.RelationClasses.
 
 Generalizable All Variables.
@@ -25,7 +26,7 @@ Canonical default_PointedOPred O `{IsPointed_OPred O} : PointedOPred
 
 Arguments mkPointedOPred : clear implicits.
 
-Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists.
+Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists eq_opred_stream map_opred_to_stream.
 
 Lemma inhabitedOP (O: PointedOPred) : exists s, O s.
 Proof. by destruct O. Qed.
@@ -187,3 +188,9 @@ Program Instance IsPointed_foldr_map_fun_flip_catOP {T} (ls : seq T) f g (o0 : O
 Program Instance IsPointed_foldl_map_fun_flip_catOP {T} (ls : seq T) f g (o0 : OPred)
         `{IsPointed_OPred o0, forall x y, IsPointed_OPred y -> IsPointed_OPred (g x y), all_IsPointed_OPred (map f ls)}
 : IsPointed_OPred (foldl (fun x (y : T) => catOP (f y) (g y x)) o0 ls).
+
+(** ** Equality with a prefix of a stream *)
+Instance IsPointed_eq_opred_stream (x : Streams.Stream Action) : IsPointed_OPred (eq_opred_stream x) := ex_intro _ nil I.
+
+(** Generate [eq_opred_stream] by mapping and folding *)
+Instance IsPointed_map_opred_to_stream {T f1 f2 s} : IsPointed_OPred (@map_opred_to_stream T f1 f2 s) := _.

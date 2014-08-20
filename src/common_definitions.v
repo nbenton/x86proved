@@ -328,3 +328,23 @@ Proof.
   revert initA initB.
   induction xs => //= *.
 Qed.
+
+Lemma stream_decomp : forall {T} (s : Streams.Stream T),
+  s = Streams.Cons (Streams.hd s) (Streams.tl s).
+Proof.
+  destruct s; reflexivity.
+Qed.
+
+Lemma map_step {A B} (f : A -> B) x xs
+: @Streams.map A B f (Streams.Cons x xs) = Streams.Cons (f x) (Streams.map f xs).
+Proof.
+  etransitivity; first apply stream_decomp; simpl.
+  reflexivity.
+Qed.
+
+Lemma flatten_stream_step {T} x xs
+: @flatten_stream T (Cons x xs) = Cons (fst x) (flatten_stream (if snd x is x'::xs' then Cons (x', xs') xs else xs)).
+Proof.
+  etransitivity; first apply stream_decomp; simpl.
+  reflexivity.
+Qed.

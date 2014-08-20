@@ -5,13 +5,14 @@ Require Import x86proved.bitsrep x86proved.x86.ioaction.
 Require Import x86proved.opred.core.
 Require Import x86proved.charge.iltac.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses.
+Require Coq.Lists.Streams.
 Require Import x86proved.common_tactics.
 
 Generalizable All Variables.
 Set Implicit Arguments.
 
 Local Transparent ILFun_Ops ILPre_Ops osepILogicOps osepILogic lentails ltrue lfalse limpl land lor lforall lexists.
-Local Transparent catOP empOP eq_opred starOP repOP roll_starOP partial_rollOP rollOP.
+Local Transparent catOP empOP eq_opred starOP repOP roll_starOP partial_rollOP rollOP eq_opred_stream map_opred_to_stream.
 
 Create HintDb opred_laws_t discriminated.
 
@@ -140,6 +141,12 @@ Lemma catOP_lforall1 T P Q : catOP (Forall x : T, P x) Q |-- Forall x : T, catOP
 Proof. t. Qed.
 
 Lemma catOP_lforall2 T P Q : catOP P (Forall x : T, Q x) |-- Forall x : T, catOP P (Q x).
+Proof. t. Qed.
+
+Lemma catOP_lor1 P1 P2 Q : catOP (P1 \\// P2) Q -|- catOP P1 Q \\// catOP P2 Q.
+Proof. t. Qed.
+
+Lemma catOP_lor2 P Q1 Q2 : catOP P (Q1 \\// Q2) -|- catOP P Q1 \\// catOP P Q2.
 Proof. t. Qed.
 
 Lemma catOP_O_starOP_O' O O' : catOP O (catOP (starOP O) O') |-- catOP (starOP O) O'.
@@ -442,3 +449,45 @@ Lemma catOP_foldl_helper' {A B} (acc : A -> B -> A) (xs : seq B) (a : A) (o' : O
                   (fun o' : OPred => catOP o' (f (fst xy) v)) \o snd xy))
               (a, (fun o0 : OPred => catOP o0 o')) xs) empOP).
 Proof. apply catOP_foldl_helper. Qed.
+
+Local Transparent lentails.
+
+Lemma empOP_eq_opred_stream xs : empOP |-- eq_opred_stream xs.
+Proof. t. Qed.
+
+Local Hint Immediate empOP_eq_opred_stream.
+
+Lemma eq_opred_stream_def x (xs : Streams.Stream Action)
+: eq_opred_stream (Streams.Cons x xs) -|- empOP \\// catOP (eq_opred (x::nil)) (eq_opred_stream xs).
+Proof. t; destruct_head' Actions; t. Qed.
+
+Lemma unfold_map_opred_to_stream {T} f1 f2 s
+: @map_opred_to_stream T f1 f2 s = eq_opred_stream (flatten_stream (Streams.map (fun v => (f1 v, f2 v)) s)).
+Proof. reflexivity. Qed.
+
+Local Opaque lor.
+
+Local Ltac map_t' :=
+  do [ progress rewrite ?map_step ?flatten_stream_step ?eq_opred_stream_def /=
+     | by rewrite {1}unfold_map_opred_to_stream
+     | f_cancel; [ match goal with |- lequiv _ _ => idtac end ]
+     | destruct_atomic_in_match' ].
+
+Local Ltac map_t := do !map_t'.
+
+Lemma map_opred_to_stream_def {T} f1 f2 x xs
+: (@map_opred_to_stream T f1 f2 (Streams.Cons x xs))
+    -|- (foldr (fun x y => empOP \\// catOP x y) (map_opred_to_stream f1 f2 xs) (map (fun v => eq_opred (v::nil)) ((f1 x)::(f2 x)))).
+Proof.
+  rewrite {1}unfold_map_opred_to_stream.
+  map_t.
+  destruct (f2 x); simpl.
+  { map_t. }
+  { let x := match goal with x : Action |- _ => constr:(x) end in
+    revert x.
+    let ls := match goal with ls : seq Action |- _ => constr:(ls) end in
+    induction ls => //= *.
+    { map_t. }
+    { hyp_rewrite <- *.
+      by rewrite flatten_stream_step eq_opred_stream_def /=. } }
+Qed.
