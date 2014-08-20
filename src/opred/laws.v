@@ -289,3 +289,109 @@ Proof. foldl_catOP_foldr_t. Qed.
 Lemma foldl_fun_flip_catOP_foldr {T} (ls : seq T) f
 : foldl (fun x (y : T) => catOP (f y) x) empOP ls -|- foldr (fun (x : T) y => catOP y (f x)) empOP ls.
 Proof. foldl_catOP_foldr_t. Qed.
+
+Local Opaque lentails.
+
+(** Miscellaneous laws about [fold] and [lentails].  Very ugly, rather
+    special-purpose, currently to be used in
+    examples/accumulate_example.v *)
+Lemma respect_lentails_under_foldl A B a o1 o2 f acc xs (H : forall v, o1 v |-- o2 v) v
+: (snd
+     (foldl
+        (fun (xy : A * (OPred -> OPred)) (v : B) =>
+           (acc (fst xy) v, (fun o' => catOP o' (f (fst xy) v)) \o (snd xy)))
+        (a, o1) xs)) v
+                     |-- (snd
+                            (foldl
+                               (fun (xy : A * (OPred -> OPred)) (v : B) =>
+                                  (acc (fst xy) v, (fun o' => catOP o' (f (fst xy) v)) \o (snd xy)))
+                               (a, o2) xs)) v.
+Proof.
+  revert o1 o2 H a.
+  induction xs => //= *.
+  rewrite -> IHxs; first reflexivity; unfold funcomp; simpl => *.
+    by hyp_rewrite -> *.
+Qed.
+
+Lemma respect_lequiv_under_foldl A B a o1 o2 f acc xs (H : forall v, o1 v -|- o2 v) v
+: (snd
+     (foldl
+        (fun (xy : A * (OPred -> OPred)) (v : B) =>
+           (acc (fst xy) v, (fun o' => catOP o' (f (fst xy) v)) \o (snd xy)))
+        (a, o1) xs))
+    v
+    -|- (snd
+           (foldl
+              (fun (xy : A * (OPred -> OPred)) (v : B) =>
+                 (acc (fst xy) v, (fun o' => catOP o' (f (fst xy) v)) \o (snd xy)))
+              (a, o2) xs)) v.
+Proof.
+  split; apply respect_lentails_under_foldl => *; hyp_rewrite *; reflexivity.
+Qed.
+
+Lemma foldl_catOP_to_functions A B a o f acc xs
+: (snd
+     (foldl
+        (fun (xy : A * OPred) (v : B) =>
+           (acc (fst xy) v, catOP (snd xy) (f (fst xy) v)))
+        (a, o) xs))
+    -|-
+    ((snd
+        (foldl
+           (fun (xy : A * (OPred -> OPred)) (v : B) =>
+              (acc (fst xy) v, (fun o' => catOP o' (f (fst xy) v)) \o (snd xy)))
+           (a, (fun o' => catOP o' o))
+           xs)))
+    empOP.
+Proof.
+  revert f o a.
+  induction xs => //= *.
+  { by rewrite empOPL. }
+  { rewrite IHxs.
+    unfold funcomp; simpl.
+    apply respect_lequiv_under_foldl => *.
+      by rewrite catOPA. }
+Qed.
+
+Lemma catOP_foldl_helper {A B} (acc : A -> B -> A) (xs : seq B) (a : A) (o' : OPred) (f : A -> B -> OPred) (o0 : OPred -> OPred := id)
+: (catOP o'
+         (snd
+            (foldl
+               (fun (xy : A * (OPred -> OPred)) (v : B) =>
+                  (acc (fst xy) v,
+                   (fun o' : OPred => catOP o' (f (fst xy) v)) \o snd xy))
+               (a, o0) xs) empOP))
+    -|- (snd
+           (foldl
+              (fun (xy : A * (OPred -> OPred)) (v : B) =>
+                 (acc (fst xy) v,
+                  (fun o' : OPred => catOP o' (f (fst xy) v)) \o snd xy))
+              (a, o0 \o (fun o0 : OPred => catOP o0 o')) xs) empOP).
+Proof.
+  revert a o'.
+  induction xs => //=.
+  { unfold funcomp, o0; simpl => *.
+    (by rewrite ?empOPL ?empOPR). }
+    { move => *.
+      unfold funcomp, o0 in *; simpl in *.
+      etransitivity; last first.
+      eapply respect_lequiv_under_foldl => *; set_evars; rewrite catOPA; subst_evars; higher_order_reflexivity.
+      rewrite -!IHxs !catOPA.
+      reflexivity. }
+Qed.
+
+Lemma catOP_foldl_helper' {A B} (acc : A -> B -> A) (xs : seq B) (a : A) (o' : OPred) (f : A -> B -> OPred)
+: (catOP o'
+         (snd
+            (foldl
+               (fun (xy : A * (OPred -> OPred)) (v : B) =>
+                  (acc (fst xy) v,
+                   (fun o' : OPred => catOP o' (f (fst xy) v)) \o snd xy))
+               (a, id) xs) empOP))
+    -|- (snd
+           (foldl
+              (fun (xy : A * (OPred -> OPred)) (v : B) =>
+                 (acc (fst xy) v,
+                  (fun o' : OPred => catOP o' (f (fst xy) v)) \o snd xy))
+              (a, (fun o0 : OPred => catOP o0 o')) xs) empOP).
+Proof. apply catOP_foldl_helper. Qed.
