@@ -320,3 +320,11 @@ CoFixpoint flatten_stream {T} (s : Stream (T * seq T)) : Stream T :=
   match s with
     | Cons x xs => Cons (fst x) (flatten_stream (if snd x is x'::xs' then Cons (x', xs') xs else xs))
   end.
+
+Lemma snd_foldl {A B C} accA accB initA initB xs
+: snd (foldl (fun (xy : A * B) (v : C) => (accA (fst xy) v, accB (snd xy) v)) (initA, initB) xs)
+  = foldl accB initB xs.
+Proof.
+  revert initA initB.
+  induction xs => //= *.
+Qed.

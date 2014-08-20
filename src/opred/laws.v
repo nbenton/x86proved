@@ -264,6 +264,53 @@ Ltac fold_catOP_pull' :=
 
 Ltac fold_catOP_pull := do !fold_catOP_pull'.
 
+(** Sometimes, we want to push instead *)
+Lemma foldl_catOP_push x y xs
+: catOP x (foldl catOP y xs) -|- foldl catOP (catOP x y) xs.
+Proof. fold_catOP_pull; by rewrite ?catOPA. Qed.
+Lemma foldr_catOP_push x y xs
+: catOP (foldr catOP x xs) y -|- foldr catOP (catOP x y) xs.
+Proof. fold_catOP_pull; by rewrite ?catOPA. Qed.
+
+Lemma foldl_flip_catOP_push x y xs
+: catOP (foldl (Basics.flip catOP) x xs) y -|- foldl (Basics.flip catOP) (catOP x y) xs.
+Proof. fold_catOP_pull; by rewrite ?catOPA. Qed.
+Lemma foldr_flip_catOP_push x y xs
+: catOP x (foldr (Basics.flip catOP) y xs) -|- foldr (Basics.flip catOP) (catOP x y) xs.
+Proof. fold_catOP_pull; by rewrite ?catOPA. Qed.
+
+Lemma foldl_fun_catOP_push {T} x y (xs : seq T) f
+: catOP x (foldl (fun x (y : T) => catOP x (f y)) y xs) -|- foldl (fun x (y : T) => catOP x (f y)) (catOP x y) xs.
+Proof. fold_catOP_pull; by rewrite ?catOPA. Qed.
+Lemma foldr_fun_catOP_push {T} x y (xs : seq T) f
+: catOP x (foldr (fun (x : T) y => catOP y (f x)) y xs) -|- foldr (fun (x : T) y => catOP y (f x)) (catOP x y) xs.
+Proof. fold_catOP_pull; by rewrite ?catOPA. Qed.
+
+Lemma foldl_fun_flip_catOP_push {T} x y (xs : seq T) f
+: catOP (foldl (fun x (y : T) => catOP (f y) x) x xs) y -|- foldl (fun x (y : T) => catOP (f y) x) (catOP x y) xs.
+Proof. fold_catOP_pull; by rewrite ?catOPA. Qed.
+Lemma foldr_fun_flip_catOP_push {T} x y (xs : seq T) f
+: catOP (foldr (fun (x : T) y => catOP (f x) y) x xs) y -|- foldr (fun (x : T) y => catOP (f x) y) (catOP x y) xs.
+Proof. fold_catOP_pull; by rewrite ?catOPA. Qed.
+
+(** This tactic pushes the initial value of a [foldl] or [foldr] in *)
+Ltac fold_catOP_push' :=
+  idtac;
+  match goal with
+    | [ |- context[catOP empOP ?a] ] => rewrite -> (empOPL a)
+    | [ |- context[catOP ?a empOP] ] => rewrite -> (empOPR a)
+    | [ |- context[catOP ?x (foldl catOP ?y ?xs)] ] => rewrite -> (foldl_catOP_push x y xs)
+    | [ |- context[catOP (foldr catOP ?x ?xs) ?y] ] => rewrite -> (foldr_catOP_push x y xs)
+    | [ |- context[catOP (foldl (Basics.flip catOP) ?x ?xs) ?y] ] => rewrite -> (foldl_flip_catOP_push x y xs)
+    | [ |- context[catOP ?x (foldr (Basics.flip catOP) ?y ?xs)] ] => rewrite -> (foldr_flip_catOP_push x y xs)
+    | [ |- context[catOP ?x (foldl (fun x y => catOP x (@?f y)) ?y ?xs)] ] => rewrite -> (foldl_fun_catOP_push x y xs f)
+    | [ |- context[catOP ?x (foldr (fun x y => catOP y (@?f x)) ?y ?xs)] ] => rewrite -> (foldr_fun_catOP_push x y xs f)
+    | [ |- context[catOP (foldl (fun x y => catOP (@?f y) x) ?x ?xs) ?y] ] => rewrite -> (foldl_fun_flip_catOP_push x y xs f)
+    | [ |- context[catOP (foldr (fun x y => catOP (@?f x) y) ?x ?xs) ?y] ] => rewrite -> (foldr_fun_flip_catOP_push x y xs f)
+  end.
+
+Ltac fold_catOP_push := do !fold_catOP_push'.
+
 Local Ltac foldl_catOP_foldr_t :=
   let ls := match goal with ls : seq _ |- _ => constr:(ls) end in
   (induction ls => //=; []);
