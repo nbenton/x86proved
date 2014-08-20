@@ -142,10 +142,10 @@ Section Basic.
              | [ |- lexists _ |-- _ ] => apply lexistsL => ?
              | _ => progress specintros => *
              | [ |- lforall _ |-- _ ] => eapply lforallL
-             | [ |- _ ?a |-- _ ?b ] => unify a b; cancel2
+             | [ |- ?f ?a |-- ?g ?b ] => unify a b; cancel2
              | [ |- ?f _ |-- ?g _ ] => unify f g; cancel1
              | [ |- _ |-- lexists _ ] => eapply lexistsR
-           end.
+           end. 
   Qed.
 
   Global Instance AtEx_basic P c O Q : AtEx (parameterized_basic P c O Q).

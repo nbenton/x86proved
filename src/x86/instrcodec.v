@@ -763,9 +763,6 @@ Definition InstrCodec : Codec Instr :=
 ||| #x"F8" ~~> isCLC
 ||| #x"F9" ~~> isSTC
 (* Everything else *)
-(* MOVX *)
-(*
-*)
 ||| JMPCodec ||| CALLCodec ||| TESTCodec ||| PUSHCodec ||| POPCodec ||| RETCodec
 ||| MOVCodec ||| BITCodec ||| SHIFTCodec ||| JCCCodec ||| BINOPCodec ||| UOPCodec
 ||| INOUTCodec ||| LEACodec ||| XCHGCodec ||| MULCodec
