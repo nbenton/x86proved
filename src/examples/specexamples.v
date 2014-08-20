@@ -353,3 +353,24 @@ Proof.
   Grab Existential Variables.
   exact #0.
 Qed.
+
+(* Example: It is safe to sit in a less tight loop forever. *)
+Example safe_loop_io P c O (H : |-- loopy_basic P c O P @ (EAX? ** OSZCP?))
+: |-- loopy_basic (EAX? ** OSZCP? ** P) (while (TEST EAX, EAX) CC_O false c) (starOP O) lfalse.
+Proof.
+  basic apply (while_rule_ind
+                 (transition_body := @id unit)
+                 (P := fun _ => P ** EAX? ** OF? ** SF? ** ZF? ** CF? ** PF?)
+                 (I_state := fun _ _ => P ** EAX? ** SF? ** ZF? ** CF? ** PF?)
+                 (I_logic := fun _ b => b == false)
+                 (Otest := fun _ => empOP)
+                 (Obody := fun _ => O)
+                 (O_after_test := fun _ => default_PointedOPred (starOP O))
+                 (O := fun _ => default_PointedOPred (starOP O))
+                 (Q := fun _ => lfalse)) => //= *.
+  { by ssimpl. }
+  { rewrite -> starOP_def at -1.
+      by apply lorR2. }
+  { specintros => *; basic apply H. }
+  { rewrite /stateIsAny; specintros => *; basic apply *. }
+Qed.
