@@ -3,6 +3,8 @@ Require Import Ssreflect.ssreflect Ssreflect.seq Ssreflect.ssrbool.
 Require Import Coq.Lists.Streams.
 Require Import Coq.Logic.FunctionalExtensionality.
 
+Set Implcit Arguments.
+
 Notation eta_expand x := (fst x, snd x).
 
 Definition prod_eta A B (p : A * B) : p = eta_expand p
