@@ -1,5 +1,6 @@
 (** * Various useful general purpose notations and definitions *)
-Require Import Ssreflect.ssreflect.
+Require Import Ssreflect.ssreflect Ssreflect.seq Ssreflect.ssrbool.
+Require Import Coq.Lists.Streams.
 Require Import Coq.Logic.FunctionalExtensionality.
 
 Notation eta_expand x := (fst x, snd x).
@@ -257,3 +258,63 @@ Lemma bool_neq_negb (a b : bool) : (a <> b) <-> (a = negb b).
 Proof.
   destruct a, b; split; simpl; congruence.
 Qed.
+
+Lemma all_behead {T} (xs : seq T) P : all P xs -> all P (behead xs).
+Proof.
+  destruct xs as [|x xs] => //=.
+  by destruct (P x).
+Qed.
+
+(** Checks that the last element satisfies the predicate, and the rest do not. *)
+Fixpoint only_last {T} (P : pred T) (x : T) (xs : seq T) : bool
+  := match xs with
+       | nil => P x
+       | x'::xs' => ~~P x && only_last P x' xs'
+     end.
+
+Lemma only_last_behead {T} (P : pred T) x xs
+: only_last P x xs -> only_last P (head x xs) (behead xs).
+Proof.
+  revert x.
+  induction xs => //= x.
+  destruct (P x) => //=.
+Qed.
+
+Fixpoint drop_last {T} (x : T) (xs : seq T) :=
+  match xs with
+    | nil => nil
+    | x'::xs' => x::drop_last x' xs'
+  end.
+
+Definition only_last' {T} (P : pred T) (x : T) (xs : seq T) : bool
+  := all (fun x => ~~P x) (drop_last x xs) && P (last x xs).
+
+Arguments only_last' / .
+
+Lemma only_last__only_last' {T} P x xs : @only_last T P x xs = @only_last' T P x xs.
+Proof.
+  move: x.
+  induction xs => //=.
+  move => x.
+  destruct (P x) => //=.
+  rewrite IHxs => //=.
+Qed.
+
+Fixpoint list_is_prefix_of_stream {T} (s : Stream T) (ls : seq T) : Prop :=
+  match ls with
+    | nil => True
+    | x::xs => match s with
+                 | Cons x' xs' => x = x' /\ list_is_prefix_of_stream xs' xs
+               end
+  end.
+
+Fixpoint stream_prepend_list {T} (ls : seq T) (rest : Stream T) : Stream T :=
+  match ls with
+    | nil => rest
+    | x::xs => Cons x (stream_prepend_list xs rest)
+  end.
+
+CoFixpoint flatten_stream {T} (s : Stream (T * seq T)) : Stream T :=
+  match s with
+    | Cons x xs => Cons (fst x) (flatten_stream (if snd x is x'::xs' then Cons (x', xs') xs else xs))
+  end.

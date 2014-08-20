@@ -874,3 +874,20 @@ Ltac clean_case_eq :=
           | [ H : true = false |- _ ] => by inversion H
           | [ H : ?a = ?a |- _ ] => clear H
         end ].
+
+(** Like [reflexivity], but if one side is the application of an evar
+    to something, use the [pattern] heuristics. *)
+Ltac higher_order_reflexivity :=
+  (match goal with
+     | [ |- ?R (?f ?x) ?y ]
+       => (is_evar f;
+           (lazymatch eval pattern x in y with
+           | ?f' x => unify f f'
+            end))
+     | [ |- ?R ?y (?f ?x) ]
+       => (is_evar f;
+           (lazymatch eval pattern x in y with
+           | ?f' x => unify f f'
+            end))
+   end);
+  reflexivity.
