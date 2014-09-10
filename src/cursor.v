@@ -164,8 +164,16 @@ Proof. induction n1 => n2 p p' p'' H1 H2.
 + destruct p => //. simpl in H1. by apply (IHn1 _ _ _ _ H1).
 Qed.
 
-Lemma apart_top m q : apart m top q <-> m=0 /\ q=top.
+Lemma apart_fromTop m q : apart m top q <-> m=0 /\ q=top.
 Proof. split. destruct m => //. by move => [-> ->]. Qed.
+
+Lemma apart_toTop m : forall (p: BITS n), apart m (mkCursor p) top -> p +# m = #0. 
+Proof. induction m => // p AP. 
+simpl in AP. 
+case E: (next p) => [p' |]. rewrite E in AP. specialize (IHm _ AP). rewrite -IHm. 
+rewrite <- (nextIsInc E). rewrite <- addB_addn. by rewrite add1n. 
+rewrite E in AP. destruct m => //. by rewrite (nextIsTop E). 
+Qed. 
 
 Lemma apart_next m : forall (p: BITS n) (q: Cursor),
   apart m (next p) q <-> apart m.+1 (mkCursor p) q.
@@ -176,7 +184,7 @@ Proof. induction m => p q H.
 + rewrite addB0. congruence.
 + simpl in H.
 case E: (next p) => [p' |]; rewrite E in H. specialize (IHm _ _ H).
-by rewrite -(nextIsInc E) -addB_addn add1n in IHm. rewrite -> apart_top in H.
+by rewrite -(nextIsInc E) -addB_addn add1n in IHm. rewrite -> apart_fromTop in H.
 by destruct H.
 Qed.
 
@@ -311,6 +319,24 @@ Qed.
 End Cursors.
 
 Coercion mkCursor : BITS >-> Cursor.
+
+Lemma leB_apart n m : forall (p: BITS n.+1) (q: Cursor n.+1),
+  m < 2^n.+1 -> leB p (p +# m) -> apart m (mkCursor p) q -> q = mkCursor (p +# m).
+Proof. 
+induction m => p q LT LE AP.
+- by rewrite AP addB0. 
+- simpl in AP. have LT': m < 2^n.+1. apply: (ltn_trans _ LT). by apply ltnSn.
+  case E: (next p) => [p' |].
+  rewrite E in AP. specialize (IHm p' q LT'). 
+  rewrite <- (add1n m). rewrite addB_addn. rewrite -> (nextIsInc E). apply IHm.
+  apply nextIsInc in E.  
+  subst. rewrite <- addB_addn. rewrite <- (add1n m) in LE.
+  apply: (leB_bounded_weaken LT _ _ LE). done. by rewrite add1n.
+  done.   
+- rewrite E in AP. destruct m => //. rewrite (nextIsTop E) in LE.
+  apply le0B in LE. by subst. 
+Qed.
+
 
 (** Convenience definitions for various sizes of cursor *)
 (*Definition NIBBLECursor := Cursor n4.

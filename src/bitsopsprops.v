@@ -907,6 +907,10 @@ Proof. by rewrite /leB eq_refl orbT. Qed.
 Lemma leB0 n (p : BITS n) : leB #0 p.
 Proof. by rewrite leB_nat toNat_fromNat0. Qed.
 
+Lemma le0B n (p : BITS n) : leB p #0 -> p = #0.
+Proof. rewrite leB_nat. rewrite toNat_fromNat0 => H. rewrite leqn0 in H. 
+apply toNat_inj. by rewrite (eqP H) toNat_fromNat0. 
+Qed.
 
 Lemma ltB_joinmsb0 n (p q : BITS n) : ltB (joinmsb0 p) (joinmsb0 q) = ltB p q.
 Proof. by rewrite ltB_nat 2!toNat_joinmsb0 -ltB_nat. Qed.

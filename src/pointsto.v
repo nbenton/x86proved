@@ -54,6 +54,15 @@ Proof. rewrite -> memIsLe. rewrite /leCursor. by apply lpropandL. Qed.
 Class FixedMemIs T n `(MI: MemIs T) :=
   memIsFixed:> forall p q v, p -- q :-> v |-- apart n p q /\\ p -- q :-> v.
 
+(* This isn't true for n = 2^32 *)
+Lemma fixedMemIs_pointsTo X `{_:FixedMemIs X} (p:DWORD) v :
+  n<2^32 -> leB p (p+#n) -> p :-> v |-- p -- (p+#n) :-> v.
+Proof. move => LT LE.
+rewrite /pointsTo. sdestruct => q. 
+rewrite -> memIsFixed. sdestruct => AP.
+rewrite (leB_apart LT LE AP).  reflexivity. 
+Qed.
+
 (*---------------------------------------------------------------------------
    We can interpret reader terms purely logically, using the primitive
    byteIs predicate and separating conjunction.
@@ -232,6 +241,15 @@ Section PairMemIs.
     p -- q :-> (x,y) -|- Exists p', p -- p' :-> x ** p' -- q :-> y.
   Proof. apply pairMemIsSimpl. Qed.
 
+  Lemma pairMemIsPair' (p q: DWORD) (x: X) (y: Y) :
+    p -- q :-> (x,y) -|- Exists p':DWORD, p -- p' :-> x ** p' -- q :-> y.
+  Proof. rewrite pairMemIsPair. 
+  split; sdestruct => p'. 
+  - destruct p'. sbazooka. rewrite -> memIsFromTop. sbazooka. 
+  - apply lexistsR with p'. sbazooka.
+  Qed.
+
+
 (*
   Context (dx dy: DWORD) {FX: FixedMemIs dx MX} {FY: FixedMemIs dy MY}.
   Instance FixedMemIsPair : FixedMemIs (addB dx dy) PairMemIs.
@@ -297,6 +315,24 @@ Section SeqMemIs.
     p -- q :-> (x::xs) -|- Exists p', p -- p' :-> x ** p' -- q :-> xs.
   Proof. apply seqMemIsSimpl. Qed.
 
+
+  Lemma seqMemIsCons' (p q:DWORD) (x:X) (xs: seq X):
+    p -- q :-> (x::xs) -|- Exists p':DWORD, p -- p' :-> x ** p' -- q :-> xs.
+  Proof. rewrite seqMemIsSimpl. split. sdestruct => p'. destruct p'. sbazooka.
+  rewrite -> memIsFromTop. sbazooka. sbazooka. 
+  Qed. 
+
+  Context {n} {MY: FixedMemIs n MX}.
+
+  Lemma seqFixedMemIsCons' (p q:DWORD) (x:X) (xs: seq X):
+    p -- q :-> (x::xs) -|- p -- (p+#n) :-> x ** (p +#n) -- q :-> xs.
+  Proof. rewrite seqMemIsCons. 
+  split. 
+  - sdestruct => p'. destruct p'. 
+    + rewrite -> memIsFixed. sdestruct => AP. rewrite (apart_addBn AP). sbazooka.
+    + rewrite -> memIsFromTop. sbazooka. 
+  - sbazooka.
+  Qed. 
 
   Lemma seqMemIsNil (p q:DWORDCursor):
     p -- q :-> (nil:seq X) -|- p = q /\\ empSP.
