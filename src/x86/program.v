@@ -54,7 +54,7 @@ Fixpoint linearizeWith (p: program) tail :=
 Definition linearize p := linearizeWith p prog_skip.
 
 Declare Reduction showprog :=
-  cbv beta delta -[fromNat fromHex makeMOV makeUOP makeBOP db dw dd ds align pad] zeta iota.
+  cbv beta delta -[fromNat fromHex makeMOV makeBOP db dw dd ds align pad] zeta iota.
 
 Fixpoint interpProgram i j prog :=
   match prog with

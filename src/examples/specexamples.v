@@ -89,7 +89,7 @@ Qed.
 Local Ltac t_after_specapply := ssimpl; try reflexivity; rewrite /ConditionIs/OSZCP/stateIsAny/stateIs; cbv beta; ssimpl; try reflexivity; sbazooka.
 
 Local Ltac do_code_unfolder :=
-  rewrite /makeUOP/makeBOP.
+  rewrite /makeBOP.
 
 Local Ltac check_eip_hyp_and_do hyp :=
   let G := match goal with |- ?G => constr:(G) end in
@@ -100,7 +100,7 @@ Local Ltac check_eip_hyp_and_do hyp :=
     try by finish_logic_with sbazooka.
 
 Local Ltac prepare_basic_goal_for_spec :=
-  rewrite /makeBOP/makeUOP/makeMOV;
+  rewrite /makeBOP/makeMOV;
   autorewrite with push_at;
   do ?(idtac;
        match goal with

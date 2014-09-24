@@ -124,7 +124,7 @@ Ltac get_next_loopy_instrrule_from_eip :=
   get_loopy_instrrule_of instr.
 (** [pre_specapply_any] does some clean up for pulling out the rule. *)
 Ltac pre_specapply_any :=
-  rewrite /makeBOP/makeUOP/makeMOV;
+  rewrite /makeBOP/makeMOV;
   cbv beta iota zeta;
   do ?((test progress intros); move => ?).
 Tactic Notation "specapply" open_constr(lem) := specapply lem.

@@ -88,26 +88,20 @@ Bind Scope memspec_scope with MemSpec.
 (*---------------------------------------------------------------------------
     Unary operations
   ---------------------------------------------------------------------------*)
-Definition makeUOP op (i: InstrArg) :=
-  match i with
-  | InstrArgR s r => UOP s op (RegMemR s r)
-  | InstrArgM ms => UOP OpSize4 op (RegMemM OpSize4 ms)
-  end.
-
 Notation "'NOT' x"
-  := (makeUOP OP_NOT x%ms) (x at level 55, at level 60) : instr_scope.
+  := (UOP _ OP_NOT x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'NOT' 'BYTE' m"
   := (UOP OpSize1 OP_NOT (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'NEG' x"
-  := (makeUOP OP_NEG x%ms) (x at level 55, at level 60) : instr_scope.
+  := (UOP _ OP_NEG x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'NEG' 'BYTE' m"
   := (UOP OpSize1 OP_NEG (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'INC' x"
-  := (makeUOP OP_INC x%ms) (x at level 55, at level 60) : instr_scope.
+  := (UOP _ OP_INC x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'INC' 'BYTE' m"
   := (UOP OpSize1 OP_INC (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'DEC' x"
-  := (makeUOP OP_DEC x%ms) (x at level 55, at level 60) : instr_scope.
+  := (UOP _ OP_DEC x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'DEC' 'BYTE' m"
   := (UOP OpSize1 OP_DEC (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 
@@ -234,7 +228,7 @@ Arguments PUSH (src)%ms.
 Arguments POP (dst)%ms.
 
 (* Typical use: in "Eval showinstr in linearize p" *)
-Declare Reduction showinstr := cbv beta delta -[fromNat makeMOV makeUOP makeBOP] zeta iota.
+Declare Reduction showinstr := cbv beta delta -[fromNat makeMOV makeBOP] zeta iota.
 
 Module Examples.
 Open Scope instr_scope.
@@ -248,6 +242,7 @@ Example ex6 (r:BYTEReg) := MOV AL, r.
 Example ex7 (r:Reg) := POP [r + #x"0000001C"].
 Example ex8 := CMP AL, (#c"!":BYTE).
 Example ex9 := MOV DX, BP. 
+Example ex10 := NOT [EBX + EDI*4 + 3]. 
 
 Close Scope instr_scope.
 End Examples.
