@@ -40,7 +40,7 @@ Qed.
 End setoid_rewrite_opacity.
 
 Ltac basicCMP_ZC :=
-  rewrite /makeBOP/InstrArg_of_VReg; 
+  rewrite /makeBOP; 
   let R := lazymatch goal with
              | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?O ?q => constr:(@CMP_ruleZC d a)
            end in

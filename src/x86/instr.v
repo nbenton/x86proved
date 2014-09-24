@@ -25,15 +25,16 @@ Inductive MemSpec :=
 (* Register or memory *)
 (*=RegMem *)
 Inductive RegMem s :=
-| RegMemR (r: VReg s)
+| RegMemR (r: VReg s) :> RegMem s
 | RegMemM (ms: MemSpec).
 Inductive RegImm s :=
 | RegImmI (c: VWORD s)
 | RegImmR (r: VReg s).
 (*=End *)
 
-Coercion DWORDRegMemR (r:Reg)       := RegMemR OpSize4 r.
+(*Coercion DWORDRegMemR (r:Reg)       := RegMemR OpSize4 r.
 Coercion BYTERegMemR  (r:BYTEReg)   := RegMemR OpSize1 r.
+*)
 Coercion DWORDRegMemM (ms: MemSpec) := RegMemM OpSize4 ms.
 Coercion DWORDRegImmI (d: DWORD)    := RegImmI OpSize4 d.
 

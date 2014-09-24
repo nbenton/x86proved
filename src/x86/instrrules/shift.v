@@ -11,7 +11,7 @@ Qed.
 
 Lemma SHL_RI_rule s (r:VReg s) (v:VWORD s) (count:nat):
   count < n32 ->
-  |-- basic (r~=v ** OSZCP?) (SHIFTOP s OP_SHL (RegMemR s r) (ShiftCountI count) (*SHL r, count*)) empOP
+  |-- basic (r~=v ** OSZCP?) (SHL r, count) empOP
             (r~=iter count shlB v ** OSZCP?).
 Proof.
   move => BOUND.
@@ -27,7 +27,7 @@ Qed.
 
 Lemma SHR_RI_rule s (r:VReg s) (v:VWORD s) (count:nat):
   count < n32 ->
-  |-- basic (r~=v ** OSZCP?) (SHIFTOP s OP_SHR (RegMemR s r) (ShiftCountI  count)) empOP
+  |-- basic (r~=v ** OSZCP?) (SHR r, count) empOP
             (r~=iter count shrB v ** OSZCP?).
 Proof.
   move => BOUND.
@@ -44,5 +44,5 @@ Qed.
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
     [get_instrrule_of]. *)
-Global Instance: forall s (r : VReg s) (count : nat), instrrule (SHIFTOP s OP_SHL (RegMemR s r) (ShiftCountI count)) := fun s r count v => @SHL_RI_rule s r v count.
-Global Instance: forall s (r : VReg s) (count : nat), instrrule (SHIFTOP s OP_SHR (RegMemR s r) (ShiftCountI count)) := fun s r count v => @SHR_RI_rule s r v count.
+Global Instance: forall s (r : VReg s) (count : nat), instrrule (SHL r, count) := fun s r count v => @SHL_RI_rule s r v count.
+Global Instance: forall s (r : VReg s) (count : nat), instrrule (SHR r, count) := fun s r count v => @SHR_RI_rule s r v count.

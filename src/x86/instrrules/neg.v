@@ -16,12 +16,10 @@ Proof. destruct s; do_instrrule_triple. Qed.
 Global Instance: forall s (r : VReg s), instrrule (NEG r) := @NEG_R_rule.
 (** TODO(t-jagro): This might be scary to those who aren't comfortable
                    with dependent types.  Maybe we should drop it, or
-                   update [NEG_R_rule] to use [UOP] rather than [NEG]
-                   (which goes through the very silly
-                   [InstrArg_of_VReg] coercion. *)
+                   update [NEG_R_rule] to use [UOP] rather than [NEG] *)
 Section generic.
   Let rule s (r : VReg s) := @NEG_R_rule s r.
-  Let T s (r : VReg s) := Eval cbv beta iota zeta delta [makeUOP InstrArg_of_VReg] in (fun T (x : T) => T) _ (@rule s r).
+  Let T s (r : VReg s) := Eval cbv beta iota zeta delta [makeUOP] in (fun T (x : T) => T) _ (@rule s r).
   Global Instance: forall s r, instrrule (UOP s OP_NEG (RegMemR s r)) :=
     fun s r => match s as s return forall r, @T s r -> forall v : VWORD s,
                                                          |--basic

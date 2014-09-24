@@ -138,7 +138,7 @@ Proof.
   unfold output_n_prog.
   prepare_basic_goal_for_spec.
   induction n.
-  { unfold InstrArg_of_VReg, ConditionIs. 
+  { 
     do? [ progress rewrite ?subB0 ?eq_refl /OSZCP/ConditionIs
         | check_goal_eips_match; by finish_logic_with sbazooka
         | specapply * ]. }
@@ -146,7 +146,7 @@ Proof.
     specialize (small_is_good _ (is_small _ Hn)).
     specialize (H _ (is_small _ Hn)).
     (** Get the instance so that [specapply *] picks it up *)
-    instrrule remember H. unfold InstrArg_of_VReg in *.  
+    instrrule remember H. 
     do ![ progress rewrite ?subB0 ?eq_refl ?small_is_good ?rollOP_defS ?catOPA ?decB_fromSuccNat /ConditionIs
         | rewrite /OSZCP/stateIsAny; specintros => *
         | progress change (false == true) with false; cbv iota

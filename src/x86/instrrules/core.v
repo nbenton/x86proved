@@ -366,17 +366,6 @@ Hint Unfold OSZCP : finish_logic_unfolder.
 Hint Unfold makeBOP makeUOP makeMOV : instrrules_all.
 Hint Unfold OSZCP scaleBy BYTE DWORD WORD VWORD RegOrFlag_target : instrrules_side_conditions_spred.
 
-(** These hints are global *)
-(** TODO(t-jagro): Find a better place for this, or, better, generalize [InstrArg] *)
-Coercion InstrArg_of_VReg s : VReg s -> InstrArg :=
-match s as s return VReg s -> InstrArg with
-| OpSize1 => BYTERegArg
-| OpSize2 => WORDRegArg
-| OpSize4 => RegArg
-end.
-
-Hint Unfold InstrArg_of_VReg : instrrules_all.
-
 (*---------------------------------------------------------------------------
     Helpers for pieces of evaluation (adapted from spechelpers and
     triplehelpers)
@@ -391,12 +380,10 @@ Hint Unfold
   (** Maybe we should write [_rule]s for [evalShiftOp] and [evalCondition]. *)
   evalShiftOp
   makeBOP makeUOP
-  (** Having to unfold [InstrArg_of_VReg] is a hack *)
-  InstrArg_of_VReg
   OSZCP
   natAsDWORD
-  (** Maybe we should find a better way to deal with [DWORDRegMemR], [evalShiftCount], [evalRegImm], and [SrcToRegImm] *)
-  DWORDRegMemR evalShiftCount evalRegImm SrcToRegImm
+  (** Maybe we should find a better way to deal with [evalShiftCount], [evalRegImm], and [SrcToRegImm] *)
+  evalShiftCount evalRegImm SrcToRegImm
   (** Maybe we should find a better way to deal with [evalJmpTgt] and [evalRegMem] *)
   evalJmpTgt evalRegMem
 : instrrules_eval.
@@ -405,7 +392,7 @@ Hint Unfold
 <<
 Hint Unfold
   specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
-  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
+  BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
   DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
   makeMOV makeBOP makeUOP
   : basicapply.
@@ -741,7 +728,7 @@ Ltac do_instrrule_triple := do_instrrule instrrule_triple_bazooka.
 (** Some convenience macros for dealing with basicapply. *)
 Hint Unfold
   specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
-  DWORDRegMemR BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
+  DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
   natAsDWORD BYTEtoDWORD
   makeMOV makeBOP makeUOP
   : instrrules_all.
