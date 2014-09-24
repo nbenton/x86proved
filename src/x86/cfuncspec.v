@@ -212,7 +212,7 @@ specintro => O.
 specapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?) {| OPred_pred := empOP |}
                                           (snd (post FS arg) ** EAX ~= fst (post FS arg) ** ECX? ** EDX? ** OSZCP? ** sp-#4 :-> ?:DWORD) ebp (sp-#8)).
 
-split; last first. rewrite /C. by ssimpl.
+rewrite /C. ssimpl.
 autorewrite with bitsHints. replace (8+4) with 12 by done. by ssimpl.
 
 specapply RET_rule.

@@ -122,13 +122,19 @@ Definition makeBOP op dst (src: InstrSrc) :=
   match dst, src with
   | BYTERegArg dst, BYTERegArg src => BOP OpSize1 op (DstSrcRR OpSize1 dst src)
   | WORDRegArg dst, WORDRegArg src => BOP OpSize2 op (DstSrcRR OpSize2 dst src)
+  | RegArg     dst, RegArg src     => BOP OpSize4 op (DstSrcRR OpSize4 dst src)
+
   | BYTERegArg dst, MemSpecArg src => BOP OpSize1 op (DstSrcRM OpSize1 dst src)
-  | RegArg dst, RegArg src => BOP OpSize4 op (DstSrcRR OpSize4 dst src)
+  | WORDRegArg dst, MemSpecArg src => BOP OpSize2 op (DstSrcRM OpSize2 dst src)
+  | RegArg     dst, MemSpecArg src => BOP OpSize4 op (DstSrcRM OpSize4 dst src)
+
   | BYTERegArg dst, ConstSrc n => BOP OpSize1 op (DstSrcRI OpSize1 dst (low 8 n))
   | RegArg dst, ConstSrc n => BOP OpSize4 op (DstSrcRI OpSize4 dst n)
-  | MemSpecArg dst, RegArg src => BOP OpSize4 op (DstSrcMR OpSize4 dst src)
+
   | MemSpecArg dst, BYTERegArg src => BOP OpSize1 op (DstSrcMR OpSize1 dst src)
-  | RegArg dst, MemSpecArg src => BOP OpSize4 op (DstSrcRM OpSize4 dst src)
+  | MemSpecArg dst, WORDRegArg src => BOP OpSize2 op (DstSrcMR OpSize2 dst src)
+  | MemSpecArg dst, RegArg     src => BOP OpSize4 op (DstSrcMR OpSize4 dst src)
+
   | MemSpecArg dst, ConstSrc n => BOP OpSize4 op (DstSrcMI OpSize4 dst n)
   | _, _=> BADINSTR
   end.
@@ -166,13 +172,20 @@ Notation "'CMP' 'BYTE' x , y" :=
 Definition makeMOV dst (src: InstrSrc) :=
   match dst, src with
   | BYTERegArg dst, BYTERegArg src => MOVOP OpSize1 (DstSrcRR OpSize1 dst src)
+  | WORDRegArg dst, WORDRegArg src => MOVOP OpSize2 (DstSrcRR OpSize2 dst src)
+  | RegArg     dst, RegArg     src => MOVOP OpSize4 (DstSrcRR OpSize4 dst src)
+
   | BYTERegArg dst, MemSpecArg src => MOVOP OpSize1 (DstSrcRM OpSize1 dst src)
-  | RegArg dst, RegArg src => MOVOP OpSize4 (DstSrcRR OpSize4 dst src)
+  | WORDRegArg dst, MemSpecArg src => MOVOP OpSize2 (DstSrcRM OpSize2 dst src)
+  | RegArg dst,     MemSpecArg src => MOVOP OpSize4 (DstSrcRM OpSize4 dst src) 
+
   | BYTERegArg dst, ConstSrc n => MOVOP OpSize1 (DstSrcRI OpSize1 dst (low 8 n))
-  | RegArg dst, ConstSrc n => MOVOP OpSize4 (DstSrcRI OpSize4 dst n)
-  | MemSpecArg dst, RegArg src => MOVOP OpSize4 (DstSrcMR OpSize4 dst src)
+  | RegArg     dst, ConstSrc n => MOVOP OpSize4 (DstSrcRI OpSize4 dst n)
+
   | MemSpecArg dst, BYTERegArg src => MOVOP OpSize1 (DstSrcMR OpSize1 dst src)
-  | RegArg dst, MemSpecArg src => MOVOP OpSize4 (DstSrcRM OpSize4 dst src)
+  | MemSpecArg dst, WORDRegArg src => MOVOP OpSize2 (DstSrcMR OpSize2 dst src)
+  | MemSpecArg dst, RegArg src => MOVOP OpSize4 (DstSrcMR OpSize4 dst src)
+
   | MemSpecArg dst, ConstSrc n => MOVOP OpSize4 (DstSrcMI OpSize4 dst n)
   | _, _=> BADINSTR
   end.

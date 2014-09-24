@@ -6,8 +6,8 @@ Import x86.instrrules.core.instrruleconfig.
 Lemma NEG_R_rule s (r:VReg s) (v:VWORD s) :
   let w := negB v in
   |-- basic
-    (VRegIs r v ** OSZCP?) (NEG r) empOP
-    (VRegIs r w ** OSZCP (msb v!=msb w) (msb w) (w == #0) (v != #0) (lsb w)).
+    (r ~= v ** OSZCP?) (NEG r) empOP
+    (r ~= w ** OSZCP (msb v!=msb w) (msb w) (w == #0) (v != #0) (lsb w)).
 Proof. destruct s; do_instrrule_triple. Qed.
 
 (** We make this rule an instance of the typeclass, and leave
@@ -25,9 +25,9 @@ Section generic.
   Global Instance: forall s r, instrrule (UOP s OP_NEG (RegMemR s r)) :=
     fun s r => match s as s return forall r, @T s r -> forall v : VWORD s,
                                                          |--basic
-                                                            (VRegIs (s:=s) r v ** OF? ** SF? ** ZF? ** CF? ** PF?)
+                                                            (r ~= v ** OF? ** SF? ** ZF? ** CF? ** PF?)
                                                             (UOP s OP_NEG (RegMemR s r)) empOP
-                                                            (VRegIs (s:=s) r (negB v) **
+                                                            (r ~= (negB v) **
                                                                               OSZCP (msb v != msb (negB v)) (msb (negB v))
                                                                               (negB v == #(0)) (v != #(0)) (lsb (negB v))) with
                  | OpSize1 => fun r x => x

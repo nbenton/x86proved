@@ -3,19 +3,19 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 Lemma XOR_RR_rule s (r1 r2:VReg s) v1 (v2:VWORD s):
-  |-- basic (VRegIs r1 v1 ** VRegIs r2 v2 ** OSZCP?) (XOR r1, r2) empOP
-            (VRegIs r1 (xorB v1 v2) ** VRegIs r2 v2 ** OSZCP false (msb (xorB v1 v2))
+  |-- basic (r1 ~= v1 ** r2 ~= v2 ** OSZCP?) (XOR r1, r2) empOP
+            (r1 ~= (xorB v1 v2) ** r2 ~= v2 ** OSZCP false (msb (xorB v1 v2))
                             (xorB v1 v2 == #0) false (lsb (xorB v1 v2))).
 Proof. destruct s; do_instrrule_triple. Qed.
 
-Lemma XOR_RM_rule (pd:DWORD) (r1 r2:Reg) (v1 v2:DWORD) (offset:nat) v :
+Lemma XOR_RM_rule (pd:DWORD) (r1 r2:VReg OpSize4) (v1 v2:DWORD) (offset:nat) v :
   xorB v1 v2 = v ->
   |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
             (XOR r1, [r2 + offset]) empOP
             (r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
              OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof. 
-change (stateIs r1) with (@VRegIs OpSize4 r1). move => ?; subst. do_instrrule_triple. 
+move => ?; subst. do_instrrule_triple. 
 Qed.
 
 (** We make this rule an instance of the typeclass, and leave
@@ -27,7 +27,7 @@ Global Instance: forall (r1 r2 : Reg) (offset : nat), instrrule (XOR r1, [r2 + o
 Global Instance: forall d (r1 r2 : VReg d), instrrule (BOP d OP_XOR (DstSrcRR d r1 r2)) | 1
   := @XOR_RR_rule.
 
-Corollary XOR_RM_ruleNoFlags (pd:DWORD) (r1 r2:Reg) v1 (v2:DWORD) (offset:nat):
+Corollary XOR_RM_ruleNoFlags (pd:DWORD) (r1 r2:VReg OpSize4) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (XOR r1, [r2 + offset]) empOP (r1~=xorB v1 v2)
              @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
 Proof. autorewrite with push_at. basic apply *. Qed.

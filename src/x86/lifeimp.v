@@ -39,7 +39,7 @@ Proof.
   do !basic apply * => //.
 
   rewrite /iter. autorewrite with bitsHints. (*rewrite -addB_addn. rewrite !shlB_asMul. *)
-  do 6 rewrite -[in X in (regIs EDI X)]mulB_muln.
+  do 6 rewrite -[in X in (EDI ~= X)]mulB_muln.
   rewrite !fromNat_mulBn.
   replace (2 * _) with 32 => //.
   replace (32 * (2*2)) with 128 => //.

@@ -41,21 +41,10 @@ Proof.
   rewrite <- HO. rewrite -> catOPA.
   eforalls Hc1.
   eforalls Hc2.
-  repeat match goal with
-           | [ H : ?SH |-- (?AH -->> obs ?OH @ ?BH) <@ ?FH |- ?S |-- (?A -->> obs ?O @ ?B) <@ ?F ]
-             => syntax_unify SH S;
-               syntax_unify BH B;
-               specapply H; try (by ssimpl); try (by f_cancel); []
-           | _ => progress rewrite spec_at_emp
-         end.
-  repeat match goal with
-           | _ => evar_safe_reflexivity
-           | [ |- _ |-- (?a -->> ?a) <@ _ ] => rewrite <- spec_reads_frame
-           | [ |- _ |-- ?a -->> ?a ] => apply: limplAdj
-           | [ |- _ //\\ ?a |-- ?a ] => apply: landL2
-           | [ |- ?a //\\ _ |-- ?a ] => apply: landL1
-           | [ |- _ //\\ ?a |-- ?a ] => apply: landL2
-         end.
+  specapply Hc1. erewrite -> H. reflexivity. by ssimpl. 
+  specapply Hc2. by ssimpl. 
+  rewrite <- spec_reads_frame. autorewrite with push_at. apply limplAdj. apply landL2. 
+  rewrite empSPR. reflexivity. 
 Qed.
 
 Definition basic_seq (c1 c2: program) S P O1 Q (O2 : OPred) R O
@@ -670,7 +659,7 @@ Hint Unfold not
                                              instrrules_side_conditions_opred
                                              instrrules_side_conditions_spred.
 Hint Unfold OPred_pred default_PointedOPred  : instrrules_side_conditions_opred.
-Hint Unfold stateIs stateIsAny : instrrules_side_conditions_spred.
+Hint Unfold stateIsAny : instrrules_side_conditions_spred.
 (** [Hint Rewrite] only supports one database at a time in 8.4.  In
     8.5, it'll be nicer and support multiple ones. *)
 Hint Rewrite eq_refl : instrrules_side_conditions.

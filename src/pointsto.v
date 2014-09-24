@@ -63,6 +63,40 @@ rewrite -> memIsFixed. sdestruct => AP.
 rewrite (leB_apart LT LE AP).  reflexivity. 
 Qed.
 
+Tactic Notation "not" tactic1(t) := try (t; fail 1).
+
+  Ltac cheap_unify p :=
+    match p with
+    | (?a,?b) => is_evar a; first [unify a b | fail 1]
+    | (?a,?b) => is_evar b; first [unify a b | fail 1]
+    | (?a,?b) => not (has_evar a); not (has_evar b); first [constr_eq a b | fail 1]
+    | (?fa ?xa,?fb ?xb) => cheap_unify (fa, fb); cheap_unify (xa, xb)
+    end.
+
+Ltac unifyPT P :=
+  match P with
+    (* These are surely safe *)
+  | (byteIs ?p ?v, byteIs ?p ?w) => unify v w
+  | (?p :-> ?v, ?p :-> ?w) => unify v w
+  | (?i -- ?j :-> ?v, ?i -- ?k :-> ?v) => unify j k
+    (* These might be overlapping ranges, but typically we don't expect to see this *)
+  | (?i -- ?j :-> ?v, ?i -- ?k :-> ?w) => (unify j k; unify v w)
+    (* This seems risky. There might be multiple ranges pointing to the same value *)
+  | (?i -- ?j :-> ?v, ?k -- ?l :-> ?v) => (unify i k; unify j l)
+
+  | (stateIs (@RegOrFlagR ?s ?r) ?v, stateIs (@RegOrFlagR ?s ?t) ?w) => 
+    (not (has_evar r); not (has_evar t); (unify r t; cheap_unify (v,w)))
+  | (stateIs (@RegOrFlagF ?r) ?v, stateIs (@RegOrFlagF ?t) ?w) => 
+    (not (has_evar r); not (has_evar t); (unify r t; cheap_unify (v,w)))
+  | (stateIs ?r ?v, stateIs ?r ?w) => Solving.cheap_unify (v, w)
+  | (?s ?v,?s ?w) => cheap_unify (v, w)
+  | _ => Solving.cheap_unify P
+  end.
+
+Ltac ssimpl := ssimpl_with unifyPT.
+Ltac sbazooka := sbazooka_with unifyPT.
+
+
 (*---------------------------------------------------------------------------
    We can interpret reader terms purely logically, using the primitive
    byteIs predicate and separating conjunction.
@@ -146,7 +180,7 @@ Lemma interpReaderPair T1 T2 (r1: Reader T1) (r2: Reader T2) v1 v2 p r :
   interpReader (let! x1 = r1; let! x2 = r2; retn (x1, x2)) p r (v1,v2).
 Proof. rewrite interpReader_bind.
 split.
-+ sdestructs => q. sbazooka. rewrite interpReader_bind. sbazooka.
++ sdestructs => q. sbazooka. sbazooka. rewrite interpReader_bind. sbazooka.
   simpl. sbazooka.
 + sdestructs => p' v. rewrite interpReader_bind. sdestructs => p'' v'.
   rewrite interpReader_retn. sdestructs => -> [-> ->]. sbazooka.
@@ -342,7 +376,7 @@ Section SeqMemIs.
     p -- q :-> (xs ++ ys) -|- p -- q :-> (xs, ys).
   Proof.
     elim: xs p => [|x xs IHxs] p.
-    - rewrite pairMemIsSimpl/fst/snd cat0s. split. sbazooka. rewrite seqMemIsNil. sbazooka.
+    - rewrite pairMemIsSimpl/fst/snd cat0s. split. sbazooka. erewrite seqMemIsNil. sbazooka.
       sdestructs => p'. rewrite seqMemIsNil. sdestructs => ->. sbazooka.
     - simpl ((x::xs) ++ ys). split.
       + rewrite pairMemIsSimpl seqMemIsCons /fst/snd.
@@ -366,6 +400,28 @@ Section SeqMemIs.
 
 End SeqMemIs.
 
+
+Lemma seqFixedMemIsConsNE X `(FMI:FixedMemIs X) (p q : DWORD) (v:X) vs : 0 < n < 2^32 -> 
+    p -- q :-> (v::vs) |-- p != q /\\ memIs p q (v::vs).
+Proof. move/andP => [GT LT]. case E: n => [|n']; subst => //. 
+  rewrite -> seqFixedMemIsCons'. 
+  have H: p != p+#n'.+1. by apply: addBn_ne. 
+  (* Why can't I identify the right memIs? *)
+  rewrite -> memIsLe at 1. sdestruct => H1. 
+  rewrite sepSPC. 
+  rewrite -> memIsLe at 1. sdestruct => H2. 
+  rewrite leCursor_nat in H1.
+  rewrite leCursor_nat in H2.
+  rewrite leq_eqVlt in H1. 
+  have HI:= @cursorToNat_inj _ p (p+#n'.+1). 
+  case E: (cursorToNat p == cursorToNat (p+#n'.+1)). 
+  rewrite (eqP E) in HI. specialize (HI (refl_equal _)). injection HI => HI'. rewrite {1}HI' in H. 
+  by rewrite eq_refl in H. rewrite E orFb in H1. 
+  have NE: cursorToNat p != cursorToNat q. apply negbT. apply: ltn_eqF. by apply: leq_trans H2. 
+  rewrite inj_eq in NE; last by apply cursorToNat_inj.
+  rewrite NE.
+  sbazooka.  
+Qed. 
 
 (*---------------------------------------------------------------------------
    MemIs for subtype
@@ -633,7 +689,7 @@ rewrite /fixedSizeReader in F1. rewrite interpReader_bind.
 sdestructs => p' v1. rewrite -> F1.
 sdestruct => E1.
 rewrite interpReader_retn.
-sbazooka. subst. done. rewrite interpReader_retn. sbazooka.
+sbazooka. subst. done. erewrite interpReader_retn. sbazooka.
 Qed.
 
 Lemma fixedSizeReader_retn T (x:T) : fixedSizeReader (readerRetn x) 0.
@@ -955,9 +1011,12 @@ Qed.
 
 
 (* Disjointness for registers, flags and bytes *)
-Lemma regIs_disjoint (r1 r2: AnyReg) v1 v2 : r1 ~= v1 ** r2 ~= v2 |-- r1 <> r2 /\\ (r1 ~= v1 ** r2 ~= v2).
-Proof. case E: (r1 == r2). rewrite (eqP E). by rewrite ->regIs_same at 1.
+Lemma regIs_disjoint s (r1 r2: VRegAny s) v1 v2 : r1 ~= v1 ** r2 ~= v2 |-- r1 <> r2 /\\ (r1 ~= v1 ** r2 ~= v2).
+Proof. destruct s. admit. admit. admit.
+
+(*- case E: (r1 == r2). rewrite (eqP E). by rewrite ->regIs_same at 1.
 ssplit; last done. move => H. by rewrite H eq_refl in E.
+*)
 Qed.
 
 Lemma flagIs_disjoint (f1 f2: Flag) v1 v2 : f1 ~= v1 ** f2 ~= v2 |-- f1 <> f2 /\\ (f1 ~= v1 ** f2 ~= v2).
@@ -970,11 +1029,8 @@ Proof. case E: (p1 == p2). rewrite (eqP E). by setoid_rewrite byteIs_same at 1.
 ssplit; last done. move => H. by rewrite H eq_refl in E.
 Qed.
 
-Ltac unifyPT P :=
-  match P with
-  | (?p :-> ?v, ?p :-> ?w) => unify v w
-  | _ => Solving.cheap_unify P
-  end.
-
-Ltac ssimpl := ssimpl_with unifyPT.
-Ltac sbazooka := sbazooka_with unifyPT.
+(*Set Printing Coercions.*)
+Example ex1 : exists (x y z:DWORD), 
+  AnyRegToVRegAny EAX ~= x ** EBX ~= #1 ** x -- y :-> #4 |-- 
+  EBX ~= y ** EAX ~= #2 ** x -- z :-> #4. 
+Proof. eexists _, _, _.  ssimpl. Qed.

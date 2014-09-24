@@ -510,37 +510,33 @@ Global Coercion lbool (b:bool) := lpropand b ltrue.
 
 Definition regPieceIs r v : SPred := eq_pred (addRegPieceToPState emptyPState r v).
 Definition flagIs f b : SPred := eq_pred (addFlagToPState emptyPState f b).
-Definition BYTEregIs r v : SPred := regPieceIs (BYTERegToRegPiece r) v.
+Definition BYTEregIs (r:VRegAny OpSize1) v : SPred := regPieceIs (BYTERegToRegPiece r) v.
 
-Definition regIs r (v:DWORD) : SPred :=
+Definition regIs (r:AnyReg) (v:DWORD) : SPred :=
    regPieceIs (AnyRegPiece r RegIx0) (getRegPiece v RegIx0)
 ** regPieceIs (AnyRegPiece r RegIx1) (getRegPiece v RegIx1)
 ** regPieceIs (AnyRegPiece r RegIx2) (getRegPiece v RegIx2)
 ** regPieceIs (AnyRegPiece r RegIx3) (getRegPiece v RegIx3).
 
-Definition WORDregIs (r:WORDReg) (v:WORD) : SPred :=
+Definition WORDregIs (r:VRegAny OpSize2) (v:WORD) : SPred :=
    regPieceIs (AnyRegPiece (WORDRegToReg r) RegIx0) (slice 0 8 8 v)
 ** regPieceIs (AnyRegPiece (WORDRegToReg r) RegIx1) (slice 8 8 0 v).
 
 Inductive RegOrFlag :=
-| RegOrFlagDWORD :> AnyReg -> RegOrFlag
-| RegOrFlagWORD :> WORDReg -> RegOrFlag
-| RegOrFlagBYTE :> BYTEReg -> RegOrFlag
+| RegOrFlagR s :> VRegAny s -> RegOrFlag
 | RegOrFlagF :> Flag -> RegOrFlag.
 
 Definition RegOrFlag_target rf :=
 match rf with
-| RegOrFlagDWORD _ => DWORD
-| RegOrFlagWORD _  => WORD
-| RegOrFlagBYTE _  => BYTE
+| RegOrFlagR s _   => VWORD s
 | RegOrFlagF _     => FlagVal
 end.
 
 Definition stateIs (x: RegOrFlag) : RegOrFlag_target x -> SPred :=
 match x with
-| RegOrFlagDWORD r => regIs r
-| RegOrFlagWORD r => WORDregIs r
-| RegOrFlagBYTE r => BYTEregIs r
+| RegOrFlagR OpSize4 r => regIs r
+| RegOrFlagR OpSize2 r => WORDregIs r
+| RegOrFlagR OpSize1 r => BYTEregIs r
 | RegOrFlagF f => flagIs f
 end.
 
@@ -552,8 +548,8 @@ Notation "x '~=' v" := (stateIs x v) (at level 70, no associativity, format "x '
 Notation "x '?'" := (stateIsAny x) (at level 2, format "x '?'"): spred_scope.
 
 Hint Unfold VWORD RegOrFlag_target : spred.
-(** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
-Hint Unfold stateIsAny stateIs : finish_logic_unfolder.
+(** When dealing with logic, we want to reduce [stateIsAny] and similar to basic building blocks. *)
+Hint Unfold stateIsAny : finish_logic_unfolder.
 
 (*---------------------------------------------------------------------------
      Byte-is predicate
@@ -715,18 +711,19 @@ destruct H1; by destruct H.
 by destruct H1.
 Qed.
 
-Lemma BYTEregIs_same (r:BYTEReg) (v1 v2:BYTE) : r ~= v1 ** r ~= v2 |-- lfalse.
-Proof. rewrite /BYTEregIs. apply regPieceIs_same. Qed.
-
 Lemma sepRev4 P Q R S : P ** Q ** R ** S -|- S ** R ** Q ** P.
 Proof. rewrite (sepSPC P). rewrite (sepSPC Q). rewrite (sepSPC R).
 by rewrite !sepSPA. Qed.
 
-Lemma regIs_same (r:AnyReg) v1 v2 : r ~= v1 ** r ~= v2 |-- lfalse.
-Proof. rewrite /stateIs/regIs.
-rewrite sepRev4. rewrite sepSPA.
-rewrite sepRev4. rewrite -!sepSPA. rewrite -> (@regPieceIs_same (AnyRegPiece r RegIx0)).
-by rewrite !sepSP_falseL. Qed.
+Lemma regIs_same s (r:VRegAny s) (v1 v2:VWORD s) : r ~= v1 ** r ~= v2 |-- lfalse.
+Proof. destruct s. 
+- apply regPieceIs_same. 
+- destruct r. admit. 
+- rewrite /stateIs/regIs. 
+  rewrite sepRev4. rewrite sepSPA.
+  rewrite sepRev4. rewrite -!sepSPA. rewrite -> (@regPieceIs_same (AnyRegPiece r RegIx0)).
+  by rewrite !sepSP_falseL. 
+Qed.
 
 Lemma flagIs_same (f:Flag) v1 v2 : f ~= v1 ** f ~= v2 |-- lfalse.
 Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]].
@@ -747,3 +744,7 @@ destruct (s Memory p); rewrite eq_refl in H1.
 destruct H1; by destruct H.
 by destruct H1.
 Qed.
+
+(* We don't want simpl to unfold this *)
+Global Opaque stateIs.
+

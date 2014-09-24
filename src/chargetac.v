@@ -168,11 +168,11 @@ Ltac simpl_logic' :=
 
 Ltac simpl_logic := do ?simpl_logic'.
 
-(** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
+(** When dealing with logic, we want to reduce [stateIsAny OSZCP] and similar to basic building blocks. *)
 (** We put the hints in the file where each of these constants is defined. *)
 (**
 <<
-Hint Unfold DWORDorBYTEregIs stateIsAny OSZCP stateIs : finish_logic_unfolder.
+Hint Unfold stateIsAny OSZCP : finish_logic_unfolder.
 >>*)
 
 Ltac finish_logic_with' tac :=

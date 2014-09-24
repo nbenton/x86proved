@@ -18,14 +18,8 @@ Require Import x86proved.bitsrep x86proved.x86.reg.
 (*=MemSpec *)
 Inductive Scale := S1 | S2 | S4 | S8.
 Inductive MemSpec :=
-  mkMemSpec (sib: option (Reg * option (NonSPReg*Scale)))
+  mkMemSpec (sib: option (VReg OpSize4 * option (NonSPReg*Scale)))
             (offset: DWORD).
-(*=End *)
-
-(* 8-bit register *)
-(*=BYTEReg *)
-Definition VReg (d: OpSize) := 
-  match d with OpSize1 => BYTEReg | OpSize2 => WORDReg | OpSize4 => Reg end.
 (*=End *)
 
 (* Register or memory *)

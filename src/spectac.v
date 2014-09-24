@@ -2,7 +2,7 @@
     Tactics for the specification logic
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
-Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.septac.
+Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.septac x86proved.pointsto (* for ssimpl *).
 Require Import x86proved.x86.reg x86proved.x86.flags. (* for EIP *)
 Require Import x86proved.safe x86proved.opred x86proved.obs.
 Require Import x86proved.common_tactics.
@@ -154,13 +154,12 @@ Ltac eforalls_no_subst_evars H :=
    assertion where EIP appears, for example, on the left of a magic wand. But
    in practice, EIP is treated very schematically.
 
-   NOTE: to get the match to succeed, we need the RegOrFlagDWORD constructor. Grrr. *)
+   NOTE: to get the match to succeed, we need the RegOrFlagR OpSize4 (AnyRegToVRegAny _) constructor. Grrr. *)
 Ltac solve_code :=
   match goal with
     |- ?P |-- ?Q /\ _ =>
-      match P with context [RegOrFlagDWORD EIP ~= ?eip] =>
-        match Q with context [RegOrFlagDWORD EIP ~= ?evar] =>
-          unify eip evar
+      match P with context [@RegOrFlagR OpSize4 (AnyRegToVRegAny EIP) ~= ?eip] =>
+        match Q with context [@RegOrFlagR OpSize4 (AnyRegToVRegAny EIP) ~= ?evar] => unify eip evar
         end
       end
   end;

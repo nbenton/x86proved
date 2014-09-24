@@ -40,7 +40,7 @@ Qed.
 End setoid_rewrite_opacity.
 
 Ltac basicCMP_ZC :=
-  rewrite /makeBOP;
+  rewrite /makeBOP/InstrArg_of_VReg; 
   let R := lazymatch goal with
              | |- |-- basic ?p (@BOP ?d OP_CMP ?a) ?O ?q => constr:(@CMP_ruleZC d a)
            end in
@@ -56,11 +56,12 @@ Lemma CMP_RI_rule (r1:Reg) v1 (v2:DWORD):
 Proof. basic apply *. Qed.
 
 (** Too bad there are no hint databases for ssr [rewrite] *)
-Lemma CMP_RbI_rule (r1:BYTEReg) (v1 v2:BYTE):
+(*Lemma CMP_RbI_rule (r1:VReg OpSize1) (v1 v2:BYTE):
   |-- basic (r1 ~= v1 ** OSZCP?) (CMP r1, v2) empOP
             (let: (carry,res) := eta_expand (sbbB false v1 v2) in
   r1 ~= v1 ** OSZCP (computeOverflow v1 v2 res) (msb res) (res == #0) carry (lsb res)).
-Proof. basic apply *. by rewrite low_catB. Qed.
+Proof. attempt basic apply (@CMP_rule OpSize1 _ v1). by rewrite low_catB. Qed.
+*)
 
 Lemma CMP_RM_rule (pd:DWORD) (r1 r2:Reg) offset (v1 v2:DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
