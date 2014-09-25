@@ -2,6 +2,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x86proved.spectac x86proved.obs x86proved.x86.basic x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
+Require Import x86proved.chargetac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -55,43 +56,38 @@ Proof.
   specintros => *. 
   unfold_program. specintros => *.
   autorewrite with push_at.
-Admitted. 
-(*  (* MOV EDI, [infoBlock] *)
+
+  (* MOV EDI, [infoBlock] *)
   rewrite {3}/allocInv. specintros => base limit. 
-  basic apply *.  unhideReg EDI => edi. specapply MOV_RM0_rule. split. sbazooka. ssimpl. ; first by sbazooka. ssimpl.
+  specapply MOV_RanyInd_rule; first by ssimpl. 
 
   (* ADD EDI, bytes *)
   specapply ADD_RI_rule; first by ssimpl.
 
   (* JC failed *)
   specapply JC_rule; first by rewrite /OSZCP; ssimpl.
-  case Hcarry:(carry_addB base n).
-  { rewrite <-spec_reads_frame.
-    autorewrite with push_at. apply limplValid. apply landL1. cancel1.
-    rewrite /stateIsAny /allocInv. by sbazooka. }
+  case Hcarry:(carry_addB base n). 
+  { rewrite <-spec_reads_frame. apply limplValid. apply landL1. finish_logic. 
+    rewrite /stateIsAny/allocInv. sbazooka. }
 
   (* CMP [infoBlock+#4], EDI *)
-  (*specintro. move/eqP => Hcarry.*)
   specapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
 
   (* JC failed *)
   specapply JC_rule; first by ssimpl.
 
   case LT:(ltB _ _).
-  { rewrite <-spec_reads_frame.
-    autorewrite with push_at. apply limplValid. apply landL1. cancel1.
+  { rewrite <-spec_reads_frame. apply limplValid. apply landL1. finish_logic. 
     rewrite /stateIsAny/allocInv. sbazooka. }
 
   (* MOV [infoBlock], EDI *)
   specapply MOV_IndR_rule; first by ssimpl.
-  { rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
-    apply: landL2. cancel1.
-    rewrite /allocInv. ssplits.
-    rewrite /stateIsAny/natAsDWORD. ssimpl. sbazooka.
+  { rewrite <-spec_reads_frame. apply limplValid. apply landL2. finish_logic.
+    rewrite /allocInv/stateIsAny/natAsDWORD. sbazooka.
+
     apply memAnySplit.
     { apply: addB_leB.
       apply injective_projections; [ by rewrite Hcarry
                                    | by generalize @adcB ]. }
     { simpl. rewrite ltBNle /natAsDWORD in LT. rewrite -> Bool.negb_false_iff in LT. by rewrite LT. } }
 Qed.
-*)
