@@ -112,5 +112,5 @@ Inductive Instr :=
 | RETOP (size: WORD)
 | OUTOP (s: OpSize) (port: Port)
 | INOP (s: OpSize) (port: Port)
-| HLT | BADINSTR.
+| HLT | ENCLU | ENCLS | BADINSTR.
 (*=End *)

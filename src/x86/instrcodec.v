@@ -317,6 +317,14 @@ Definition isHLT : CAST unit Instr.
 apply: MakeCast (fun _ => HLT) (fun i => if i is HLT then Some tt else None) _; by elim; elim.
 Defined.
 
+Definition isENCLU : CAST unit Instr.
+apply: MakeCast (fun _ => ENCLU) (fun i => if i is ENCLU then Some tt else None) _; by elim; elim.
+Defined.
+
+Definition isENCLS : CAST unit Instr.
+apply: MakeCast (fun _ => ENCLS) (fun i => if i is ENCLS then Some tt else None) _; by elim; elim.
+Defined.
+
 Definition TgtCodec : Codec Tgt := DWORDCodec ~~> unTgt.
 Definition ShortTgtCodec : Codec Tgt := shortDWORDCodec ~~> unTgt.
 
@@ -762,6 +770,8 @@ Definition InstrCodec : Codec Instr :=
 ||| #x"F5" ~~> isCMC
 ||| #x"F8" ~~> isCLC
 ||| #x"F9" ~~> isSTC
+||| #x"0F" .$ #x"01" .$ #x "D7" ~~> isENCLU
+||| #x"0F" .$ #x"01" .$ #x "CF" ~~> isENCLS
 (* Everything else *)
 ||| JMPCodec ||| CALLCodec ||| TESTCodec ||| PUSHCodec ||| POPCodec ||| RETCodec
 ||| MOVCodec ||| BITCodec ||| SHIFTCodec ||| JCCCodec ||| BINOPCodec ||| UOPCodec
