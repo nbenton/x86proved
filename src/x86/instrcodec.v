@@ -605,15 +605,15 @@ Definition BINOPCodec :=
       (VAXCodec _ $ VWORDCodec _ ~~> unDstSrcRI _) ~~> unBOP (mkOpSize w true)
 
     (* OP r/m8, r8 | OP r/m16, r16 | OP r/m32, r32 *)
-||| #b"00" .$ opCodec $ #b"000" .$ 
+||| #b"00" .$ opCodec $ #b"010" .$ 
       (RegMemCodec (VRegCodec _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w false)
-||| #b"00" .$ opCodec $ #b"001" .$ 
+||| #b"00" .$ opCodec $ #b"011" .$ 
       (RegMemCodec (VRegCodec _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w true)
 
     (* OP r8, r/m8 | OP r16, r/m16 | OP r32, r/m32 *)
-||| #b"00" .$ opCodec $ #b"010" .$ 
+||| #b"00" .$ opCodec $ #b"000" .$ 
       (RegMemCodec (VRegCodec _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w false)
-||| #b"00" .$ opCodec $ #b"011" .$ 
+||| #b"00" .$ opCodec $ #b"001" .$ 
       (RegMemCodec (VRegCodec _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w true)
 
     (* OP r/m8, imm8 | OP r/m16, imm16 | OP r/m32, imm32 *)
