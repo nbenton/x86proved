@@ -1,5 +1,5 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
-Require Import x86proved.bitsrep x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.spred x86proved.pointsto x86proved.cursor x86proved.reader x86proved.writer x86proved.roundtrip x86proved.x86.addr.
+Require Import x86proved.bitsrep x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.spred x86proved.cursor x86proved.reader x86proved.writer x86proved.roundtrip x86proved.x86.addr.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -74,7 +74,6 @@ Fixpoint interpProgram i j prog :=
   | prog_data _ _ _ _ v => i -- j :-> v
   end.
 
-Require Import x86proved.septac.
 Lemma interpProgramLeAux prog : forall p q, interpProgram p q prog |-- leCursor p q /\\ interpProgram p q prog.
 Proof.
 induction prog => p q; rewrite /interpProgram-/interpProgram.
@@ -304,7 +303,6 @@ Global Instance progEq_decLabel_m:
 Proof. move => f1 f2 EQ. by apply progEqDecLabel. Qed.
 
 (* Main lemma: memIs respects progEq *)
-Require Import x86proved.septac.
 Lemma memIsProgEquiv p1 p2 : progEq p1 p2 -> forall (l l':ADDR), l -- l' :-> p1 -|- l -- l' :-> p2.
 Proof. move => EQ. induction EQ => l l'; unfold_program; unfold_program; subst.
 (* progEqRefl *)

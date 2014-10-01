@@ -2,7 +2,7 @@ Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
 Require Import x86proved.x86.procstatemonad (* for [setRegInProcState] *) x86proved.pmapprops (* for [updateThenLookup] *) x86proved.x86.ioaction (* for [outputToActions] *).
-Require Import x86proved.septac (* for [sbazoooka] *) x86proved.pointsto (* for [:->] *) x86proved.pfun (* for [splitsAs] *) x86proved.writer (* for [WriterTm] *) x86proved.cursor.
+Require Import x86proved.spred x86proved.pfun (* for [splitsAs] *) x86proved.writer (* for [WriterTm] *) x86proved.cursor.
 
 Require Import x86proved.triple.morphisms x86proved.triple.roc.
 

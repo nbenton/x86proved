@@ -2,7 +2,7 @@ Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
 Require Import x86proved.x86.procstatemonad (* for [ST] *).
-Require x86proved.pointsto (* for [ssimpl] *).
+Require x86proved.spred (* for [ssimpl] *).
 
 Require Import x86proved.triple.roc.
 Require Import x86proved.triple.monad.

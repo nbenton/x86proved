@@ -1,7 +1,7 @@
 (** * Auxiliary lemmas and tactics for Hoare triples on *programs* *)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x86proved.spectac x86proved.obs x86proved.pointsto x86proved.cursor x86proved.x86.instr x86proved.reader x86proved.x86.instrcodec.
+Require Import x86proved.spred x86proved.opred x86proved.spec x86proved.spectac x86proved.obs x86proved.cursor x86proved.x86.instr x86proved.reader x86proved.x86.instrcodec.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import x86proved.x86.program x86proved.x86.basic x86proved.charge.ilogic.
 Require Import x86proved.common_tactics.

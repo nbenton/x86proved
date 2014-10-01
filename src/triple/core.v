@@ -3,13 +3,13 @@
     supports registers, flags and memory. *)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.fintype.
 Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops x86proved.bitsopsprops x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.pmapprops x86proved.x86.ioaction.
-Require Import x86proved.monad x86proved.monadinst x86proved.reader x86proved.spred x86proved.spredtotal x86proved.septac x86proved.pointsto x86proved.pfun x86proved.cursor x86proved.writer.
+Require Import x86proved.monad x86proved.monadinst x86proved.reader x86proved.spred x86proved.spred.spredtotal x86proved.pfun x86proved.cursor x86proved.writer.
 Require Import x86proved.common_tactics x86proved.common_definitions.
 
 Module Import tripleconfig.
   Export Ssreflect.ssreflect  Ssreflect.ssrfun Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat (* for getting levels right *) Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq (* for [++] *) Ssreflect.fintype.
   Export x86proved.x86.procstate (* for [ProcState] *) (*x86proved.x86.procstatemonad (* for [ST] *)*).
-  Export x86proved.spred (* for [SPred], [lentails] *) x86proved.spredtotal (* for coercion [ProcState >-> PState] *).
+  Export x86proved.spred (* for [SPred], [lentails] *) x86proved.spred.spredtotal (* for coercion [ProcState >-> PState] *).
   Export x86proved.monad (* for [bind] and [retn] *).
 
   Global Set Implicit Arguments.

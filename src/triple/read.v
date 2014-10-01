@@ -1,7 +1,7 @@
 Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import x86proved.reader (* for [Reader] *) x86proved.pointsto (* for [interpReader] *) x86proved.pfun (* for [includedIn] *) x86proved.cursor (* for [next] *).
+Require Import x86proved.reader (* for [Reader] *) x86proved.spred (* for [interpReader] *) x86proved.pfun (* for [includedIn] *) x86proved.cursor (* for [next] *).
 
 Import Prenex Implicits.
 

@@ -43,14 +43,16 @@ x86\eval.vo \
 x86\encdechelp.vo \
 x86\step.vo \
 x86\ioaction.vo \
+spred\core.vo \
+spred\spredtotal.vo \
+spred\pointsto.vo \
+spred\septac.vo \
 spred.vo \
-spredtotal.vo \
 opred.vo \
 opred/core.vo \
 opred/pointed.vo \
 opred/morphisms.vo \
 opred/laws.vo \
-septac.vo \
 chargetac.vo \
 list_relations.vo \
 charge_lemmas.vo \
@@ -59,7 +61,6 @@ safe.vo \
 obs.vo \
 spectac.vo \
 basicspectac.vo \
-pointsto.vo \
 triple.vo \
 triple/core.vo \
 triple/morphisms.vo \

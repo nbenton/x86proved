@@ -1,7 +1,7 @@
 Require Import x86proved.triple.core.
 Import triple.core.tripleconfig.
 
-Require Import x86proved.septac (* for [sbazooka] *) x86proved.pfun (* for [splitsAs] *).
+Require Import x86proved.spred (* for [sbazooka] *) x86proved.pfun (* for [splitsAs] *).
 Require Import x86proved.triple.roc x86proved.triple.tactics.
 Require Import x86proved.common_tactics.
 

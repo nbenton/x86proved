@@ -2,7 +2,7 @@
     Tactics for the specification logic
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
-Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.septac x86proved.pointsto (* for ssimpl *).
+Require Import x86proved.bitsrep x86proved.spred x86proved.spec  (* for ssimpl *).
 Require Import x86proved.x86.reg x86proved.x86.flags. (* for EIP *)
 Require Import x86proved.safe x86proved.opred x86proved.obs.
 Require Import x86proved.common_tactics.

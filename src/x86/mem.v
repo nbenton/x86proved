@@ -29,8 +29,9 @@ Definition Mem := PMAP BYTE naddrBits.
 Definition initialMemory : Mem := @EmptyPMap BYTE _.
 
 (* Memory from p to just below p' in m consists exactly of the bytes in xs *)
-Fixpoint memIs (m:Mem) (p p':ADDR) xs :=
+(*Fixpoint memIs (m:Mem) (p p':ADDR) xs :=
   if xs is x::xs then m p = Some x /\ memIs m (incB p) p' xs else p=p'.
+*)
 
 
 (* Map some memory, filling it with ones (to be more visible!) *)

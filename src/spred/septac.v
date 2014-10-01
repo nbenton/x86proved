@@ -1,5 +1,5 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
-Require Import x86proved.spred.
+Require Import x86proved.spred.core.
 Require Import x86proved.common_tactics x86proved.charge_lemmas.
 Require Import Coq.Classes.RelationClasses.
 

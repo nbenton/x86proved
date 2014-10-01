@@ -3,12 +3,15 @@
     structure dependencies on being able to unfold things like
     [VRegIs]... *)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
-Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.septac x86proved.spectac.
+Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.spectac.
 Require Import x86proved.x86.reg x86proved.x86.flags (* for EIP *) x86proved.x86.instrrules.core (* for [VRegIs] *) x86proved.x86.program.
 Require Import x86proved.safe x86proved.opred x86proved.obs.
-Require Import x86proved.pointsto (* for [memIs] *) x86proved.x86.instr (* for [Instr] *) x86proved.x86.basicprog (* for [get_instrrule_of] *) x86proved.x86.instrsyntax (* for [makeBOP] *).
+Require Import x86proved.x86.instr (* for [Instr] *) x86proved.x86.basicprog (* for [get_instrrule_of] *) x86proved.x86.instrsyntax (* for [makeBOP] *).
 Require Import x86proved.common_tactics.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
 
 (** We now have a number of macros for dealing with applying [basic]
     lemmas to less structured code.  We can pull out the [EIP] pointer
