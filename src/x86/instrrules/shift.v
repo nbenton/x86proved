@@ -9,8 +9,12 @@ Lemma SmallCount : forall count, count < 32 -> toNat (n:=8) (andB #x"1f" (fromNa
 Proof. do 32 case => //.
 Qed.
 
-Lemma SHL_RI_rule s (r:VReg s) (v:VWORD s) (count:nat):
-  count < n32 ->
+Lemma SmallCount64 : forall count, count < 64 -> toNat (n:=8) (andB #x"3f" (fromNat count)) = count.
+Proof. do 64 case => //.
+Qed.
+
+Lemma SHL_RI_rule s (r:GPReg s) (v:VWORD s) (count:nat):
+  count < (if s is OpSize8 then n64 else n32) ->
   |-- basic (r~=v ** OSZCP?) (SHL r, count) empOP
             (r~=iter count shlB v ** OSZCP?).
 Proof.
@@ -20,13 +24,14 @@ Proof.
       middle of the proof to reduce proof term size. *)
   destruct s;
   do 5?[do ![ progress instrrule_triple_bazooka using sbazooka
+            | progress rewrite (SmallCount64 BOUND)
             | progress rewrite (SmallCount BOUND)
             | progress rewrite /stateIsAny ]
        | destruct count as [|count]; rewrite /(iter 0) ?dropmsb_iter_shlB ].
 Qed.
 
-Lemma SHR_RI_rule s (r:VReg s) (v:VWORD s) (count:nat):
-  count < n32 ->
+Lemma SHR_RI_rule s (r:GPReg s) (v:VWORD s) (count:nat):
+  count < (if s is OpSize8 then n64 else n32) ->
   |-- basic (r~=v ** OSZCP?) (SHR r, count) empOP
             (r~=iter count shrB v ** OSZCP?).
 Proof.
@@ -37,6 +42,7 @@ Proof.
   destruct s;
   do 5?[do ![ progress instrrule_triple_bazooka using sbazooka
             | progress rewrite (SmallCount BOUND)
+            | progress rewrite (SmallCount64 BOUND)
             | progress rewrite /stateIsAny ]
        | destruct count as [|count]; rewrite /(iter 0) ?droplsb_iter_shrB ].
 Qed.
@@ -44,5 +50,5 @@ Qed.
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
     [get_instrrule_of]. *)
-Global Instance: forall s (r : VReg s) (count : nat), instrrule (SHL r, count) := fun s r count v => @SHL_RI_rule s r v count.
-Global Instance: forall s (r : VReg s) (count : nat), instrrule (SHR r, count) := fun s r count v => @SHR_RI_rule s r v count.
+Global Instance: forall s (r : GPReg s) (count : nat), instrrule (SHL r, count) := fun s r count v => @SHL_RI_rule s r v count.
+Global Instance: forall s (r : GPReg s) (count : nat), instrrule (SHR r, count) := fun s r count v => @SHR_RI_rule s r v count.

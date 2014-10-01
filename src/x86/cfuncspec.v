@@ -60,7 +60,7 @@ Example incSpec : FunSpec (mkFunSig 1 true)  :=
   ---------------------------------------------------------------------------*)
 Definition scratchRegisters := [::EAX; ECX; EDX].
 
-Fixpoint scratchedExcept r (rs: seq NonSPReg) : SPred :=
+Fixpoint scratchedExcept r (rs: seq NonSPReg32) : SPred :=
   if rs is r'::rs
   then if r==r' then scratchedExcept r rs
        else r'? ** scratchedExcept r rs
@@ -161,7 +161,7 @@ typeclasses eauto.
 Qed.
 
 (* Push/pop idiom. It would be nice to have an anti-frame rule so we don't need to mention r in the frame *)
-Lemma pushpop_rule (r:NonSPReg) c P (O : PointedOPred) Q :
+Lemma pushpop_rule (r:NonSPReg32) c P (O : PointedOPred) Q :
   |-- basic P c O Q ->
   |-- Forall esp:DWORD, Forall v:DWORD, basic P (PUSH r;; c;; POP r) O Q @ (r ~= v ** ESP ~= esp ** esp-#4 :-> ?:DWORD).
 Proof.
@@ -337,11 +337,11 @@ rewrite sepSPC. rewrite (sepSPC P).
 rewrite <- land_sepSP. sbazooka. apply landR => //.
 Qed.
 
-Fixpoint regIsIn (r: NonSPReg) (rs: seq NonSPReg) :=
+Fixpoint regIsIn (r: NonSPReg32) (rs: seq NonSPReg32) :=
   if rs is r'::rs then
   (r == r') || regIsIn r rs else false.
 
-Lemma stdcall1_call f P Q (r: NonSPReg):
+Lemma stdcall1_call f P Q (r: NonSPReg32):
   |> calleeSpec_stdcall1 f P Q |--
      Forall v: DWORD, Forall esp: DWORD,
      basic (r ~= v ** scratchedExcept r scratchRegisters ** OSZCP? ** P v)

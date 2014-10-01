@@ -14,7 +14,7 @@ Delimit Scope memspec_scope with ms.
   ---------------------------------------------------------------------------*)
 Inductive SingletonMemSpec :=
 | OffsetMemSpec :> DWORD -> SingletonMemSpec
-| RegMemSpec :> Reg -> SingletonMemSpec.
+| RegMemSpec :> GPReg32 -> SingletonMemSpec.
 
 Definition fromSingletonMemSpec (msa: SingletonMemSpec) :=
   match msa with
@@ -27,39 +27,39 @@ Notation "'[' m ']'" :=
   (at level 0, m at level 0) : memspec_scope.
 
 Notation "'[' r '+' n ']'" :=
-  (mkMemSpec (Some(r:Reg, None)) n)
+  (mkMemSpec (Some(r:GPReg _, None)) n)
   (at level 0, r at level 0, n at level 0) : memspec_scope.
 
 Notation "'[' r '-' n ']'" :=
-  (mkMemSpec (Some(r:Reg, None)) (negB n))
+  (mkMemSpec (Some(r:GPReg _, None)) (negB n))
   (at level 0, r at level 0, n at level 0) : memspec_scope.
 
 Notation "'[' r '+' i '+' n ']'" :=
-  (mkMemSpec (Some(r:Reg, Some (i,S1))) n)
+  (mkMemSpec (Some(r:GPReg _, Some (i,S1))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "'[' r '+' i '*' '2' ']'" :=
-  (mkMemSpec (Some(r:Reg, Some(i,S2))) #0)
+  (mkMemSpec (Some(r:GPReg _, Some(i,S2))) #0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
 Notation "'[' r '+' i '*' '2' '+' n ']'" :=
-  (mkMemSpec (Some(r:Reg, Some(i,S2))) n)
+  (mkMemSpec (Some(r:GPReg _, Some(i,S2))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "'[' r '+' i '*' '4' ']'" :=
-  (mkMemSpec (Some(r:Reg, Some(i,S4))) 0)
+  (mkMemSpec (Some(r:GPReg _, Some(i,S4))) 0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
 Notation "'[' r '+' i '*' '4' '+' n ']'" :=
-  (mkMemSpec (Some(r:Reg, Some(i,S4))) n)
+  (mkMemSpec (Some(r:GPReg _, Some(i,S4))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "'[' r '+' i '*' '8' ']'" :=
-  (mkMemSpec (Some(r:Reg, Some(i,S8))) 0)
+  (mkMemSpec (Some(r:GPReg _, Some(i,S8))) 0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
 Notation "'[' r '+' i '*' '8' '+' n ']'" :=
-  (mkMemSpec (Some(r:Reg, Some(i,S8))) n)
+  (mkMemSpec (Some(r:GPReg _, Some(i,S8))) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 (*Definition DWORDtoDWORDorBYTE dword : DWORD -> DWORDorBYTE dword :=
@@ -68,7 +68,7 @@ Notation "'[' r '+' i '*' '8' '+' n ']'" :=
 *)
 
 Inductive InstrArg :=
-| InstrArgR s :> VReg s -> InstrArg
+| InstrArgR s :> GPReg s -> InstrArg
 | InstrArgM :> MemSpec -> InstrArg.
 
 Inductive InstrSrc :=
@@ -113,10 +113,12 @@ Definition makeBOP op dst (src: InstrSrc) :=
   | InstrArgR OpSize1 dst, InstrArgR OpSize1 src => BOP OpSize1 op (DstSrcRR OpSize1 dst src)
   | InstrArgR OpSize2 dst, InstrArgR OpSize2 src => BOP OpSize2 op (DstSrcRR OpSize2 dst src)
   | InstrArgR OpSize4 dst, InstrArgR OpSize4 src => BOP OpSize4 op (DstSrcRR OpSize4 dst src)
+  | InstrArgR OpSize8 dst, InstrArgR OpSize8 src => BOP OpSize8 op (DstSrcRR OpSize8 dst src)
 
   | InstrArgR OpSize1 dst, InstrArgM src => BOP OpSize1 op (DstSrcRM OpSize1 dst src)
   | InstrArgR OpSize2 dst, InstrArgM src => BOP OpSize2 op (DstSrcRM OpSize2 dst src)
   | InstrArgR OpSize4 dst, InstrArgM src => BOP OpSize4 op (DstSrcRM OpSize4 dst src)
+  | InstrArgR OpSize8 dst, InstrArgM src => BOP OpSize8 op (DstSrcRM OpSize8 dst src)
 
   | InstrArgR OpSize1 dst, ConstSrc n => BOP OpSize1 op (DstSrcRI OpSize1 dst (low 8 n))
   | InstrArgR OpSize4 dst, ConstSrc n => BOP OpSize4 op (DstSrcRI OpSize4 dst n)
@@ -124,6 +126,7 @@ Definition makeBOP op dst (src: InstrSrc) :=
   | InstrArgM dst, InstrArgR OpSize1 src => BOP OpSize1 op (DstSrcMR OpSize1 dst src)
   | InstrArgM dst, InstrArgR OpSize2 src => BOP OpSize2 op (DstSrcMR OpSize2 dst src)
   | InstrArgM dst, InstrArgR OpSize4 src => BOP OpSize4 op (DstSrcMR OpSize4 dst src)
+  | InstrArgM dst, InstrArgR OpSize8 src => BOP OpSize8 op (DstSrcMR OpSize8 dst src)
 
   | InstrArgM dst, ConstSrc n => BOP OpSize4 op (DstSrcMI OpSize4 dst n)
   | _, _=> BADINSTR
@@ -139,6 +142,7 @@ Notation "'XOR' x , y" := (makeBOP OP_XOR x%ms y%ms) (x,y at level 55, at level 
 Notation "'CMP' x , y" := (makeBOP OP_CMP x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
 
 (* Only need byte modifier for constant source, memspec destination *)
+(* TODO: WORD and QWORD variants. Can we make this generic somehow? *)
 Notation "'ADC' 'BYTE' x , y" :=
   (BOP OpSize1 OP_ADC (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 Notation "'ADD' 'BYTE' x , y" :=
@@ -164,10 +168,12 @@ Definition makeMOV dst (src: InstrSrc) :=
   | InstrArgR OpSize1 dst, InstrArgR OpSize1 src => MOVOP OpSize1 (DstSrcRR OpSize1 dst src)
   | InstrArgR OpSize2 dst, InstrArgR OpSize2 src => MOVOP OpSize2 (DstSrcRR OpSize2 dst src)
   | InstrArgR OpSize4 dst, InstrArgR OpSize4 src => MOVOP OpSize4 (DstSrcRR OpSize4 dst src)
+  | InstrArgR OpSize8 dst, InstrArgR OpSize8 src => MOVOP OpSize8 (DstSrcRR OpSize8 dst src)
 
   | InstrArgR OpSize1 dst, InstrArgM src => MOVOP OpSize1 (DstSrcRM OpSize1 dst src)
   | InstrArgR OpSize2 dst, InstrArgM src => MOVOP OpSize2 (DstSrcRM OpSize2 dst src)
   | InstrArgR OpSize4 dst, InstrArgM src => MOVOP OpSize4 (DstSrcRM OpSize4 dst src) 
+  | InstrArgR OpSize8 dst, InstrArgM src => MOVOP OpSize8 (DstSrcRM OpSize8 dst src) 
 
   | InstrArgR OpSize1 dst, ConstSrc n => MOVOP OpSize1 (DstSrcRI OpSize1 dst (low 8 n))
   | InstrArgR OpSize4 dst, ConstSrc n => MOVOP OpSize4 (DstSrcRI OpSize4 dst n)
@@ -175,6 +181,7 @@ Definition makeMOV dst (src: InstrSrc) :=
   | InstrArgM dst, InstrArgR OpSize1 src => MOVOP OpSize1 (DstSrcMR OpSize1 dst src)
   | InstrArgM dst, InstrArgR OpSize2 src => MOVOP OpSize2 (DstSrcMR OpSize2 dst src)
   | InstrArgM dst, InstrArgR OpSize4 src => MOVOP OpSize4 (DstSrcMR OpSize4 dst src)
+  | InstrArgM dst, InstrArgR OpSize8 src => MOVOP OpSize8 (DstSrcMR OpSize8 dst src)
 
   | InstrArgM dst, ConstSrc n => MOVOP OpSize4 (DstSrcMI OpSize4 dst n)
   | _, _=> BADINSTR
@@ -183,6 +190,10 @@ Definition makeMOV dst (src: InstrSrc) :=
 Notation "'MOV' x , y" := (makeMOV x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
 Notation "'MOV' 'BYTE' x , y" :=
   (MOVOP OpSize1 (DstSrcMI OpSize1 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+Notation "'MOV' 'WORD' x , y" :=
+  (MOVOP OpSize2 (DstSrcMI OpSize2 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
+Notation "'MOV' 'QWORD' x , y" :=
+  (MOVOP OpSize8 (DstSrcMI OpSize8 x%ms y)) (x,y at level 55, at level 60) : instr_scope.
 
 (*---------------------------------------------------------------------------
     MOV operations
@@ -235,11 +246,11 @@ Open Scope instr_scope.
 
 Example ex1 := ADD EAX, [EBX + 3].
 Example ex2 := INC BYTE [ECX + EDI*4 + 78].
-Example ex3 (r:Reg) := MOV EDI, [r].
+Example ex3 (r:NonSPReg32) := MOV EDI, [r].
 Example ex4 (a:DWORD) := MOV EDI, [a].
 Example ex5 (a:DWORD) := MOV EDI, a.
-Example ex6 (r:BYTEReg) := MOV AL, r.
-Example ex7 (r:Reg) := POP [r + #x"0000001C"].
+Example ex6 (r:NonSPReg8) := MOV AL, r.
+Example ex7 (r:NonSPReg32) := POP [r + #x"0000001C"].
 Example ex8 := CMP AL, (#c"!":BYTE).
 Example ex9 := MOV DX, BP. 
 Example ex10 := NOT [EBX + EDI*4 + 3]. 

@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.seq Ssreflect.eqtype Ssreflect.tuple.
 Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.cursor x86proved.update.
-Require Import x86proved.x86.program x86proved.monad x86proved.monadinst x86proved.writer.
+Require Import x86proved.x86.program x86proved.monad x86proved.monadinst x86proved.writer x86proved.x86.addr.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -11,7 +11,7 @@ Import Prenex Implicits.
 
 Inductive AssemblerError := OutOfLabels | DuplicateLabel.
 
-Definition assemblerState := seq DWORD * PMAP DWORD 32 * seq AssemblerError : Type.
+Definition assemblerState := seq ADDR * PMAP ADDR naddrBits * seq AssemblerError : Type.
 
 
 (* The monad in which pass 2 does its computation. This unfolds to
@@ -22,7 +22,7 @@ Definition getState: ST assemblerState := SMT_get _ (S:=_).
 Definition setState: assemblerState -> ST unit := SMT_set _ (S:=_).
 Coercion assemblerLift {X} (w: WriterTm X): ST X := SMT_lift _ w.
 
-Definition getPos: ST DWORD :=
+Definition getPos: ST ADDR :=
   let! pos = assemblerLift getWCursor;
   if pos is mkCursor c then retn c else writerFail.
 
@@ -84,8 +84,8 @@ Fixpoint finalpass (p: program) : ST unit :=
 Inductive AssemblerResult R :=
   AssemblerSuccess (r:R) | AssemblerFail (errors: seq AssemblerError).
 
-Definition runOnePass (offset: DWORD) (addrs: seq DWORD) (p: program) :
-  AssemblerResult (seq DWORD * seq BYTE) :=
+Definition runOnePass (offset: ADDR) (addrs: seq ADDR) (p: program) :
+  AssemblerResult (seq ADDR * seq BYTE) :=
   match runWriterTm true (onepass p (addrs,EmptyPMap _ _,nil)) offset with
   | Some ((_,m,nil,_),bytes) => AssemblerSuccess (pmap m addrs,bytes)
   | Some ((_,_,errors,_),_) => AssemblerFail _ errors
@@ -120,12 +120,12 @@ Instance write_program : Writer program :=
     else writerFail.
 
 (* This is the main function of the assembler. *)
-Definition assemble (offset: DWORD) (p: program) : option (seq BYTE) :=
+Definition assemble (offset: ADDR) (p: program) : option (seq BYTE) :=
   runWriter true write_program offset p.
 
 (* Call this to determine whether the assembler returned something meaningful.
  *)
-Definition assemble_success (offset: DWORD) (p: program) : bool :=
+Definition assemble_success (offset: ADDR) (p: program) : bool :=
   match assemble offset p with
   | Some _ => true
   | None => false

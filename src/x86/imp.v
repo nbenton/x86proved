@@ -44,7 +44,7 @@ Section LanguageDefinitions.
 End LanguageDefinitions.
 
 Section Compiler.
-  Definition var_reg v : Reg :=
+  Definition var_reg v : GPReg32 :=
     match v with xa => EAX | xb => EBX | xc => ECX end.
 
   (* Puts the result in EDX *)

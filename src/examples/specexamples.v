@@ -55,7 +55,7 @@ Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
   do !basic apply *.
-  by rewrite addIsIterInc/iter.
+  rewrite addIsIterInc/iter. by ssimpl. 
 Qed.
 
 Example incdec_while c a:
@@ -316,7 +316,7 @@ Proof.
   rewrite /echo_once_clean/echo_once_OP_helper.
   basic apply *.
   basic apply *.
-  by rewrite low_catB.
+  rewrite low_catB. by ssimpl.
 Qed.
 
 Instance: forall al in_c out_c, instrrule (echo_once_clean al in_c out_c) := @safe_echo_once_clean.

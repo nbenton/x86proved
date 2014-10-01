@@ -13,7 +13,7 @@ Import Prenex Implicits.
 (* Generate a sequence that computes r1 + r2*m with result in r1 and r2 trashed *)
 Open Scope instr_scope.
 (*=add_mulc *)
-Fixpoint add_mulc nbits (r1 r2: Reg) (m: nat) :=
+Fixpoint add_mulc nbits (r1 r2: GPReg32) (m: nat) :=
   if nbits is nbits'.+1
   then if odd m
        then ADD r1, r2;; SHL r2, 1;; add_mulc nbits' r1 r2 m./2
@@ -22,7 +22,7 @@ Fixpoint add_mulc nbits (r1 r2: Reg) (m: nat) :=
 (*=End *)
 
 (*=add_mulcCorrect *)
-Lemma add_mulcCorrect nbits : forall (r1 r2: Reg) m, m < 2^nbits ->
+Lemma add_mulcCorrect nbits : forall (r1 r2: GPReg32) m, m < 2^nbits ->
   |-- Forall v, Forall w,
       basic
       (r1 ~= v ** r2 ~= w ** OSZCP?)
@@ -61,7 +61,7 @@ Qed.
 Global Instance: forall nbits r1 r2 m, instrrule (add_mulc nbits r1 r2 m) := @add_mulcCorrect.
 
 (* More efficient version that does multi-bit shifts *)
-Fixpoint add_mulcAux nbits (c:nat) (r1 r2: Reg) (m: nat) : program :=
+Fixpoint add_mulcAux nbits (c:nat) (r1 r2: GPReg32) (m: nat) : program :=
   (if nbits is nbits'.+1
   then if odd m
        then
@@ -71,7 +71,7 @@ Fixpoint add_mulcAux nbits (c:nat) (r1 r2: Reg) (m: nat) : program :=
        else add_mulcAux nbits' c.+1 r1 r2 m./2
   else prog_skip)%asm.
 
-Lemma add_mulcAuxCorrect nbits : forall (c:nat) (r1 r2: Reg) (m:nat),
+Lemma add_mulcAuxCorrect nbits : forall (c:nat) (r1 r2: GPReg32) (m:nat),
   c+nbits <= 32 ->
   m < 2^nbits ->
   |-- Forall v, Forall w,
@@ -142,7 +142,7 @@ Qed.
 Global Instance: forall nbits c r1 r2 m, instrrule (add_mulcAux nbits c r1 r2 m) := @add_mulcAuxCorrect.
 
 (* Now a peephole optimization, using LEA for special cases *)
-Definition add_mulcOpt (r1 r2: NonSPReg) (m:nat) : program :=
+Definition add_mulcOpt (r1 r2: NonSPReg32) (m:nat) : program :=
   (if m == 2
   then LEA r1, [r1 + r2*2]
   else
@@ -153,7 +153,7 @@ Definition add_mulcOpt (r1 r2: NonSPReg) (m:nat) : program :=
   then LEA r1, [r1 + r2*8]
   else add_mulcAux 32 0 r1 r2 m)%asm.
 
-Lemma add_mulcOptCorrect (r1 r2: NonSPReg) (m:nat):
+Lemma add_mulcOptCorrect (r1 r2: NonSPReg32) (m:nat):
   m < 2^32 ->
   |-- Forall v, Forall w,
   basic
@@ -168,13 +168,13 @@ autorewrite with push_at.
 case EQ2: (m == 2); last case EQ4: (m == 4); last case EQ8: (m == 8);
 do ?basic apply * => //.
 
-by rewrite /eval.scaleBy shlB_asMul (eqP EQ2).
+rewrite /eval.scaleBy shlB_asMul (eqP EQ2). by ssimpl.
 
 rewrite /eval.scaleBy !shlB_asMul (eqP EQ4) -mulB_muln.
-by change (2*2) with 4.
+change (2*2) with 4. by ssimpl.
 
 rewrite /eval.scaleBy !shlB_asMul (eqP EQ8) -!mulB_muln.
-by change (2*_) with 8.
+change (2*_) with 8. by ssimpl.
 
 by rewrite /stateIs expn0 muln1.
 Qed.
@@ -184,7 +184,7 @@ Global Instance: forall r1 r2 m, instrrule (add_mulcOpt r1 r2 m) := @add_mulcOpt
 (* More efficient version that does multi-bit shifts.
    Also with clever use of LEA where possible, iterated *)
 (*=add_mulcFast *)
-Fixpoint gen nb (c:nat) (r1:Reg) (r2: NonSPReg) m :=
+Fixpoint gen nb (c:nat) (r1:GPReg32) (r2: NonSPReg32) m :=
   if nb is nb'.+1
   then if odd m then
     match c with
@@ -195,11 +195,11 @@ Fixpoint gen nb (c:nat) (r1:Reg) (r2: NonSPReg) m :=
     | _ => SHL r2, c;; ADD r1, r2;; gen nb' 1 r1 r2 m./2
     end else                        gen nb' c.+1 r1 r2 m./2
   else prog_skip.
-Definition add_mulcFast (r1:Reg) (r2: NonSPReg) (d:DWORD) :=
+Definition add_mulcFast (r1:GPReg32) (r2: NonSPReg32) (d:DWORD) :=
   gen 32 0 r1 r2 (toNat d).
 (*=End *)
 
-Lemma genCorrect nbits : forall (c:nat) (r1:Reg) (r2:NonSPReg) (m:nat),
+Lemma genCorrect nbits : forall (c:nat) (r1:GPReg32) (r2:NonSPReg32) (m:nat),
   c+nbits <= 32 ->
   m < 2^nbits ->
   |-- Forall v, Forall w,
@@ -296,7 +296,7 @@ Qed.
 
 Global Instance: forall nbits c r1 r2 m, instrrule (gen nbits c r1 r2 m) := @genCorrect.
 
-Lemma add_mulcFastCorrect (r1 r2: NonSPReg) (d:DWORD):
+Lemma add_mulcFastCorrect (r1 r2: NonSPReg32) (d:DWORD):
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)

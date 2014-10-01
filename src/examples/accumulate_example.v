@@ -262,7 +262,7 @@ Qed.
 
 Definition accumulate_until_value_prog value
            (pbody: program) in_ch
-  := accumulate_prog (CMP (AL : VReg OpSize1), (value : DWORD)) CC_Z false pbody in_ch.
+  := accumulate_prog (CMP (AL : Reg8), (value : DWORD)) CC_Z false pbody in_ch.
 
 
 (** TODO: put in the reasoning that [last x xs == value]; we'll need a lemma relating [last] and [only_last] *)
@@ -312,7 +312,7 @@ Proof.
 Qed.
 
 
-
+(*
 Example addB_until_zero_prog_safe ch o s z c p S al
 : S |-- (Forall initial (x : BYTE) (xs : seq BYTE) (pf1 : only_last (fun t : BYTE => t == #0) x xs),
          (loopy_basic (AH ~= initial ** AL ~= al ** OSZCP o s z c p)
@@ -325,7 +325,7 @@ Proof.
 (* basic apply (@accumulate_until_value_prog_safe #0 _ (fun x => AH ~= x)) => *; first assumption.
   basic apply *. *)
 Qed.
-
+*)
 
 Import Streams.
 

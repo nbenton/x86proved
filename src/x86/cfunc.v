@@ -44,7 +44,7 @@ Fixpoint pushArgs n (p:program) : nfun Src n program :=
   then fun arg => pushArgs n (PUSH arg;; p)
   else p.
 
-Definition makeMOVsrc (r:Reg) (s: Src) : program :=
+Definition makeMOVsrc (r:GPReg32) (s: Src) : program :=
   match s with
   | SrcI c => MOV r, c
   | SrcM m => MOV r, m

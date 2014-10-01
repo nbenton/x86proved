@@ -10,9 +10,9 @@
     regions of memory not all of which are accessible under given permissions,
     and the re-use of partiality for separation would preclude this.
   ===========================================================================*)
-Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.finfun Ssreflect.eqtype Ssreflect.fintype Ssreflect.seq.
+Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.finfun Ssreflect.eqtype Ssreflect.fintype Ssreflect.seq Ssreflect.tuple.
 Require Import x86proved.bitsrep x86proved.bitsops x86proved.cursor x86proved.reader x86proved.writer.
-Require Export x86proved.pmap.
+Require Export x86proved.pmap x86proved.x86.addr.
 Local Open Scope update_scope.
 
 Set Implicit Arguments.
@@ -20,34 +20,31 @@ Unset Strict Implicit.
 Import Prenex Implicits.
 
 
-(* 32-bit addressable memory *)
+(* 64-bit addressable memory *)
 (*=Mem *)
-Definition Mem := PMAP BYTE 32.
+Definition Mem := PMAP BYTE naddrBits.
 (*=End *)
-Definition PTR := DWORD.
-Identity Coercion PTRtoDWORD : PTR >-> DWORD.
 
 (* Initially, no memory is mapped *)
-Definition initialMemory : Mem := @EmptyPMap BYTE 32.
+Definition initialMemory : Mem := @EmptyPMap BYTE _.
 
 (* Memory from p to just below p' in m consists exactly of the bytes in xs *)
-Fixpoint memIs (m:Mem) (p p':PTR) xs :=
+Fixpoint memIs (m:Mem) (p p':ADDR) xs :=
   if xs is x::xs then m p = Some x /\ memIs m (incB p) p' xs else p=p'.
 
 
 (* Map some memory, filling it with ones (to be more visible!) *)
-Definition reserveMemory (m: Mem) (p:PTR) (c: DWORD) : Mem :=
+Definition reserveMemory (m: Mem) (p:ADDR) c : Mem :=
   bIterFrom p c (fun p m => m !p := ones 8) m.
 
-(* Returns bytes with most-significant first *)
-Definition DWORDToBytes (d: DWORD) : BYTE*BYTE*BYTE*BYTE := split4 8 8 8 8 d.
+Definition isMapped (p:ADDR) (ms: Mem) : bool := ms p.
 
-Definition isMapped (p:PTR) (ms: Mem) : bool := ms p.
-
-Instance MemUpdateOpsDWORD : UpdateOps Mem PTR DWORD :=
+(*
+Instance MemUpdateOpsDWORD : UpdateOps Mem ADDR DWORD :=
   fun m p v =>
-  let '(b3,b2,b1,b0) := DWORDToBytes v in
+  let: [::tuple b0;b1;b2;b3] := bitsToBytes 4 v in
   m !p:=b0 !incB p:=b1 !incB(incB p):=b2 !incB(incB(incB p)):=b3.
+*)
 
 (*
 Instance MemUpdateDWORD : Update Mem DWORD DWORD.
@@ -95,12 +92,12 @@ Definition updateBYTE (p:DWORD) (b:BYTE) (ms: Mem) : option Mem :=
    read m p = readerOk x q if memory between p inclusive and q exclusive represents x:X
   ---------------------------------------------------------------------------*)
 Inductive readerResult T :=
-  readerOk (x: T) (q: DWORDCursor) | readerWrap | readerFail.
+  readerOk (x: T) (q: ADDRCursor) | readerWrap | readerFail.
 Implicit Arguments readerOk [T].
 Implicit Arguments readerWrap [T].
 Implicit Arguments readerFail [T].
 
-Fixpoint readMem T (r:Reader T) (m:Mem) (pos:DWORDCursor) : readerResult T :=
+Fixpoint readMem T (r:Reader T) (m:Mem) (pos:ADDRCursor) : readerResult T :=
   match r with
   | readerRetn x => readerOk x pos
   | readerNext rd =>
@@ -116,8 +113,8 @@ Fixpoint readMem T (r:Reader T) (m:Mem) (pos:DWORDCursor) : readerResult T :=
   end.
 
 (* Example of interpretation of writer on sequences *)
-Fixpoint writeMemTm (w:WriterTm unit) (m:Mem) (pos: DWORDCursor) :
-    option (DWORDCursor * Mem) :=
+Fixpoint writeMemTm (w:WriterTm unit) (m:Mem) (pos: ADDRCursor) :
+    option (ADDRCursor * Mem) :=
   match w with
   | writerRetn _ => Some (pos, m)
   | writerNext byte w =>
@@ -140,13 +137,13 @@ Fixpoint writeMemTm (w:WriterTm unit) (m:Mem) (pos: DWORDCursor) :
     None
   end.
 
-Definition writeMem {T} (w:Writer T) (m:Mem) (pos: DWORDCursor) (t: T):
-    option (DWORDCursor * Mem) :=
+Definition writeMem {T} (w:Writer T) (m:Mem) (pos: ADDRCursor) (t: T):
+    option (ADDRCursor * Mem) :=
   writeMemTm (w t) m pos.
 
 Require Import Coq.Strings.String.
 Import Ascii.
-Fixpoint enumMemToString (xs: seq (DWORD * BYTE)) :=
+Fixpoint enumMemToString (xs: seq (ADDR * BYTE)) :=
   (if xs is (p,b)::xs then toHex p ++ ":=" ++ toHex b ++ ", " ++ enumMemToString xs
   else "")%string.
 

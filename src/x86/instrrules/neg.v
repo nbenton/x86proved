@@ -3,7 +3,7 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 (** Special case for negation *)
-Lemma NEG_R_rule s (r:VReg s) (v:VWORD s) :
+Lemma NEG_R_rule s (r:GPReg s) (v:VWORD s) :
   let w := negB v in
   |-- basic
     (r ~= v ** OSZCP?) (NEG r) empOP
@@ -13,4 +13,4 @@ Proof. destruct s; do_instrrule_triple. Qed.
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
     [get_instrrule_of]. *)
-Global Instance: forall s (r : VReg s), instrrule (NEG r) := @NEG_R_rule.
+Global Instance: forall s (r : GPReg s), instrrule (NEG r) := @NEG_R_rule.

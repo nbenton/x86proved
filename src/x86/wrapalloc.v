@@ -11,7 +11,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Definition wrappedAlloc bytes (r1 r2:Reg) heapInfo: program :=
+Definition wrappedAlloc bytes (r1 r2:GPReg32) heapInfo: program :=
   (LOCAL FAIL;
   LOCAL SUCCEED;
     allocImp heapInfo bytes FAIL;;
@@ -22,7 +22,7 @@ Definition wrappedAlloc bytes (r1 r2:Reg) heapInfo: program :=
   SUCCEED:;)
   %asm.
 
-Lemma wrappedAlloc_correct bytes (r1 r2: Reg) heapInfo :
+Lemma wrappedAlloc_correct bytes (r1 r2: GPReg32) heapInfo :
   |-- Forall i j: DWORD,
   toyfun i EDI? empOP ((Exists p:DWORD, EDI ~= p ** memAny p (p +# bytes)) \\// EDI ~= #0)
 
@@ -50,10 +50,10 @@ specsplit.
 autorewrite with push_at.
 
 (* MOV EDI, 0 *)
-specapply MOV_RanyI_rule. rewrite /RegToVReg. 
+specapply MOV_RanyI_rule. 
 - by ssimpl.
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. simpl (OPred_pred (default_PointedOPred _)). cancel1. rewrite /natAsDWORD/RegToVReg. 
+autorewrite with push_at. simpl (OPred_pred (default_PointedOPred _)). cancel1. rewrite /natAsDWORD.
 ssimpl. by apply: lorR2.
 
 (* success case *)

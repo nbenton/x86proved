@@ -2,7 +2,7 @@
     Reader monad, with instances for BYTE, WORD and DWORD
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.tuple.
-Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsopsprops x86proved.cursor x86proved.monad.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsopsprops x86proved.x86.addr x86proved.cursor x86proved.monad.
 Require Import Coq.Logic.FunctionalExtensionality Coq.Strings.String x86proved.cstring.
 
 Set Implicit Arguments.
@@ -15,11 +15,11 @@ Inductive ReaderTm T :=
 | readerRetn (x: T)
 | readerNext (rd: BYTE -> ReaderTm T)
 | readerSkip (rd: ReaderTm T)
-| readerCursor (rd: DWORDCursor -> ReaderTm T).
+| readerCursor (rd: ADDRCursor -> ReaderTm T).
 
 Class Reader T := getReaderTm : ReaderTm T.
 (*=End *)
-Instance readCursor : Reader (DWORDCursor) := readerCursor (fun p => readerRetn p).
+Instance readCursor : Reader (ADDRCursor) := readerCursor (fun p => readerRetn p).
 Definition readNext {T} {R: Reader T}: Reader T := R.
 
 Fixpoint readerBind X Y (r: Reader X) (f: X -> Reader Y) : Reader Y :=
@@ -66,7 +66,7 @@ Qed.
 (* Functional interpretation of reader on sequences.
    Returns the final position, the tail of the given sequence and the value
    read. *)
-Fixpoint runReader T (r:Reader T) (c:DWORDCursor) xs : option (DWORDCursor * seq BYTE * T) :=
+Fixpoint runReader T (r:Reader T) (c:ADDRCursor) xs : option (ADDRCursor * seq BYTE * T) :=
   match r with
   | readerRetn x => Some (c, xs, x)
   | readerNext rd =>
@@ -109,7 +109,7 @@ Instance readBYTE : Reader BYTE | 0 :=
   readerNext (fun b => readerRetn b).
 (*=End *)
 
-Lemma runReader_readBYTE (p: DWORD) byte bytes :
+Lemma runReader_readBYTE (p: ADDR) byte bytes :
   runReader readBYTE p (byte::bytes) =
   Some (next p, bytes, byte).
 Proof. done. Qed.
@@ -117,22 +117,23 @@ Proof. done. Qed.
 Definition readSkip : Reader unit :=
   readerSkip (readerRetn tt).
 
-(*=readDWORD *)
-Definition bytesToDWORD (b3 b2 b1 b0: BYTE) : DWORD :=
-  b3 ## b2 ## b1 ## b0.
-Instance readDWORD : Reader DWORD | 0 :=
-  let! b0 = readNext;
-  let! b1 = readNext;
-  let! b2 = readNext;
-  let! b3 = readNext;
-  retn (bytesToDWORD b3 b2 b1 b0).
-(*=End *)
+Fixpoint readTupleBYTE (n:nat) : Reader (n.-tuple BYTE) :=
+  if n is n'.+1
+  then let! b = readBYTE;
+       let! bs = readTupleBYTE n';
+       retn (cons_tuple b bs)
+  else retn (nil_tuple _).
+Global Existing Instance readTupleBYTE.
 
-Definition bytesToWORD (b1 b0: BYTE) : WORD := b1 ## b0.
-Instance readWORD: Reader WORD :=
-  let! b0 = readNext;
-  let! b1 = readNext;
-  retn (bytesToWORD b1 b0).
+Instance readBITS n : Reader (BITS (n*8)) :=
+  let! bs = readNext;
+  retn (bytesToBits (n:=n) bs).
+
+(*=readDWORD *)
+Instance readWORD  : Reader WORD  := readBITS 2.
+Instance readDWORD : Reader DWORD := readBITS 4.
+Instance readQWORD : Reader QWORD := readBITS 8.
+(*=End *)
 
 (** This must go at a lower level/priority than [readDWORD] and [readBYTE] so it is picked up less eagerly. *)
 Instance readVWORD s : Reader (VWORD s) | 1 :=
@@ -140,6 +141,7 @@ Instance readVWORD s : Reader (VWORD s) | 1 :=
   | OpSize1 => readBYTE
   | OpSize2 => readWORD
   | OpSize4 => readDWORD
+  | OpSize8 => readQWORD
   end.
 
 Fixpoint readPad (n:nat) : Reader unit :=
@@ -153,14 +155,6 @@ Fixpoint readString (n:nat) : Reader string :=
        let! s = readString n';
        retn (String (Ascii.ascii_of_nat (toNat c)) s)
   else retn EmptyString.
-
-Fixpoint readTupleBYTE (n:nat) : Reader (n.-tuple BYTE) :=
-  if n is n'.+1
-  then let! b = readBYTE;
-       let! bs = readTupleBYTE n';
-       retn (cons_tuple b bs)
-  else retn (nil_tuple _).
-Global Existing Instance readTupleBYTE.
 
 (* Here n is the maximum number of characters to read *)
 (*Fixpoint readCString : Reader cstring :=

@@ -27,29 +27,29 @@ rewrite -> seqMemIsCons. sbazooka.
 rewrite -> seqMemIsNil. sbazooka. 
 Qed. 
 
-Definition opSizeToNat s := match s with OpSize1 => 1 | OpSize2 => 2 | OpSize4 => 4 end.
+Definition opSizeToNat s := match s with OpSize1 => 1 | OpSize2 => 2 | OpSize4 => 4 | OpSize8 => 8 end.
 
-Lemma MOV_RM0aux_rule s (r1: VReg s) (r2:Reg)  (pd:DWORD) (v1 v2: VWORD s) :
+Lemma MOV_RM0aux_rule s (r1: GPReg s) (r2:GPReg32)  (pd:DWORD) (v1 v2: VWORD s) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v2)
             (MOV r1, [r2]) empOP
             (r1 ~= v2 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v2).
 Proof. rewrite ->memIsLe at 1. specintros => LE. rewrite ->memIs_pointsTo at 1.
-destruct s; basic apply *; rewrite -> (fixedMemIs_pointsTo (n:=_)) => //; reflexivity. 
+destruct s; basic apply *; rewrite -> (fixedMemIs_pointsTo (n:=_)) => //; ssimpl. 
 Qed.
 
-Global Instance: forall s (r1: VReg s) (r2: Reg), instrrule (MOV r1, [r2]) := @MOV_RM0aux_rule.
+Global Instance: forall s (r1: GPReg s) (r2: GPReg32), instrrule (MOV r1, [r2]) := @MOV_RM0aux_rule.
 
-Lemma MOV_M0Raux_rule s (r1: VReg s) (r2:Reg)  (pd:DWORD) (v1 v2: VWORD s) :
+Lemma MOV_M0Raux_rule s (r1: GPReg s) (r2:GPReg32)  (pd:DWORD) (v1 v2: VWORD s) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v2)
             (MOV [r2], r1) empOP
             (r1 ~= v1 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v1).
 Proof. rewrite -> memIsLe at 1. specintros => LE. rewrite -> memIs_pointsTo at 1. 
 destruct s; basic apply *; rewrite -> (fixedMemIs_pointsTo (n:=_)) => //; reflexivity. 
 Qed.
-Global Instance: forall s (r1: VReg s) (r2: Reg), instrrule (MOV [r2], r1) := @MOV_M0Raux_rule.
+Global Instance: forall s (r1: GPReg s) (r2: GPReg32), instrrule (MOV [r2], r1) := @MOV_M0Raux_rule.
 
-Definition getCode (dst:Reg):program := (MOV dst, [ESI]). 
-Definition getSpec (dst:Reg) code :=   
+Definition getCode (dst:GPReg32):program := (MOV dst, [ESI]). 
+Definition getSpec (dst:GPReg32) code :=   
   Forall (p q r: DWORD), Forall vs w ws oldv, 
   basic 
   (dst ~= oldv)
@@ -59,7 +59,7 @@ Definition getSpec (dst:Reg) code :=
 
 Hint Unfold readVWORD opSizeToNat : instrrules_all.
 
-Lemma getCorrect (dst: Reg):
+Lemma getCorrect (dst: GPReg32):
   |-- getSpec dst (getCode dst). 
 Proof.
 rewrite /getSpec/getCode. specintros => p q r vs w ws oldv. autorewrite with push_at.

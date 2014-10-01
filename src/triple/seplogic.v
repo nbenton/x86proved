@@ -78,7 +78,7 @@ apply ltNext.
 Qed.
 *)
 
-Lemma byteIsMapped (p:PTR) (v: BYTE) S s :
+Lemma byteIsMapped (p:ADDR) (v: BYTE) S s :
   (byteIs p v ** S) (toPState s) -> isMapped p s.
 Proof.
 move => [s1 [s2 [H1 [H2 H3]]]].

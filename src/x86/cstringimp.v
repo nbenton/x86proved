@@ -79,7 +79,7 @@ Proof.
   move => ISZF. rewrite /strlen.
   autorewrite with push_at.
 
-  unhideReg ECX => oldecx.
+  rewrite /(stateIsAny ECX). specintros => oldecx.
 
   (* MOV ECX, 0 *)
   basic apply MOV_RI_rule.

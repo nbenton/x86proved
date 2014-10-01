@@ -456,6 +456,29 @@ move => H i. move/andP => [LE LT].
 specialize (H i LE). by rewrite 2!getBit_low LT in H. 
 Qed. 
 
+Lemma getUpdateSlice n1 n2 n3 (p: BITS (n1+n2+n3)) (q: BITS n2) :
+  slice n1 n2 n3 (updateSlice _ _ _ p q) = q.
+Proof. rewrite /slice/updateSlice/split3/split2.
+by rewrite low_catB high_catB.
+Qed.
+
+Lemma bitsToBytesK n : cancel (@bitsToBytes n) (@bytesToBits n).
+Proof. induction n.
++ move => x. by rewrite (tuple0 _) (tuple0 x). 
++ move => xs. rewrite /bitsToBytes-/bitsToBytes.
+rewrite /splitAtByte. rewrite (split2eta xs) split2app. 
+by rewrite /bytesToBits-/bytesToBits beheadCons theadCons IHn. 
+Qed. 
+
+Lemma bytesToBitsK n : cancel (@bytesToBits n) (@bitsToBytes n).
+Proof. induction n.
++ move => x. by rewrite (tuple0 _) (tuple0 x). 
++ move => xs. rewrite /bitsToBytes-/bitsToBytes/splitAtByte. 
+rewrite (split2eta (bytesToBits xs)) split2app. 
+case/tupleP: xs => [x xs].
+rewrite /bytesToBits-/bytesToBits beheadCons theadCons. 
+by rewrite high_catB IHn low_catB. Qed. 
+
 (*---------------------------------------------------------------------------
     Zero and sign extension
   ---------------------------------------------------------------------------*)

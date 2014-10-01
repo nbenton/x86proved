@@ -34,40 +34,49 @@ Definition BYTECodec: Codec BYTE := bitsCodec 8.
 
 Corollary totalBYTE : total BYTECodec. Proof. apply totalBITS. Qed.
 
-Definition DWORD_as_BYTES : CAST (BYTE*BYTE*BYTE*BYTE) DWORD.
-Proof. apply: MakeCast
-  (fun p => let: (b0,b1,b2,b3) := p in b3 ## b2 ## b1 ## b0)
-  (fun d => let: (b3,b2,b1,b0) := split4 8 8 8 8 d in Some(b0,b1,b2,b3)) _.
-move => d [[[b0 b1] b2] b3]. case E: (split4 8 8 8 8 d) => [[[b0' b1'] b2'] b3'].
-move => [<- <- <- <-]. by rewrite -(split4eta d) E.
+Definition BITS_as_BYTES n : CAST (n.-tuple BYTE) (BITS (n * 8)).
+Proof. apply: (MakeCast (@bytesToBits n) (fun d => Some (bitsToBytes n d)) _).
+move => x y [<-]. apply bitsToBytesK. 
 Defined.
+
+Require Import tuplehelp.
+Definition consTupleCast {n X} : CAST (X * n.-tuple X) (n.+1.-tuple X).
+Proof. apply: MakeCast (fun p => cons_tuple p.1 p.2) (fun d => Some (thead d, behead_tuple d)) _.
+move => t y [<-]/=. case/tupleP: t => [x xs]. by rewrite theadCons beheadCons. Defined. 
+
+Definition nilTupleCast {X} : CAST unit (0.-tuple X).
+Proof. apply: MakeCast (fun p => nil_tuple _) (fun d => Some tt) _. 
+move => t y []/=. by rewrite (tuple0 t). Defined. 
+
+Fixpoint tupleCodec X n (c: Codec X) : Codec (n.-tuple X) :=
+  if n is n'.+1 return Codec (n.-tuple X)
+  then c $ tupleCodec n' c ~~> consTupleCast 
+  else Emp ~~> nilTupleCast.
 
 (* Little-endian DWORDs *)
 Definition DWORDCodec: Codec DWORD :=
-  BYTECodec $ BYTECodec $ BYTECodec $ BYTECodec ~~> DWORD_as_BYTES.
+  tupleCodec 4 BYTECodec ~~> BITS_as_BYTES _.
 
+Definition QWORDCodec: Codec QWORD :=
+  tupleCodec 8 BYTECodec ~~> BITS_as_BYTES _.
+
+(*
 Lemma totalDWORD: total DWORDCodec.
 Proof. apply totalCast. apply totalSeq. apply totalSeq. apply totalSeq.
 apply totalBITS. apply totalBITS. apply totalBITS. apply totalBITS. done.
 Qed.
-
-Definition WORD_as_BYTES : CAST (BYTE*BYTE) WORD.
-Proof. apply: MakeCast
-  (fun p => let: (b0,b1) := p in b1 ## b0)
-  (fun d => let: (b1,b0) := split2 8 8 d in Some(b0,b1))
-  _.
-move => d y. case E: (split2 8 8 d) => [b0' b1'].
-move => [<-]. rewrite (split2eta d). rewrite /split2 in E. congruence.
-Defined.
+*)
 
 (* Little-endian WORDs *)
 Definition WORDCodec: Codec WORD :=
-  BYTECodec $ BYTECodec ~~> WORD_as_BYTES.
+  tupleCodec 2 BYTECodec ~~> BITS_as_BYTES _.
 
+(*
 Lemma totalWord : total WORDCodec.
 Proof. apply totalCast. apply totalSeq. apply totalBITS. apply totalBITS.
 done.
 Qed.
+*)
 
 Definition shortDWORDEmb : CAST BYTE DWORD.
 apply: MakeCast (@signExtend 24 7) (@signTruncate 24 7) _.
@@ -75,15 +84,6 @@ Proof. move => d b/= H. by apply signTruncateK. Defined.
 
 Definition shortDWORDCodec: Codec DWORD :=
   BYTECodec ~~> shortDWORDEmb.
-
-(*Definition DWORDorBYTECodec dword : Codec (DWORDorBYTE dword) :=
-  if dword as dword return Codec (DWORDorBYTE dword)
-  then DWORDCodec
-  else BYTECodec.
-
-Lemma totalDWORDorBYTE d : total (DWORDorBYTECodec d).
-Proof. case d. apply totalDWORD. apply totalBITS. Qed.
-*)
 
 Fixpoint Const n : BITS n -> Codec unit :=
   if n is n'.+1

@@ -12,23 +12,23 @@ Import Prenex Implicits.
 
 Local Open Scope instr_scope.
 
-Definition inlineHead (r1 r2:Reg) :program :=
+Definition inlineHead (r1 r2:GPReg32) :program :=
   MOV r1, [r2].
 
-Definition inlineTail (r1 r2:Reg) :program :=
+Definition inlineTail (r1 r2:GPReg32) :program :=
   MOV r1, [r2+4].
 
 (* Head is in r1, tail is in r2, result in EDI, ESI trashed *)
-Definition updateCons (r1 r2:Reg) :program :=
+Definition updateCons (r1 r2:GPReg32) :program :=
     SUB EDI, 8;;
     MOV [EDI], r1;;
     MOV [EDI+4], r2.
 
-Definition inlineCons (r1 r2:Reg) heapInfo failAddr: program :=
+Definition inlineCons (r1 r2:GPReg32) heapInfo failAddr: program :=
   allocImp heapInfo 8 failAddr;;
   updateCons r1 r2.
 
-Definition callCons (r1 r2:Reg) heapInfo: program :=
+Definition callCons (r1 r2:GPReg32) heapInfo: program :=
   LOCAL FAIL;
   LOCAL SUCCEED;
     inlineCons r1 r2 heapInfo FAIL;;

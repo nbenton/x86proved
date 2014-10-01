@@ -18,18 +18,18 @@ Require Import x86proved.bitsrep x86proved.x86.reg.
 (*=MemSpec *)
 Inductive Scale := S1 | S2 | S4 | S8.
 Inductive MemSpec :=
-  mkMemSpec (sib: option (VReg OpSize4 * option (NonSPReg*Scale)))
+  mkMemSpec (sib: option (GPReg32 * option (NonSPReg32*Scale)))
             (offset: DWORD).
 (*=End *)
 
 (* Register or memory *)
 (*=RegMem *)
 Inductive RegMem s :=
-| RegMemR (r: VReg s) :> RegMem s
+| RegMemR (r: GPReg s) :> RegMem s
 | RegMemM (ms: MemSpec).
 Inductive RegImm s :=
 | RegImmI (c: VWORD s)
-| RegImmR (r: VReg s).
+| RegImmR (r: GPReg s).
 (*=End *)
 
 Coercion DWORDRegMemM (ms: MemSpec) := RegMemM OpSize4 ms.
@@ -41,12 +41,12 @@ Coercion DWORDRegImmI (d: DWORD)    := RegImmI OpSize4 d.
 Inductive Src :=
 | SrcI (c: DWORD) :> Src
 | SrcM (ms: MemSpec) :> Src
-| SrcR (r: Reg) :> Src.
+| SrcR (r: GPReg32) :> Src.
 Inductive DstSrc (s: OpSize) :=
-| DstSrcRR (dst src: VReg s)
-| DstSrcRM (dst: VReg s) (src: MemSpec)
-| DstSrcMR (dst: MemSpec) (src: VReg s)
-| DstSrcRI (dst: VReg s) (c: VWORD s)
+| DstSrcRR (dst src: GPReg s)
+| DstSrcRM (dst: GPReg s) (src: MemSpec)
+| DstSrcMR (dst: MemSpec) (src: GPReg s)
+| DstSrcRI (dst: GPReg s) (c: VWORD s)
 | DstSrcMI (dst: MemSpec) (c: VWORD s).
 (*=End *)
 
@@ -59,7 +59,7 @@ Inductive Tgt :=
 Inductive JmpTgt :=
 | JmpTgtI :> Tgt -> JmpTgt
 | JmpTgtM :> MemSpec -> JmpTgt
-| JmpTgtR :> Reg -> JmpTgt.
+| JmpTgtR :> GPReg32 -> JmpTgt.
 Inductive ShiftCount :=
 | ShiftCountCL | ShiftCountI (c: BYTE).
 Inductive Port :=
@@ -91,17 +91,17 @@ Inductive Condition :=
 Inductive Instr :=
 | UOP s (op: UnaryOp) (dst: RegMem s)
 | BOP s (op: BinOp) (ds: DstSrc s)
-| BITOP (op: BitOp) (dst: RegMem OpSize4) (bit: Reg + BYTE)
+| BITOP (op: BitOp) (dst: RegMem OpSize4) (bit: GPReg32 + BYTE)
 | TESTOP s (dst: RegMem s) (src: RegImm s)
 | MOVOP s (ds: DstSrc s)
 | MOVSegRM (dst: SegReg) (src: RegMem OpSize2)
 | MOVRMSeg (dst: RegMem OpSize2) (dst: SegReg)
-| MOVX (signextend:bool) s (dst: Reg) (src: RegMem s)
+| MOVX (signextend:bool) s (dst: GPReg32) (src: RegMem s)
 | SHIFTOP s (op: ShiftOp) (dst: RegMem s) (count: ShiftCount)
 | MUL {s} (src: RegMem s)
-| IMUL (dst: Reg) (src: RegMem OpSize4)
-| LEA (reg: Reg) (src: RegMem OpSize4)
-| XCHG s (reg: VReg s) (src: RegMem s)
+| IMUL (dst: GPReg32) (src: RegMem OpSize4)
+| LEA (reg: GPReg32) (src: RegMem OpSize4)
+| XCHG s (reg: GPReg s) (src: RegMem s)
 | JCCrel (cc: Condition) (cv: bool) (tgt: Tgt)
 | PUSH (src: Src)
 | PUSHSegR (r: SegReg)

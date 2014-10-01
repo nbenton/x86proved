@@ -81,7 +81,7 @@ Proof.
   apply lforallL with iret.
   apply lforallL with O'.
   rewrite /stateIsAny.
-  cancel2. cancel1. by ssimpl.
+  cancel2. cancel1. by ssimpl. reflexivity. 
 Qed.
 
 Global Opaque call_toyfun.
@@ -147,7 +147,7 @@ Proof.
            | [ |- proj _ |-- empOP ]     => by rewrite -> HempOP
            | _ => evar_safe_syntax_unify_reflexivity
          end.
-  by rewrite addIsIterInc /iter.
+  rewrite addIsIterInc /iter. reflexivity.
 Qed.
 
 Definition toyfun_example_callee_correct (f f': DWORD):

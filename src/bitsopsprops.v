@@ -1599,9 +1599,11 @@ Definition BITSbooleanring (n:nat) :=
   (@and1B n) (@andBC n) (@andBA n)
   (@andBDl n) (fun _ _ => refl_equal _) (@xorBB n).
 
+Add Ring QWORDring : (BITSring n64).
 Add Ring DWORDring : (BITSring n32).
 Add Ring BYTEring : (BITSring n8).
 
+Add Ring QWORDbooleanring : (BITSbooleanring n64).
 Add Ring DWORDbooleanring : (BITSbooleanring n32).
 Add Ring BYTEbooleanring : (BITSbooleanring n8).
 

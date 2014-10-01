@@ -4,7 +4,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.fintype Ssreflect.finfun Ssreflect.seq Ssreflect.tuple.
 Require Import x86proved.bitsrep x86proved.pfun x86proved.x86.reg x86proved.x86.mem x86proved.x86.flags.
-Require Import x86proved.pmap x86proved.pmapprops.
+Require Import x86proved.pmap x86proved.pmapprops x86proved.x86.addr.
 Require Import Coq.Setoids.Setoid x86proved.charge.csetoid Coq.Classes.Morphisms.
 
 
@@ -31,7 +31,7 @@ Inductive Frag := Registers | Memory | Flags.
 Definition fragDom d :=
   match d with
   | Registers => RegPiece
-  | Memory => PTR
+  | Memory => ADDR
   | Flags => Flag
   end.
 
@@ -51,9 +51,9 @@ Definition fragTgt d :=
 Definition PState := forall f: Frag, fragDom f -> option (fragTgt f).
 
 Structure StateFrag : Type := {frag:Frag; carrier:>Type}.
-Canonical Structure AnyRegStateFrag := @Build_StateFrag Registers AnyReg.
-Canonical Structure RegStateFrag := @Build_StateFrag Registers Reg.
-Canonical Structure NonSPRegStateFrag := @Build_StateFrag Registers NonSPReg.
+Canonical Structure Reg64StateFrag := @Build_StateFrag Registers Reg64.
+Canonical Structure NonSPReg64StateFrag := @Build_StateFrag Registers NonSPReg64.
+Canonical Structure GPReg64StateFrag := @Build_StateFrag Registers GPReg64.
 Canonical Structure FlagStateFrag := Build_StateFrag Flags Flag.
 
 Definition fragOf {sf: StateFrag} (x: carrier sf) := frag sf.
@@ -76,7 +76,7 @@ Definition addFlagToPState (s:PState) f v : PState :=
   | Memory => s Memory
   end.
 
-Definition addBYTEToPState (s:PState) (p:PTR) b : PState :=
+Definition addBYTEToPState (s:PState) (p:ADDR) b : PState :=
   fun (fr:Frag) =>
   match fr as fr in Frag return fragDom fr -> option (fragTgt fr) with
   | Memory => fun p' => if p == p' then Some (Some b) else s Memory p'
@@ -510,20 +510,25 @@ Global Coercion lbool (b:bool) := lpropand b ltrue.
 
 Definition regPieceIs r v : SPred := eq_pred (addRegPieceToPState emptyPState r v).
 Definition flagIs f b : SPred := eq_pred (addFlagToPState emptyPState f b).
-Definition BYTEregIs (r:VRegAny OpSize1) v : SPred := regPieceIs (BYTERegToRegPiece r) v.
+(*Definition BYTEregIs (r:Reg OpSize1) v : SPred := regPieceIs (BYTERegToRegPiece r) v.*)
 
-Definition regIs (r:AnyReg) (v:DWORD) : SPred :=
-   regPieceIs (AnyRegPiece r RegIx0) (getRegPiece v RegIx0)
-** regPieceIs (AnyRegPiece r RegIx1) (getRegPiece v RegIx1)
-** regPieceIs (AnyRegPiece r RegIx2) (getRegPiece v RegIx2)
-** regPieceIs (AnyRegPiece r RegIx3) (getRegPiece v RegIx3).
+Definition reg64Is (r:Reg64) (v:QWORD) : SPred :=
+  let pi i := regPieceIs (mkRegPiece r i) (getRegPiece v i) in
+   pi 0 ** pi 1 ** pi 2 ** pi 3 ** pi 4 ** pi 5 ** pi 6 ** pi 7.
 
-Definition WORDregIs (r:VRegAny OpSize2) (v:WORD) : SPred :=
-   regPieceIs (AnyRegPiece (WORDRegToReg r) RegIx0) (slice 0 8 8 v)
-** regPieceIs (AnyRegPiece (WORDRegToReg r) RegIx1) (slice 8 8 0 v).
+Definition reg32Is (r:Reg32) (v:DWORD) : SPred :=
+  let pi i := regPieceIs (mkRegPiece (Reg32_base r) i) (getRegPiece v i) in
+   pi 0 ** pi 1 ** pi 2 ** pi 3.
+
+Definition reg16Is (r:Reg16) (v:WORD) : SPred :=
+   regPieceIs (mkRegPiece (Reg16_base r) 0) (slice 0 8 8 v)
+** regPieceIs (mkRegPiece (Reg16_base r) 1) (slice 8 8 0 v).
+
+Definition reg8Is (r:Reg8) (v:BYTE) : SPred :=
+   regPieceIs (mkRegPiece (Reg8_base r) 0) v.
 
 Inductive RegOrFlag :=
-| RegOrFlagR s :> VRegAny s -> RegOrFlag
+| RegOrFlagR s :> Reg s -> RegOrFlag
 | RegOrFlagF :> Flag -> RegOrFlag.
 
 Definition RegOrFlag_target rf :=
@@ -534,9 +539,10 @@ end.
 
 Definition stateIs (x: RegOrFlag) : RegOrFlag_target x -> SPred :=
 match x with
-| RegOrFlagR OpSize4 r => regIs r
-| RegOrFlagR OpSize2 r => WORDregIs r
-| RegOrFlagR OpSize1 r => BYTEregIs r
+| RegOrFlagR OpSize1 r => reg8Is r
+| RegOrFlagR OpSize2 r => reg16Is r
+| RegOrFlagR OpSize4 r => reg32Is r
+| RegOrFlagR OpSize8 r => reg64Is r
 | RegOrFlagF f => flagIs f
 end.
 
@@ -622,8 +628,8 @@ rewrite -> PH, QH in H1.
 by rewrite (stateSplitsAsExtends H1) (stateSplitsAsExtends H1').
 Qed.
 
-Instance StrictlyExactRegIs r v: StrictlyExact (regIs r v).
-Proof. rewrite /regIs. do 3 (apply StrictlyExactSep; first apply StrictlyExactRegPieceIs).
+Instance StrictlyExactRegIs r v: StrictlyExact (reg64Is r v).
+Proof. rewrite /reg64Is. do 7 (apply StrictlyExactSep; first apply StrictlyExactRegPieceIs).
 apply StrictlyExactRegPieceIs. Qed.
 
 Instance StrictlyExactEmpSP : StrictlyExact empSP.
@@ -715,15 +721,17 @@ Lemma sepRev4 P Q R S : P ** Q ** R ** S -|- S ** R ** Q ** P.
 Proof. rewrite (sepSPC P). rewrite (sepSPC Q). rewrite (sepSPC R).
 by rewrite !sepSPA. Qed.
 
+(*
 Lemma regIs_same s (r:VRegAny s) (v1 v2:VWORD s) : r ~= v1 ** r ~= v2 |-- lfalse.
 Proof. destruct s. 
 - apply regPieceIs_same. 
 - destruct r. admit. 
 - rewrite /stateIs/regIs. 
   rewrite sepRev4. rewrite sepSPA.
-  rewrite sepRev4. rewrite -!sepSPA. rewrite -> (@regPieceIs_same (AnyRegPiece r RegIx0)).
+  rewrite sepRev4. rewrite -!sepSPA. rewrite -> (@regPieceIs_same (AnyRegPiece r (inord 0))).
   by rewrite !sepSP_falseL. 
 Qed.
+*)
 
 Lemma flagIs_same (f:Flag) v1 v2 : f ~= v1 ** f ~= v2 |-- lfalse.
 Proof.  move => s [s1 [s2 [H1 [H1a H1b]]]].

@@ -41,7 +41,7 @@ Proof.
   rewrite <- HO. rewrite -> catOPA.
   eforalls Hc1.
   eforalls Hc2.
-  specapply Hc1. erewrite -> H. reflexivity. by ssimpl. 
+  specapply Hc1. erewrite -> H. reflexivity. by ssimpl.
   specapply Hc2. by ssimpl. 
   rewrite <- spec_reads_frame. autorewrite with push_at. apply limplAdj. apply landL2. 
   rewrite empSPR. reflexivity. 

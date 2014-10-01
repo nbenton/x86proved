@@ -34,6 +34,7 @@ x86\reg.vo \
 x86\exn.vo \
 x86\instr.vo \
 x86\instrsyntax.vo \
+x86\addr.vo \
 x86\mem.vo \
 x86\regstate.vo \
 x86\procstate.vo \

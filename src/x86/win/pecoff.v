@@ -47,9 +47,10 @@ Record DLLImport := {
 
 Record DLLExport := {
   DLLExport_name: string;
-  DLLExport_VA: DWORD
+  DLLExport_VA: QWORD
 }.
 
+(*
 (* We need character, string and byte sequence writers *)
 Instance charWriter : Writer ascii :=
   fun c => writeBYTE (nat_of_ascii c).
@@ -71,7 +72,7 @@ LOCAL START; LOCAL END;
 START:;;
   ds "MZ"%string;;
   pad 58;;
-  dd (END - START)%R;;
+  dd (low 32 (END - START))%R;;
 END:;.
 
 (* Section 2.2: Signature *)
@@ -226,16 +227,16 @@ Definition IDATA :=
   (IMAGE_SCN_CNT_INITIALIZED_DATA || IMAGE_SCN_MEM_READ || IMAGE_SCN_MEM_WRITE).
 
 (* s is a program that when assembled produces the unaligned section *)
-Fixpoint makeSections dRVA pointerToRawData endHeaders (sections: seq section)
+Fixpoint makeSections dRVA (pointerToRawData:DWORD) endHeaders (sections: seq section)
   (headers bodies: seq program)
   (codeStart dataStart SizeOfCode SizeOfInitializedData SizeOfUninitializedData:DWORD)
   makePrefix : program :=
   (if sections is mkSection Name characteristics contents :: sections
   then
     LOCAL sectionStart; LOCAL rawEnd; LOCAL inFileEnd; LOCAL inMemoryEnd;
-    let: rawSize := rawEnd - sectionStart in
-    let: virtualSize := inMemoryEnd - sectionStart in
-    let: sizeOfRawData := inFileEnd - sectionStart in
+    let: rawSize := low 32 (rawEnd - sectionStart) in
+    let: virtualSize := low 32 (inMemoryEnd - sectionStart) in
+    let: sizeOfRawData := low 32 (inFileEnd - sectionStart) in
     let: isCode := (characteristics && IMAGE_SCN_CNT_CODE) != #0 in
     let: isData := (characteristics && IMAGE_SCN_CNT_INITIALIZED_DATA) != #0 in
     let: isUninitializedData := (characteristics && IMAGE_SCN_CNT_UNINITIALIZED_DATA) != #0 in
@@ -262,13 +263,13 @@ Fixpoint makeSections dRVA pointerToRawData endHeaders (sections: seq section)
       rawEnd:;; align fileAlignBits;;
       inFileEnd:;; skipAlign sectAlignBits;;
       inMemoryEnd:;)::bodies)
-      (if (codeStart == #0) && isCode then sectionStart else codeStart)
-      (if (dataStart == #0) && isData then sectionStart else dataStart)
-      (if isCode then SizeOfCode + (inFileEnd - sectionStart)
+      (if (codeStart == #0) && isCode then low 32 sectionStart else codeStart)
+      (if (dataStart == #0) && isData then low 32 sectionStart else dataStart)
+      (if isCode then SizeOfCode + low 32 (inFileEnd - sectionStart)
        else SizeOfCode)
-      (if isData then SizeOfInitializedData + (inFileEnd - sectionStart)
+      (if isData then SizeOfInitializedData + low 32 (inFileEnd - sectionStart)
        else SizeOfInitializedData)
-      (if isUninitializedData then SizeOfUninitializedData + (inFileEnd - sectionStart)
+      (if isUninitializedData then SizeOfUninitializedData + low 32 (inFileEnd - sectionStart)
        else SizeOfUninitializedData)
       makePrefix
   else
@@ -290,7 +291,7 @@ Fixpoint makeString (s:string) :=
    The last 2 tables are built in reverse order so that name addresses appear in lexical order in the
    Export Name Pointer Table.
  *)
-Fixpoint computeExportTables dRVA (exports: seq DLLExport) baseEAT baseENPT baseEOT (kEAT kENPT kEOT : program) (ord : WORD) : program :=
+Fixpoint computeExportTables (dRVA:QWORD -> program) (exports: seq DLLExport) baseEAT baseENPT baseEOT (kEAT kENPT kEOT : program) (ord : WORD) : program :=
   (if exports is Build_DLLExport name addr :: exports
   then
     LOCAL NAME;
@@ -320,7 +321,7 @@ Definition makeExportTables dRVA (exports : seq DLLExport) baseEAT baseENPT base
   #0
 .
 
-Definition makeExportDirectoryTable dRVA (nbEntries baseName baseEAT baseENPT baseEOT : DWORD) :=
+Definition makeExportDirectoryTable (dRVA:QWORD -> program) (nbEntries baseName baseEAT baseENPT baseEOT : DWORD) :=
   dd 0;; (* Reserved *)
   dd 0;; (* Time stamp *)
   dw 0;; (* Major version *)
@@ -344,10 +345,10 @@ Definition makeExportDirectoryTable dRVA (nbEntries baseName baseEAT baseENPT ba
 
   NOTE: the IAT and ILT must be DWORD-aligned. This is not mentioned in the PE/COFF spec!
 *)
-Fixpoint makeIATsILTs dRVA (imports: seq (DWORD*(DWORD*DLLImport))) (importAddrs: seq (seq DWORD)) (IATs ILTs: program) :=
+Fixpoint makeIATsILTs (dRVA:QWORD -> program) (imports: seq (QWORD*(QWORD*DLLImport))) (importAddrs: seq (seq QWORD)) (IATs ILTs: program) :=
   match imports, importAddrs with
    (IATbase,(ILTbase,Build_DLLImport _ entries))::imports, addrs::importAddrs =>
-    (fix computeIATandILTforOneDLL (entries: seq ImportEntry) (addrs: seq DWORD) (IAT ILT: program) : program :=
+    (fix computeIATandILTforOneDLL (entries: seq ImportEntry) (addrs: seq QWORD) (IAT ILT: program) : program :=
        match entries, addrs with
        | entry::entries, addr::addrs =>
          match entry with
@@ -374,7 +375,7 @@ Fixpoint attachLOCALS T (xs: seq T) k :=
   if xs is x::xs' then LOCAL L; attachLOCALS xs' (fun ys => k ((L,x)::ys))
   else k nil.
 
-Fixpoint makeImportDirectory dRVA (imports: seq (DWORD*(DWORD*DLLImport))) endIDT :=
+Fixpoint makeImportDirectory (dRVA:QWORD -> program) (imports: seq (QWORD*(QWORD*DLLImport))) endIDT :=
   if imports is (IAT,(ILT,Build_DLLImport name entries))::imports
   then
     LOCAL NAME;
@@ -393,7 +394,7 @@ Fixpoint makeImportDirectory dRVA (imports: seq (DWORD*(DWORD*DLLImport))) endID
 
 Open Scope instr_scope. Open Scope ring_scope.
 Definition makePEfile
-  dRVA
+  (dRVA: QWORD -> program)
   targetType                               (* Target type: EXE or DLL *)
   entryPoint                               (* Entry point for execution, #0 if not present *)
   (exportTableStart exportTableEnd
@@ -418,15 +419,15 @@ startOptionalHeader:;;
   dRVA (if entryPoint == #0 then if targetType is EXE then BaseOfCode else #0 else entryPoint);;
   dRVA BaseOfCode;;
   dRVA BaseOfData;;
-  dd imageBase;;
+  dd (low 32 imageBase);;
   dd sectAlign;;                (* SectionAlignment *)
   dd fileAlign;;                (* FileAlignment *)
   dv (Build_Version 6 0);;      (* OperatingSystemVersion *)
   dv (Build_Version 0 0);;      (* ImageVersion *)
   dv (Build_Version 6 0);;      (* SubsystemVersion *)
   dd 0;;                        (* Win32VersionValue, must be zero *)
-  dd (endFile - imageBase);;    (* SizeOfImage *)
-  dd (endHeaders - imageBase);; (* SizeOfHeaders *)
+  dd (low 32(endFile - imageBase));;    (* SizeOfImage *)
+  dd (low 32 (endHeaders - imageBase));; (* SizeOfHeaders *)
   dd 0;;                        (* CheckSum *)
   dw IMAGE_SUBSYSTEM_WINDOWS_CUI;;(* Subsystem *)
   dw (IMAGE_DLL_CHARACTERISTICS_NO_SEH ||
@@ -475,7 +476,7 @@ endOptionalHeader:;)
 ;;
 endFile:;.
 
-Definition makeExportSection dRVA startEDT endEDT progName exports :=
+Definition makeExportSection (dRVA:QWORD -> program) startEDT endEDT progName exports :=
   LOCAL baseEAT; LOCAL baseENPT; LOCAL baseEOT; LOCAL baseName;
 baseName:;;
   makeString progName;;
@@ -487,14 +488,14 @@ baseName:;;
   makeExportDirectoryTable
      dRVA
      (size exports)
-     baseName
-     baseEAT
-     baseENPT
-     baseEOT;;
+     (low 32 baseName)
+     (low 32 baseEAT)
+     (low 32 baseENPT)
+     (low 32 baseEOT);;
   endEDT:;
   .
 
-Definition makeImportSection dRVA startIDT endIDT imports (importAddrs: seq (seq DWORD)) :=
+Definition makeImportSection dRVA startIDT endIDT imports (importAddrs: seq (seq QWORD)) :=
   (* Labels for IATs *)
   attachLOCALS imports (fun imports1 =>
   (* Labels for ILTs *)
@@ -515,19 +516,19 @@ Definition makeImportSection dRVA startIDT endIDT imports (importAddrs: seq (seq
 *)
 (*=topprog *)
 Inductive topprog :=
-| topprog_global (name: option string) (t: DWORD -> topprog)
+| topprog_global (name: option string) (t: QWORD -> topprog)
 | topprog_importdll (name: string) (p: topimps)
-| topprog_entry (t: DWORD -> topprog)
+| topprog_entry (t: QWORD -> topprog)
 | topprog_sect (sect: section) (t: topprog)
 | topprog_end
 with topimps :=
-| topimps_import (name: string) (t: DWORD -> topimps)
+| topimps_import (name: string) (t: QWORD -> topimps)
 | topimps_topprog (t: topprog).
 
 Coercion topimps_topprog : topprog >-> topimps.
 
-Fixpoint applyTopProg {T} (local: (DWORD -> T) -> T) k (imports: seq DLLImport) (importAddrs: seq (seq DWORD))
-  (exports: seq DLLExport) (sections: seq section) (entry:DWORD) t : T :=
+Fixpoint applyTopProg {T} (local: (QWORD -> T) -> T) k (imports: seq DLLImport) (importAddrs: seq (seq QWORD))
+  (exports: seq DLLExport) (sections: seq section) (entry:QWORD) t : T :=
   match t with
   | topprog_sect s t =>
     applyTopProg local k imports importAddrs exports (s :: sections) entry t
@@ -551,7 +552,7 @@ Fixpoint applyTopProg {T} (local: (DWORD -> T) -> T) k (imports: seq DLLImport) 
     applyTopProg local k imports importAddrs exports sections entry (t L))
   end
 
-with applyTopImps {T} (local : (DWORD -> T) -> T) k nameDLL entries addrs imports importAddrs exports sections entry (t: topimps) :=
+with applyTopImps {T} (local : (QWORD -> T) -> T) k nameDLL entries addrs imports importAddrs exports sections entry (t: topimps) :=
   match t with
   | topimps_import name t =>
     local (fun L => applyTopImps local k nameDLL
@@ -619,7 +620,7 @@ Definition makeRange X (xs: seq X) f :=
   else f 0 0.
 
 (*=computeRVAsIn *)
-Definition computeRVAsIn (f: (DWORD -> program) -> program) : program :=
+Definition computeRVAsIn (f: (QWORD -> program) -> program) : program :=
   LOCAL base;
   base:;;
     f (fun VA => dd (if VA == #0 then #0 else VA - base)).
@@ -733,3 +734,4 @@ Definition makeEXE base progName t :=
   assembleToString base (makePEfile_program EXE progName t).
 Definition makeDLL base progName t :=
   assembleToString base (makePEfile_program DLL progName t).
+*)

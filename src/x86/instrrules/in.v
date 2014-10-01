@@ -3,12 +3,12 @@ Require Import x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 (** Special case for literal port *)
-Require Import x86proved.triple.
 Lemma IN_I_rule (c: BYTE) v w :
   |-- basic
       (AL ~= v) (IN c, AL) (inOP (zeroExtend n8 c) w) (AL ~= w).
 Proof. instrrule_triple_bazooka. triple.core.triple_by_compute.
-apply: separateSetRegPiece. rewrite /stateIs in s. eassumption. by rewrite !eq_refl. Qed.
+apply: triple.set.separateSetRegPiece => //. rewrite /stateIs/reg8Is in s. eassumption.
+by rewrite !eq_refl. Qed.
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic

@@ -23,7 +23,7 @@ Local Ltac triple_by_compute_using lem
      triple_post_compute;
      do !esplit; try eassumption.
 
-Lemma separateGetGen_helper R {r : Reader R} (p : PTR) (v : R) (P : SPred) (s : ProcState)
+Lemma separateGetGen_helper R {r : Reader R} (p : ADDR) (v : R) (P : SPred) (s : ProcState)
       (HP : P |-- p :-> v ** ltrue)
       (Ps : P s)
 : exists q, readMem readNext s p = readerOk v q.
@@ -35,7 +35,7 @@ Proof.
   eexists; reflexivity.
 Qed.
 
-Lemma separateGetGen_match R {r : Reader R} T (p : PTR) (v : R) (P : SPred) (s : ProcState) Ok W F
+Lemma separateGetGen_match R {r : Reader R} T (p : ADDR) (v : R) (P : SPred) (s : ProcState) Ok W F
       (HP : P |-- p :-> v ** ltrue)
       (Ps : P s)
 : match readMem readNext s p return T with
@@ -46,19 +46,19 @@ Lemma separateGetGen_match R {r : Reader R} T (p : PTR) (v : R) (P : SPred) (s :
 Proof. by elim (separateGetGen_helper HP Ps) => ? ->. Qed.
 
 (** Get readables from memory *)
-Lemma triple_letGetSepGen R {r:Reader R} (p:PTR) (v:R) P c O Q :
+Lemma triple_letGetSepGen R {r:Reader R} (p:ADDR) (v:R) P c O Q :
   P |-- p:->v ** ltrue ->
   TRIPLE P (c v) O Q ->
   TRIPLE P (bind (getFromProcState p) c) O Q.
 Proof. move => ?. triple_by_compute_using separateGetGen_match. Qed.
 
-Lemma triple_letGetSep R {r:Reader R} (p:PTR) (v:R) c O Q :
+Lemma triple_letGetSep R {r:Reader R} (p:ADDR) (v:R) c O Q :
   forall S,
   TRIPLE (p:->v ** S) (c v) O Q ->
   TRIPLE (p:->v ** S) (bind (getFromProcState p) c) O Q.
 Proof. move => S. apply triple_letGetSepGen. by cancel2. Qed.
 
-Lemma separateGetGen_match' R {r : Reader R} (p q : PTR) (v : R) (P : SPred) (s : ProcState)
+Lemma separateGetGen_match' R {r : Reader R} (p q : ADDR) (v : R) (P : SPred) (s : ProcState)
       (HP : P |-- p -- q :-> v ** ltrue)
       (Ps : P s)
 : readMem readNext s p = readerOk v q.
@@ -70,7 +70,7 @@ Proof.
   eexists; reflexivity.
 Qed.
 
-Lemma triple_letReadSep R {r:Reader R} (p q:PTR) (v:R) c (P:SPred) O Q :
+Lemma triple_letReadSep R {r:Reader R} (p q:ADDR) (v:R) c (P:SPred) O Q :
   P |-- p -- q :-> v ** ltrue ->
   TRIPLE P (c (v,q)) O Q ->
   TRIPLE P (bind (readFromProcState p) c) O Q.

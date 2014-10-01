@@ -26,7 +26,7 @@ Definition initializedMemory :=
   if writeMem write_program reservedMemory (mkCursor codeAddr) (main #x"C0000000") is Some (_,m) then m else reservedMemory.
 
 Definition initialState :=
-  mkProcState ((initialReg ! EIP:=codeAddr ! regToAnyReg ESP:=stackAddr)) initialFlagState initializedMemory.
+  mkProcState ((initialReg ! RIP:=(zeroExtend 32 codeAddr) ! (RSP:Reg64):=(zeroExtend 32 stackAddr))) initialFlagState initializedMemory.
 
 (*
 Definition runFor n s :=

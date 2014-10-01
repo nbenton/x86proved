@@ -2,7 +2,7 @@
     Assembler for type [program]. Import this and call [assemble_program].
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.seq Ssreflect.eqtype Ssreflect.tuple.
-Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.cursor x86proved.update.
+Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.cursor x86proved.update x86proved.x86.addr.
 Require Import x86proved.x86.program x86proved.monad x86proved.monadinst x86proved.writer.
 Require Import x86proved.spred x86proved.septac x86proved.pointsto x86proved.reader x86proved.roundtrip x86proved.x86.programassem x86proved.codec x86proved.bitreader x86proved.x86.instrcodec.
 
@@ -49,7 +49,7 @@ Proof. induction bytes => p q.
   rewrite IHbytes. sbazooka. sbazooka.
 Qed.
 
-Theorem write_instr_correct (i j: DWORD) (instr: Instr) :
+Theorem write_instr_correct (i j: ADDR) (instr: Instr) :
   interpWriter i j instr |-- i -- j :-> instr.
 Proof.
   rewrite /interpWriter/encodeInstr.
@@ -86,7 +86,7 @@ Proof.
 Qed.
 
 
-Lemma finalpass_correct p st (pos pos': DWORD) arg:
+Lemma finalpass_correct p st (pos pos': ADDR) arg:
   interpWriterTm (finalpass p st) pos pos' arg |-- pos -- pos' :-> p.
 Proof.
   move: st pos pos' arg.
@@ -127,7 +127,7 @@ Proof.
 Qed.
 
 (*=write_program_correct *)
-Theorem write_program_correct (i j: DWORD) (p: program) :
+Theorem write_program_correct (i j: ADDR) (p: program) :
   interpWriter i j p |-- i -- j :-> p.
 (*=End *)
 Proof.
@@ -147,7 +147,7 @@ Qed.
 
 (* When applying this lemma, discharge the side condition with [by vm_compute].
  *)
-Theorem assemble_correct (offset endpos: DWORD) p:
+Theorem assemble_correct (offset endpos: ADDR) p:
   assemble_success offset p ->
   offset -- endpos :-> assemble offset p |-- offset -- endpos :-> p.
 Proof.

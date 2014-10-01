@@ -12,9 +12,9 @@ Import Prenex Implicits.
 
 (* Decode instruction at EIP, move EIP to next instruction *)
 Definition decodeAndAdvance : ST Instr :=
-  let! oldIP = getRegFromProcState EIP;
+  let! oldIP = getReg32FromProcState EIP;
   let! (instr,newIP) = readFromProcState oldIP;
-  do! setRegInProcState EIP newIP;
+  do! setReg32InProcState EIP newIP;
   retn instr.
 
 (*=step *)

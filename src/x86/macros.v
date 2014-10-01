@@ -64,7 +64,7 @@ Lemma JCC_rule a cc cv (b:bool) (p q: DWORD) :
 Proof.
 rewrite /JCC/relToAbs.
 unfold_program. specintros => O i1 i2 H1 H2.
-rewrite -H2. rewrite H1. specapply JCCrel_rule; first by ssimpl. 
+rewrite -H2. rewrite H1. specapply JCCrel_rule. by ssimpl. 
 rewrite addB_subBK.
 rewrite <-spec_reads_frame. apply: limplAdj.
 apply: landL2. autorewrite with push_at. cancel1. sbazooka. 
@@ -162,22 +162,22 @@ Qed.
 Global Instance: forall (a : DWORD), instrrule (JMP a) := @JMP_I_rule.
 Global Instance: forall (a : DWORD), loopy_instrrule (JMP a) := @JMP_I_loopy_rule.
 
-Lemma JMP_R_rule (r:Reg) addr (p q: DWORD) :
+Lemma JMP_R_rule (r:GPReg32) addr (p q: DWORD) :
   |-- Forall O, (obs O @ (EIP ~= addr ** r ~= addr) -->> obs O @ (EIP ~= p ** r ~= addr)) <@
         (p -- q :-> JMP (JmpTgtR r)).
 Proof.
   rewrite /JMP. apply JMPrel_R_rule.
 Qed.
 
-Lemma JMP_R_loopy_rule (r:Reg) addr (p q: DWORD) :
+Lemma JMP_R_loopy_rule (r:GPReg32) addr (p q: DWORD) :
   |-- Forall (O : PointedOPred), (|> obs O @ (EIP ~= addr ** r ~= addr) -->> obs O @ (EIP ~= p ** r ~= addr)) <@
         (p -- q :-> JMP (JmpTgtR r)).
 Proof.
   rewrite /JMP. apply JMPrel_R_loopy_rule.
 Qed.
 
-Global Instance: forall (a : Reg), instrrule (JMP (JmpTgtR a)) := @JMP_R_rule.
-Global Instance: forall (a : Reg), loopy_instrrule (JMP (JmpTgtR a)) := @JMP_R_loopy_rule.
+Global Instance: forall (a : GPReg32), instrrule (JMP (JmpTgtR a)) := @JMP_R_rule.
+Global Instance: forall (a : GPReg32), loopy_instrrule (JMP (JmpTgtR a)) := @JMP_R_loopy_rule.
 
 Lemma CALL_I_rule (a:DWORD) (p q: DWORD) :
   |-- Forall O, Forall w: DWORD, Forall sp:DWORD, (

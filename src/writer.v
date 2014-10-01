@@ -2,7 +2,8 @@
     Syntax for writers, with instances for BYTE and DWORD
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.tuple.
-Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsopsprops x86proved.cursor x86proved.monad x86proved.monadinst.
+Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsopsprops x86proved.cursor 
+               x86proved.x86.addr x86proved.monad x86proved.monadinst.
 Require Import Coq.Logic.FunctionalExtensionality Coq.Strings.String x86proved.cstring.
 
 Set Implicit Arguments.
@@ -14,7 +15,7 @@ Inductive WriterTm A :=
 | writerRetn (x: A)
 | writerNext (b: BYTE) (w: WriterTm A)
 | writerSkip (w: WriterTm A)
-| writerCursor (w: DWORDCursor -> WriterTm A)
+| writerCursor (w: ADDRCursor -> WriterTm A)
 | writerFail.
 Class Writer T := getWriterTm: T -> WriterTm unit.
 (*=End *)
@@ -59,11 +60,11 @@ Proof. apply Build_Monad.
     by rewrite IH.
 Qed.
 
-Definition getWCursor : WriterTm (DWORDCursor) := writerCursor (fun p => writerRetn p).
+Definition getWCursor : WriterTm (ADDRCursor) := writerCursor (fun p => writerRetn p).
 Definition writeNext {T} {W: Writer T}: Writer T := W.
 
 (* Functional interpretation of writer on sequences *)
-Fixpoint runWriterTm padSkip X (w: WriterTm X) (c: DWORDCursor) : option (X * seq BYTE) :=
+Fixpoint runWriterTm padSkip X (w: WriterTm X) (c: ADDRCursor) : option (X * seq BYTE) :=
   match w with
   | writerRetn x => Some (x, nil)
   | writerNext byte w =>
@@ -83,7 +84,7 @@ Fixpoint runWriterTm padSkip X (w: WriterTm X) (c: DWORDCursor) : option (X * se
   | writerCursor w => runWriterTm padSkip (w c) c
   end.
 
-Lemma runWriterTm_bindCursor padSkip X (w: DWORDCursor -> WriterTm X) (p: DWORD) :
+Lemma runWriterTm_bindCursor padSkip X (w: ADDRCursor -> WriterTm X) (p: ADDR) :
   runWriterTm padSkip (let! c = getWCursor; w c) p =
   runWriterTm padSkip (w p) p.
 Proof. done. Qed.
@@ -121,7 +122,7 @@ Proof.
     eauto 10.
 Qed.
 
-Definition runWriter padSkip T (w: Writer T) (c: DWORDCursor) (x: T): option (seq BYTE) :=
+Definition runWriter padSkip T (w: Writer T) (c: ADDRCursor) (x: T): option (seq BYTE) :=
   let! (_, bytes) = runWriterTm padSkip (w x) c;
   retn bytes.
 
@@ -132,31 +133,30 @@ Definition runWriter padSkip T (w: Writer T) (c: DWORDCursor) (x: T): option (se
 (*=writeDWORD *)
 Instance writeBYTE : Writer BYTE | 0 :=
   fun b => writerNext b (writerRetn tt).
-Instance writeDWORD : Writer DWORD | 0 := fun d =>
-  let: (b3,b2,b1,b0) := split4 8 8 8 8 d in
-  do! writeBYTE b0;
-  do! writeBYTE b1;
-  do! writeBYTE b2;
-  do! writeBYTE b3;
+Fixpoint writeTupleBYTE (m:nat) : Writer (m.-tuple BYTE) :=
+  if m is m'.+1
+  then fun tup => do! writeBYTE (thead tup); writeTupleBYTE (behead_tuple tup)
+  else fun tup => retn tt.
+
+Global Existing Instance writeTupleBYTE.
+
+Instance writeBITS n : Writer (BITS (n*8)) | 0 := fun d =>
+  do! writeNext (bitsToBytes n d); 
   retn tt.
+
+Instance writeWORD  : Writer WORD  := writeBITS (n:=2).
+Instance writeDWORD : Writer DWORD := writeBITS (n:=4).
+Instance writeQWORD : Writer QWORD := writeBITS (n:=8).
 (*=End *)
 
-Instance writeWORD : Writer WORD := fun w =>
-  let: (b1,b0) := split2 8 8 w in
-  do! writeNext b0;
-  do! writeNext b1;
-  retn tt.
-
 (** This must go at a lower level/priority than [writeDWORD] and [writeBYTE] so it is picked up less eagerly. *)
-(*Instance writeVWORD s : Writer (VWORD s) | 1 :=
+Instance writeVWORD s : Writer (VWORD s) | 1 :=
   match s as s return Writer (VWORD s) with
   | OpSize1 => writeBYTE
   | OpSize2 => writeWORD
   | OpSize4 => writeDWORD
   | OpSize8 => writeQWORD
   end.
-Implicit Arguments writeDWORDorBYTE [].
-*)
 
 Instance writeSkipBYTE : Writer unit :=
   fun _ => writerSkip (writerRetn tt).
@@ -189,13 +189,6 @@ Definition writeSkipAlign (m:nat) : Writer unit := fun _ =>
   then writeSkipBy (toNat (negB (lowWithZeroExtend m pos))) tt
   else retn tt.
 
-
-Fixpoint writeTupleBYTE (m:nat) : Writer (m.-tuple BYTE) :=
-  if m is m'.+1
-  then fun tup => do! writeBYTE (thead tup); writeTupleBYTE (behead_tuple tup)
-  else fun tup => retn tt.
-
-Global Existing Instance writeTupleBYTE.
 
 Fixpoint writeString (n:nat) : Writer string := fun s =>
   if n is n'.+1

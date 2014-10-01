@@ -40,20 +40,20 @@ Arguments n24 : simpl never.
 Opaque n24.
 Definition NIBBLE := BITS n4.
 
-Inductive OpSize := OpSize1 | OpSize2 | OpSize4 (* | OpSize8 *). 
+Inductive OpSize := OpSize1 | OpSize2 | OpSize4 | OpSize8. 
 Definition VWORD s := 
-  BITS (match s with OpSize1 => n8 | OpSize2 => n16 | OpSize4 => n32 (* | OpSize8 => n64 *) end).
+  BITS (match s with OpSize1 => n8 | OpSize2 => n16 | OpSize4 => n32 | OpSize8 => n64 end).
 Definition BYTE   := VWORD OpSize1.
 Definition WORD   := VWORD OpSize2.
 Definition DWORD  := VWORD OpSize4.
-(*Definition QWORD  := VWORD OpSize8.*)
+Definition QWORD  := VWORD OpSize8.
 (*=End *)
 
 Identity Coercion VWORDtoBITS : VWORD >-> BITS.
 Identity Coercion BYTEtoVWORD : BYTE >-> VWORD.
 Identity Coercion WORDtoVWORD : WORD >-> VWORD.
 Identity Coercion DWORDtoVWORD : DWORD >-> VWORD.
-(*Identity Coercion QWORDtoVWORD : QWORD >-> VWORD.*)
+Identity Coercion QWORDtoVWORD : QWORD >-> VWORD.
 
 (* Construction *)
 Notation "'nilB'" := (nil_tuple _).
@@ -137,6 +137,7 @@ Definition signTruncate extra {n} (p: BITS (n.+1 + extra)) : option (BITS n.+1) 
 (* Zero extend by {extra} bits *)
 Definition zeroExtend extra {n} (p: BITS n) := zero extra ## p.
 
+Coercion DWORDtoQWORD := zeroExtend (n:=32) 32 : DWORD -> QWORD.
 Coercion WORDtoDWORD := zeroExtend (n:=16) 16 : WORD -> DWORD.
 Coercion BYTEtoDWORD := zeroExtend (n:=8) 24 : BYTE -> DWORD.
 
@@ -192,6 +193,25 @@ Definition slice n n1 n2 (p: BITS (n+n1+n2)) : BITS n1 :=
 
 Definition updateSlice n n1 n2 (p: BITS (n+n1+n2)) (m:BITS n1) : BITS (n+n1+n2) :=
   let: (a,b,c) := split3 n2 n1 n p in a ## m ## c.
+
+(* Little-endian conversion of n-tuples of bytes (first component is least significant)
+   into BITS (n*8) *)
+Fixpoint seqBytesToBits (xs : seq BYTE) : BITS (size xs*8) :=
+  if xs is x::xs' return BITS (size xs*8) then seqBytesToBits xs' ## x
+  else nilB.
+
+Fixpoint bytesToBits {n} : (n.-tuple BYTE) -> BITS (n*8) :=
+  if n is n'.+1 return n.-tuple BYTE -> BITS (n*8) 
+  then fun xs => bytesToBits (behead_tuple xs) ## (thead xs)
+  else fun xs => nilB.
+
+Definition splitAtByte n (bits : BITS ((n.+1)*8)) :BITS (n*8) * BYTE := (split2 (n*8) 8 bits).
+
+Fixpoint bitsToBytes n : BITS (n*8) -> n.-tuple BYTE :=
+  if n is n'.+1 return BITS (n*8) -> n.-tuple BYTE
+  then fun xs => 
+    let (hi,lo) := splitAtByte n' xs in cons_tuple lo (bitsToBytes _ hi)
+  else fun xs => nil_tuple _. 
 
 (*---------------------------------------------------------------------------
     Single bit operations

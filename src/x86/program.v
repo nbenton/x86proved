@@ -1,5 +1,5 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
-Require Import x86proved.bitsrep x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.spred x86proved.pointsto x86proved.cursor x86proved.reader x86proved.writer x86proved.roundtrip.
+Require Import x86proved.bitsrep x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.spred x86proved.pointsto x86proved.cursor x86proved.reader x86proved.writer x86proved.roundtrip x86proved.x86.addr.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -9,8 +9,8 @@ Import Prenex Implicits.
 Inductive program :=
   prog_instr (c: Instr)
 | prog_skip | prog_seq (p1 p2: program)
-| prog_declabel (body: DWORD -> program)
-| prog_label (l: DWORD)
+| prog_declabel (body: ADDR -> program)
+| prog_label (l: ADDR)
 | prog_data {T} {R: Reader T} {W: Writer T} (RT: Roundtrip R W) (v: T).
 Coercion prog_instr: Instr >-> program.
 (*=End *)
@@ -64,7 +64,7 @@ Fixpoint interpProgram i j prog :=
       mkCursor i, mkCursor j => i = j /\\ empSP
     | _, _ => i = j /\\ empSP
     end
-  | prog_seq p1 p2 => Exists i': DWORD, interpProgram i i' p1 ** interpProgram i' j p2
+  | prog_seq p1 p2 => Exists i': ADDR, interpProgram i i' p1 ** interpProgram i' j p2
   | prog_declabel body => Exists l, interpProgram i j (body l)
   | prog_label l =>
     match i, j with
@@ -93,7 +93,7 @@ Definition interpProgramLe p q prog := @interpProgramLeAux prog p q.
 
 Global Instance programMemIs : MemIs program := Build_MemIs interpProgramLe.
 
-Lemma programMemIsSkip (p q:DWORDCursor) : p -- q :-> prog_skip -|- p = q /\\ empSP.
+Lemma programMemIsSkip (p q:ADDRCursor) : p -- q :-> prog_skip -|- p = q /\\ empSP.
 Proof. destruct p => //. destruct q => //=. split. sdestruct => ->. sbazooka.
 sdestruct => H. injection H => ->. sbazooka. destruct q => //=. Qed.
 
@@ -104,10 +104,10 @@ Lemma programMemIsData T R W (RT:Roundtrip R W) p q (d:T) : p -- q :-> prog_data
 Proof. by simpl. Qed.
 
 Lemma programMemIsSeq p q p1 p2 :
-  p -- q :-> prog_seq p1 p2 -|- Exists p':DWORD, p -- p' :-> p1 ** p' -- q :-> p2.
+  p -- q :-> prog_seq p1 p2 -|- Exists p':ADDR, p -- p' :-> p1 ** p' -- q :-> p2.
 Proof. by simpl. Qed.
 
-Lemma programMemIsLabel (p q: DWORDCursor) l :
+Lemma programMemIsLabel (p q: ADDRCursor) l :
   p -- q :-> prog_label l -|- p = q /\\ p = l /\\ empSP.
 Proof. split.
 destruct p => //. simpl. destruct q => //. sbazooka. congruence. congruence.
@@ -140,9 +140,9 @@ Module ProgramTactic.
     let P := eval cbv [fs sn] in P in
     match P with
     | fun (x: ?X) => @?i x -- @?j x :-> (@?p1 x ;; @?p2 x) =>
-        let P1 := aux (fun i'x: pr DWORD X => i (sn i'x) -- fs i'x :-> p1 (sn i'x)) in
-        let P2 := aux (fun i'x: pr DWORD X => fs i'x -- j (sn i'x) :-> p2 (sn i'x)) in
-        constr:(fun (x:X) => Exists i': DWORD, P1 (pa i' x) ** P2 (pa i' x))
+        let P1 := aux (fun i'x: pr ADDR X => i (sn i'x) -- fs i'x :-> p1 (sn i'x)) in
+        let P2 := aux (fun i'x: pr ADDR X => fs i'x -- j (sn i'x) :-> p2 (sn i'x)) in
+        constr:(fun (x:X) => Exists i': ADDR, P1 (pa i' x) ** P2 (pa i' x))
     | fun (x: ?X) => @mkCursor _ (@?i x) -- @mkCursor _ (@?j x) :-> (@?l x :;) =>
         constr:(fun (x:X) => i x = j x /\\ i x = l x /\\ empSP)
 
@@ -162,7 +162,7 @@ Module ProgramTactic.
         constr:(fun (x:X) => i x = j x /\\ empSP)
 
     | fun (x: ?X) => @?i x -- @?j x :-> (prog_declabel (@?body x)) =>
-        let P' := aux (fun lx: pr DWORD X =>
+        let P' := aux (fun lx: pr ADDR X =>
                       i (sn lx) -- j (sn lx) :-> body (sn lx) (fs lx)) in
         constr:(fun (x:X) => Exists l, P' (pa l x))
     | _ => P
@@ -305,8 +305,8 @@ Proof. move => f1 f2 EQ. by apply progEqDecLabel. Qed.
 
 (* Main lemma: memIs respects progEq *)
 Require Import x86proved.septac.
-Lemma memIsProgEquiv p1 p2 : progEq p1 p2 -> forall (l l':DWORD), l -- l' :-> p1 -|- l -- l' :-> p2.
-Proof. move => EQ. induction EQ => l l'.
+Lemma memIsProgEquiv p1 p2 : progEq p1 p2 -> forall (l l':ADDR), l -- l' :-> p1 -|- l -- l' :-> p2.
+Proof. move => EQ. induction EQ => l l'; unfold_program; unfold_program; subst.
 (* progEqRefl *)
 + done.
 (* progEqSym *)
@@ -314,27 +314,24 @@ Proof. move => EQ. induction EQ => l l'.
 (* progEqTrans *)
 + by rewrite IHEQ1 IHEQ2.
 (* progEqDecLabel *)
-+ unfold_program. unfold_program. split. sdestruct => lab. ssplit. rewrite -> H0. reflexivity.
-sdestruct => lab. ssplit. rewrite <-H0. reflexivity.
++ split; sdestruct => lab; ssplit; [rewrite -> H0; reflexivity | rewrite <-H0; reflexivity ].
 (* progEqSeq *)
-+ unfold_program. unfold_program. split; sdestructs => i. rewrite IHEQ1 IHEQ2; sbazooka.
-rewrite -IHEQ1 -IHEQ2; by sbazooka.
++ split; sdestructs => i; [rewrite IHEQ1 IHEQ2; sbazooka | rewrite -IHEQ1 -IHEQ2; by sbazooka].
 (* progEqSeqAssoc *)
-+ unfold_program. unfold_program. split; sbazooka; rewrite sepSPA; reflexivity. 
++ split; sbazooka; rewrite sepSPA; reflexivity. 
 (* progEqSeqSkip *)
-+ unfold_program. sbazooka. by subst. 
++ sbazooka; by subst. 
 (* progEqSkipSeq *)
-+ unfold_program. sbazooka. by subst. 
++ sbazooka; by subst. 
 (* progEqSeqDecLabel *)
-+ unfold_program. do 3 rewrite /memIs/=. split; sbazooka.
++ do 3 rewrite /memIs/=. split; sbazooka.
 (* progEqDecLabelSeq *)
-+ unfold_program. do 3 rewrite /memIs/=. split; sbazooka.
++ do 3 rewrite /memIs/=. split; sbazooka.
 (* progEqDecLabelSkip *)
-+ unfold_program. unfold_program. split. sdestructs => i ->. sbazooka.
-  apply lexistsR with #0. sbazooka.
++ split. sdestructs => i ->. sbazooka.  apply lexistsR with #0. sbazooka.
 Qed.
 
 (* Now declare memIs as a morphism wrt progEq *)
-Global Instance memIs_progEq_m (p p': DWORD):
+Global Instance memIs_progEq_m (p p': ADDR):
   Proper (progEq ==> lequiv) (@memIs _ _ p p').
 Proof. move => p1 p2 EQ. by apply memIsProgEquiv. Qed.

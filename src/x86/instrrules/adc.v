@@ -16,7 +16,7 @@ Proof. do_instrrule_triple. Qed.
     [get_instrrule_of]. *)
 Global Instance: forall d (ds : DstSrc d), instrrule (BOP d OP_ADC ds) := @ADC_rule.
 
-Lemma ADC_RI_rule_helper (r1:Reg) v1 (v2:DWORD) o s z c p
+Lemma ADC_RI_rule_helper (r1:GPReg32) v1 (v2:DWORD) o s z c p
 : let: (carry, v) := eta_expand (adcB c v1 v2) in
   |-- (basic (r1~=v1 ** OSZCP o s z c p)
              (ADC r1, v2) empOP
@@ -24,7 +24,7 @@ Lemma ADC_RI_rule_helper (r1:Reg) v1 (v2:DWORD) o s z c p
                 (v == #0) carry (lsb v))).
 Proof. basic apply *. Qed.
 
-Lemma ADC_RI_rule (r1:Reg) v1 (v2:DWORD) carry v o s z c p
+Lemma ADC_RI_rule (r1:GPReg32) v1 (v2:DWORD) carry v o s z c p
 : adcB c v1 v2 = (carry, v) ->
   |-- (basic (r1~=v1 ** OSZCP o s z c p)
              (ADC r1, v2) empOP

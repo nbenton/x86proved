@@ -5,14 +5,14 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.
 Require Import x86proved.x86.reg x86proved.bitsrep x86proved.update.
 Local Open Scope update_scope.
 
-(* State of the registers, including IP and flags *)
+(* State of the registers, including RIP and flags *)
 (* Lookup is just function application *)
 (*=RegState *)
-Definition RegState := AnyReg -> DWORD.
+Definition RegState := Reg64 -> QWORD.
 (*=End *)
 
 (* Avoid == to permit extraction *)
-Instance RegStateUpdateOps : UpdateOps RegState AnyReg DWORD :=
+Instance RegStateUpdateOps : UpdateOps RegState Reg64 QWORD :=
   fun rs r v => fun r' => if r == r' then v else rs r'.
 
 Lemma setThenGetDistinct r1 v r2 (rs: RegState) :
@@ -26,7 +26,7 @@ Qed.
 
 Require Import Coq.Logic.FunctionalExtensionality.
 
-Instance RegStateUpdate : Update RegState AnyReg DWORD.
+Instance RegStateUpdate : Update RegState Reg64 QWORD.
 apply Build_Update.
 (* Same register *)
 move => rs r v w. rewrite /update /RegStateUpdateOps.
@@ -43,15 +43,16 @@ Qed.
 Definition initialReg : RegState := fun _ => #0.
 
 Require Import Coq.Strings.String.
+(* TODO: other 8 regs *)
 Definition regStateToString (rs:RegState) :=
-  (" EIP=" ++ toHex (rs EIP) ++
-   " ESP=" ++ toHex (rs ESP) ++
-   " EBP=" ++ toHex (rs EBP) ++
-   " EAX=" ++ toHex (rs EAX) ++
-   " EBX=" ++ toHex (rs EBX) ++
-   " ECX=" ++ toHex (rs ECX) ++
-   " EDX=" ++ toHex (rs EDX) ++
-   " ESI=" ++ toHex (rs ESI) ++
-   " EDI=" ++ toHex (rs EDI) ++
-   " EBP=" ++ toHex (rs EBP)
+  (" RIP=" ++ toHex (rs RIP) ++
+   " RSP=" ++ toHex (rs RSP) ++
+   " RBP=" ++ toHex (rs RBP) ++
+   " RAX=" ++ toHex (rs RAX) ++
+   " RBX=" ++ toHex (rs RBX) ++
+   " RCX=" ++ toHex (rs RCX) ++
+   " RDX=" ++ toHex (rs RDX) ++
+   " RSI=" ++ toHex (rs RSI) ++
+   " RDI=" ++ toHex (rs RDI) ++
+   " RBP=" ++ toHex (rs RBP)
    )%string.

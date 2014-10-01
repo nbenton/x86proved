@@ -14,7 +14,7 @@ Import Prenex Implicits.
 
 Local Open Scope instr_scope.
 
-Lemma inlineHead_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
+Lemma inlineHead_correct (r1 r2: GPReg32) (i j p e: DWORD) v vs :
   inlineHead_spec r1 r2 i j p e v vs (inlineHead r1 r2).
 Proof.
 rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. unfold_program.
@@ -25,7 +25,7 @@ rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. cancel1. by ssimpl.
 Qed.
 
-Lemma inlineTail_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
+Lemma inlineTail_correct (r1 r2: GPReg32) (i j p e: DWORD) v vs :
   inlineTail_spec r1 r2 i j p e v vs (inlineTail r1 r2).
 Proof.
 rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. unfold_program.
@@ -35,7 +35,7 @@ rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. cancel1. by sbazooka.
 Qed.
 
-Lemma inlineCons_correct (r1 r2: Reg) heapInfo failAddr (i j h t e: DWORD) vs :
+Lemma inlineCons_correct (r1 r2: GPReg32) heapInfo failAddr (i j h t e: DWORD) vs :
   inlineCons_spec r1 r2 heapInfo failAddr i j h t e vs (inlineCons r1 r2 heapInfo failAddr).
 Proof.
 rewrite /inlineCons_spec/inlineCons/updateCons. unfold_program.
@@ -71,7 +71,7 @@ apply limplValid. apply landL2. cancel1.
 rewrite /OSZCP/listSeg-/listSeg. rewrite /stateIsAny. sbazooka.
 Qed.
 
-Lemma callCons_correct (r1 r2: Reg) heapInfo (i j h t e: DWORD) vs :
+Lemma callCons_correct (r1 r2: GPReg32) heapInfo (i j h t e: DWORD) vs :
   |-- callCons_spec r1 r2 heapInfo i j h t e vs (callCons r1 r2 heapInfo).
 Proof.
 
@@ -92,7 +92,7 @@ specsplit.
 (* failure case *)
 autorewrite with push_at.
 
-unhideReg EDI => olddi.
+rewrite /(stateIsAny EDI). specintros => oldedi. 
 (* mov EDI, 0 *)
 specapply MOV_RI_rule. sbazooka.
 

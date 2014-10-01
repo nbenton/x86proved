@@ -7,7 +7,7 @@
     We also provide an implementation in terms of BYTE readers.
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.finfun Ssreflect.fintype Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.tuple Ssreflect.div.
-Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops x86proved.bitsopsprops x86proved.cursor x86proved.monad x86proved.reader.
+Require Import x86proved.bitsrep x86proved.bitsprops x86proved.bitsops x86proved.bitsopsprops x86proved.cursor x86proved.monad x86proved.reader x86proved.x86.addr.
 Require Import Coq.Logic.FunctionalExtensionality.
 
 Set Implicit Arguments.
@@ -53,7 +53,7 @@ Qed.
    ordering) *)
 Definition n35 := n32.+3.
 Arguments n35 : simpl never.
-Definition BitCursor := Cursor n35.
+Definition BitCursor := Cursor (naddrBits.+3).
 
 (* Functional interpretation of bitReader on sequences. Returns the
    final position, the tail of the given sequence and the value
@@ -96,7 +96,7 @@ Proof. induction r.
   by apply H.
 Qed.
 
-Definition fromByteCursor (c: DWORDCursor) : BitCursor := widenCursor 3 c.
+Definition fromByteCursor (c: ADDRCursor) : BitCursor := widenCursor 3 c.
 
 (* We can use a byte-reader to implement a bit-reader by accumulating the bits of the
    next byte read in a list. Notice the use of reverse: we read bits from msb to lsb. *)
@@ -161,16 +161,16 @@ Qed.
    holds if the bit reader state (bitc,bits) is equivalent
          to the byte reader state (bytec, accbits, bytes)
 *)
-Inductive BBInv : BitCursor -> seq bool -> DWORDCursor -> seq bool -> seq BYTE -> Prop :=
-| BBInvAligned (p: DWORDCursor) bytes :
+Inductive BBInv : BitCursor -> seq bool -> ADDRCursor -> seq bool -> seq BYTE -> Prop :=
+| BBInvAligned (p: ADDRCursor) bytes :
   BBInv (fromByteCursor p) (toBin bytes) p nil bytes
 
-| BBInvCons (p: DWORD) accbit accbits bytes :
+| BBInvCons (p: ADDR) accbit accbits bytes :
   size accbits < 7 ->
   BBInv (p ## fromNat (n:=3) (7 - size accbits)) (accbit::accbits++toBin bytes)
   (next p) (accbit::accbits) bytes.
 
-Lemma BBInvProp1 (bytec: DWORD) (byte:BYTE) (bytes: seq BYTE) accbit accbits (p:BITS n35) :
+Lemma BBInvProp1 (bytec: ADDR) (byte:BYTE) (bytes: seq BYTE) accbit accbits (p:BITS _) :
   fromByteCursor bytec = mkCursor p  ->
   rev byte = accbit :: accbits ->
   BBInv p (accbit :: accbits ++ toBin bytes) bytec [::] (byte :: bytes) ->
@@ -182,14 +182,14 @@ have: size (rev byte) = 8 by rewrite size_rev size_tuple. rewrite E2/=; congruen
 destruct accbits => //.
 injection E1 => <-. simpl.
 replace (zero 3) with (fromNat (n:=3) 0).
-have NC := @nextCat n32 3 bytec 0. rewrite NC => //.
+have NC := @nextCat _ 3 bytec 0. rewrite NC => //.
 simpl in SIZELO. injection SIZELO => SIZEACCBITS.
 replace (fromNat (n:=3) 1) with (fromNat (n:=3) (7 - size accbits)).
 apply BBInvCons. by rewrite SIZEACCBITS. by rewrite SIZEACCBITS.
 by rewrite fromNat0.
 Qed.
 
-Lemma BBInvProp2 (p: DWORD) bytes accbit accbits :
+Lemma BBInvProp2 (p: ADDR) bytes accbit accbits :
   size accbits < 7 ->
   BBInv (p ## fromNat (n:=3) (7 - size accbits)) (accbit :: accbits ++ toBin bytes)
           (next p) (accbit :: accbits) bytes ->
@@ -251,12 +251,12 @@ Qed.
 
 (* Note that if bits is non-null then the byte cursor is already advanced to the next
    location *)
-Definition bitCursorAndBitsToByteCursor (c:BitCursor) (bits:seq bool) : DWORDCursor :=
-  if c is mkCursor p then if bits is nil then mkCursor (@high n32 3 p)
-                          else next (@high n32 3 p) else top _.
+Definition bitCursorAndBitsToByteCursor (c:BitCursor) (bits:seq bool) : ADDRCursor :=
+  if c is mkCursor p then if bits is nil then mkCursor (@high _ 3 p)
+                          else next (@high _ 3 p) else top _.
 
 Corollary bitReaderToReader_correct t (br: BitReader t) :
-  forall bytes resbits (cursor: DWORDCursor) (cursor':BitCursor) v,
+  forall bytes resbits (cursor: ADDRCursor) (cursor':BitCursor) v,
   runBitReader br (fromByteCursor cursor) (toBin bytes) = Some (cursor', resbits, v) ->
   exists resbytes, exists resbits',
   runReader (bitReaderToReader br nil) cursor bytes =

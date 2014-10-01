@@ -2,7 +2,7 @@
 Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Lemma RET_rule p' (sp:DWORD) (offset:WORD) (p q: DWORD) O :
+Lemma RET_rule p' (sp:DWORD) (offset:WORD) (p q: ADDR) O :
   let sp':DWORD := addB (sp+#4) (zeroExtend 16 offset) in
   |-- (
          obs O @ (EIP ~= p' ** ESP ~= sp' ** sp :-> p') -->>
@@ -13,7 +13,7 @@ Proof.
   do_instrrule_triple.
 Qed.
 
-Lemma RET_loopy_rule p' (sp:DWORD) (offset:WORD) (p q: DWORD) O `{IsPointed_OPred O} :
+Lemma RET_loopy_rule p' (sp:DWORD) (offset:WORD) (p q: ADDR) O `{IsPointed_OPred O} :
   let sp':DWORD := addB (sp+#4) (zeroExtend 16 offset) in
   |-- (
       |> obs O @ (EIP ~= p' ** ESP ~= sp' ** sp :-> p') -->>

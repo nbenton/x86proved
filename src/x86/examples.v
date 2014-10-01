@@ -14,7 +14,7 @@ Local Open Scope instr_scope.
 
 (*=max *)
 (* Determine max(r1,r2), leaving result in r1 *)
-Definition max (r1 r2: Reg) : program :=
+Definition max (r1 r2: GPReg32) : program :=
   LOCAL Bigger;
     CMP r1, r2;; JG Bigger;; MOV r1, r2;;
   Bigger:; .

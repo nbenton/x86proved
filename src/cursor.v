@@ -338,22 +338,8 @@ induction m => p q LT LE AP.
 Qed.
 
 
-(** Convenience definitions for various sizes of cursor *)
-(*Definition NIBBLECursor := Cursor n4.
-Definition BYTECursor   := Cursor n8.
-Definition WORDCursor   := Cursor n16.*)
-Definition DWORDCursor  := Cursor n32.
-(*Definition QWORDCursor  := Cursor n64.
-Definition DWORDorBYTECursor (d: bool) := Cursor (if d then n32 else n8).*)
-
-(*Coercion mkNIBBLECursor (x: NIBBLE) : NIBBLECursor := mkCursor x.
-Coercion mkBYTECursor   (x: BYTE)   : BYTECursor   := mkCursor x.
-Coercion mkWORDCursor   (x: WORD)   : WORDCursor   := mkCursor x.
-Coercion mkDWORDCursor  (x: DWORD)  : DWORDCursor  := mkCursor x.
-Coercion mkQWORDCursor  (x: QWORD)  : QWORDCursor  := mkCursor x.
-Coercion mkDWORDorBYTECursor d (x: DWORDorBYTE d) : DWORDorBYTECursor d := mkCursor x.*)
-
-Identity Coercion DWORDCursortoCursor32 : DWORDCursor >-> Cursor.
+Notation DWORDCursor  := (Cursor n32).
+Notation QWORDCursor  := (Cursor n64).
 
 Lemma nextCat n1 n2 (p:BITS n1) m : m < (2^n2).-1 ->
   next (p ## fromNat (n:=n2) m) = p ## #(m.+1).
