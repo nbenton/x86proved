@@ -44,9 +44,10 @@ x86\encdechelp.vo \
 x86\step.vo \
 x86\ioaction.vo \
 spred\core.vo \
+spred\stateis.vo \
 spred\spredtotal.vo \
 spred\pointsto.vo \
-spred\septac.vo \
+spred\tactics.vo \
 spred.vo \
 opred.vo \
 opred/core.vo \

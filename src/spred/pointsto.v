@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.choice Ssreflect.fintype.
 Require Import x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops x86proved.x86.procstate x86proved.x86.addr.
-Require Import x86proved.monad x86proved.reader x86proved.writer x86proved.roundtrip x86proved.spred.core x86proved.spred.septac x86proved.pfun x86proved.cursor x86proved.charge.iltac x86proved.charge.ilogic.
+Require Import x86proved.monad x86proved.reader x86proved.writer x86proved.roundtrip x86proved.spred.core x86proved.spred.stateis x86proved.spred.tactics x86proved.pfun x86proved.cursor x86proved.charge.iltac x86proved.charge.ilogic.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1020,27 +1020,8 @@ apply (leB_bounded_weaken BOUND) => //. apply leq_addr.
 Qed.
 
 
-(* Disjointness for registers, flags and bytes *)
-Lemma regIs_disjoint s (r1 r2: Reg s) v1 v2 : r1 ~= v1 ** r2 ~= v2 |-- r1 <> r2 /\\ (r1 ~= v1 ** r2 ~= v2).
-Proof. destruct s. admit. admit. admit. admit.
-
-(*- case E: (r1 == r2). rewrite (eqP E). by rewrite ->regIs_same at 1.
-ssplit; last done. move => H. by rewrite H eq_refl in E.
-*)
-Qed.
-
-Lemma flagIs_disjoint (f1 f2: Flag) v1 v2 : f1 ~= v1 ** f2 ~= v2 |-- f1 <> f2 /\\ (f1 ~= v1 ** f2 ~= v2).
-Proof. case E: (f1 == f2). rewrite (eqP E). by setoid_rewrite flagIs_same at 1.
-ssplit; last done. move => H. by rewrite H eq_refl in E.
-Qed.
-
 Lemma byteIs_disjoint p1 p2 v1 v2 : byteIs p1 v1 ** byteIs p2 v2 |-- p1 <> p2 /\\ (byteIs p1 v1 ** byteIs p2 v2).
 Proof. case E: (p1 == p2). rewrite (eqP E). by setoid_rewrite byteIs_same at 1.
 ssplit; last done. move => H. by rewrite H eq_refl in E.
 Qed.
 
-(*Set Printing Coercions.*)
-(*Example ex1 : exists (x y z:DWORD), 
-  AnyRegToVRegAny EAX ~= x ** EBX ~= #1 ** x -- y :-> #4 |-- 
-  EBX ~= y ** EAX ~= #2 ** x -- z :-> #4. 
-Proof. eexists _, _, _.  ssimpl. Qed.*)
