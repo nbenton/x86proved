@@ -96,11 +96,17 @@ Proof.
   move => H pre.
   rewrite /stateIs/reg64Is in H.
   have H0 := H. rewrite ->sepSPA in H0. have R0 := regPieceSep (H0 _ pre). clear H0.
+
   have H1 := H. rewrite <-sepSPA in H1. rewrite -> (sepSPC (regPieceIs (mkRegPiece r 0) _)) in H1.
   do 3 rewrite ->sepSPA in H1. have R1 := regPieceSep (H1 _ pre).
+
   have H2 := H1. rewrite <-sepSPA in H2. rewrite -> (sepSPC (regPieceIs (mkRegPiece r 2) _)) in H2.   
   do 2 rewrite <-sepSPA in H2. rewrite <- sepSPC in H2. have R2 := regPieceSep (H2 _ pre).
   clear H2.
+
+  have H3 := H1. do 2 rewrite <-sepSPA in H3.  rewrite -> sepSPC in H3. do 2 rewrite ->sepSPA in H3.
+  have R3 := regPieceSep (H3 _ pre). clear H3.
+
   have H3 := H1. do 3 rewrite <-sepSPA in H3.  rewrite -> sepSPC in H3. do 2 rewrite <-sepSPA in H3.
   rewrite -> sepSPC in H3. rewrite ->sepSPA in H3. have R4 := regPieceSep (H3 _ pre). clear H3.
   have H3 := H1. do 4 rewrite <-sepSPA in H3.  rewrite -> sepSPC in H3. do 2 rewrite <-sepSPA in H3.
@@ -112,8 +118,16 @@ Proof.
   have H3 := H1. do 2 rewrite <-sepSPA in H3.  rewrite -> sepSPC in H3. do 2 rewrite <-sepSPA in H3.
   rewrite -> sepSPC in H3. rewrite ->sepSPA in H3. have R8 := regPieceSep (H3 _ pre). clear H3.
   clear H. 
-  apply getRegPiece_ext. rewrite /RegIx.   
-  admit. 
+  apply getRegPiece_ext. 
+  case; first done. 
+  case; first done. 
+  case; first done. 
+  case; first done. 
+  case; first done. 
+  case; first done. 
+  case; first done. 
+  case; first done. 
+  done.  
 Qed.
 
 Lemma triple_letGetReg64 (r:Reg OpSize8) v (P Q:SPred) O c:
@@ -132,7 +146,8 @@ Lemma triple_letGetReg32 (r:Reg OpSize4) v (P Q:SPred) O c:
   (P |-- r ~= v ** ltrue) ->
   TRIPLE P (c v) O Q ->
   TRIPLE P (bind (getReg32FromProcState r) c) O Q.
-Proof. move => ?. pre_let. triple_by_compute. admit. (*apply: getRegSep; eassumption. *) Qed.
+Proof. move => H. pre_let. triple_by_compute.
+rewrite /stateIs/reg32Is in H. repeat rewrite -> sepSPA in H. admit.  Qed.
 
 Lemma triple_letGetReg32Sep (r:Reg OpSize4) v c O Q :
  forall S,

@@ -15,11 +15,10 @@ Lemma CALLrel_rule (p q: ADDR) (tgt: JmpTgt) (sp:ADDR) (w:DWORD) O :
     ) <@ (p -- q :-> CALLrel tgt)).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
-admit.
-(*  do_instrrule
+  do_instrrule
     ((try specintros => *; autorewrite with push_at);
-     apply: TEIPLE_safe => ?;
-     do !instrrule_triple_bazooka_step idtac).*)
+     apply: TRIPLE_safe => ?;
+     do !instrrule_triple_bazooka_step idtac).
 Qed.
 
 Lemma CALLrel_loopy_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) (O : PointedOPred) :
@@ -30,11 +29,10 @@ Lemma CALLrel_loopy_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) (O : PointedOPr
     ) <@ (p -- q :-> CALLrel tgt)).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
-admit. (*
   do_instrrule
     ((try specintros => *; autorewrite with push_at);
-     apply: TEIPLE_safeLater => ?;
-     do !instrrule_triple_bazooka_step idtac).*)
+     apply: TRIPLE_safeLater => ?;
+     do !instrrule_triple_bazooka_step idtac).
 Qed.
 
 (** We make this rule an instance of the typeclass, and leave

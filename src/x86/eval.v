@@ -180,8 +180,10 @@ Definition evalJmpTgt tgt : ST ADDR :=
   | JmpTgtI (mkTgt r) =>
     let! nextIP = getReg32FromProcState EIP;
     retn (addB nextIP r)
-  | JmpTgtR r => let! p = evalReg32 r; retn p
-  | JmpTgtM m => evalMemSpec m
+  | JmpTgtR r => evalReg32 r
+  | JmpTgtM m =>
+    let! p = evalMemSpec m;
+    getDWORDFromProcState p
   end.
 
 Definition setVRegInProcState {s:OpSize} : Reg s -> VWORD s -> _ :=

@@ -320,7 +320,8 @@ Example addB_until_zero_prog_safe ch o s z c p S al
                       ((AH ~= (foldl (fun x y => addB x y) initial (drop_last x xs)))
                          ** AL ~= (last x xs) ** OF? ** SF? ** ZF ~= true ** CF? ** PF?))).
 Proof.
-  specintros => *. admit. 
+  specintros => *. 
+  admit. 
 (* basic apply (@accumulate_until_value_prog_safe #0 _ (fun x => AH ~= x)) => *; first assumption.
   basic apply *. *)
 Qed.

@@ -14,10 +14,10 @@ Lemma JMPrel_rule (tgt: JmpTgt) (p q: ADDR)
                                  -->> obs O @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt))).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
-admit.   (*do_instrrule
+  do_instrrule
     ((try specintros => *; autorewrite with push_at);
      apply: TRIPLE_safe => ?;
-     do !instrrule_triple_bazooka_step idtac).*)
+     do !instrrule_triple_bazooka_step idtac).
 Qed.
 
 Lemma JMPrel_loopy_rule (tgt: JmpTgt) (p q: ADDR)
@@ -27,12 +27,10 @@ Lemma JMPrel_loopy_rule (tgt: JmpTgt) (p q: ADDR)
                                  -->> obs O @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt))).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
-admit.
-
-(*  do_instrrule
+  do_instrrule
     ((try specintros => *; autorewrite with push_at);
      apply: TRIPLE_safeLater => ?;
-     do !instrrule_triple_bazooka_step idtac).*)
+     do !instrrule_triple_bazooka_step idtac).
 Qed.
 
 (** We make this rule an instance of the typeclass, and leave

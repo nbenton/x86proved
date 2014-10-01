@@ -38,16 +38,15 @@ Proof.
 
   do !basic apply * => //.
 
-admit. 
-(*  rewrite /iter. autorewrite with bitsHints. (*rewrite -addB_addn. rewrite !shlB_asMul. *)
-  do 6 rewrite -[in X in (_ ~= X)]mulB_muln.
+  rewrite /iter. autorewrite with bitsHints.   
+  (* This is gross: rewrite cares about coercions! *)
+  do 6 rewrite -[in X in ((RegOrFlagR (_ (_ EDI))) ~= X)]mulB_muln.
   rewrite !fromNat_mulBn.
   replace (2 * _) with 32 => //.
   replace (32 * (2*2)) with 128 => //.
   rewrite -addB_addn.
   (* Can't use ring 'cos it's inside bits *)
-admit.
-  ssimpl. rewrite -mulnDr addnC. replace (128 + 32) with 160 => //.
+  rewrite -mulnDr addnC. replace (128 + 32) with 160 => //.
   ssimpl.
 
   rewrite -6!mulnA.
@@ -57,8 +56,6 @@ admit.
   reflexivity.
   rewrite toNat_fromNatBounded. apply (ltn_trans NR) => //.
   apply (ltn_trans NR) => //.
-*)
-
 Qed.
 
 (* Increment ESI if location buf[ECX, EDX] contains a dot *)

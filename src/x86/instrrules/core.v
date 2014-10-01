@@ -415,23 +415,21 @@ Lemma evalReg64_rule (r: Reg OpSize8) v c O Q :
 Proof. by apply triple_letGetReg64Sep. Qed.
 Global Opaque evalReg64.
 
-(*Lemma evalRegPiece_rule (rp: RegPiece) (v:BYTE) c O Q :
+Lemma evalRegPiece_rule (rp: RegPiece) (v:BYTE) c O Q :
   forall S,
   TRIPLE (regPieceIs rp v ** S) (c v) O Q ->
-  TRIPLE (regPieceIs rp v ** S) (bind (evalRegPiece rp) c) O Q.
+  TRIPLE (regPieceIs rp v ** S) (bind (getRegPieceFromProcState rp) c) O Q.
 Proof.
-move => S T. rewrite /stateIs/BYTEregIs.
+move => S T. 
 triple_apply triple_letGetRegPieceSep.
 triple_apply T.
 Qed.
-Global Opaque evalRegPiece.
-*)
 
 Lemma evalReg8_rule (r: Reg OpSize1) (v:BYTE) c O Q :
   forall S,
   TRIPLE (r ~= v ** S) (c v) O Q ->
   TRIPLE (r ~= v ** S) (bind (evalReg8 r) c) O Q.
-Proof. admit. (*apply evalRegPiece_rule. *) Qed.
+Proof. destruct r; apply evalRegPiece_rule. Qed.
 Global Opaque evalReg8.
 
 Lemma evalReg16_rule (r: Reg OpSize2) (v:WORD) c O Q :
@@ -439,13 +437,8 @@ Lemma evalReg16_rule (r: Reg OpSize2) (v:WORD) c O Q :
   TRIPLE (r ~= v ** S) (c v) O Q ->
   TRIPLE (r ~= v ** S) (bind (evalReg16 r) c) O Q.
 Proof.
-move => S T. rewrite /stateIs/reg16Is/evalReg16. destruct r as [r].
-admit. (*triple_apply evalRegPiece_rule. 
-triple_apply evalRegPiece_rule. 
-replace (slice 8 8 0 v ## slice 0 8 8 v) with v.
-try_triple_apply T.
-rewrite /stateIs/WORDregIs/WORDRegToReg/VRegToVRegAny. by ssimpl.
-
+move => S T. rewrite /stateIs/reg16Is/evalReg16. destruct r as [r]. admit. 
+(*
 (* @TODO: this should be in bitsprops *)
 apply allBitsEq => i LT.
 setoid_rewrite -> getBit_catB. rewrite /slice/split3/split2.

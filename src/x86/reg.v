@@ -295,7 +295,35 @@ Require Import bitsprops.
 Lemma getRegPiece_ext (v w: QWORD) :
   (forall ix, getRegPiece v ix = getRegPiece w ix) ->
   v = w. 
-Proof. rewrite /getRegPiece. move => H0. admit. 
+Proof. move => H. 
+have H0:= H 0. 
+have H1:= H 1. 
+have H2:= H 2. 
+have H3:= H 3. 
+have H4:= H 4. 
+have H5:= H 5. 
+have H6:= H 6. 
+have H7:= H 7.
+simpl in *. 
+have P0 := proj2 (sliceEq _ _) H0.
+have P1 := proj2 (sliceEq _ _) H1.
+have P2 := proj2 (sliceEq _ _) H2.
+have P3 := proj2 (sliceEq _ _) H3.
+have P4 := proj2 (sliceEq _ _) H4.
+have P5 := proj2 (sliceEq _ _) H5.
+have P6 := proj2 (sliceEq _ _) H6.
+have P7 := proj2 (sliceEq _ _) H7.
+apply allBitsEq.
+move => i LT. 
+case LT8: (i < n8). apply P0 => //. 
+case LT16: (i < n16). apply P1; by rewrite LT16 leqNgt LT8. 
+case LT24: (i < n24). apply P2; by rewrite LT24 leqNgt LT16. 
+case LT32: (i < n32). apply P3; by rewrite LT32 leqNgt LT24. 
+case LT40: (i < 40). apply P4; by rewrite LT40 leqNgt LT32. 
+case LT48: (i < 48). apply P5; by rewrite LT48 leqNgt LT40. 
+case LT56: (i < 56). apply P6; by rewrite LT56 leqNgt LT48. 
+case LT64: (i < 64). apply P7; by rewrite LT64 leqNgt LT56. 
+by rewrite LT in LT64. 
 Qed.
 
 (* 8, 16, 32 or 64 bit registers *)
