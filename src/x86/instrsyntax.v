@@ -68,10 +68,8 @@ Notation "'[' r '+' i '*' '8' '+' n ']'" :=
 *)
 
 Inductive InstrArg :=
-| BYTERegArg :> BYTEReg -> InstrArg
-| WORDRegArg :> WORDReg -> InstrArg
-| RegArg :> Reg -> InstrArg
-| MemSpecArg :> MemSpec -> InstrArg.
+| InstrArgR s :> VReg s -> InstrArg
+| InstrArgM :> MemSpec -> InstrArg.
 
 Inductive InstrSrc :=
 | ArgSrc :> InstrArg -> InstrSrc
@@ -90,28 +88,20 @@ Bind Scope memspec_scope with MemSpec.
 (*---------------------------------------------------------------------------
     Unary operations
   ---------------------------------------------------------------------------*)
-Definition makeUOP op (i: InstrArg) :=
-  match i with
-  | BYTERegArg r => UOP OpSize1 op (RegMemR OpSize1 r)
-  | WORDRegArg r => UOP OpSize2 op (RegMemR OpSize2 r)
-  | RegArg r => UOP OpSize4 op (RegMemR OpSize4 r)
-  | MemSpecArg ms => UOP OpSize4 op (RegMemM OpSize4 ms)
-  end.
-
 Notation "'NOT' x"
-  := (makeUOP OP_NOT x%ms) (x at level 55, at level 60) : instr_scope.
+  := (UOP _ OP_NOT x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'NOT' 'BYTE' m"
   := (UOP OpSize1 OP_NOT (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'NEG' x"
-  := (makeUOP OP_NEG x%ms) (x at level 55, at level 60) : instr_scope.
+  := (UOP _ OP_NEG x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'NEG' 'BYTE' m"
   := (UOP OpSize1 OP_NEG (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'INC' x"
-  := (makeUOP OP_INC x%ms) (x at level 55, at level 60) : instr_scope.
+  := (UOP _ OP_INC x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'INC' 'BYTE' m"
   := (UOP OpSize1 OP_INC (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 Notation "'DEC' x"
-  := (makeUOP OP_DEC x%ms) (x at level 55, at level 60) : instr_scope.
+  := (UOP _ OP_DEC x%ms) (x at level 55, at level 60) : instr_scope.
 Notation "'DEC' 'BYTE' m"
   := (UOP OpSize1 OP_DEC (RegMemM OpSize1 m%ms)) (m at level 55, at level 60) : instr_scope.
 
@@ -120,16 +110,22 @@ Notation "'DEC' 'BYTE' m"
   ---------------------------------------------------------------------------*)
 Definition makeBOP op dst (src: InstrSrc) :=
   match dst, src with
-  | BYTERegArg dst, BYTERegArg src => BOP OpSize1 op (DstSrcRR OpSize1 dst src)
-  | WORDRegArg dst, WORDRegArg src => BOP OpSize2 op (DstSrcRR OpSize2 dst src)
-  | BYTERegArg dst, MemSpecArg src => BOP OpSize1 op (DstSrcRM OpSize1 dst src)
-  | RegArg dst, RegArg src => BOP OpSize4 op (DstSrcRR OpSize4 dst src)
-  | BYTERegArg dst, ConstSrc n => BOP OpSize1 op (DstSrcRI OpSize1 dst (low 8 n))
-  | RegArg dst, ConstSrc n => BOP OpSize4 op (DstSrcRI OpSize4 dst n)
-  | MemSpecArg dst, RegArg src => BOP OpSize4 op (DstSrcMR OpSize4 dst src)
-  | MemSpecArg dst, BYTERegArg src => BOP OpSize1 op (DstSrcMR OpSize1 dst src)
-  | RegArg dst, MemSpecArg src => BOP OpSize4 op (DstSrcRM OpSize4 dst src)
-  | MemSpecArg dst, ConstSrc n => BOP OpSize4 op (DstSrcMI OpSize4 dst n)
+  | InstrArgR OpSize1 dst, InstrArgR OpSize1 src => BOP OpSize1 op (DstSrcRR OpSize1 dst src)
+  | InstrArgR OpSize2 dst, InstrArgR OpSize2 src => BOP OpSize2 op (DstSrcRR OpSize2 dst src)
+  | InstrArgR OpSize4 dst, InstrArgR OpSize4 src => BOP OpSize4 op (DstSrcRR OpSize4 dst src)
+
+  | InstrArgR OpSize1 dst, InstrArgM src => BOP OpSize1 op (DstSrcRM OpSize1 dst src)
+  | InstrArgR OpSize2 dst, InstrArgM src => BOP OpSize2 op (DstSrcRM OpSize2 dst src)
+  | InstrArgR OpSize4 dst, InstrArgM src => BOP OpSize4 op (DstSrcRM OpSize4 dst src)
+
+  | InstrArgR OpSize1 dst, ConstSrc n => BOP OpSize1 op (DstSrcRI OpSize1 dst (low 8 n))
+  | InstrArgR OpSize4 dst, ConstSrc n => BOP OpSize4 op (DstSrcRI OpSize4 dst n)
+
+  | InstrArgM dst, InstrArgR OpSize1 src => BOP OpSize1 op (DstSrcMR OpSize1 dst src)
+  | InstrArgM dst, InstrArgR OpSize2 src => BOP OpSize2 op (DstSrcMR OpSize2 dst src)
+  | InstrArgM dst, InstrArgR OpSize4 src => BOP OpSize4 op (DstSrcMR OpSize4 dst src)
+
+  | InstrArgM dst, ConstSrc n => BOP OpSize4 op (DstSrcMI OpSize4 dst n)
   | _, _=> BADINSTR
   end.
 
@@ -165,15 +161,22 @@ Notation "'CMP' 'BYTE' x , y" :=
   ---------------------------------------------------------------------------*)
 Definition makeMOV dst (src: InstrSrc) :=
   match dst, src with
-  | BYTERegArg dst, BYTERegArg src => MOVOP OpSize1 (DstSrcRR OpSize1 dst src)
-  | BYTERegArg dst, MemSpecArg src => MOVOP OpSize1 (DstSrcRM OpSize1 dst src)
-  | RegArg dst, RegArg src => MOVOP OpSize4 (DstSrcRR OpSize4 dst src)
-  | BYTERegArg dst, ConstSrc n => MOVOP OpSize1 (DstSrcRI OpSize1 dst (low 8 n))
-  | RegArg dst, ConstSrc n => MOVOP OpSize4 (DstSrcRI OpSize4 dst n)
-  | MemSpecArg dst, RegArg src => MOVOP OpSize4 (DstSrcMR OpSize4 dst src)
-  | MemSpecArg dst, BYTERegArg src => MOVOP OpSize1 (DstSrcMR OpSize1 dst src)
-  | RegArg dst, MemSpecArg src => MOVOP OpSize4 (DstSrcRM OpSize4 dst src)
-  | MemSpecArg dst, ConstSrc n => MOVOP OpSize4 (DstSrcMI OpSize4 dst n)
+  | InstrArgR OpSize1 dst, InstrArgR OpSize1 src => MOVOP OpSize1 (DstSrcRR OpSize1 dst src)
+  | InstrArgR OpSize2 dst, InstrArgR OpSize2 src => MOVOP OpSize2 (DstSrcRR OpSize2 dst src)
+  | InstrArgR OpSize4 dst, InstrArgR OpSize4 src => MOVOP OpSize4 (DstSrcRR OpSize4 dst src)
+
+  | InstrArgR OpSize1 dst, InstrArgM src => MOVOP OpSize1 (DstSrcRM OpSize1 dst src)
+  | InstrArgR OpSize2 dst, InstrArgM src => MOVOP OpSize2 (DstSrcRM OpSize2 dst src)
+  | InstrArgR OpSize4 dst, InstrArgM src => MOVOP OpSize4 (DstSrcRM OpSize4 dst src) 
+
+  | InstrArgR OpSize1 dst, ConstSrc n => MOVOP OpSize1 (DstSrcRI OpSize1 dst (low 8 n))
+  | InstrArgR OpSize4 dst, ConstSrc n => MOVOP OpSize4 (DstSrcRI OpSize4 dst n)
+
+  | InstrArgM dst, InstrArgR OpSize1 src => MOVOP OpSize1 (DstSrcMR OpSize1 dst src)
+  | InstrArgM dst, InstrArgR OpSize2 src => MOVOP OpSize2 (DstSrcMR OpSize2 dst src)
+  | InstrArgM dst, InstrArgR OpSize4 src => MOVOP OpSize4 (DstSrcMR OpSize4 dst src)
+
+  | InstrArgM dst, ConstSrc n => MOVOP OpSize4 (DstSrcMI OpSize4 dst n)
   | _, _=> BADINSTR
   end.
 
@@ -225,7 +228,7 @@ Arguments PUSH (src)%ms.
 Arguments POP (dst)%ms.
 
 (* Typical use: in "Eval showinstr in linearize p" *)
-Declare Reduction showinstr := cbv beta delta -[fromNat makeMOV makeUOP makeBOP] zeta iota.
+Declare Reduction showinstr := cbv beta delta -[fromNat makeMOV makeBOP] zeta iota.
 
 Module Examples.
 Open Scope instr_scope.
@@ -239,6 +242,7 @@ Example ex6 (r:BYTEReg) := MOV AL, r.
 Example ex7 (r:Reg) := POP [r + #x"0000001C"].
 Example ex8 := CMP AL, (#c"!":BYTE).
 Example ex9 := MOV DX, BP. 
+Example ex10 := NOT [EBX + EDI*4 + 3]. 
 
 Close Scope instr_scope.
 End Examples.

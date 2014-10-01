@@ -18,28 +18,20 @@ Require Import x86proved.bitsrep x86proved.x86.reg.
 (*=MemSpec *)
 Inductive Scale := S1 | S2 | S4 | S8.
 Inductive MemSpec :=
-  mkMemSpec (sib: option (Reg * option (NonSPReg*Scale)))
+  mkMemSpec (sib: option (VReg OpSize4 * option (NonSPReg*Scale)))
             (offset: DWORD).
-(*=End *)
-
-(* 8-bit register *)
-(*=BYTEReg *)
-Definition VReg (d: OpSize) := 
-  match d with OpSize1 => BYTEReg | OpSize2 => WORDReg | OpSize4 => Reg end.
 (*=End *)
 
 (* Register or memory *)
 (*=RegMem *)
 Inductive RegMem s :=
-| RegMemR (r: VReg s)
+| RegMemR (r: VReg s) :> RegMem s
 | RegMemM (ms: MemSpec).
 Inductive RegImm s :=
 | RegImmI (c: VWORD s)
 | RegImmR (r: VReg s).
 (*=End *)
 
-Coercion DWORDRegMemR (r:Reg)       := RegMemR OpSize4 r.
-Coercion BYTERegMemR  (r:BYTEReg)   := RegMemR OpSize1 r.
 Coercion DWORDRegMemM (ms: MemSpec) := RegMemM OpSize4 ms.
 Coercion DWORDRegImmI (d: DWORD)    := RegImmI OpSize4 d.
 
@@ -47,9 +39,9 @@ Coercion DWORDRegImmI (d: DWORD)    := RegImmI OpSize4 d.
 (* Binary ops: five combinations of source and destination *)
 (*=Src *)
 Inductive Src :=
-| SrcI (c: DWORD)
-| SrcM (ms: MemSpec)
-| SrcR (r: Reg).
+| SrcI (c: DWORD) :> Src
+| SrcM (ms: MemSpec) :> Src
+| SrcR (r: Reg) :> Src.
 Inductive DstSrc (s: OpSize) :=
 | DstSrcRR (dst src: VReg s)
 | DstSrcRM (dst: VReg s) (src: MemSpec)
@@ -57,9 +49,7 @@ Inductive DstSrc (s: OpSize) :=
 | DstSrcRI (dst: VReg s) (c: VWORD s)
 | DstSrcMI (dst: MemSpec) (c: VWORD s).
 (*=End *)
-Coercion SrcI : DWORD >-> Src.
-Coercion SrcR : Reg >-> Src.
-Coercion SrcM : MemSpec >-> Src.
+
 (* Jump target: PC-relative offset *)
 (* We make this a separate type constructor to pick up type class instances later *)
 (* Jump ops: immediate, register, or memory source *)
@@ -122,5 +112,5 @@ Inductive Instr :=
 | RETOP (size: WORD)
 | OUTOP (s: OpSize) (port: Port)
 | INOP (s: OpSize) (port: Port)
-| HLT | BADINSTR.
+| HLT | ENCLU | ENCLS | BADINSTR.
 (*=End *)

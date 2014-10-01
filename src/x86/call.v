@@ -80,7 +80,7 @@ Proof.
   rewrite /toyfun.
   apply lforallL with iret.
   apply lforallL with O'.
-  rewrite /stateIsAny/stateIs/VRegIs.
+  rewrite /stateIsAny.
   cancel2. cancel1. by ssimpl.
 Qed.
 

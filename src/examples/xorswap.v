@@ -38,12 +38,12 @@ Proof.
   (* XOR r1, r2 *)
   do 3 basic apply *.
 
-  rewrite /OSZCP/stateIsAny/stateIs/VRegIs; sbazooka.
   (* Now we're left reasoning about XOR *)
   rewrite {2}[X in xorB w X]xorBC.
-  rewrite [X in regIs r2 X]xorBA.
+  rewrite (xorBA w w). 
   rewrite [X in xorB _ X]xorBC xorBA.
-  by autorewrite with bitsHints.
+  autorewrite with bitsHints. 
+  by ssimpl.
 Qed.
 
 Lemma tmpSwapCorrect (r1 r2 rt: Reg) :

@@ -189,12 +189,12 @@ Proof. move => [s1 [s2 [Hs [Hs1 Hs2]]]].
   rewrite /= in Hs. apply Hs. by rewrite -Hs1/= eq_refl. 
 Qed.
 
-Lemma RegPieceFromStateDef (r:AnyReg) (v:DWORD) (s: PState) :
+Lemma RegPieceFromStateDef (r:VRegAny OpSize4) (v:DWORD) (s: PState) :
   (r~=v) s -> 
   forall ix,
   s Registers (AnyRegPiece r ix) = Some (getRegPiece v ix).
 Proof. move => H. 
-rewrite /=/regIs in H. 
+rewrite /stateIs/regIs in H. 
 elim. 
 - by apply RegPieceFromStateDefAux in H. 
 - apply lentails_eq in H. do 2 rewrite <- sepSPA in H. 
@@ -250,7 +250,7 @@ move => p. simpl. case E': (s Memory p) => [x |]. by right. done.
 move => p. simpl. case E': (s Flags p) => [x |]. by right. done.
 Qed. 
 
-Lemma separateSetReg (r:AnyReg) (v w:DWORD) Q (s:ProcState) :
+Lemma separateSetReg (r:VRegAny OpSize4) (v w:DWORD) Q (s:ProcState) :
   (r~=v ** Q) s -> (r~=w ** Q) (s!r:=w).
 Proof.
 move => [s1 [s2 [Hs [Hs1 Hs2]]]].
@@ -325,12 +325,13 @@ case E: (f == f').
   rewrite setFlagThenGetSame.
   destruct H1.
   * left. split => //. by destruct H.
-  * rewrite (eqP E) in H2. rewrite -H2 in H. case: H => _ H.
+  * rewrite (eqP E)/stateIs in H2. rewrite -H2 in H. case: H => _ H.
     simpl in H. by rewrite eqxx in H.
 - rewrite setFlagThenGetDistinct => //. by apply negbT in E.
 
 split => //.
-eapply flagIsEquiv_m; [reflexivity | reflexivity | rewrite <- H2; reflexivity|].
+rewrite /stateIs/= in H2. 
+eapply flagIsEquiv_m; [reflexivity | reflexivity | rewrite /stateIs; rewrite <- H2; reflexivity|].
 apply: state_extensional => [[]] //. move=> f' /=.
 by case E: (f == f').
 Qed.
@@ -344,21 +345,21 @@ Proof.
  eapply separateSetFlag. apply H.
 Qed.
 
-Lemma triple_setRegSep (r:AnyReg) v w S
+Lemma triple_setRegSep (r:VRegAny OpSize4) v w S
 : TRIPLE (r~=v ** S) (setRegInProcState r w) nil (r~=w ** S).
 Proof. triple_by_compute. apply: separateSetReg; eassumption. Qed.
 
 Lemma triple_setBYTERegSep (r:BYTEReg) v w S
-: TRIPLE (BYTEregIs r v ** S) (setBYTERegInProcState r w) nil (BYTEregIs r w ** S).
-Proof. rewrite /BYTEregIs/=/setBYTERegInProcState. elim E: (BYTERegToRegPiece r) => [r' b]. 
+: TRIPLE (r ~= v ** S) (setBYTERegInProcState r w) nil (r ~= w ** S).
+Proof. rewrite /stateIs/BYTEregIs/=/setBYTERegInProcState. elim E: (BYTERegToRegPiece r) => [r' b]. 
 triple_by_compute. apply: separateSetRegPiece; eassumption. Qed.
 
 Lemma triple_setWORDRegSep (r:WORDReg) v w S
-: TRIPLE (WORDregIs r v ** S) (setWORDRegInProcState r w) nil (WORDregIs r w ** S).
-Proof. rewrite /WORDregIs/=/setWORDRegInProcState. elim: r => [r]. 
+: TRIPLE (r ~= v ** S) (setWORDRegInProcState r w) nil (r ~= w ** S).
+Proof. rewrite /stateIs/WORDregIs/setWORDRegInProcState.  elim r => r'. 
 triple_by_compute. admit. Qed.
 
-Lemma triple_setRegSepGen (r:AnyReg) v w P R:
+Lemma triple_setRegSepGen (r:VRegAny OpSize4) v w P R:
   P |-- r~=v ** R ->
   TRIPLE P (setRegInProcState r w) nil (r~=w ** R).
 Proof. move=> HP. rewrite ->HP. apply: triple_setRegSep. Qed.

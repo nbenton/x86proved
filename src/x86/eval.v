@@ -339,6 +339,10 @@ Definition evalInstr instr : ST unit :=
     evalDst false dst
     (fun d => let! c = evalShiftCount count; evalShiftOp (n:=n31) op d c)
 
+  | SHIFTOP OpSize2 op dst count =>
+    evalDst false dst
+    (fun d => let! c = evalShiftCount count; evalShiftOp (n:=n15) op d c)
+
   | SHIFTOP OpSize1 op dst count =>
     evalDst false dst
     (fun d => let! c = evalShiftCount count; evalShiftOp (n:=n7) op d c)

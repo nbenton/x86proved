@@ -197,4 +197,17 @@ match r with
 | DH => AnyRegPiece EDX RegIx1
 end.
 
+(* BYTE, WORD or DWORD register, not including EIP *)
+Definition VReg (s: OpSize) := 
+  match s with OpSize1 => BYTEReg | OpSize2 => WORDReg | OpSize4 => Reg end.
 
+Definition VRegAny (s: OpSize) :=
+  match s with OpSize1 => BYTEReg | OpSize2 => WORDReg | OpSize4 => AnyReg end.
+  
+Coercion VRegToVRegAny {s} : VReg s -> VRegAny s  := 
+  match s return VReg s -> VRegAny s with OpSize1 => fun r => r | OpSize2 => fun r => r | OpSize4 => fun r => r end. 
+
+Coercion RegToVReg (r:Reg) : VReg OpSize4 := r.
+Coercion WORDRegToVReg (r:WORDReg) : VReg OpSize2 := r.
+Coercion BYTERegToVReg (r:BYTEReg) : VReg OpSize1 := r.
+Coercion AnyRegToVRegAny (r: AnyReg) : VRegAny OpSize4 := r.

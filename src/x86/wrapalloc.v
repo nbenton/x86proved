@@ -50,10 +50,11 @@ specsplit.
 autorewrite with push_at.
 
 (* MOV EDI, 0 *)
-specapply MOV_RanyI_rule.
+specapply MOV_RanyI_rule. rewrite /RegToVReg. 
 - by ssimpl.
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. simpl (OPred_pred (default_PointedOPred _)). cancel1. rewrite /natAsDWORD. ssimpl. by apply: lorR2.
+autorewrite with push_at. simpl (OPred_pred (default_PointedOPred _)). cancel1. rewrite /natAsDWORD/RegToVReg. 
+ssimpl. by apply: lorR2.
 
 (* success case *)
 autorewrite with push_at.

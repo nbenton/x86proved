@@ -34,7 +34,7 @@ Ltac locate_frame G :=
     | _         => fail 2 "No frame in" G
   end.
 Ltac locate_regIsReg regIsReg G :=
-  match eval cbv beta iota zeta delta [stateIs VRegIs] in G with
+  match eval cbv beta iota zeta delta [AnyRegToVRegAny VRegToVRegAny] in G with
     | regIsReg ?x     => constr:(x)
     | ?a ** _         => locate_regIsReg regIsReg a
     | _  ** ?b        => locate_regIsReg regIsReg b
@@ -50,7 +50,7 @@ Ltac locate_code codeIs F :=
     | ?G'                => fail 1 "No (unique) code at" codeIs "found in" G'
   end.
 
-Ltac locate_reg reg G := let regIsReg := constr:(regIs reg) in locate_regIsReg regIsReg G.
+Ltac locate_reg reg G := let regIsReg := constr:(stateIs (@RegOrFlagR _ reg)) in locate_regIsReg regIsReg G.
 
 Ltac get_post_reg_from reg G :=
   let G' := locate_post_reg_component G in
@@ -83,26 +83,26 @@ Ltac get_code_at_from eip G :=
 
 (** Get the code located at [EIP] *)
 Ltac get_eip_code G :=
-  let eip := get_post_reg_from EIP G in
+  let eip := get_post_reg_from (EIP:VRegAny OpSize4) G in
   get_code_at_from (eip : DWORD) G.
 
 Ltac check_eips_match A B :=
-  let pre_eip_A := get_pre_reg_from EIP A in
-  let post_eip_A := get_post_reg_from EIP A in
-  let pre_eip_B := get_pre_reg_from EIP B in
-  let post_eip_B := get_post_reg_from EIP B in
+  let pre_eip_A := get_pre_reg_from (EIP:VRegAny OpSize4) A in
+  let post_eip_A := get_post_reg_from (EIP:VRegAny OpSize4) A in
+  let pre_eip_B := get_pre_reg_from (EIP:VRegAny OpSize4) B in
+  let post_eip_B := get_post_reg_from (EIP:VRegAny OpSize4) B in
   constr_eq pre_eip_A pre_eip_B;
     constr_eq post_eip_A post_eip_B.
 
 Ltac check_goal_eips_match :=
-  let pre_eip := get_pre_reg EIP in
-  let post_eip := get_post_reg EIP in
+  let pre_eip := get_pre_reg (EIP:VRegAny OpSize4) in
+  let post_eip := get_post_reg (EIP:VRegAny OpSize4) in
   constr_eq pre_eip post_eip.
 
 
 Ltac split_eip_match :=
   let G := match goal with |- ?G => constr:(G) end in
-  let eip := get_post_reg_from EIP G in
+  let eip := get_post_reg_from (EIP:VRegAny OpSize4) G in
   let discriminee := match eip with
                        | context[match ?E with _ => _ end] => constr:(E)
                        | _ => fail 1 "No 'if ... then ... else' nor 'match ... with ... end' found in EIP =" eip
@@ -124,7 +124,7 @@ Ltac get_next_loopy_instrrule_from_eip :=
   get_loopy_instrrule_of instr.
 (** [pre_specapply_any] does some clean up for pulling out the rule. *)
 Ltac pre_specapply_any :=
-  rewrite /makeBOP/makeUOP/makeMOV;
+  rewrite /makeBOP/makeMOV;
   cbv beta iota zeta;
   do ?((test progress intros); move => ?).
 Tactic Notation "specapply" open_constr(lem) := specapply lem.

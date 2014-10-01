@@ -325,8 +325,8 @@ Module Compile.
   | VBINOP And v w => MOV EAX, compileVar v;; AND EAX, compileVar w;; MOV dst, EAX
   | VBINOP Or  v w => MOV EAX, compileVar v;; OR EAX, compileVar w;; MOV dst, EAX
   | VBINOP Xor v w => MOV EAX, compileVar v;; XOR EAX, compileVar w;; MOV dst, EAX
-  | VUOP Not v => MOV EAX, compileVar v;; MOV dst, EAX;; makeUOP OP_NOT dst
-  | VUOP Neg v => MOV EAX, compileVar v;; MOV dst, EAX;; makeUOP OP_NEG dst
+  | VUOP Not v => MOV EAX, compileVar v;; MOV dst, EAX;; UOP _ OP_NOT dst
+  | VUOP Neg v => MOV EAX, compileVar v;; MOV dst, EAX;; UOP _ OP_NEG dst
   | IMM n => MOV dst, n
   end.
 

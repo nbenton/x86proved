@@ -54,7 +54,7 @@ Fixpoint linearizeWith (p: program) tail :=
 Definition linearize p := linearizeWith p prog_skip.
 
 Declare Reduction showprog :=
-  cbv beta delta -[fromNat fromHex makeMOV makeUOP makeBOP db dw dd ds align pad] zeta iota.
+  cbv beta delta -[fromNat fromHex makeMOV makeBOP db dw dd ds align pad] zeta iota.
 
 Fixpoint interpProgram i j prog :=
   match prog with
@@ -318,15 +318,13 @@ Proof. move => EQ. induction EQ => l l'.
 sdestruct => lab. ssplit. rewrite <-H0. reflexivity.
 (* progEqSeq *)
 + unfold_program. unfold_program. split; sdestructs => i. rewrite IHEQ1 IHEQ2; sbazooka.
-rewrite -IHEQ1 -IHEQ2; sbazooka.
+rewrite -IHEQ1 -IHEQ2; by sbazooka.
 (* progEqSeqAssoc *)
-+ unfold_program. unfold_program. split; sbazooka.
++ unfold_program. unfold_program. split; sbazooka; rewrite sepSPA; reflexivity. 
 (* progEqSeqSkip *)
-+ unfold_program. split. sdestructs => i ->. by ssimpl.
-  sbazooka.
++ unfold_program. sbazooka. by subst. 
 (* progEqSkipSeq *)
-+ unfold_program. split. sdestructs => i' ->. by ssimpl.
-  sbazooka.
++ unfold_program. sbazooka. by subst. 
 (* progEqSeqDecLabel *)
 + unfold_program. do 3 rewrite /memIs/=. split; sbazooka.
 (* progEqDecLabelSeq *)

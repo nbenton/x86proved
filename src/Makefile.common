@@ -126,6 +126,7 @@ examples\xorswap.vo \
 examples\mulc.vo \
 x86\main.vo \
 examples\fact.vo \
+examples\memstuff.vo \
 x86\examples.vo \
 x86\testrun.vo \
 x86\cstringimp.vo \

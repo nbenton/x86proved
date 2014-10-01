@@ -90,7 +90,7 @@ Proof. move => [s1 [s2 [Hs [Hs1 Hs2]]]].
   rewrite /= in Hs. injection Hs => //. by rewrite -Hs1/= eq_refl.
 Qed.
 
-Lemma getRegSep (r : AnyReg) v (P : SPred) (s : ProcState)
+Lemma getRegSep (r : VRegAny OpSize4) v (P : SPred) (s : ProcState)
 : P |-- r ~= v ** ltrue -> P s -> v = registers s r.
 Proof.
   move => H pre.
@@ -106,13 +106,13 @@ Proof.
   by apply getRegPiece_ext.
 Qed.
 
-Lemma triple_letGetReg (r:AnyReg) v (P Q:SPred) O c:
+Lemma triple_letGetReg (r:VRegAny OpSize4) v (P Q:SPred) O c:
   (P |-- r ~= v ** ltrue) ->
   TRIPLE P (c v) O Q ->
   TRIPLE P (bind (getRegFromProcState r) c) O Q.
 Proof. move => ?. pre_let. triple_by_compute. apply: getRegSep; eassumption. Qed.
 
-Lemma triple_letGetRegSep (r:AnyReg) v c O Q :
+Lemma triple_letGetRegSep (r:VRegAny OpSize4) v c O Q :
  forall S,
  TRIPLE (r~=v ** S) (c v) O Q ->
  TRIPLE (r~=v ** S) (bind (getRegFromProcState r) c) O Q.
@@ -124,7 +124,7 @@ Lemma triple_letGetFlagSep (fl:Flag) (v:bool) c O Q :
   TRIPLE (fl~=v ** S) (bind (getFlagFromProcState fl) c) O Q.
 Proof. move => S T. apply: triple_letGetFlag. cancel2. reflexivity. done. Qed.
 
-Lemma triple_doGetReg (r:AnyReg) (P Q: SPred) O c :
+Lemma triple_doGetReg (r:VRegAny OpSize4) (P Q: SPred) O c :
   TRIPLE P c O Q ->
   TRIPLE P (do! getRegFromProcState r; c) O Q.
 Proof. move => T s pre. move: (T s pre) => [f [eq H']]. eexists f.

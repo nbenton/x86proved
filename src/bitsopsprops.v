@@ -272,36 +272,6 @@ rewrite -(addn1 m) GRing.natrD.
 by rewrite GRing.addrK.
 Qed.
 
-Lemma incBDistinct n : forall (p: BITS n.+1), incB p <> p.
-Proof. case/tupleP => b p'. by elim b. Qed.
-
-Lemma incBincBDistinct n : forall (p: BITS n.+2), incB (incB p) <> p.
-Proof. case/tupleP => b p'. case/tupleP: p' => b' p'. elim b; by elim b'. Qed.
-
-Lemma incBincBincBDistinct n : forall (p: BITS n.+2), incB (incB (incB p)) <> p.
-Proof. case/tupleP => b p'. case/tupleP: p' => b' p'. elim b; by elim b'. Qed.
-
-Lemma incBneq n : forall (p: BITS n.+1), incB p != p.
-Proof. move => p. apply (introN eqP). apply: incBDistinct. Qed.
-
-Lemma incBincBneq n : forall (p: BITS n.+2), incB (incB p) != p.
-Proof. move => p. apply (introN eqP). apply: incBincBDistinct. Qed.
-
-Lemma incBincBincBneq n : forall (p: BITS n.+2), incB (incB (incB p)) != p.
-Proof. move => p. apply (introN eqP). apply: incBincBincBDistinct. Qed.
-(*
-Lemma bitsEqInc n : forall (p: BITS n.+1), bitsEq (incB p) p = false.
-Proof. move => p. replace (bitsEq (incB p) p) with (incB p == p) by done.
-apply negbTE. apply incBneq. Qed.
-
-Lemma bitsEqIncInc n : forall (p: BITS n.+2), bitsEq (incB (incB p)) p = false.
-Proof. move => p. replace (bitsEq _ p) with (incB (incB p) == p) by done.
-apply negbTE. apply incBincBneq. Qed.
-
-Lemma bitsEqIncIncInc n : forall (p: BITS n.+2), bitsEq (incB (incB (incB p))) p = false.
-Proof. move => p. replace (bitsEq _ p) with (incB (incB (incB p)) == p) by done.
-apply negbTE. apply incBincBincBneq. Qed.
-*)
 (*---------------------------------------------------------------------------
     Properties of inversion (one's complement)
   ---------------------------------------------------------------------------*)
@@ -739,6 +709,59 @@ rewrite toNat_fromNat. rewrite toNat_fromNat.
 rewrite modnDmr. apply modn_sub.
 + apply expn_gt0. + apply toNatBounded. + done. + done.
 Qed.
+
+Lemma neqB_modn n (p q: BITS n) : p <> q <-> toNat p <> toNat q %[mod 2^n]. 
+Proof. split => H. move => H'.
+rewrite (@modn_small (toNat p)) in H'.  
+rewrite (@modn_small (toNat q)) in H'.
+apply toNat_inj in H'. by subst. apply toNatBounded. apply toNatBounded. 
+move => H'. by subst.  
+Qed. 
+
+Lemma addBn_distinct n m : forall (p: BITS n), m.+1 < 2^n -> p <> p +#(m.+1).
+Proof. move => p LT. 
+rewrite neqB_modn.
+rewrite toNat_addB toNat_fromNat. rewrite (@modn_small (m.+1)) => //. rewrite modn_mod.
+move/eqP. rewrite -{1}(addn0 (toNat p)). 
+rewrite eqn_modDl. 
+rewrite modn_small; last by apply expn_gt0. 
+by rewrite modn_small; last by assumption. 
+Qed. 
+
+Corollary addBn_ne n m : forall (p: BITS n), m.+1 < 2^n -> p != p +#(m.+1).
+Proof. move => p LT. apply/eqP. by apply addBn_distinct. Qed.
+
+(* @todo: prove these as corollaries of addBn_distinct *)
+Lemma incBDistinct n : forall (p: BITS n.+1), incB p <> p.
+Proof. case/tupleP => b p'. by elim b. Qed.
+
+Lemma incBincBDistinct n : forall (p: BITS n.+2), incB (incB p) <> p.
+Proof. case/tupleP => b p'. case/tupleP: p' => b' p'. elim b; by elim b'. Qed.
+
+Lemma incBincBincBDistinct n : forall (p: BITS n.+2), incB (incB (incB p)) <> p.
+Proof. case/tupleP => b p'. case/tupleP: p' => b' p'. elim b; by elim b'. Qed.
+
+Lemma incBneq n : forall (p: BITS n.+1), incB p != p.
+Proof. move => p. apply (introN eqP). apply: incBDistinct. Qed.
+
+Lemma incBincBneq n : forall (p: BITS n.+2), incB (incB p) != p.
+Proof. move => p. apply (introN eqP). apply: incBincBDistinct. Qed.
+
+Lemma incBincBincBneq n : forall (p: BITS n.+2), incB (incB (incB p)) != p.
+Proof. move => p. apply (introN eqP). apply: incBincBincBDistinct. Qed.
+(*
+Lemma bitsEqInc n : forall (p: BITS n.+1), bitsEq (incB p) p = false.
+Proof. move => p. replace (bitsEq (incB p) p) with (incB p == p) by done.
+apply negbTE. apply incBneq. Qed.
+
+Lemma bitsEqIncInc n : forall (p: BITS n.+2), bitsEq (incB (incB p)) p = false.
+Proof. move => p. replace (bitsEq _ p) with (incB (incB p) == p) by done.
+apply negbTE. apply incBincBneq. Qed.
+
+Lemma bitsEqIncIncInc n : forall (p: BITS n.+2), bitsEq (incB (incB (incB p))) p = false.
+Proof. move => p. replace (bitsEq _ p) with (incB (incB (incB p)) == p) by done.
+apply negbTE. apply incBincBincBneq. Qed.
+*)
 
 Lemma addBsubBn n (p: BITS n) m1 m2 : m2 <= m1 -> p +# (m1-m2) = p +# m1 -# m2.
 Proof. move => H. destruct n; first apply trivialBits.

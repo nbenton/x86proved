@@ -29,7 +29,7 @@ Qed.
 Example safe_loop_while eax :
   |-- loopy_basic (EAX ~= eax ** OSZCP?) (while (TEST EAX, EAX) CC_O false prog_skip) empOP lfalse.
 Proof.
-  basic apply (while_rule_ro (I := fun b => b == false /\\ EAX? ** SF? ** ZF? ** CF? ** PF?)) => //=;
+  basic apply (while_rule_ro (I := fun b => b == false /\\ EAX? ** SF? ** ZF? ** CF? ** PF?)) => //;
     rewrite /stateIsAny; specintros => *;
     basic apply *.
 Qed.
@@ -86,10 +86,10 @@ Proof.
   { by rewrite addB_decB_incB. }
 Qed.
 
-Local Ltac t_after_specapply := ssimpl; try reflexivity; rewrite /ConditionIs/OSZCP/VRegIs/stateIsAny/stateIs; cbv beta; ssimpl; try reflexivity; sbazooka.
+Local Ltac t_after_specapply := ssimpl; try reflexivity; rewrite /ConditionIs/OSZCP/stateIsAny/stateIs; cbv beta; ssimpl; try reflexivity; sbazooka.
 
 Local Ltac do_code_unfolder :=
-  rewrite /makeUOP/makeBOP.
+  rewrite /makeBOP.
 
 Local Ltac check_eip_hyp_and_do hyp :=
   let G := match goal with |- ?G => constr:(G) end in
@@ -100,7 +100,7 @@ Local Ltac check_eip_hyp_and_do hyp :=
     try by finish_logic_with sbazooka.
 
 Local Ltac prepare_basic_goal_for_spec :=
-  rewrite /makeBOP/makeUOP/makeMOV;
+  rewrite /makeBOP/makeMOV;
   autorewrite with push_at;
   do ?(idtac;
        match goal with
@@ -138,19 +138,20 @@ Proof.
   unfold output_n_prog.
   prepare_basic_goal_for_spec.
   induction n.
-  { do ?[ progress rewrite ?subB0 ?eq_refl /OSZCP/ConditionIs
+  { 
+    do? [ progress rewrite ?subB0 ?eq_refl /OSZCP/ConditionIs
         | check_goal_eips_match; by finish_logic_with sbazooka
         | specapply * ]. }
   { specialize (IHn (is_small _ Hn)).
     specialize (small_is_good _ (is_small _ Hn)).
     specialize (H _ (is_small _ Hn)).
     (** Get the instance so that [specapply *] picks it up *)
-    instrrule remember H.
+    instrrule remember H. 
     do ![ progress rewrite ?subB0 ?eq_refl ?small_is_good ?rollOP_defS ?catOPA ?decB_fromSuccNat /ConditionIs
         | rewrite /OSZCP/stateIsAny; specintros => *
         | progress change (false == true) with false; cbv iota
         | solve [ check_eip_hyp_and_do IHn ]
-        | specapply *; first by t_after_specapply ]. }
+        | specapply *; first by t_after_specapply ]. admit. }
 Qed.
 
 Example safe_loop_n_const P (pbody : program) O (n : nat) d
@@ -229,10 +230,11 @@ Proof.
   specialize (transition_correct Pstart start PPstart).
 
   (** The body code *)
-  specapply H; clear H; do [ eassumption | by apply catOP_O_roll_starOP_O' | by ssimpl | idtac ]; try (by ssimpl); [].
+  specapply H; clear H; do [ eassumption |  by apply catOP_O_roll_starOP_O' | ]. 
+  by ssimpl. 
 
   (** The jump code *)
-  specapply JMP_I_loopy_rule; first by ssimpl.
+  specapply JMP_I_loopy_rule. by ssimpl.
   simpl OPred_pred.
 
   finish_logic_with sbazooka.
@@ -368,9 +370,8 @@ Proof.
                  (O_after_test := fun _ => default_PointedOPred (starOP O))
                  (O := fun _ => default_PointedOPred (starOP O))
                  (Q := fun _ => lfalse)) => //= *.
-  { by ssimpl. }
-  { rewrite -> starOP_def at -1.
-      by apply lorR2. }
+  { by ssimpl. } 
+  { setoid_rewrite ->starOP_def at -1. by apply lorR2. }
   { specintros => *; basic apply H. }
   { rewrite /stateIsAny; specintros => *; basic apply *. }
 Qed.

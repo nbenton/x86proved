@@ -217,7 +217,7 @@ Example accumulate_until_prog_safe ptest cond value pbody c
         (H_test : forall initial x xs,
                     only_last test_finished x xs
                     -> S
-                         |-- (loopy_basic (P initial ** BYTEregIs AL x)
+                         |-- (loopy_basic (P initial ** AL ~= x)
                                           ptest
                                           empOP
                                           (I initial x
@@ -232,7 +232,7 @@ Example accumulate_until_prog_safe ptest cond value pbody c
                                           empOP
                                           (P (accumulate initial x) ** AL?)))
 : S |-- (Forall initial x xs (pf1 : only_last test_finished x xs),
-         (loopy_basic (P initial ** BYTEregIs AL al)
+         (loopy_basic (P initial ** AL ~= al)
                       (accumulate_prog ptest cond value pbody c)
                       (foldr catOP empOP (map (inOP (zeroExtend n8 c)) (x::xs)))
                       (I (foldl accumulate initial (drop_last x xs)) (last x xs) (~~value) ** ConditionIs cond (~~value)))).
@@ -279,7 +279,7 @@ Example accumulate_until_value_prog_safe value
                                           empOP
                                           (P (accumulate initial x) ** AL? ** OF? ** SF? ** ZF? ** CF? ** PF?)))
 : S |-- (Forall initial x xs (pf1 : only_last (fun t : BYTE => t == value) x xs),
-         (loopy_basic (P initial ** BYTEregIs AL al ** OSZCP o s z c p)
+         (loopy_basic (P initial ** AL ~= al ** OSZCP o s z c p)
                       (accumulate_until_value_prog value pbody ch)
                       (foldr catOP empOP (map (inOP (zeroExtend n8 ch)) (x::xs)))
                       (P (foldl accumulate initial (drop_last x xs)) ** AL ~= (last x xs) ** OF? ** SF? ** ZF ~= true ** CF? ** PF?))).

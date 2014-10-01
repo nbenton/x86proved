@@ -4,11 +4,10 @@ Import x86.instrrules.core.instrruleconfig.
 
 Require Import x86proved.bitsopsprops (* for [andBB] *).
 
-Lemma TEST_self_rule (r:Reg) (v:DWORD) :
+Lemma TEST_self_rule (r:VReg OpSize4) (v:DWORD) :
   |-- basic (r ~= v ** OSZCP?) (TEST r, r) empOP
             (r ~= v ** OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof.
-  change (stateIs r) with (@VRegIs OpSize4 r).
   do_instrrule (instrrule_triple_bazooka; rewrite andBB; instrrule_triple_bazooka).
 Qed.
 

@@ -64,12 +64,10 @@ Lemma JCC_rule a cc cv (b:bool) (p q: DWORD) :
 Proof.
 rewrite /JCC/relToAbs.
 unfold_program. specintros => O i1 i2 H1 H2.
-rewrite -H2. rewrite H1. specapply JCCrel_rule. by ssimpl.
+rewrite -H2. rewrite H1. specapply JCCrel_rule; first by ssimpl. 
 rewrite addB_subBK.
 rewrite <-spec_reads_frame. apply: limplAdj.
-apply: landL2. autorewrite with push_at.
-case E:(b == cv);
-  by cancel1; sbazooka.
+apply: landL2. autorewrite with push_at. cancel1. sbazooka. 
 Qed.
 
 Lemma JCC_loopy_rule a cc cv (b:bool) (p q: DWORD) :
@@ -81,7 +79,7 @@ Lemma JCC_loopy_rule a cc cv (b:bool) (p q: DWORD) :
 Proof.
 rewrite /JCC/relToAbs.
 unfold_program. specintros => O i1 i2 H1 H2.
-rewrite -H2. rewrite H1. specapply JCCrel_loopy_rule. by ssimpl.
+rewrite -H2. rewrite H1. specapply JCCrel_loopy_rule; first by ssimpl. 
 rewrite addB_subBK.
 rewrite <-spec_reads_frame. apply: limplAdj.
 apply: landL2. autorewrite with push_at.
@@ -143,7 +141,7 @@ Lemma JMP_I_rule (a: DWORD) (p q: DWORD) :
 Proof.
 rewrite /JMP/relToAbs.
 unfold_program. specintros => O i1 i2 H1 H2.
-rewrite -H2 H1. specapply JMPrel_I_rule. by ssimpl.
+rewrite -H2 H1. specapply JMPrel_I_rule; first by ssimpl. 
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 apply: limplAdj. apply: landL2. autorewrite with push_at.
 cancel1. sbazooka.
@@ -155,7 +153,7 @@ Lemma JMP_I_loopy_rule (a: DWORD) (p q: DWORD) :
 Proof.
 rewrite /JMP/relToAbs.
 unfold_program. specintros => O i1 i2 H1 H2.
-rewrite -H2 H1. specapply JMPrel_I_loopy_rule. by ssimpl.
+rewrite -H2 H1. specapply JMPrel_I_loopy_rule; first by ssimpl.
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 apply: limplAdj. apply: landL2. autorewrite with push_at.
 cancel1. cancel1. sbazooka.
@@ -190,7 +188,7 @@ Proof.
 specintros => O w sp.
 rewrite /CALL/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2 H1. specapply CALLrel_I_rule. by ssimpl.
+rewrite -H2 H1. specapply CALLrel_I_rule; first by ssimpl.
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 autorewrite with push_at.
 apply: limplAdj. apply: landL2. cancel1.
@@ -206,7 +204,7 @@ Proof.
 specintros => O w sp.
 rewrite /CALL/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2 H1. specapply CALLrel_I_loopy_rule. by ssimpl.
+rewrite -H2 H1. specapply CALLrel_I_loopy_rule; first by ssimpl.
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 autorewrite with push_at.
 apply: limplAdj. apply: landL2. cancel1. cancel1.
@@ -241,7 +239,7 @@ Definition ifthenelse (cond: Condition) (value: bool)
       pose proof (Hthen : instrrule pthen);
       pose proof (Helse : instrrule pelse).
 
-  Lemma if_rule cond (value:bool) pthen pelse P O Q S:
+   Lemma if_rule cond (value:bool) pthen pelse P O Q S:
     S |-- basic (P value ** ConditionIs cond value) pthen (O value) (Q value) ->
     S |-- basic (P (~~value) ** ConditionIs cond (~~value)) pelse (O (~~value)) (Q (~~value)) ->
     S |-- Forall b, basic (P b ** ConditionIs cond b)
@@ -410,8 +408,9 @@ Definition while (ptest: program)
         | progress unfold_program ].
 
     (** The jmp at the very beginning, to the test *)
-    specapply *; first by ssimpl.
+    specapply *; first by ssimpl. 
 
+    
     lrevert x.
     apply spec_lob_context.
     apply landAdj.
@@ -435,7 +434,7 @@ Definition while (ptest: program)
 
     (** the conditional jump (jcc) *)
     specintros => *.
-    loopy_specapply *; first by ssimpl.
+    loopy_specapply *; first by ssimpl. 
 
     (** we split into the body case and the leaving case *)
     specsplit.
@@ -449,7 +448,8 @@ Definition while (ptest: program)
 
       specapply *; try (by ssimpl); try (by eauto); simpl OPred_pred.
 
-      finish_logic_with ltac:(autorewrite with push_at; eauto; ssimpl). }
+      finish_logic_with ltac:(autorewrite with push_at; eauto; sbazooka). 
+    }
 
     { (** leaving case *)
       specintros. move/eqP => *; subst.
@@ -652,7 +652,7 @@ Definition while (ptest: program)
 
     specsplit.
     (* JMP TEST *)
-    - loopy_specapply *; first by ssimpl.
+    - loopy_specapply *; first by ssimpl. 
       rewrite <-spec_reads_frame. apply: limplAdj.
       apply: landL2. apply: landL2. by (autorewrite with push_at; reflexivity).
 
