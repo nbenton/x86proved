@@ -62,23 +62,23 @@ Canonical Structure Reg32_EqType := Eval hnf in EqType _ Reg32_EqMixin.
 Coercion NonSPReg32_to_GPReg32 (r: NonSPReg32) := mkGPReg32 (NonSPReg32_base r).
 Coercion GPReg32_to_Reg32 (r: GPReg32) := mkReg32 (GPReg32_base r).
 
-Notation EAX := (mkNonSPReg32 RAX).
-Notation EBX := (mkNonSPReg32 RBX).
-Notation ECX := (mkNonSPReg32 RCX).
-Notation EDX := (mkNonSPReg32 RDX).
-Notation ESI := (mkNonSPReg32 RSI).
-Notation EDI := (mkNonSPReg32 RDI).
-Notation EBP := (mkNonSPReg32 RBP).
-Notation R8D := (mkNonSPReg32 R8).
-Notation R9D := (mkNonSPReg32 R9).
-Notation R10D := (mkNonSPReg32 R10).
-Notation R11D := (mkNonSPReg32 R11).
-Notation R12D := (mkNonSPReg32 R12).
-Notation R13D := (mkNonSPReg32 R13).
-Notation R14D := (mkNonSPReg32 R14).
-Notation R15D := (mkNonSPReg32 R15).
-Notation ESP := (mkGPReg32 RSP).
-Notation EIP := (mkReg32 RIP).
+Definition EAX := (mkNonSPReg32 RAX).
+Definition EBX := (mkNonSPReg32 RBX).
+Definition ECX := (mkNonSPReg32 RCX).
+Definition EDX := (mkNonSPReg32 RDX).
+Definition ESI := (mkNonSPReg32 RSI).
+Definition EDI := (mkNonSPReg32 RDI).
+Definition EBP := (mkNonSPReg32 RBP).
+Definition R8D := (mkNonSPReg32 R8).
+Definition R9D := (mkNonSPReg32 R9).
+Definition R10D := (mkNonSPReg32 R10).
+Definition R11D := (mkNonSPReg32 R11).
+Definition R12D := (mkNonSPReg32 R12).
+Definition R13D := (mkNonSPReg32 R13).
+Definition R14D := (mkNonSPReg32 R14).
+Definition R15D := (mkNonSPReg32 R15).
+Definition ESP := (mkGPReg32 RSP).
+Definition EIP := (mkReg32 RIP).
 
 (* Addressable 16-bit slices of above *)
 Inductive NonSPReg16 := mkNonSPReg16 (r: NonSPReg64).
@@ -102,23 +102,23 @@ Canonical Structure Reg16_EqType := Eval hnf in EqType _ Reg16_EqMixin.
 Coercion NonSPReg16_to_GPReg16 (r: NonSPReg16) := mkGPReg16 (NonSPReg16_base r).
 Coercion GPReg16_to_Reg16 (r: GPReg16) := mkReg16 (GPReg16_base r).
 
-Notation AX := (mkNonSPReg16 RAX).
-Notation BX := (mkNonSPReg16 RBX).
-Notation CX := (mkNonSPReg16 RCX).
-Notation DX := (mkNonSPReg16 RDX).
-Notation SI := (mkNonSPReg16 RSI).
-Notation DI := (mkNonSPReg16 RDI).
-Notation BP := (mkNonSPReg16 RBP).
-Notation R8W := (mkNonSPReg16 R8).
-Notation R9W := (mkNonSPReg16 R9).
-Notation R10W := (mkNonSPReg16 R10).
-Notation R11W := (mkNonSPReg16 R11).
-Notation R12W := (mkNonSPReg16 R12).
-Notation R13W := (mkNonSPReg16 R13).
-Notation R14W := (mkNonSPReg16 R14).
-Notation R15W := (mkNonSPReg16 R15).
-Notation SP := (mkGPReg16 RSP).
-Notation IP := (mkReg16 RIP).
+Definition AX := (mkNonSPReg16 RAX).
+Definition BX := (mkNonSPReg16 RBX).
+Definition CX := (mkNonSPReg16 RCX).
+Definition DX := (mkNonSPReg16 RDX).
+Definition SI := (mkNonSPReg16 RSI).
+Definition DI := (mkNonSPReg16 RDI).
+Definition BP := (mkNonSPReg16 RBP).
+Definition R8W := (mkNonSPReg16 R8).
+Definition R9W := (mkNonSPReg16 R9).
+Definition R10W := (mkNonSPReg16 R10).
+Definition R11W := (mkNonSPReg16 R11).
+Definition R12W := (mkNonSPReg16 R12).
+Definition R13W := (mkNonSPReg16 R13).
+Definition R14W := (mkNonSPReg16 R14).
+Definition R15W := (mkNonSPReg16 R15).
+Definition SP := (mkGPReg16 RSP).
+Definition IP := (mkReg16 RIP).
 
 
 (* Addressable 8-bit slices of above *)
@@ -128,30 +128,32 @@ Lemma NonSPReg8_base_inj : injective NonSPReg8_base. Proof. move => [x] [y] [/=E
 Canonical Structure NonSPReg8_EqMixin := InjEqMixin NonSPReg8_base_inj.
 Canonical Structure NonSPReg8_EqType := Eval hnf in EqType _ NonSPReg8_EqMixin.
 
-Inductive Reg8 := mkReg8 (r: GPReg64).
-Definition Reg8_base r8 := let: mkReg8 r := r8 in r.
-Lemma Reg8_base_inj : injective Reg8_base. Proof. move => [x] [y] [/=E]. by subst. Qed. 
-Canonical Structure Reg8_EqMixin := InjEqMixin Reg8_base_inj.
-Canonical Structure Reg8_EqType := Eval hnf in EqType _ Reg8_EqMixin.
+Inductive GPReg8 := mkReg8 (r: GPReg64) | AH | BH | CH | DH.
+Definition GPReg8_toNat r8 := 
+  match r8 with mkReg8 r => GPReg64_toNat r | AH => 16 | BH => 17 | CH => 18 | DH => 19 end.
+Lemma GPReg8_toNat_inj : injective GPReg8_toNat. Proof. repeat case => //; case => //.  Qed. 
+Canonical Structure GPReg8_EqMixin := InjEqMixin GPReg8_toNat_inj.
+Canonical Structure GPReg8_EqType := Eval hnf in EqType _ GPReg8_EqMixin.
+Definition Reg8 := GPReg8.
 
 Coercion NonSPReg8_to_Reg8 (r: NonSPReg8) := mkReg8 (NonSPReg8_base r).
 
-Notation AL := (mkNonSPReg8 RAX).
-Notation BL := (mkNonSPReg8 RBX).
-Notation CL := (mkNonSPReg8 RCX).
-Notation DL := (mkNonSPReg8 RDX).
-Notation SIL := (mkNonSPReg8 RSI).
-Notation DIL := (mkNonSPReg8 RDI).
-Notation BPL := (mkNonSPReg8 RBP).
-Notation R8L := (mkNonSPReg8 R8).
-Notation R9L := (mkNonSPReg8 R9).
-Notation R10L := (mkNonSPReg8 R10).
-Notation R11L := (mkNonSPReg8 R11).
-Notation R12L := (mkNonSPReg8 R12).
-Notation R13L := (mkNonSPReg8 R13).
-Notation R14L := (mkNonSPReg8 R14).
-Notation R15L := (mkNonSPReg8 R15).
-Notation SPL := (mkReg8 RSP).
+Definition AL := (mkNonSPReg8 RAX).
+Definition BL := (mkNonSPReg8 RBX).
+Definition CL := (mkNonSPReg8 RCX).
+Definition DL := (mkNonSPReg8 RDX).
+Definition SIL := (mkNonSPReg8 RSI).
+Definition DIL := (mkNonSPReg8 RDI).
+Definition BPL := (mkNonSPReg8 RBP).
+Definition R8L := (mkNonSPReg8 R8).
+Definition R9L := (mkNonSPReg8 R9).
+Definition R10L := (mkNonSPReg8 R10).
+Definition R11L := (mkNonSPReg8 R11).
+Definition R12L := (mkNonSPReg8 R12).
+Definition R13L := (mkNonSPReg8 R13).
+Definition R14L := (mkNonSPReg8 R14).
+Definition R15L := (mkNonSPReg8 R15).
+Definition SPL := (mkReg8 RSP).
 
 (*
 (* Legacy 8-bit registers *)
@@ -279,6 +281,15 @@ Definition putRegPiece (v: QWORD) (ix: RegIx) (b: BYTE) : QWORD :=
   | 7 => updateSlice 56 8 _ v b  
   | _ => v
   end.
+
+Definition Reg8_toRegPiece (r:Reg8) :=
+match r with
+| mkReg8 r64 => mkRegPiece r64 0
+| AH => mkRegPiece RAX 1
+| BH => mkRegPiece RBX 1
+| CH => mkRegPiece RCX 1
+| DH => mkRegPiece RDX 1
+end.
   
 Require Import bitsprops.
 Lemma getRegPiece_ext (v w: QWORD) :
@@ -287,27 +298,12 @@ Lemma getRegPiece_ext (v w: QWORD) :
 Proof. rewrite /getRegPiece. move => H0. admit. 
 Qed.
 
-(*
-Definition BYTERegToRegPiece (r:BYTEReg) :=
-match r with
-| AL => DWORDRegPiece RAX (inord 0)
-| AH => DWORDRegPiece RAX (inord 1)
-| BL => DWORDRegPiece RBX (inord 0)
-| BH => DWORDRegPiece RBX (inord 1)
-| CL => DWORDRegPiece RCX (inord 0)
-| CH => DWORDRegPiece RCX (inord 1)
-| DL => DWORDRegPiece RDX (inord 0)
-| DH => DWORDRegPiece RDX (inord 1)
-end.
-
-*)
-
 (* 8, 16, 32 or 64 bit registers *)
 Definition NonSPReg (s: OpSize) := 
   match s with OpSize1 => NonSPReg8 | OpSize2 => NonSPReg16 | OpSize4 => NonSPReg32 | OpSize8 => NonSPReg64 end.
 
 Definition GPReg (s: OpSize) := 
-  match s with OpSize1 => Reg8 | OpSize2 => GPReg16 | OpSize4 => GPReg32 | OpSize8 => GPReg64 end.
+  match s with OpSize1 => GPReg8 | OpSize2 => GPReg16 | OpSize4 => GPReg32 | OpSize8 => GPReg64 end.
 
 Definition Reg (s: OpSize) :=
   match s with OpSize1 => Reg8 | OpSize2 => Reg16 | OpSize4 => Reg32 | OpSize8 => Reg64 end.
@@ -323,9 +319,9 @@ Coercion GPReg_to_Reg {s} : GPReg s -> Reg s  :=
 Coercion Reg64_to_Reg (r:Reg64) : Reg OpSize8 := r.
 Coercion Reg32_to_Reg (r:Reg32) : Reg OpSize4 := r.
 Coercion Reg16_to_Reg (r:Reg16) : Reg OpSize2 := r.
-Coercion Reg8_to_Reg (r:Reg8)   : Reg OpSize1 := r.
+Coercion Reg8_to_Reg (r:GPReg8)   : Reg OpSize1 := r.
 
 Coercion GPReg64_to_GPReg (r:GPReg64) : GPReg OpSize8 := r.
 Coercion GPReg32_to_GPReg (r:GPReg32) : GPReg OpSize4 := r.
 Coercion GPReg16_to_GPReg (r:GPReg16) : GPReg OpSize2 := r.
-Coercion Reg8_to_GPReg (r:Reg8) : GPReg OpSize1 := r.
+Coercion Reg8_to_GPReg (r:GPReg8) : GPReg OpSize1 := r.

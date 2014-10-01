@@ -408,8 +408,8 @@ admit. Qed.
 
 Lemma triple_setReg8Sep (r:Reg OpSize1) v w S
 : TRIPLE (r ~= v ** S) (setReg8InProcState r w) nil (r ~= w ** S).
-Proof. rewrite /stateIs/reg8Is/=/setReg8InProcState. 
-triple_by_compute. apply: separateSetRegPiece => //. eassumption. Qed.
+Proof. rewrite /stateIs/reg8Is/=/setReg8InProcState.
+destruct r; triple_by_compute; apply: separateSetRegPiece => //; eassumption. Qed.
 
 Lemma triple_setReg16Sep (r:Reg OpSize2) v w S
 : TRIPLE (r ~= v ** S) (setReg16InProcState r w) nil (r ~= w ** S).

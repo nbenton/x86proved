@@ -46,6 +46,7 @@ x86\ioaction.vo \
 spred\core.vo \
 spred\stateis.vo \
 spred\spredtotal.vo \
+spred\memis.vo \
 spred\pointsto.vo \
 spred\tactics.vo \
 spred.vo \

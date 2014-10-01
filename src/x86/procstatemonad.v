@@ -45,8 +45,7 @@ Definition getReg16FromProcState (r: Reg16) :=
   retn (low 16 v).
 
 Definition getReg8FromProcState (r: Reg8) :=
-  let! v = getReg64FromProcState (Reg8_base r);
-  retn (low 8 v).
+  getRegPieceFromProcState (Reg8_toRegPiece r).
 
 (*---------------------------------------------------------------------------
     Register setters
@@ -64,8 +63,23 @@ Definition setReg16InProcState (r: Reg16) (w: WORD) :=
     setReg64InProcState (Reg16_base r) (updateSlice 0 16 _ v w).
 
 Definition setReg8InProcState (r: Reg8) (w: BYTE) :=
-    let! v = getReg64FromProcState (Reg8_base r);
-    setReg64InProcState (Reg8_base r) (updateSlice 0 8 _ v w).
+  match r with
+  | mkReg8 r64 =>
+    let! v = getReg64FromProcState r64;
+    setReg64InProcState r64 (updateSlice 0 8 _ v w)
+  | AH => 
+    let! v = getReg64FromProcState RAX;
+    setReg64InProcState RAX (updateSlice 8 8 _ v w)
+  | BH => 
+    let! v = getReg64FromProcState RBX;
+    setReg64InProcState RBX (updateSlice 8 8 _ v w)
+  | CH => 
+    let! v = getReg64FromProcState RCX;
+    setReg64InProcState RCX (updateSlice 8 8 _ v w)
+  | DH => 
+    let! v = getReg64FromProcState RDX;
+    setReg64InProcState RDX (updateSlice 8 8 _ v w)
+  end.
 
 Lemma setRegGetRegDistinct Y r1 v r2 (f: _ -> ST Y) s :
   ~~(r1 == r2) ->

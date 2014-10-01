@@ -226,12 +226,11 @@ Definition Reg8Codec : Codec Reg8 :=
     #b"000" .$ always (AL:Reg8)
 ||| #b"001" .$ always (CL:Reg8)
 ||| #b"010" .$ always (DL:Reg8)
-||| #b"011" .$ always (BL:Reg8).
-(*
+||| #b"011" .$ always (BL:Reg8)
 ||| #b"100" .$ always AH
 ||| #b"101" .$ always CH
 ||| #b"110" .$ always DH
-||| #b"111" .$ always BH.*)
+||| #b"111" .$ always BH.
 
 Definition GPReg16Codec : Codec GPReg16 := 
     #b"000" .$ always (AX:GPReg16)

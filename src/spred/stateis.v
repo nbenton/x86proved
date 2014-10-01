@@ -36,7 +36,7 @@ Definition reg16Is (r:Reg16) (v:WORD) : SPred :=
 ** regPieceIs (mkRegPiece (Reg16_base r) 1) (slice 8 8 0 v).
 
 Definition reg8Is (r:Reg8) (v:BYTE) : SPred :=
-   regPieceIs (mkRegPiece (Reg8_base r) 0) v.
+   regPieceIs (Reg8_toRegPiece r) v.
 
 Inductive RegOrFlag :=
 | RegOrFlagR s :> Reg s -> RegOrFlag

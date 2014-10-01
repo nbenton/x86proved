@@ -312,7 +312,6 @@ Proof.
 Qed.
 
 
-(*
 Example addB_until_zero_prog_safe ch o s z c p S al
 : S |-- (Forall initial (x : BYTE) (xs : seq BYTE) (pf1 : only_last (fun t : BYTE => t == #0) x xs),
          (loopy_basic (AH ~= initial ** AL ~= al ** OSZCP o s z c p)
@@ -325,7 +324,6 @@ Proof.
 (* basic apply (@accumulate_until_value_prog_safe #0 _ (fun x => AH ~= x)) => *; first assumption.
   basic apply *. *)
 Qed.
-*)
 
 Import Streams.
 
