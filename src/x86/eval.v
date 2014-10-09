@@ -177,7 +177,7 @@ Definition getUIP a :=
   | AdSize8 => getRegFromProcState RIP
   end.
 
-Definition evalMemSpec {a} (m:MemSpec a) : ST ADDR :=
+Definition evalMemSpecAdr {a} (m:MemSpec a) : ST (ADR a) :=
   match m with
     mkMemSpec optSIB displacement =>
     if optSIB is Some SIB
@@ -188,15 +188,19 @@ Definition evalMemSpec {a} (m:MemSpec a) : ST ADDR :=
         if ixopt is Some(index,sc)
         then
           let! indexval = evalIxReg index;
-          retn (computeIxAddr baseval displacement (scaleBy sc indexval))
+          retn (computeIxAdr baseval displacement (scaleBy sc indexval))
         else 
-          retn (computeAddr baseval displacement)
+          retn (computeAdr baseval displacement)
       | RIPrel =>
         let! baseval = getUIP a;
-        retn (computeAddr baseval displacement)
+        retn (computeAdr baseval displacement)
       end
-    else retn (ADRtoADDR (computeDisplacement a displacement))
+    else retn (computeDisplacement a displacement)
   end.
+
+Definition evalMemSpec {a} (m: MemSpec a) : ST ADDR :=
+  let! adr = evalMemSpecAdr m;
+  retn (ADRtoADDR adr).
 
 Definition evalSrc src :=
   match src with
@@ -207,10 +211,16 @@ Definition evalSrc src :=
     getFromProcState p
   end.
 
-Definition setARegInProcState {a} : BaseReg a -> ADR a -> ST unit :=
-  match a with
-  | AdSize4 => setRegInProcState
-  | AdSize8 => setRegInProcState
+(* This is used by the LEA instruction. See table 3-64 in Intel spec *)
+Definition setAdrRegInProcState {s a} : GPReg s -> ADR a -> ST unit :=
+  match s, a  with
+  | OpSize2, AdSize4 => fun r addr => setRegInProcState (s:=OpSize2) r (low 16 addr)
+  | OpSize2, AdSize8 => fun r addr => setRegInProcState (s:=OpSize2) r (low 16 addr)
+  | OpSize4, AdSize4 => fun r addr => setRegInProcState (s:=OpSize4) r addr
+  | OpSize4, AdSize8 => fun r addr => setRegInProcState (s:=OpSize4) r (low 32 addr)
+  | OpSize8, AdSize4 => fun r addr => setRegInProcState (s:=OpSize8) r (zeroExtend 32 addr)
+  | OpSize8, AdSize8 => fun r addr => setRegInProcState (s:=OpSize8) r addr
+  | _, _ => fun _ _ => raiseUnspecified
   end.
 
 
@@ -409,12 +419,12 @@ Definition evalInstr instr : ST unit :=
     do! forgetFlagInProcState PF;
     forgetFlagInProcState ZF
 
-(*
-  @TODO: restore this; operand/address size stuff is hairy
-  | LEA s a r m =>
-    let! addr = evalMemSpec m;
-    setVRegInProcState r addr
-*)
+  | LEA s r (RegMemM a m) =>
+    let! addr = evalMemSpecAdr m;
+    setAdrRegInProcState r addr
+
+  | LEA s r (RegMemR _) =>
+    raiseExn ExnUD
 
   | XCHG s r1 (RegMemR r2) =>
     let! v1 = getRegFromProcState r1;

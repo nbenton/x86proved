@@ -124,7 +124,7 @@ Inductive Instr :=
 | SHIFTOP s (op: ShiftOp) (dst: RegMem s) (count: ShiftCount)
 | MUL {s} (src: RegMem s)
 | IMUL (dst: GPReg32) (src: RegMem OpSize4)
-| LEA s a (reg: GPReg s) (src: MemSpec a)
+| LEA s (reg: GPReg s) (src: RegMem s)
 | XCHG s (reg: GPReg s) (src: RegMem s)
 | JCCrel (cc: Condition) (cv: bool) (tgt: Tgt)
 | PUSH (src: Src)

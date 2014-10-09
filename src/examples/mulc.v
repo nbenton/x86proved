@@ -168,13 +168,14 @@ autorewrite with push_at.
 case EQ2: (m == 2); last case EQ4: (m == 4); last case EQ8: (m == 8);
 do ?basic apply * => //.
 
-rewrite /eval.scaleBy shlB_asMul (eqP EQ2). by ssimpl.
+rewrite /eval.computeIxAdr/eval.computeAdr/eval.scaleBy/eval.computeDisplacement shlB_asMul (eqP EQ2).
+rewrite -> addB0. by ssimpl.
 
-rewrite /eval.scaleBy !shlB_asMul (eqP EQ4) -mulB_muln.
-change (2*2) with 4. by ssimpl.
+rewrite /eval.computeIxAdr/eval.computeAdr/eval.scaleBy/eval.computeDisplacement !shlB_asMul (eqP EQ4) -mulB_muln.
+rewrite -> addB0. change (2*2) with 4. by ssimpl.
 
-rewrite /eval.scaleBy !shlB_asMul (eqP EQ8) -!mulB_muln.
-change (2*_) with 8. by ssimpl.
+rewrite /eval.computeIxAdr/eval.computeAdr/eval.scaleBy/eval.computeDisplacement !shlB_asMul (eqP EQ8) -!mulB_muln.
+rewrite -> addB0. change (2*_) with 8. by ssimpl.
 
 by rewrite /stateIs expn0 muln1.
 Qed.
@@ -244,7 +245,8 @@ Proof.
 
   rewrite expn1 -{2}(odd_double_half m) ODD. rewrite muln2. rewrite -addBA.
   replace (2^2) with (2*2) by done. rewrite mulnA. rewrite -mulB_addn. rewrite !muln2.
-  rewrite -(odd_double_half m). by rewrite ODD mulB_addn.
+  rewrite -(odd_double_half m). rewrite /eval.computeAdr/eval.computeDisplacement. rewrite -> addB0. 
+  by rewrite ODD mulB_addn.
 
   (* c is 2 *)
   rewrite /eval.scaleBy shlB_asMul.
@@ -256,11 +258,12 @@ Proof.
   replace (2+m./2 * 2 *2) with (true*2 + m./2 * 2 * 2) by done.
   rewrite -mulnDl.
   rewrite -ODD. rewrite !muln2. rewrite -> (odd_double_half m).
-  rewrite -!muln2 /stateIs. by rewrite mulnA.
+  rewrite -!muln2 /stateIs. rewrite /eval.computeAdr/eval.computeDisplacement. rewrite -> addB0. 
+  by rewrite mulnA.
 
   (* c is 3 *)
-  rewrite /eval.scaleBy !shlB_asMul.
-
+  rewrite /eval.scaleBy/eval.computeIxAdr/eval.computeAdr/eval.computeDisplacement !shlB_asMul.
+  rewrite -> addB0.
   rewrite -addBA. rewrite <-!mulBA. rewrite <- (mulBDr w).
   rewrite 4!expnS expn0 muln1 mulnA.
   rewrite 2!fromNat_mulBn. rewrite fromNat_addBn. rewrite 2!mulnA. rewrite -mulnDl.

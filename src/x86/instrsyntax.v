@@ -254,7 +254,7 @@ Notation "'ROR' x , c" := (SHIFTOP _ OP_ROR x%ms (ShiftCountI c)) (x, c at level
 
 Notation "'IMUL' x , y" := (IMUL x%ms y%ms) (x,y at level 55, at level 60) : instr_scope.
 
-Notation "'LEA' x , y" := (LEA x (RegMemM OpSize4 _ y%ms)) (x,y at level 55, at level 60) : instr_scope.
+Notation "'LEA' x , y" := (LEA _ x (RegMemM _ _ y%ms)) (x,y at level 55, at level 60) : instr_scope.
 
 Notation "'RET' x" := (RETOP x) (at level 60, x at level 55, format "'RET' x") : instr_scope.
 

@@ -445,7 +445,7 @@ Lemma evalMemSpecBase_rule a (r:BaseReg a) p (offset:DWORD) c O Q :
   forall S,
   TRIPLE ((r:GPReg _) ~= p ** S) (c (computeAddr p offset)) O Q ->
   TRIPLE ((r:GPReg _) ~= p ** S) (bind (evalMemSpec (mkMemSpec a (Some (mkSIB a r None)) offset)) c) O Q.
-Proof. move => S T. rewrite /evalMemSpec.
+Proof. move => S T. rewrite /evalMemSpec/evalMemSpecAdr.
 destruct a. 
 - triple_apply getReg_rule.
   triple_apply T.
@@ -457,7 +457,7 @@ Lemma evalMemSpecRIPrel_rule a p (offset:DWORD) c O Q :
   forall S,
   TRIPLE (interpUIP a ~= p ** S) (c (computeAddr p offset)) O Q ->
   TRIPLE (interpUIP a ~= p ** S) (bind (evalMemSpec (mkMemSpec a (Some (RIPrel _)) offset)) c) O Q.
-Proof. move => S T. rewrite /evalMemSpec.
+Proof. move => S T. rewrite /evalMemSpec/evalMemSpecAdr.
 destruct a. 
 - triple_apply getReg_rule.
   triple_apply T.
@@ -469,7 +469,7 @@ Lemma evalMemSpecSIB_rule a (r:BaseReg a) (ix:IxReg a) sc (p indexval:ADR a) (of
   forall S,
   TRIPLE ((r:GPReg _) ~= p ** (ix:NonSPReg _) ~= indexval ** S) (c (computeIxAddr p offset (scaleBy sc indexval))) O Q ->
   TRIPLE ((r:GPReg _) ~= p ** (ix:NonSPReg _) ~= indexval ** S) (bind (evalMemSpec (mkMemSpec a (Some (mkSIB _ r (Some (ix,sc)))) offset)) c) O Q.
-Proof. move => S T. rewrite /evalMemSpec.
+Proof. move => S T. rewrite /evalMemSpec/evalMemSpecAdr.
 destruct a. 
 - triple_apply getReg_rule.
   triple_apply getReg_rule. 

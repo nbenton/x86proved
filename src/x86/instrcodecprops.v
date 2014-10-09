@@ -23,6 +23,39 @@ Require Import x86proved.codecregex Ssreflect.div.
 
 
 
+Require Import x86proved.writer x86proved.monadinst.
+Require Import x86proved.bitreader x86proved.monad x86proved.cursor.
+
+Fixpoint writeBytes (s: seq BYTE) : WriterTm unit :=
+  if s is b::rest
+  then do! writeNext b; writeBytes rest
+  else retn tt.
+
+Instance writeBytesI : Writer (seq BYTE) := writeBytes.
+
+(* NOTE: we don't have a Roundtrip instance for Instr because the
+   encoding/decoding don't proceed in lock-step, as required by simrw.
+  Instead, we use explicit correctness lemma in programassemcorrect.
+*)
+Instance encodeInstr : Writer Instr := fun instr =>
+  let! pc = getWCursor;
+  if pc is mkCursor p then
+    if enc InstrCodec instr is Some bs
+    then writeNext (fromBin bs).2
+    else writerFail
+  else writerFail.
+
+Lemma writeBytesSkipFree xs : writerTmSkipFree (writeBytes xs).
+Proof. induction xs => //. Qed.
+
+Module Examples.
+Require Import instrsyntax. Open Scope instr_scope.
+
+Definition exinstr := LEA ECX, [R9D+EAX*4+1234].
+
+Compute (bytesToHex (snd (fromBin (if enc InstrCodec exinstr is Some bs then bs else nil)))).
+End Examples.
+
 (* Qed step takes similar time to actual vm_compute! *)
 Lemma InstrCodecIsNonAmbiguous : NonAmbiguous InstrCodec.
 Proof. by vm_compute. Qed. 
@@ -42,7 +75,6 @@ apply: sizesProp I. apply: InstrCodecFinite. apply byteAligned. Qed.
 Corollary encInstrAligned : forall l x, enc InstrCodec x = Some l -> 8 %| size l.
 Proof. move => l x ENC. apply encSound in ENC. by apply: InstrCodecAlignment ENC. Qed.
 
-Require Import x86proved.bitreader x86proved.monad x86proved.cursor.
 
 Corollary InstrCodecRoundtrip l cursor cursor' e x:
   enc InstrCodec x = Some l ->
@@ -86,43 +118,7 @@ specialize (CC AP'). rewrite cats0 in CC. specialize (BRR CC).
 Qed.
 
 
-Require Import x86proved.writer x86proved.monadinst.
-Fixpoint writeBytes (s: seq BYTE) : WriterTm unit :=
-  if s is b::rest
-  then do! writeNext b; writeBytes rest
-  else retn tt.
 
-Instance writeBytesI : Writer (seq BYTE) := writeBytes.
-
-(* NOTE: we don't have a Roundtrip instance for Instr because the
-   encoding/decoding don't proceed in lock-step, as required by simrw.
-  Instead, we use explicit correctness lemma in programassemcorrect.
-*)
-Instance encodeInstr : Writer Instr := fun instr =>
-  let! pc = getWCursor;
-  if pc is mkCursor p then
-    if enc InstrCodec instr is Some bs
-    then writeNext (fromBin bs).2
-    else writerFail
-  else writerFail.
-
-Lemma writeBytesSkipFree xs : writerTmSkipFree (writeBytes xs).
-Proof. induction xs => //. Qed.
-
-Module Examples.
-Require Import instrsyntax. Open Scope instr_scope.
-(* Doesn't work: need 64-bit REX extensions *)
-(*
-Definition exinstr := (BOP OpSize8 OP_ADD (DstSrcMR OpSize8 (mkMemSpec (Some (EBX:GPReg32, Some(EDX, S4))) (#x"12345678")) RBP)).
-*)
-(*
-Definition exinstr := (BOP OpSize2 OP_ADD (DstSrcMR OpSize2 (mkMemSpec (Some (EBX:GPReg32, Some(EDX, S4))) (#x"12345678")) BP)).
-*)
-(* This one is broken! Shouldn't code? *)
-Definition exinstr := MOV AH, [R11D+R13D*4+12]. 
-
-Compute (bytesToHex (snd (fromBin (if enc InstrCodec exinstr is Some bs then bs else nil)))).
-End Examples.
 
 
 

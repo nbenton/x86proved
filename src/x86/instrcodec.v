@@ -994,13 +994,15 @@ Definition MULCodec :=
 (*---------------------------------------------------------------------------
     LEA instruction 
   ---------------------------------------------------------------------------*)
-(*Definition unLEA : CAST (GPReg32 * RegMem OpSize4) Instr.
-apply: MakeCast (fun p => LEA p.1 p.2) (fun i => if i is LEA x y then Some(x,y) else None) _.
-by elim => // ? ? [? ?] [-> ->]. Defined.
+Definition unLEA s : CAST (GPReg s * RegMem s) Instr.
+apply: (MakeCast (fun p => LEA s p.1 p.2) (fun i => if i is LEA s' x y then 
+  tryEqOpSize (F:= fun s=> (GPReg s * RegMem s)%type) s (x,y) else None) _).
+by elim: s; elim => //; elim => //; move => r q [a b] [-> <-]. Defined.
 
 Definition LEACodec :=
-  #x"8D" .$ RegMemCodec false false false (GPReg32Codec false) _ ~~> unLEA.
-*)
+  sizesPrefixCodec (fun w a =>     
+  rexPrefixCodec (fun W R X B =>
+  #x"8D" .$ RegMemCodec a R X B (VRegCodec R _) _ ~~> unLEA (mkOpSize w W true))).
 
 (*---------------------------------------------------------------------------
     XCHG instruction 
@@ -1037,7 +1039,7 @@ Definition InstrCodec : Codec Instr :=
 (* Everything else *)
 ||| JMPCodec ||| CALLCodec ||| TESTCodec ||| PUSHCodec ||| POPCodec ||| RETCodec
 ||| MOVCodec ||| BITCodec ||| SHIFTCodec ||| JCCCodec ||| BINOPCodec ||| UOPCodec
-||| INOUTCodec ||| (*LEACodec ||| XCHGCodec ||| *) MULCodec
+||| INOUTCodec ||| LEACodec ||| (* XCHGCodec ||| *) MULCodec
 .
 
 Definition MaxBits := Eval vm_compute in Option.default 0 (maxSize InstrCodec).
