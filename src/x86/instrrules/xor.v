@@ -26,13 +26,13 @@ Proof. destruct s; basic apply *. Qed.
 
 Example XOR_RM_rule (pd:DWORD) (r1 r2:GPReg OpSize4) (v1 v2:DWORD) (offset:nat) v :
   xorB v1 v2 = v ->
-  |-- basic (r1~=v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
+  |-- basic (r1~=v1 ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2 ** OSZCP?)
             (XOR r1, [r2 + offset]) empOP
-            (r1~=v ** r2 ~= pd ** pd +# offset :-> v2 **
+            (r1~=v ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2 **
              OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof. move => ?; subst. basic apply *. Qed.
 
 Example XOR_RM_ruleNoFlags (pd:DWORD) (r1 r2:GPReg OpSize4) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (XOR r1, [r2 + offset]) empOP (r1~=xorB v1 v2)
-             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
+             @ (r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2 ** OSZCP?).
 Proof. autorewrite with push_at. basic apply *. Qed.

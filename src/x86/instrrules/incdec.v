@@ -29,8 +29,8 @@ Proof. basic apply *. Qed.
 
 Corollary INC_M_rule (r:GPReg32) (offset:nat) (v pbase:DWORD) o s z c pf:
   let w := incB v in
-  |-- basic (r ~= pbase ** pbase +# offset :-> v ** OSZCP o s z c pf) (INC [r + offset]) empOP
-            (r ~= pbase ** pbase +# offset :-> w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
+  |-- basic (r ~= pbase ** (eval.computeAddr (a:=AdSize4) pbase offset) :-> v ** OSZCP o s z c pf) (INC [r + offset]) empOP
+            (r ~= pbase ** (eval.computeAddr (a:=AdSize4) pbase offset) :-> w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
 Proof. basic apply *. Qed.
 
 Lemma INC_R_ruleNoFlags (r:GPReg32) (v:DWORD):

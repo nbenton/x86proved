@@ -167,13 +167,13 @@ Inductive BBInv : BitCursor -> seq bool -> ADDRCursor -> seq bool -> seq BYTE ->
 
 | BBInvCons (p: ADDR) accbit accbits bytes :
   size accbits < 7 ->
-  BBInv (p ## fromNat (n:=3) (7 - size accbits)) (accbit::accbits++toBin bytes)
+  BBInv (mkCursor (p ## fromNat (n:=3) (7 - size accbits))) (accbit::accbits++toBin bytes)
   (next p) (accbit::accbits) bytes.
 
 Lemma BBInvProp1 (bytec: ADDR) (byte:BYTE) (bytes: seq BYTE) accbit accbits (p:BITS _) :
-  fromByteCursor bytec = mkCursor p  ->
+  fromByteCursor (mkCursor bytec) = mkCursor p  ->
   rev byte = accbit :: accbits ->
-  BBInv p (accbit :: accbits ++ toBin bytes) bytec [::] (byte :: bytes) ->
+  BBInv (mkCursor p) (accbit :: accbits ++ toBin bytes) (mkCursor bytec) [::] (byte :: bytes) ->
   BBInv (next p) (accbits ++ toBin bytes) (next bytec) accbits bytes.
 Proof. move => E1 E2 INV.
 rewrite /fromByteCursor in E1.
@@ -191,7 +191,7 @@ Qed.
 
 Lemma BBInvProp2 (p: ADDR) bytes accbit accbits :
   size accbits < 7 ->
-  BBInv (p ## fromNat (n:=3) (7 - size accbits)) (accbit :: accbits ++ toBin bytes)
+  BBInv (mkCursor (p ## fromNat (n:=3) (7 - size accbits))) (accbit :: accbits ++ toBin bytes)
           (next p) (accbit :: accbits) bytes ->
   BBInv (next (p ## fromNat (n:=3) (7 - size accbits))) (accbits ++ toBin bytes)
      (next p) accbits bytes.
@@ -199,7 +199,7 @@ Proof. move => LT INV.
 destruct accbits. rewrite /= subn0.
 replace (fromNat (n:=3) 7) with (ones 3). rewrite nextCatNext. apply BBInvAligned.
 apply toNat_inj. by rewrite toNat_ones toNat_fromNat.
-have: next (p ## fromNat (n:=3) (6 - size accbits)) = p ## fromNat (n:=3) (7 - size accbits).
+have: next (p ## fromNat (n:=3) (6 - size accbits)) = mkCursor (p ## fromNat (n:=3) (7 - size accbits)).
 apply cursorToNat_inj. rewrite cursorToNat_next /=.
 rewrite 2!toNatCat 2!toNat_fromNat.
 rewrite modn_small. rewrite modn_small. rewrite -addn1 -addnA addn1. rewrite -subSn.

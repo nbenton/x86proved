@@ -15,7 +15,7 @@ Proof. do_instrrule_triple. Qed.
     [get_instrrule_of]. *)
 Global Instance: forall d ds, instrrule (MOVOP d ds) := @MOV_rule.
 
-
+(*
 (** ** Register to register *)
 Lemma MOV_RR_rule (r1 r2:GPReg32) v1 v2:
   |-- basic (r1 ~= v1 ** r2 ~= v2) (MOV r1, r2) empOP (r1 ~= v2 ** r2 ~= v2).
@@ -46,13 +46,14 @@ Lemma MOV_RanyM_rule (pd:DWORD) (r1 r2:GPReg32) offset (v2: DWORD) :
             (MOV r1, [r2 + offset]) empOP
             (r1 ~= v2 ** r2 ~= pd ** pd +# offset :-> v2).
 Proof. unhideReg r1 => old. basic apply *. Qed.
+*)
 
 Lemma MOV_RanyInd_rule (pd:DWORD) (r1:GPReg32) (v2: DWORD) :
-  |-- basic (r1? ** pd :-> v2)
+  |-- basic (r1? ** ADRtoADDR (a:=AdSize4) pd :-> v2)
             (MOV r1, [pd]) empOP
-            (r1 ~= v2 ** pd :-> v2).
+            (r1 ~= v2 ** ADRtoADDR (a:=AdSize4) pd :-> v2).
 Proof. unhideReg r1 => old. basic apply *. Qed.
-
+(*
 Lemma MOV_RM0_rule (pd:DWORD) (r1 r2:GPReg32) (v1 v2: DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd :-> v2)
             (MOV r1, [r2]) empOP
@@ -73,10 +74,10 @@ Lemma MOV_MR_rule (p: DWORD) (r1 r2: GPReg32) offset (v1 v2:DWORD) :
 Proof. basic apply *. Qed.
 
 (** ** Immediate to memory *)
-Lemma MOV_MI_rule s (pd:DWORD) (r:GPReg32) offset (v w:VWORD s) :
+Lemma MOV_MI_rule s (pd:DWORD) (r:GPReg32) offset (v:VWORD s) (w:IMM s) :
   |-- basic (r ~= pd ** pd +# offset :-> v)
             (MOVOP _ (DstSrcMI _ (mkMemSpec (Some(r, None)) #offset) w)) empOP
-            (r ~= pd ** pd +# offset :-> w).
+            (r ~= pd ** pd +# offset :-> eval.getImm w).
 Proof. basic apply *. Qed.
 
 Lemma MOV_M0R_rule (pd:DWORD) (r1 r2:GPReg32) (v1 v2: DWORD) :
@@ -84,14 +85,15 @@ Lemma MOV_M0R_rule (pd:DWORD) (r1 r2:GPReg32) (v1 v2: DWORD) :
             (MOV [r1], r2) empOP
             (r1 ~= pd ** pd :-> v2 ** r2 ~= v2).
 Proof. basic apply *. Qed.
+*)
 
 Lemma MOV_IndR_rule (pd:DWORD) (r:GPReg32) (v1 v2: DWORD) :
-  |-- basic (pd :-> v1 ** r ~= v2)
+  |-- basic (ADRtoADDR (a:=AdSize4) pd :-> v1 ** r ~= v2)
             (MOV [pd], r) empOP
-            (pd :-> v2 ** r ~= v2).
+            (ADRtoADDR (a:=AdSize4) pd :-> v2 ** r ~= v2).
 Proof. basic apply *. Qed.
 
-
+(*
 Lemma MOV_MbR_rule (p: DWORD) (r1:GPReg32) (r2: Reg8) offset (v1:BYTE) (v2:BYTE) :
   |-- basic (r1 ~= p ** p +# offset :-> v1 ** r2 ~= v2)
             (MOV [r1 + offset], r2) empOP
@@ -109,3 +111,4 @@ Lemma MOV_MbI_rule (pd:DWORD) (r1:GPReg32) offset (v1 v2:BYTE) :
             (MOV BYTE [r1 + offset], v2) empOP
             (r1 ~= pd ** pd +# offset :-> v2).
 Proof. basic apply *. Qed.
+*)

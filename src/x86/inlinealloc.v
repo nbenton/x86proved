@@ -15,12 +15,12 @@ Local Open Scope instr_scope.
        count, the number of bytes currently available
    Furthermore, "count" bytes of memory starting at "base" is defined
 *)
-Definition allocInv (infoBlock: DWORD) :=
-  Exists base: DWORD,
-  Exists count: DWORD,
-  infoBlock :-> base **
-  infoBlock +#4 :-> count **
-  memAny base count.
+Definition allocInv (infoBlock: ADR AdSize4) :=
+  Exists base: ADR AdSize4,
+  Exists count: ADR AdSize4,
+  ADRtoADDR infoBlock :-> base **
+  ADRtoADDR (a:=AdSize4) (infoBlock +#4) :-> count **
+  memAny (ADRtoADDR base) (ADRtoADDR count).
 
 (* Allocate memory.
      infoBlock: Src  is pointer to two-word heap information block
@@ -28,7 +28,7 @@ Definition allocInv (infoBlock: DWORD) :=
      failed: DWORD is label to branch to on failure
    If successful, EDI contains pointer to byte just beyond allocated block.
 *)
-Definition allocImp (infoBlock:DWORD) (n: nat) (failed: DWORD) : program :=
+Definition allocImp (infoBlock:DWORD) (n: nat) (failed: ADDR) : program :=
   MOV EDI, [infoBlock];;
   ADD EDI, n;;
   JC  failed;;  (* A carry indicates unsigned overflow *)
@@ -36,12 +36,12 @@ Definition allocImp (infoBlock:DWORD) (n: nat) (failed: DWORD) : program :=
   JC  failed;;  (* A carry indicates unsigned underflow *)
   MOV [infoBlock], EDI.
 
-Definition allocSpec n (fail:DWORD) inv code :=
-  Forall i j : DWORD, Forall O : OPred, (
-      obs O @ (EIP ~= fail ** EDI?) //\\
-      obs O @ (EIP ~= j ** Exists p, EDI ~= p +# n ** memAny p (p +# n))
+Definition allocSpec n (fail:ADDR) inv code :=
+  Forall i j : ADDR, Forall O : OPred, (
+      obs O @ (UIP ~= fail ** EDI?) //\\
+      obs O @ (UIP ~= j ** Exists p, EDI ~= p +# n ** memAny (ADRtoADDR (a:=AdSize4) p) (ADRtoADDR (a:=AdSize4) (p +# n)))
     -->>
-      obs O @ (EIP ~= i ** EDI?)
+      obs O @ (UIP ~= i ** EDI?)
     )
     @ (OSZCP? ** inv)
     <@ (i -- j :-> code).
@@ -59,6 +59,7 @@ Proof.
 
   (* MOV EDI, [infoBlock] *)
   rewrite {3}/allocInv. specintros => base limit. 
+  (*rewrite {2}/(stateIsAny EDI). specintros => oldedi.*)
   specapply MOV_RanyInd_rule; first by ssimpl. 
 
   (* ADD EDI, bytes *)
@@ -66,9 +67,9 @@ Proof.
 
   (* JC failed *)
   specapply JC_rule; first by rewrite /OSZCP; ssimpl.
-  case Hcarry:(carry_addB base n). 
+  case Hcarry:(carry_addB base (natAsDWORD n)). 
   { rewrite <-spec_reads_frame. apply limplValid. apply landL1. finish_logic. 
-    rewrite /stateIsAny/allocInv. sbazooka. }
+    rewrite /stateIsAny/allocInv. sbazooka.  }
 
   (* CMP [infoBlock+#4], EDI *)
   specapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
@@ -86,8 +87,9 @@ Proof.
     rewrite /allocInv/stateIsAny/natAsDWORD. sbazooka.
 
     apply memAnySplit.
-    { apply: addB_leB.
-      apply injective_projections; [ by rewrite Hcarry
+Admitted. 
+(*    { apply: addB_leB. admit. 
+      apply injective_projections. generalize @adcB. simpl. admit. simpl. ; [ by rewrite Hcarry
                                    | by generalize @adcB ]. }
     { simpl. rewrite ltBNle /natAsDWORD in LT. rewrite -> Bool.negb_false_iff in LT. by rewrite LT. } }
-Qed.
+Qed.*)

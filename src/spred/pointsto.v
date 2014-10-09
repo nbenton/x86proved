@@ -34,7 +34,7 @@ Proof. rewrite /pointsTo. by apply lexistsR with q. Qed.
 
 (* This isn't true for n = 2^32 *)
 Lemma fixedMemIs_pointsTo X `{_:FixedMemIs X} (p:ADDR) v :
-  n<2^naddrBits -> leB p (p+#n) -> p :-> v |-- p -- (p+#n) :-> v.
+  n<2^naddrBits -> leB p (p+#n) -> mkCursor p :-> v |-- mkCursor p -- mkCursor (p+#n:ADDR) :-> v.
 Proof. move => LT LE.
 rewrite /pointsTo. sdestruct => q. 
 rewrite -> memIsFixed. sdestruct => AP.
@@ -51,14 +51,16 @@ Tactic Notation "not" tactic1(t) := try (t; fail 1).
     | (?fa ?xa,?fb ?xb) => cheap_unify (fa, fb); cheap_unify (xa, xb)
     end.
 
+(* Various hacks in here to avoid expensive unification *)
 Ltac unifyPT P :=
   match P with
     (* These are surely safe *)
   | (byteIs ?p ?v, byteIs ?p ?w) => unify v w
   | (?p :-> ?v, ?p :-> ?w) => unify v w
-  | (?i -- ?j :-> ?v, ?i -- ?k :-> ?v) => unify j k
+  | (@mkCursor ?m ?p :-> ?v, @mkCursor ?n ?p :-> ?w) => unify v w
+  | (@mkCursor ?m ?i -- ?j :-> ?v, @mkCursor ?n ?i -- ?k :-> ?v) => unify j k
     (* These might be overlapping ranges, but typically we don't expect to see this *)
-  | (?i -- ?j :-> ?v, ?i -- ?k :-> ?w) => (unify j k; unify v w)
+  | (@mkCursor ?m ?i -- ?j :-> ?v, @mkCursor ?n ?i -- ?k :-> ?w) => (unify j k; unify v w)
     (* This seems risky. There might be multiple ranges pointing to the same value *)
   | (?i -- ?j :-> ?v, ?k -- ?l :-> ?v) => (unify i k; unify j l)
 
@@ -71,12 +73,13 @@ Ltac unifyPT P :=
   | _ => Solving.cheap_unify P
   end.
 
+Hint Unfold adSizeToOpSize : ssimpl.
 Ltac ssimpl := ssimpl_with unifyPT.
 Ltac sbazooka := sbazooka_with unifyPT.
 
 
 (* In fact p :-> b for b:BYTE is just a long-winded way of saying byteIs p b *)
-Lemma pointsToBYTE_byteIs (p:ADDR) b : p :-> b -|- byteIs p b.
+Lemma pointsToBYTE_byteIs (p:ADDR) b : mkCursor p :-> b -|- byteIs p b.
 Proof.
 rewrite /pointsTo. split.
 sdestruct => q. rewrite readerMemIsSimpl interpReader_bindBYTE.
@@ -93,7 +96,7 @@ Qed.
     + apply lexistsR with p. rewrite seqMemIsNil. sbazooka.
   Qed.
 
-Lemma memIs_consBYTE (p:ADDR) q (b:BYTE) bs : p -- q :-> (b::bs) -|- p :-> b ** (next p) -- q :-> bs.
+Lemma memIs_consBYTE (p:ADDR) q (b:BYTE) bs : mkCursor p -- q :-> (b::bs) -|- mkCursor p :-> b ** (next p) -- q :-> bs.
 Proof.
 split.
   rewrite -> seqMemIsCons. sdestruct => q'.
@@ -115,7 +118,7 @@ setoid_rewrite interpReader_bindBYTE_top.
 by sdestructs => _.
 Qed.
 
-Lemma pointsTo_consBYTE (p:ADDR) (b:BYTE) bs : p :-> (b::bs) -|- p :-> b ** (next p) :-> bs.
+Lemma pointsTo_consBYTE (p:ADDR) (b:BYTE) bs : mkCursor p :-> (b::bs) -|- mkCursor p :-> b ** (next p) :-> bs.
 Proof.
 rewrite /pointsTo.
 split.
@@ -140,10 +143,10 @@ Fixpoint catBYTES (xs: seq BYTE) : BITS (size xs * 8) :=
   if xs is x::xs return BITS (size xs * 8) then catBYTES xs ## x else nilB.
 
 Lemma cursorPointsTo_consBYTE (p:ADDRCursor) (b:BYTE) bs :
-  p :-> (b::bs) -|- Exists p', (p = mkCursor p' /\\ p' :-> b ** (next p') :-> bs).
+  p :-> (b::bs) -|- Exists p':ADDR, (p = mkCursor p' /\\ mkCursor p' :-> b ** (next p') :-> bs).
 Proof.
-elim p => [p' |]. rewrite pointsTo_consBYTE. split.  apply lexistsR with p'. sbazooka.
-sdestructs => p0 [->]. sbazooka.
+elim p => [p' |]. rewrite pointsTo_consBYTE. split.  apply lexistsR with p'. unfold adSizeToOpSize. sbazooka.
+sdestructs => p0 [->]. unfold adSizeToOpSize. by sbazooka.
 rewrite topPointsTo_consBYTE.
 split => //.
 by sdestructs => p' H.
@@ -161,7 +164,7 @@ Qed.
 
 
 Lemma pointsToDWORD_BYTES (p:ADDR) (b0 b1 b2 b3:BYTE):
-  p :-> [::b0;b1;b2;b3] -|- p :-> (b3 ## b2 ## b1 ## b0).
+  mkCursor p :-> [::b0;b1;b2;b3] -|- mkCursor p :-> (b3 ## b2 ## b1 ## b0).
 Proof.
 Admitted.
 (*rewrite {2}/pointsTo.
@@ -216,7 +219,7 @@ Qed.
 
 Corollary pointsToDWORD_asBYTES (d: DWORD) (p:ADDR):
   let: (b3,b2,b1,b0) := split4 8 8 8 8 d in
-  p :-> [::b0;b1;b2;b3] -|- p :-> d.
+  mkCursor p :-> [::b0;b1;b2;b3] -|- mkCursor p :-> d.
 Proof.
 have SE := @split4eta 8 8 8 8 d.
 elim E: (split4 8 8 8 8 d) => [[[b3 b2] b1] b0].
@@ -224,7 +227,7 @@ rewrite E in SE. rewrite -SE. apply pointsToDWORD_BYTES.
 Qed.
 
 Lemma pointsToWORD_BYTES (p:ADDR) (b0 b1:BYTE):
-  p :-> [::b0;b1] -|- p :-> (b1 ## b0).
+  mkCursor p :-> [::b0;b1] -|- mkCursor p :-> (b1 ## b0).
 Proof.
 Admitted.
 (*rewrite {2}/pointsTo.
@@ -262,157 +265,12 @@ Qed.
 *)
 Corollary pointsToWORD_asBYTES (d: WORD) (p:ADDR):
   let: (b1,b0) := split2 8 8 d in
-  p :-> [::b0;b1] -|- p :-> d.
+  mkCursor p :-> [::b0;b1] -|- mkCursor p :-> d.
 Proof.
 split; rewrite pointsToWORD_BYTES. rewrite {3}(@split2eta 8 8 d); reflexivity. 
 rewrite {1}(@split2eta 8 8 d); reflexivity. 
 Qed. 
 
 
-
-
-Definition memAny p q := Exists bs: seq BYTE, p -- q :-> bs.
-
-Lemma memAnyEmpty p : empSP |-- memAny p p.
-Proof. apply lexistsR  with nil. simpl. sbazooka. Qed.
-
-Lemma memAnyMerge p q r : memAny p q ** memAny q r |-- memAny p r.
-Proof.
-  rewrite /memAny. sdestructs => s1 s2.
-
-  apply lexistsR with (s1 ++ s2). setoid_rewrite seqMemIsCat.
-  rewrite -> pairMemIsPair.
-  by apply lexistsR with q.
-Qed.
-
-Lemma entails_memAnyNext (p: ADDR) q :
-  ltCursor p q -> memAny p q |-- Exists b: BYTE, p :-> b ** memAny (next p) q.
-Proof.
-  rewrite -leCursor_next.
-  move => LT.
-  rewrite /memAny. sdestruct => bs.
-  destruct bs.
-  rewrite -> seqMemIsNil.
-  sdestructs => EQ.
-  rewrite <- EQ in LT.
-  rewrite leCursor_next in LT.
-  rewrite /ltCursor in LT.
-  rewrite ltB_nat in LT. by rewrite ltnn in LT.
-
-  rewrite -> seqMemIsCons.
-  sdestruct => q'. apply lexistsR with b.
-  rewrite /pointsTo.
-  rewrite -> memIsBYTE_next_entails. sdestructs => ->. sbazooka.
-Qed.
-
-Lemma entails_memAnySplit p q r :
-  leCursor p q -> leCursor q r -> memAny p r |-- memAny p q ** memAny q r.
-Proof.
-move/LeCursorP. elim.
-  - move=> _. rewrite <-empSPL at 1. ssimpl. apply lexistsR with nil.
-    rewrite seqMemIsNil. sbazooka.
-  - move => {q} q Hpq Hind Hqr. rewrite leCursor_next in Hqr.
-    etransitivity; [apply Hind|]; first exact: leCursor_weaken.
-    rewrite ->entails_memAnyNext; last done.
-    sdestruct => b. ssimpl.
-    rewrite {1}/memAny. sdestructs => s.
-    rewrite /memAny. apply lexistsR with (s ++ [:: b]).
-    rewrite -> seqMemIsCat. rewrite -> pairMemIsPair.
-    apply lexistsR with q. cancel2. rewrite -> seqMemIsCons.
-    apply lexistsR with (next q). rewrite -> seqMemIsNil.
-    rewrite /pointsTo. sdestruct => q'. rewrite -> memIsBYTE_next_entails.
-    sdestructs => ->. sbazooka.
-Qed.
-
-Corollary memAnySplit p q r :
-  leCursor p q -> leCursor q r -> memAny p r -|- memAny p q ** memAny q r.
-Proof. move => H1 H2.
-split. by apply entails_memAnySplit. by apply memAnyMerge.
-Qed.
-
-Lemma byteIs_entails_memAny (p:ADDR)  b : byteIs p b |-- memAny p (next p).
-Proof. rewrite /memAny. apply lexistsR with (b::nil).
-simpl. apply lexistsR with (next p). sbazooka.
-Qed.
-
-Lemma readerMemIs_entails_memAny R {r: Reader R} : forall p q (v: R),
-  p -- q :-> v |-- memAny p q.
-Proof. rewrite /memIs/=/readNext.
-induction r =>  p q v//=.
-+ sdestructs => H ->. apply memAnyEmpty.
-+ destruct p => //=. sdestruct => b.
-  rewrite -> H. rewrite -> byteIs_entails_memAny.
-  by rewrite -> memAnyMerge.
-+ destruct p => //=. sdestruct => b.
-  rewrite -> IHr. rewrite -> byteIs_entails_memAny.
-  by rewrite -> memAnyMerge.
-Qed.
-
-Lemma four X (bs: seq X) : size bs = 4 -> exists b1 b2 b3 b4, bs = [::b1;b2;b3;b4].
-move => H.
-destruct bs => //.
-destruct bs => //.
-destruct bs => //.
-destruct bs => //.
-exists x, x0, x1, x2.
-destruct bs => //.
-Qed.
-
-(*
-Lemma memAny_entails_fixedReaderMemIs R {r: Reader R} n : fixedSizeReader r n ->
-  forall p q, apart n p q ->
-  memAny p q |-- Exists v:R, p :-> v.
-Proof.
-move => F p q A.
-rewrite /memAny. sdestruct => bs.
-destruct p => //.
-destruct q => //.
-rewrite -> (apart_addBn A). setoid_rewrite seqMemIsBYTE_addn.
-done. sdestruct => EQ.
-destruct (four EQ) as [b0 [b1 [b2 [b3 H]]]]. rewrite H.
-apply lexistsR with (b3 ## b2 ## b1 ## b0).
-rewrite <- pointsToDWORD_BYTES. rewrite /pointsTo. ssplit.
-reflexivity.
-Qed.
-*)
-
-Lemma memAny_entails_pointsToDWORD (p:ADDR) :
-  memAny p (p+#4) |-- Exists d:DWORD, p :-> d.
-Proof.
-rewrite /memAny. sdestruct => bs.
-setoid_rewrite seqMemIsBYTE_addn; last done. sdestruct => EQ.
-destruct (four EQ) as [b0 [b1 [b2 [b3 H]]]]. rewrite H.
-apply lexistsR with (b3 ## b2 ## b1 ## b0).
-rewrite <- pointsToDWORD_BYTES. rewrite /pointsTo. ssplit.
-reflexivity.
-Qed.
-
-Inductive AnyMemT := AnyMem.
-
-
-Lemma memAnyLe p q : memAny p q |-- leCursor p q /\\ memAny p q.
-Proof. rewrite /memAny. sdestruct => bs. rewrite -> memIsLe. sbazooka. Qed.
-
-Instance AnyMemIs : MemIs AnyMemT.
-refine (@Build_MemIs _ (fun p q _ => memAny p q) _).
-move => p q _. apply memAnyLe.
-Qed.
-
-
-(* Without this, the Qed check after memAnySplitAdd loops forever. *)
-Local Opaque leB.
-
-Corollary memAnySplitAdd (p:ADDR) m1 m2 :
-  m1 + m2 < 2 ^ naddrBits ->
-  memAny p (p+#(m1+m2)) -|- memAny p (p+#m1) ** memAny (p+#m1) (p+#(m1+m2)).
-Proof. move => BOUND.
-split.
-+ rewrite -> (@memAnyLe). sdestruct => MAL.
-apply entails_memAnySplit.
-rewrite -{1}(addB0 p). apply (leB_bounded_weaken BOUND) => //. apply leq_addr.
-apply (leB_bounded_weaken BOUND) => //. apply leq_addr.
-
-+ apply memAnyMerge.
-Qed.
 
 

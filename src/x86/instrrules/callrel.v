@@ -7,11 +7,12 @@ Require Import x86proved.common_tactics (* for [not] and [goal_has_evar] *).
 Require Import x86proved.basicspectac (* for [specapply *] *).
 Require Import x86proved.chargetac (* for [finish_logic] *).
 
-Lemma CALLrel_rule (p q: ADDR) (tgt: JmpTgt) (sp:ADDR) (w:DWORD) O :
+Require Import x86proved.x86.addr.
+Lemma CALLrel_rule (p q: ADDR) (tgt: JmpTgt) (sp:ADDR) (w:ADDR) O :
   |-- interpJmpTgt tgt q (fun P p' =>
       (
-         obs O @ (EIP ~= p' ** P ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
-         obs O @ (EIP ~= p  ** P ** ESP~=sp    ** sp-#4 :-> w)
+         obs O @ (UIP ~= p' ** P ** USP ~= sp-#8 ** (sp-#8) :-> q) -->>
+         obs O @ (UIP ~= p  ** P ** USP ~= sp    ** (sp-#8) :-> w)
     ) <@ (p -- q :-> CALLrel tgt)).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
@@ -21,11 +22,11 @@ Proof.
      do !instrrule_triple_bazooka_step idtac).
 Qed.
 
-Lemma CALLrel_loopy_rule (p q: DWORD) (tgt: JmpTgt) (w sp:DWORD) (O : PointedOPred) :
+Lemma CALLrel_loopy_rule (p q: ADDR) (tgt: JmpTgt) (w sp:ADDR) (O : PointedOPred) :
   |-- interpJmpTgt tgt q (fun P p' =>
       (
-      |> obs O @ (EIP ~= p' ** P ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
-         obs O @ (EIP ~= p  ** P ** ESP~=sp    ** sp-#4 :-> w)
+      |> obs O @ (UIP ~= p' ** P ** USP~=sp-#8 ** sp-#8 :-> q) -->>
+         obs O @ (UIP ~= p  ** P ** USP~=sp    ** sp-#8 :-> w)
     ) <@ (p -- q :-> CALLrel tgt)).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
@@ -44,31 +45,31 @@ Global Instance: forall tgt : JmpTgt, loopy_instrrule (CALLrel tgt) := fun tgt p
 Section specapply_hint.
 Local Hint Unfold interpJmpTgt : specapply.
 
-Corollary CALLrel_R_rule (r:GPReg32) (p q: DWORD) :
-  |-- Forall O (w sp: DWORD) p', (
-         obs O @ (EIP ~= p' ** r~=p' ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
-         obs O @ (EIP ~= p  ** r~=p' ** ESP~=sp    ** sp-#4 :-> w)
-    ) <@ (p -- q :-> CALLrel r).
+Corollary CALLrel_R_rule (r:GPReg64) (p q: ADDR) :
+  |-- Forall O (w sp: ADDR) p', (
+         obs O @ (UIP ~= p' ** r~=p' ** USP~=sp-#8 ** sp-#8 :-> q) -->>
+         obs O @ (UIP ~= p  ** r~=p' ** USP~=sp    ** sp-#8 :-> w)
+    ) <@ (p -- q :-> CALLrel (JmpTgtRegMem r)).
 Proof. specintros => *. specapply *; finish_logic_with sbazooka. Qed.
 
-Corollary CALLrel_R_loopy_rule (r:GPReg32) (p q: DWORD) :
-  |-- Forall (O : PointedOPred) (w sp: DWORD) p', (
-      |> obs O @ (EIP ~= p' ** r~=p' ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
-         obs O @ (EIP ~= p  ** r~=p' ** ESP~=sp    ** sp-#4 :-> w)
-    ) <@ (p -- q :-> CALLrel r).
+Corollary CALLrel_R_loopy_rule (r:GPReg64) (p q: ADDR) :
+  |-- Forall (O : PointedOPred) (w sp: ADDR) p', (
+      |> obs O @ (UIP ~= p' ** r~=p' ** USP~=sp-#8 ** sp-#8 :-> q) -->>
+         obs O @ (UIP ~= p  ** r~=p' ** USP~=sp    ** sp-#8 :-> w)
+    ) <@ (p -- q :-> CALLrel (JmpTgtRegMem r)).
 Proof. specintros => *. loopy_specapply *; finish_logic_with sbazooka. Qed.
 
-Corollary CALLrel_I_rule (rel: DWORD) (p q: DWORD) :
-  |-- Forall O (w sp: DWORD), (
-         obs O @ (EIP ~= addB q rel ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
-         obs O @ (EIP ~= p          ** ESP~=sp    ** sp-#4 :-> w)
+Corollary CALLrel_I_rule (rel: DWORD) (p q: ADDR) :
+  |-- Forall O (w sp: ADDR), (
+         obs O @ (UIP ~= addB q (signExtend _ rel) ** RSP~=sp-#8 ** sp-#8 :-> q) -->>
+         obs O @ (UIP ~= p          ** RSP~=sp    ** sp-#8 :-> w)
     ) <@ (p -- q :-> CALLrel rel).
 Proof. specintros => *. specapply *; finish_logic_with sbazooka. Qed.
 
-Corollary CALLrel_I_loopy_rule (rel: DWORD) (p q: DWORD) :
-  |-- Forall (O : PointedOPred) (w sp: DWORD), (
-      |> obs O @ (EIP ~= addB q rel ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
-         obs O @ (EIP ~= p          ** ESP~=sp    ** sp-#4 :-> w)
+Corollary CALLrel_I_loopy_rule (rel: DWORD) (p q: ADDR) :
+  |-- Forall (O : PointedOPred) (w sp: ADDR), (
+      |> obs O @ (UIP ~= addB q (signExtend _ rel) ** USP~=sp-#8 ** sp-#8 :-> q) -->>
+         obs O @ (UIP ~= p          ** USP~=sp    ** sp-#8 :-> w)
     ) <@ (p -- q :-> CALLrel rel).
 Proof. specintros => *. loopy_specapply *; finish_logic_with sbazooka. Qed.
 End specapply_hint.

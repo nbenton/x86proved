@@ -9,6 +9,8 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
+Hint Unfold ADRtoADDR (*ADDRtoADDRCursor*) : ssimpl.
+
 (*---------------------------------------------------------------------------
    The intended meaning of
       p -- q :-> v
@@ -17,7 +19,7 @@ Import Prenex Implicits.
    We require that memIs p q v implies p<=q.
   ---------------------------------------------------------------------------*)
 Class MemIs T := {
-  memIs:> ADDRCursor -> ADDRCursor -> T -> SPred;
+  memIs   :> ADDRCursor -> ADDRCursor -> T -> SPred;
   memIsLe :> forall p q v, memIs p q v |-- leCursor p q /\\ memIs p q v
 }.
 
@@ -25,7 +27,7 @@ Notation "p '--' q ':->' x" := (memIs p q x) (at level 50, q at next level, no a
 
 (* This is a consequence of memIsLe *)
 Lemma memIsNonTop T {_:MemIs T} (v: T) (p: ADDRCursor) (q:ADDR) :
-    p -- q :-> v |-- Exists p':ADDR, p = mkCursor p' /\\ p -- q :-> v.
+    p -- mkCursor q :-> v |-- Exists p':ADDR, p = mkCursor p' /\\ p -- mkCursor q :-> v.
 Proof. eapply lentailsPre. apply memIsLe.
 sdestruct => H. elim (leCursorNonTop H) => [p' EQ].
 apply lexistsR with p'. rewrite EQ. sbazooka.
@@ -34,7 +36,7 @@ Qed.
 (* This is another consequence of memIsLe *)
 (* We leave the argument to [top] unspecified so that it may be picked up as a constant an not be a numeral. *)
 Lemma memIsFromTop T (_:MemIs T) (v: T) (q: ADDR) :
-  top _ -- q :-> v |-- lfalse.
+  top _ -- mkCursor q :-> v |-- lfalse.
 Proof. rewrite -> memIsLe. rewrite /leCursor. by apply lpropandL. Qed.
 
 (* Our characterisation of fixed-size encodings *)
@@ -142,10 +144,10 @@ Definition fixedSizeReader R (r: Reader R) n :=
   ---------------------------------------------------------------------------*)
 
 Lemma interpReader_bindBYTE T (r: BYTE -> Reader T) w (p:ADDR) (q:ADDRCursor) :
-  interpReader (readerBind readNext r) p q w -|-
+  interpReader (readerBind readNext r) (mkCursor p) q w -|-
   Exists b:BYTE, byteIs p b ** interpReader (r b) (next p) q w.
 Proof. rewrite interpReader_bind/readNext/readBYTE/interpReader-/interpReader.
-split. sbazooka. sbazooka. subst. by ssimpl. sbazooka.
+split. sbazooka. subst. by ssimpl. sbazooka.
 Qed.
 
 Lemma interpReader_bindBYTE_top T (r: BYTE -> Reader T) w (q:ADDRCursor) :
@@ -169,8 +171,8 @@ Instance FixedMemIsBYTE : FixedMemIs 1 (readerMemIs BYTE).
 Proof. apply fixedSizeBYTE. Qed.
 
 Lemma memIsBYTE_next_entails (p:ADDR) q (v:BYTE) :
-  p -- q :-> v |-- q = next p /\\ p -- q :-> v.
-Proof. have MI := @memIsFixed _ _ _ FixedMemIsBYTE p q v.
+  mkCursor p -- q :-> v |-- q = next p /\\ mkCursor p -- q :-> v.
+Proof. have MI := @memIsFixed _ _ _ FixedMemIsBYTE (mkCursor p) q v.
 by simpl (apart _ _ _) in MI.
 Qed.
 
@@ -212,12 +214,13 @@ Section PairMemIs.
     p -- q :-> (x,y) -|- Exists p', p -- p' :-> x ** p' -- q :-> y.
   Proof. apply pairMemIsSimpl. Qed.
 
-  Lemma pairMemIsPair' (p q: ADDR) (x: X) (y: Y) :
-    p -- q :-> (x,y) -|- Exists p':ADDR, p -- p' :-> x ** p' -- q :-> y.
+  Lemma pairMemIsPair' (p q:ADDR) (x: X) (y: Y) :
+    mkCursor p -- mkCursor q :-> (x,y) -|- 
+    Exists p':ADDR, mkCursor p -- mkCursor p' :-> x ** mkCursor p' -- mkCursor q :-> y.
   Proof. rewrite pairMemIsPair. 
-  split; sdestruct => p'. 
+  split; sdestruct => p'. unfold adSizeToOpSize.
   - destruct p'. sbazooka. rewrite -> memIsFromTop. sbazooka. 
-  - apply lexistsR with p'. sbazooka.
+  - apply lexistsR with (mkCursor p'). sbazooka.
   Qed.
 
 
@@ -292,15 +295,17 @@ Section SeqMemIs.
 
 
   Lemma seqMemIsCons' (p q:ADDR) (x:X) (xs: seq X):
-    p -- q :-> (x::xs) -|- Exists p':ADDR, p -- p' :-> x ** p' -- q :-> xs.
-  Proof. rewrite seqMemIsSimpl. split. sdestruct => p'. destruct p'. sbazooka.
+    mkCursor p -- mkCursor q :-> (x::xs) -|- 
+    Exists p':ADDR, mkCursor p -- mkCursor p' :-> x ** mkCursor p' -- mkCursor q :-> xs.
+  Proof. rewrite seqMemIsSimpl. split. sdestruct => p'. destruct p'. sbazooka. 
   rewrite -> memIsFromTop. sbazooka. sbazooka. 
   Qed. 
 
   Context {n} {MY: FixedMemIs n MX}.
 
   Lemma seqFixedMemIsCons' (p q:ADDR) (x:X) (xs: seq X):
-    p -- q :-> (x::xs) -|- p -- (p+#n) :-> x ** (p +#n) -- q :-> xs.
+    mkCursor p -- mkCursor q :-> (x::xs) -|- 
+    mkCursor p -- mkCursor (p+#n:ADDR) :-> x ** mkCursor (p +#n:ADDR) -- mkCursor q :-> xs.
   Proof. rewrite seqMemIsCons. 
   split. 
   - sdestruct => p'. destruct p'. 
@@ -336,7 +341,7 @@ End SeqMemIs.
 
 
 Lemma seqFixedMemIsConsNE X `(FMI:FixedMemIs X) (p q : ADDR) (v:X) vs : 0 < n < 2^naddrBits -> 
-    p -- q :-> (v::vs) |-- p != q /\\ memIs p q (v::vs).
+    mkCursor p -- mkCursor q :-> (v::vs) |-- p != q /\\ memIs (mkCursor p) (mkCursor q) (v::vs).
 Proof. move/andP => [GT LT]. case E: n => [|n']; subst => //. 
   rewrite -> seqFixedMemIsCons'. 
   have H: p != p+#n'.+1. by apply: addBn_ne. 
@@ -347,11 +352,11 @@ Proof. move/andP => [GT LT]. case E: n => [|n']; subst => //.
   rewrite leCursor_nat in H1.
   rewrite leCursor_nat in H2.
   rewrite leq_eqVlt in H1. 
-  have HI:= @cursorToNat_inj _ p (p+#n'.+1). 
-  case E: (cursorToNat p == cursorToNat (p+#n'.+1)). 
+  have HI:= @cursorToNat_inj _ (mkCursor p) (mkCursor (p+#n'.+1)). 
+  case E: (cursorToNat (mkCursor p) == cursorToNat (mkCursor (p+#n'.+1))). 
   rewrite (eqP E) in HI. specialize (HI (refl_equal _)). injection HI => HI'. rewrite {1}HI' in H. 
   by rewrite eq_refl in H. rewrite E orFb in H1. 
-  have NE: cursorToNat p != cursorToNat q. apply negbT. apply: ltn_eqF. by apply: leq_trans H2. 
+  have NE: cursorToNat (mkCursor p) != cursorToNat (mkCursor q). apply negbT. apply: ltn_eqF. by apply: leq_trans H2. 
   rewrite inj_eq in NE; last by apply cursorToNat_inj.
   rewrite NE.
   sbazooka.  
@@ -393,14 +398,14 @@ Section SubMemIs.
 End SubMemIs.
 
 Lemma seq_BYTE_size (p q: ADDR) (vs: seq BYTE) :
-  p -- q :-> vs |-- q = p +# size vs /\\ p -- q :-> vs.
+  mkCursor p -- mkCursor q :-> vs |-- q = p +# size vs /\\ mkCursor p -- mkCursor q :-> vs.
 Proof.
   elim: vs p => [|b bs IHbs] p.
   - rewrite -> seqMemIsNil. sdestruct => [[<-]]. ssplits => //.
     by rewrite addB0.
   - rewrite -> seqMemIsCons. rewrite /size -/size. sdestruct => [[p'|]].
     - rewrite ->IHbs. sdestruct => Hq. rewrite ->memIsBYTE_next_entails.
-      sdestruct => Hp'. symmetry in Hp'. subst. ssplit; last by sbazooka.
+      sdestruct => Hp'. symmetry in Hp'. subst. unfold adSizeToOpSize. ssplit; last by sbazooka.
       clear IHbs. replace (p +# (size bs).+1) with (incB p +# size bs).
       apply nextIsInc in Hp'. subst. rewrite <-addB_addn. rewrite -addB1.
       by rewrite ->addB_addn. rewrite -addB1. rewrite <-addB_addn. by rewrite add1n.
@@ -409,15 +414,15 @@ Qed.
 
 Lemma seqMemIsBYTE_addn (vs:seq BYTE) : forall m (p:ADDR),
   m < 2^naddrBits ->
-  p -- (p+#m) :-> vs |--
-  size vs = m /\\ p -- (p+#m) :-> vs.
+  mkCursor p -- mkCursor (p+#m:ADDR) :-> vs |--
+  size vs = m /\\ mkCursor p -- mkCursor (p+#m:ADDR) :-> vs.
 Proof.
   induction vs => m p BOUND.
 (* vs is nil *)
   setoid_rewrite seqMemIsNil.
   sdestruct => EQ.
   have H: m = 0.
-  apply (addB0_inv (p:=p) BOUND). have: p = p +# m by congruence. by move => {1}->.
+    apply (addB0_inv (p:=p) BOUND). injection EQ => EQ'. by rewrite {1}EQ'. 
   rewrite H addB0. sbazooka.
 (* vs is non-nil *)
   setoid_rewrite seqMemIsCons.
@@ -427,14 +432,14 @@ Proof.
 
   destruct m as [|m].
     rewrite addB0. rewrite -> (@memIsLe _ _ (next p)). rewrite leCursor_next /ltCursor.
-    rewrite ltB_nat ltnn.  rewrite lpropandF. by ssimpl.
+    rewrite ltB_nat ltnn lpropandF. by ssimpl.
     simpl (size _). apply ltnW in BOUND.
     specialize (IHvs m (p+#1) BOUND). rewrite <- addB_addn in IHvs. rewrite add1n in IHvs.
 
     case E: (next p) => [q |].
       symmetry in E. have NI := nextIsInc (sym_equal E). subst.
-      rewrite -> IHvs. sbazooka.  congruence.
-      rewrite -> memIsFromTop. by ssimpl.
+      rewrite -> IHvs. unfold adSizeToOpSize. sbazooka.  congruence.
+      unfold adSizeToOpSize. rewrite -> memIsFromTop. by ssimpl.
 Qed.
 
 
@@ -513,9 +518,9 @@ Proof. apply fixedSizeTupleBYTE. Qed.
 
 
 Corollary memIsDWORD_range (p q: ADDR) (c:DWORD):
-  p -- q :-> c -|- q = p +# 4 /\\ p -- q :-> c.
+  mkCursor p -- mkCursor q :-> c -|- q = p +# 4 /\\ mkCursor p -- mkCursor q :-> c.
 Proof. split; last by sdestruct.
-have FMI := FixedMemIsDWORD.  rewrite /FixedMemIs in FMI. specialize (FMI p q c).
+have FMI := FixedMemIsDWORD.  rewrite /FixedMemIs in FMI. specialize (FMI (mkCursor p) (mkCursor q) c).
 etransitivity; first apply FMI. (* Why doesn't rewrite work here? *)
 sdestruct => A.
 sbazooka. by apply apart_addBn.
@@ -554,7 +559,7 @@ Proof.
   - done.
 Qed.
 
-Lemma memIsBYTE_byteIs (p:ADDR) q b : p -- q :-> b |-- byteIs p b.
+Lemma memIsBYTE_byteIs (p:ADDR) q b : mkCursor p -- q :-> b |-- byteIs p b.
 Proof.
 rewrite readerMemIsSimpl interpReader_bindBYTE.
 rewrite /interpReader. sdestructs => b' -> _. by ssimpl.
@@ -618,7 +623,7 @@ Proof. reflexivity. Qed.
 
 
 Lemma interpWriterTm_top T (wt: WriterTm T) t (q: ADDR) :
-  interpWriterTm wt (top _) q t -|-
+  interpWriterTm wt (top _) (mkCursor q) t -|-
   lfalse.
 Proof.
   split; last done. induction wt => //=.

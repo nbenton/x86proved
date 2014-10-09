@@ -4,7 +4,7 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.seq Ssreflect.eqtype Ssreflect.tuple.
 Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.cursor x86proved.update x86proved.x86.addr.
 Require Import x86proved.x86.program x86proved.monad x86proved.monadinst x86proved.writer.
-Require Import x86proved.spred x86proved.reader x86proved.roundtrip x86proved.x86.programassem x86proved.codec x86proved.bitreader x86proved.x86.instrcodec.
+Require Import x86proved.spred x86proved.reader x86proved.roundtrip x86proved.x86.programassem x86proved.codec x86proved.bitreader x86proved.x86.instrcodec x86proved.x86.instrcodecprops.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -99,7 +99,7 @@ Proof.
     have WIC:= @write_instr_correct pos pos' c. rewrite /interpWriter in WIC.
     rewrite /writeNext. rewrite -{1}H2 in WIC. apply: WIC.
   (* prog_skip *)
-    simpl. sdestructs => _ H. sbazooka. congruence.
+    simpl. sdestructs => _ H. injection H => ->. sbazooka. 
   (* prog_seq *)
     rewrite /finalpass-/finalpass.
     rewrite interpWriterTm_bind. sdestructs => p' [st' []].
@@ -134,16 +134,15 @@ Proof.
   rewrite /interpWriter/write_program.
   rewrite interpWriterTm_bind. sdestructs => i' j'.
   simpl (interpWriterTm getWCursor _ _ _).
-  sdestructs => -> ->. ssimpl.
+  sdestructs => -> ->. ssimpl. 
+  case: i' => [i'' |].
+
   rewrite /runAssembler.
   case: (runNPasses _ _ _) => [[[npasses labels] bytes] |].
   rewrite interpWriterTm_bind. sdestructs => p' s. simpl.
-  sdestructs => _ ->.
-  case: i' => [i'' |].
-    rewrite -> finalpass_correct. simpl. by ssimpl.
-  rewrite interpWriterTm_top.  sbazooka.
-  by simpl.
-Qed.
+  sdestructs => _ ->. rewrite -> finalpass_correct. ssimpl. by simpl.
+  simpl. done. by rewrite interpWriterTm_top.  
+Qed. 
 
 (* When applying this lemma, discharge the side condition with [by vm_compute].
  *)

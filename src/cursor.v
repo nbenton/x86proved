@@ -342,7 +342,7 @@ Notation DWORDCursor  := (Cursor n32).
 Notation QWORDCursor  := (Cursor n64).
 
 Lemma nextCat n1 n2 (p:BITS n1) m : m < (2^n2).-1 ->
-  next (p ## fromNat (n:=n2) m) = p ## #(m.+1).
+  next (p ## fromNat (n:=n2) m) = mkCursor (p ## #(m.+1)).
 Proof. move => LT.
 apply cursorToNat_inj. rewrite cursorToNat_next/=. rewrite 2!toNatCat 2!toNat_fromNat.
 rewrite modn_small.
@@ -421,7 +421,7 @@ Proof. move => n1 m p q AP. rewrite -apart_toNat. rewrite <-apart_toNat in AP.
 rewrite 2!cursorToNat_widen. by rewrite -AP mulnDl. Qed.
 
 Lemma subCursor_next n (p: BITS n.+1) :
-  subCursor (next p) p = fromNat 1.
+  subCursor (next p) (mkCursor p) = mkCursor (fromNat 1).
 Proof. apply cursorToNat_inj.
 rewrite cursorToNat_sub. rewrite cursorToNat_next.
 rewrite /cursorToNat. rewrite subSn => //. rewrite subnn. rewrite toNat_fromNatBounded => //.

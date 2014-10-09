@@ -433,7 +433,7 @@ inversion H4. rewrite /isMapped H0. done.
 Qed.
 
 Lemma triple_setBYTESep (p:ADDR) (v w:BYTE) S
-: TRIPLE (p:->v ** S) (setBYTEInProcState p w) nil (p:->w ** S).
+: TRIPLE (p:->v ** S) (setInProcState p w) nil (p:->w ** S).
 Proof.
   rewrite 2!pointsToBYTE_byteIs.
   triple_by_compute; erewrite byteIsMapped by eassumption; do ?split.
@@ -469,6 +469,18 @@ case E: (writeMemTm W _ _) => [[p' m] |]. by rewrite E in H.
 rewrite E in H. by destruct H. Qed.
 
 (** TODO(t-jagro): Maybe write [separateSetDWORD] and make this proof shorter. *)
+
+Require Import reader writer roundtrip.
+Lemma triple_setSep {X} {R:Reader X} {W:Writer X} {RT:Roundtrip R W} (p:ADDR) (v w:X) S
+: TRIPLE (p:->v ** S) (setInProcState p w) nil (p:->w ** S).
+Admitted.
+
+Lemma triple_setVWORDSep {s} (p: ADDR) (v w: VWORD s) S
+: TRIPLE (p:->v ** S) (setInProcState p w) nil (p:->w ** S).
+destruct s; apply triple_setSep.
+Qed. 
+
+(*
 Lemma triple_setDWORDSep (p:ADDR) (v w:DWORD) S
 : TRIPLE (p:->v ** S) (setDWORDInProcState p w) nil (p:->w ** S).
 Proof.
@@ -551,3 +563,4 @@ Lemma triple_setVWORDSep s (p:ADDR) (v w: VWORD s) S :
 Proof. destruct s.  
 apply triple_setBYTESep. apply triple_setWORDSep. apply triple_setDWORDSep. 
 apply triple_setQWORDSep. Qed.
+*)

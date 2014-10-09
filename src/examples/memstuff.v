@@ -27,7 +27,6 @@ rewrite -> seqMemIsCons. sbazooka.
 rewrite -> seqMemIsNil. sbazooka. 
 Qed. 
 
-Definition opSizeToNat s := match s with OpSize1 => 1 | OpSize2 => 2 | OpSize4 => 4 | OpSize8 => 8 end.
 
 Lemma MOV_RM0aux_rule s (r1: GPReg s) (r2:GPReg32)  (pd:DWORD) (v1 v2: VWORD s) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v2)

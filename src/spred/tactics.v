@@ -753,7 +753,9 @@ Module Solving.
              | [ H : ?T |- _ |-- ?T /\\ _ ] => apply lpropandR; first by exact H
            end.
 
-  Ltac ssimpl_with doUnify := pre_ssimpl_with doUnify; post_ssimpl.
+  Hint Unfold not : ssimpl.
+
+  Ltac ssimpl_with doUnify := autounfold with ssimpl; pre_ssimpl_with doUnify; post_ssimpl.
 
   Ltac ssimpl := ssimpl_with cheap_unify.
 

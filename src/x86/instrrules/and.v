@@ -3,13 +3,26 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 (** ** Generic AND *)
+
+(** ** AND r1, [r2 + offset] *)
+(*
+Example AND_RM_rule (pbase:DWORD) (r1 r2:GPReg32) v1 (v2:DWORD) (offset:nat) :
+  |-- basic (r1~=v1 ** OSZCP?)
+            (AND r1, [r2 + offset]) empOP
+            (let v:= andB v1 v2 in r1~=v ** OSZCP false (msb v) (v == #0) false (lsb v))
+      @ (r2 ~= pbase ** adrToADDR (a:=AdSize4) (computeAddr (a:=AdSize4) pbase offset) :-> v2).
+Proof.
+do_instrrule_triple. 
+Qed.
+*)
+
 Lemma AND_rule sz (ds:DstSrc sz) (v1: VWORD sz) :
    |-- specAtDstSrc ds (fun D v2 =>
        basic (D v1 ** OSZCP?)
              (BOP _ OP_AND ds) empOP
              (let v := andB v1 v2 in
               D v ** OSZCP false (msb v) (v == #0) false (lsb v))).
-Proof. do_instrrule_triple. Qed.
+Proof. do_instrrule_triple. Qed. 
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
@@ -32,12 +45,12 @@ Example AND_RM_rule (pbase:DWORD) (r1 r2:GPReg32) v1 (v2:DWORD) (offset:nat) :
   |-- basic (r1~=v1 ** OSZCP?)
             (AND r1, [r2 + offset]) empOP
             (let v:= andB v1 v2 in r1~=v ** OSZCP false (msb v) (v == #0) false (lsb v))
-      @ (r2 ~= pbase ** pbase +# offset :-> v2).
+      @ (r2 ~= pbase ** (eval.computeAddr (a:=AdSize4) pbase offset) :-> v2).
 Proof. autorewrite with push_at. basic apply *. Qed.
 
 Example AND_RM_ruleNoFlags (pd:DWORD) (r1 r2:GPReg32) v1 (v2:DWORD) (offset:nat):
   |-- basic (r1~=v1) (AND r1, [r2 + offset]) empOP (r1~=andB v1 v2)
-             @ (r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?).
+             @ (r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2 ** OSZCP?).
 Proof. autorewrite with push_at. basic apply *. Qed.
 
 (** ** AND r, v *)

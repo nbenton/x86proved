@@ -9,7 +9,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.opred x86proved.spec x86proved.spectac x86proved.safe x86proved.obs x86proved.cursor x86proved.x86.instr x86proved.reader x86proved.x86.instrcodec.
+Require Import x86proved.spred x86proved.opred x86proved.spec x86proved.spectac x86proved.safe x86proved.obs x86proved.cursor x86proved.x86.instr x86proved.reader x86proved.x86.instrcodec x86proved.x86.eval.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Section Basic.
@@ -26,8 +26,8 @@ Section Basic.
   Context {T} `{MI: MemIs T}.
 
   Definition parameterized_basic P (c : T) (O : OPred) Q : spec :=
-    Forall (i j : DWORD) (O' : T_OPred),
-    (obs O' @ (EIP ~= j ** Q) -->> obs (catOP O O') @ (EIP ~= i ** P)) <@ (i -- j :-> c).
+    Forall (i j : ADDR) (O' : T_OPred),
+    (obs O' @ (UIP ~= j ** Q) -->> obs (catOP O O') @ (UIP ~= i ** P)) <@ (i -- j :-> c).
 
   Global Strategy 10000 [parameterized_basic].
 

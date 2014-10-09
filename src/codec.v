@@ -631,7 +631,7 @@ match c with
 | Alt _ c d => fun x =>
   match enc c x, enc d x with
   | Some bs1, Some bs2 =>
-    if size bs1 < size bs2 then Some bs1 else Some bs2
+    if size bs1 <= size bs2 then Some bs1 else Some bs2
   | None, Some bs2 => Some bs2
   | Some bs1, None => Some bs1
   | None, None => None
@@ -674,7 +674,7 @@ exists l1, l2. injection EQ => [<-]. split => //. intuition. *)
 (* Alt *)
 case E1: (enc c1 v) => [l1 |]; rewrite E1 in EQ => //.
 case E2: (enc c2 v) => [l2 |]; rewrite E2 in EQ => //.
-case B: (size l1 < size l2); rewrite B in EQ;
+case B: (size l1 <= size l2); rewrite B in EQ;
 injection EQ => [<-]; intuition.
 injection EQ => [<-]; intuition.
 case E2: (enc c2 v) => [l2 |]; rewrite E2 in EQ => //.
@@ -700,7 +700,7 @@ Lemma domVoid t : dom (Void t) = [pred _ | false]. Proof. done. Qed.
 Lemma domAlt T (c1 c2: Codec T) : dom (c1 ||| c2) = predU (dom c1) (dom c2).
 Proof. apply functional_extensionality => x. rewrite /dom/=.
 destruct (enc c1 x) => //. destruct (enc c2 x) => //.
-by destruct (_ < _). destruct (enc c2 x) => //.
+by destruct (_ <= _). destruct (enc c2 x) => //.
 Qed.
 
 Lemma domSeq T U (c: Codec T) (d: Codec U) : dom (c $ d) = [pred x | dom c x.1 && dom d x.2].

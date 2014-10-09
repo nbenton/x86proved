@@ -47,6 +47,14 @@ Definition getReg16FromProcState (r: Reg16) :=
 Definition getReg8FromProcState (r: Reg8) :=
   getRegPieceFromProcState (Reg8_toRegPiece r).
 
+Definition getRegFromProcState {s} : Reg s -> ST (VWORD s) :=
+  match s with
+  | OpSize1 => getReg8FromProcState
+  | OpSize2 => getReg16FromProcState
+  | OpSize4 => getReg32FromProcState
+  | OpSize8 => getReg64FromProcState
+  end.
+
 (*---------------------------------------------------------------------------
     Register setters
   ---------------------------------------------------------------------------*)
@@ -80,6 +88,15 @@ Definition setReg8InProcState (r: Reg8) (w: BYTE) :=
     let! v = getReg64FromProcState RDX;
     setReg64InProcState RDX (updateSlice 8 8 _ v w)
   end.
+
+Definition setRegInProcState {s} : Reg s -> VWORD s -> ST unit :=
+  match s with
+  | OpSize1 => setReg8InProcState
+  | OpSize2 => setReg16InProcState
+  | OpSize4 => setReg32InProcState
+  | OpSize8 => setReg64InProcState
+  end.
+
 
 Lemma setRegGetRegDistinct Y r1 v r2 (f: _ -> ST Y) s :
   ~~(r1 == r2) ->
@@ -125,6 +142,9 @@ Definition forgetFlagInProcState f :=
   ---------------------------------------------------------------------------*)
 
 (* This is wrong because wrap-around is under-specified *)
+(* See Section 5.3 in Volume 3A of Intel manuals *)
+(* When effective segment limit is 0xffffffff then behaviour is unspecified for
+   reads that wrap around. Otherwise, it is "correct": no partial reads or writes *)
 Definition getFromProcState R {r:Reader R} (p: ADDR) : ST R :=
   let! s = getProcState;
   match readMem readNext (memory s) p with
@@ -140,32 +160,12 @@ Definition readFromProcState R {r:Reader R} (p: ADDR) : ST (R*ADDR) :=
   | _ => raiseExn ExnGP
   end.
 
-(* See Section 5.3 in Volume 3A of Intel manuals *)
-(* When effective segment limit is 0xffffffff then behaviour is unspecified for
-   reads that wrap around. Otherwise, it is "correct": no partial reads or writes *)
-Definition getBYTEFromProcState := getFromProcState (R:=BYTE).
-Definition getWORDFromProcState := getFromProcState (R:=WORD).
-Definition getDWORDFromProcState := getFromProcState (R:=DWORD).
-Definition getVWORDFromProcState {s} := getFromProcState (R:=VWORD s).
-
-Definition setInProcState {X} {W:Writer X} p (x:X) :=
+Definition setInProcState {X} {W:Writer X} (p:ADDR) (x:X) :=
   let! s = getProcState;
   match writeMem W (memory s) p x with
   | Some (p', m') =>
       setProcState (mkProcState (registers s) (flags s) m')
   | None => raiseUnspecified
-  end.
-
-Definition setBYTEInProcState (p:ADDR) (b:BYTE)   := setInProcState p b.
-Definition setWORDInProcState (p:ADDR) (d:WORD) := setInProcState p d.
-Definition setDWORDInProcState (p:ADDR) (d:DWORD) := setInProcState p d.
-Definition setQWORDInProcState (p:ADDR) (d:QWORD) := setInProcState p d.
-Definition setVWORDInProcState {s} : ADDR -> VWORD s -> ST unit := 
-  match s with
-  | OpSize1 => setBYTEInProcState 
-  | OpSize2 => setWORDInProcState  
-  | OpSize4 => setDWORDInProcState 
-  | OpSize8 => setQWORDInProcState 
   end.
 
 (*---------------------------------------------------------------------------

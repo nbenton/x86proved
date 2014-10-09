@@ -17,8 +17,8 @@ Import Prenex Implicits.
 Inductive simrw {X T} (x: X):
   ADDRCursor -> Reader X -> WriterTm T -> Prop :=
 | simrw_retn p t: simrw x p (readerRetn x) (writerRetn t)
-| simrw_next p R b W': simrw x (next p) (R b) W' -> simrw x p (readerNext R) (writerNext b W')
-| simrw_skip p R W': simrw x (next p) R W' -> simrw x p (readerSkip R) (writerSkip W')
+| simrw_next p R b W': simrw x (next p) (R b) W' -> simrw x (mkCursor p) (readerNext R) (writerNext b W')
+| simrw_skip p R W': simrw x (next p) R W' -> simrw x (mkCursor p) (readerSkip R) (writerSkip W')
 | simrw_rcursor p R' W: simrw x p (R' p) W -> simrw x p (readerCursor R') W
 | simrw_wcursor p R W': simrw x p R (W' p) -> simrw x p R (writerCursor W')
 | simrw_fail p R: simrw x p R writerFail
@@ -35,7 +35,7 @@ Class Roundtrip X (R: Reader X) (W: Writer X) :=
 
 (* Generalisation of simrw_next that also handles Cursor *)
 Lemma simrw_next' A (x:A) (p:ADDRCursor) R b (W': WriterTm unit):
-  (forall p': ADDR, p = p' -> simrw x (next p') (R b) W') ->
+  (forall p': ADDR, p = mkCursor p' -> simrw x (next p') (R b) W') ->
   simrw x p (readerNext R) (writerNext b W').
 Proof.
   intros H. elim Hp: p => [p'|]; last constructor. constructor. exact: H.

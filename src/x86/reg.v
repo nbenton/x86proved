@@ -8,6 +8,9 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.bitsrep.
 
+(*---------------------------------------------------------------------------
+    General purpose registers
+  ---------------------------------------------------------------------------*)
 (* General purpose registers, excluding RSP and RIP *)
 (*=NonSPReg64 *)
 Inductive NonSPReg64 := 
@@ -30,15 +33,28 @@ Lemma GPReg64_toNat_inj : injective GPReg64_toNat. Proof. by repeat case => //. 
 Canonical Structure GPReg64_EqMixin := InjEqMixin GPReg64_toNat_inj.
 Canonical Structure GPReg64_EqType := Eval hnf in EqType _ GPReg64_EqMixin.
 
-(* All general purpose registers, including RIP but still excluding the flags *)
+(*---------------------------------------------------------------------------
+    Control registers
+  ---------------------------------------------------------------------------*)
+Inductive CReg := CR0 | CR1 | CR2 | CR3 | CR4.
+Definition CRegToNat r :=  
+  match r with CR0 => 0 | CR1 => 1 | CR2 => 2 | CR3 => 3 | CR4 => 4 end. 
+Lemma CRegToNat_inj : injective CRegToNat. Proof. by repeat case => //. Qed.
+Canonical Structure CRegEqMixin := InjEqMixin CRegToNat_inj.
+Canonical Structure CRegEqType := Eval hnf in EqType _ CRegEqMixin.
+
+(*---------------------------------------------------------------------------
+    All registers
+  ---------------------------------------------------------------------------*)
+(* All registers, including RIP and control registers but still excluding the flags *)
 (*=Reg64 *)
-Inductive Reg64 := mkReg64 (r: GPReg64) :> Reg64 | RIP.
+Inductive Reg64 := mkReg64 (r: GPReg64) :> Reg64 | mkCReg (r: CReg) | RIP.
 (*=End *)
-Definition Reg64_toNat r :=  match r with | RIP => 16 | mkReg64 r => GPReg64_toNat r end.
+Definition Reg64_toNat r :=  
+  match r with | RIP => 16 | mkReg64 r => GPReg64_toNat r | mkCReg r => 17+CRegToNat r end.
 Lemma Reg64_toNat_inj : injective Reg64_toNat. Proof. by repeat case => //. Qed.
 Canonical Structure Reg64_EqMixin := InjEqMixin Reg64_toNat_inj.
 Canonical Structure Reg64_EqType := Eval hnf in EqType _ Reg64_EqMixin.
-
 
 (* Addressable 32-bit slices of above *)
 Inductive NonSPReg32 := mkNonSPReg32 (r: NonSPReg64).
@@ -162,84 +178,15 @@ Inductive Reg8alt := AL|BL|CL|DL|AH|BH|CH|DH.
 
 
 
-(* Segment registers *)
+(*---------------------------------------------------------------------------
+    Segment registers
+  ---------------------------------------------------------------------------*)
 Inductive SegReg := CS | DS | SS | ES | FS | GS.
 Definition SegRegToNat r :=  
   match r with CS => 0 | DS => 1 | SS => 2 | ES => 3 | FS => 4 | GS => 5 end. 
 Lemma SegRegToNat_inj : injective SegRegToNat. Proof. by repeat case => //. Qed.
 Canonical Structure SegRegEqMixin := InjEqMixin SegRegToNat_inj.
 Canonical Structure SegRegEqType := Eval hnf in EqType _ SegRegEqMixin.
-
-(*
-Definition anyRegToAnyQWORDReg (r:DWORDReg):AnyQWORDReg :=
-  match r with 
-  | EIP => RIP
-  | regToDWORDReg r => regToQWORDReg r
-  end.
-
-Definition WORDRegToReg (wr:WORDReg):Reg := let: mkWordReg r := wr in r.
-Lemma WORDRegToReg_inj : injective WORDRegToReg.
-Proof. by move => [x] [y] /= ->. Qed. 
-Canonical Structure WORDRegEqMixin := InjEqMixin WORDRegToReg_inj.
-Canonical Structure WORDRegEqType := Eval hnf in EqType _ WORDRegEqMixin.
-
-(* Standard numbering of registers *)
-Definition natToReg n : option Reg :=
-  match n return option Reg with
-  | 0 => Some (EAX:Reg)
-  | 1 => Some (ECX:Reg)
-  | 2 => Some (EDX:Reg)
-  | 3 => Some (EBX:Reg)
-  | 4 => Some (ESP:Reg)
-  | 5 => Some (EBP:Reg)
-  | 6 => Some (ESI:Reg)
-  | 7 => Some (EDI:Reg)
-  | _ => None
-  end.
-
-Lemma roundtripReg : forall r, natToReg (RegToNat r) = Some r.
-Proof. case. by case. done. Qed.
-
-(* Reg is a choiceType and a countType *)
-Definition Reg_countMixin := CountMixin roundtripReg.
-Definition Reg_choiceMixin := CountChoiceMixin Reg_countMixin.
-Canonical Reg_choiceType :=  Eval hnf in ChoiceType _ Reg_choiceMixin.
-Canonical Reg_countType  :=  Eval hnf in CountType _ Reg_countMixin.
-
-(* Reg is a finType *)
-Lemma Reg_enumP :
-  Finite.axiom [:: EAX:Reg; EBX:Reg; ECX:Reg; EDX:Reg; ESI:Reg; EDI:Reg; EBP:Reg; ESP].
-Proof. case;  [by case | done]. Qed.
-
-Definition Reg_finMixin := Eval hnf in FinMixin Reg_enumP.
-Canonical Reg_finType   := Eval hnf in FinType _ Reg_finMixin.
-
-(* Standard numbering of registers *)
-Definition natToDWORDReg n :=
-  match natToReg n with
-  | Some r => Some (regToDWORDReg r)
-  | None => match n with 8 => Some EIP | _ => None end
-  end.
-
-Lemma roundtripDWORDReg : forall r, natToDWORDReg (DWORDRegToNat r) = Some r.
-Proof. case. case; [case; by constructor | done]. done. Qed.
-
-(* DWORDReg is a choiceType and a countType *)
-Definition DWORDReg_countMixin := CountMixin roundtripDWORDReg.
-Definition DWORDReg_choiceMixin := CountChoiceMixin DWORDReg_countMixin.
-Canonical DWORDReg_choiceType := Eval hnf in ChoiceType _ DWORDReg_choiceMixin.
-Canonical DWORDReg_countType  := Eval hnf in CountType  _ DWORDReg_countMixin.
-
-(* DWORDReg is a finType *)
-Lemma DWORDReg_enumP :
-  Finite.axiom [:: EAX:DWORDReg; EBX:DWORDReg; ECX:DWORDReg;
-                   EDX:DWORDReg; ESI:DWORDReg; EDI:DWORDReg; EBP:DWORDReg; ESP:DWORDReg; EIP].
-Proof. case; [case; [case; done | done] | done]. Qed.
-
-Definition DWORDReg_finMixin := Eval hnf in FinMixin DWORDReg_enumP.
-Canonical DWORDReg_finType :=  Eval hnf in FinType _ DWORDReg_finMixin.
-
-*)
 
 (*---------------------------------------------------------------------------
     Register pieces: these are the bytes that make up the register state
@@ -353,3 +300,8 @@ Coercion GPReg64_to_GPReg (r:GPReg64) : GPReg OpSize8 := r.
 Coercion GPReg32_to_GPReg (r:GPReg32) : GPReg OpSize4 := r.
 Coercion GPReg16_to_GPReg (r:GPReg16) : GPReg OpSize2 := r.
 Coercion Reg8_to_GPReg (r:GPReg8) : GPReg OpSize1 := r.
+
+(* Universal instruction pointer and stack pointer. EIP/ESP for 32-bit mode, RIP/RSP for 64-bit mode *)
+Definition UIP := RIP. 
+Definition USP := RSP.
+

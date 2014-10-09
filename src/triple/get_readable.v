@@ -24,9 +24,9 @@ Local Ltac triple_by_compute_using lem
      do !esplit; try eassumption.
 
 Lemma separateGetGen_helper R {r : Reader R} (p : ADDR) (v : R) (P : SPred) (s : ProcState)
-      (HP : P |-- p :-> v ** ltrue)
+      (HP : P |-- mkCursor p :-> v ** ltrue)
       (Ps : P s)
-: exists q, readMem readNext s p = readerOk v q.
+: exists q, readMem readNext s (mkCursor p) = readerOk v q.
 Proof.
   specialize (HP _ Ps).
   do ![ progress destruct_head_hnf ex
@@ -36,18 +36,22 @@ Proof.
 Qed.
 
 Lemma separateGetGen_match R {r : Reader R} T (p : ADDR) (v : R) (P : SPred) (s : ProcState) Ok W F
-      (HP : P |-- p :-> v ** ltrue)
+      (HP : P |-- mkCursor p :-> v ** ltrue)
       (Ps : P s)
-: match readMem readNext s p return T with
+: match readMem readNext s (mkCursor p) return T with
     | readerOk v0 _ => Ok v0
     | readerWrap => W
     | readerFail => F
   end = Ok v.
 Proof. by elim (separateGetGen_helper HP Ps) => ? ->. Qed.
 
+Identity Coercion idC : ADDR >-> QWORD. 
+Identity Coercion idC' : QWORD >-> VWORD. 
+Identity Coercion idC'' : VWORD >-> BITS. 
+
 (** Get readables from memory *)
 Lemma triple_letGetSepGen R {r:Reader R} (p:ADDR) (v:R) P c O Q :
-  P |-- p:->v ** ltrue ->
+  P |-- mkCursor p :-> v ** ltrue ->
   TRIPLE P (c v) O Q ->
   TRIPLE P (bind (getFromProcState p) c) O Q.
 Proof. move => ?. triple_by_compute_using separateGetGen_match. Qed.

@@ -40,13 +40,18 @@ Arguments n24 : simpl never.
 Opaque n24.
 Definition NIBBLE := BITS n4.
 
+(* Range of word sizes that we support for registers etc. *)
 Inductive OpSize := OpSize1 | OpSize2 | OpSize4 | OpSize8. 
+ 
+Definition opSizeToNat s := 
+  match s with OpSize1 => 1 | OpSize2 => 2 | OpSize4 => 4 | OpSize8 => 8 end.
+
 Definition VWORD s := 
   BITS (match s with OpSize1 => n8 | OpSize2 => n16 | OpSize4 => n32 | OpSize8 => n64 end).
-Definition BYTE   := VWORD OpSize1.
-Definition WORD   := VWORD OpSize2.
-Definition DWORD  := VWORD OpSize4.
-Definition QWORD  := VWORD OpSize8.
+Definition BYTE   := (VWORD OpSize1).
+Definition WORD   := (VWORD OpSize2).
+Definition DWORD  := (VWORD OpSize4).
+Definition QWORD  := (VWORD OpSize8).
 (*=End *)
 
 Identity Coercion VWORDtoBITS : VWORD >-> BITS.
@@ -79,7 +84,7 @@ Arguments fromNat n m : simpl never.
 
 Definition toNat {n} (p: BITS n) := foldr (fun (b:bool) n => b + n.*2) 0 p.
 
-(*Coercion natAsQWORD := @fromNat _ : nat -> QWORD.*)
+Coercion natAsQWORD := @fromNat _ : nat -> QWORD.
 Coercion natAsDWORD := @fromNat _ : nat -> DWORD.
 Coercion natAsWORD := @fromNat _ : nat -> WORD.
 Coercion natAsBYTE := @fromNat _ : nat -> BYTE.
@@ -136,10 +141,11 @@ Definition signTruncate extra {n} (p: BITS (n.+1 + extra)) : option (BITS n.+1) 
 
 (* Zero extend by {extra} bits *)
 Definition zeroExtend extra {n} (p: BITS n) := zero extra ## p.
-
-Coercion DWORDtoQWORD := zeroExtend (n:=32) 32 : DWORD -> QWORD.
+(*
+Coercion DWORDtoQWORD := zeroExtend (n:=32) 32 : DWORD -> QWORD. 
 Coercion WORDtoDWORD := zeroExtend (n:=16) 16 : WORD -> DWORD.
 Coercion BYTEtoDWORD := zeroExtend (n:=8) 24 : BYTE -> DWORD.
+*)
 
 (* Take m least significant bits of n-bit argument and fill with zeros if m>n *)
 Fixpoint lowWithZeroExtend m {n} : BITS n -> BITS m :=

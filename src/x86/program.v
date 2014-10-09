@@ -56,21 +56,29 @@ Definition linearize p := linearizeWith p prog_skip.
 Declare Reduction showprog :=
   cbv beta delta -[fromNat fromHex makeMOV makeBOP db dw dd ds align pad] zeta iota.
 
-Fixpoint interpProgram i j prog :=
+Fixpoint interpProgram (i j:ADDRCursor) prog :=
   match prog with
   | prog_instr c => i -- j :-> c
-  | prog_skip =>
-    match i, j with
-      mkCursor i, mkCursor j => i = j /\\ empSP
-    | _, _ => i = j /\\ empSP
-    end
-  | prog_seq p1 p2 => Exists i': ADDR, interpProgram i i' p1 ** interpProgram i' j p2
-  | prog_declabel body => Exists l, interpProgram i j (body l)
-  | prog_label l =>
-    match i, j with
-      mkCursor i, mkCursor j => i = j /\\ i = l /\\ empSP
-    | _, _ => i = j /\\ i = l /\\ empSP
-    end
+  | prog_skip => 
+      match i with
+      | mkCursor i0 =>
+          match j with
+          | mkCursor j0 => i0 = j0 /\\ empSP
+          | top => i = j /\\ empSP
+          end
+      | top => i = j /\\ empSP
+      end
+  | prog_seq p1 p2 => Exists i', interpProgram i (mkCursor i') p1 ** interpProgram (mkCursor i') j p2
+  | prog_declabel body => Exists l:ADDR, interpProgram i j (body l)
+  | prog_label l => 
+      match i with
+      | mkCursor i0 =>
+          match j with
+          | mkCursor j0 => i0 = j0 /\\ i0 = l /\\ empSP
+          | top => i = j /\\ i = mkCursor l /\\ empSP
+          end
+      | top => i = j /\\ i = mkCursor l /\\ empSP
+      end
   | prog_data _ _ _ _ v => i -- j :-> v
   end.
 
@@ -103,13 +111,13 @@ Lemma programMemIsData T R W (RT:Roundtrip R W) p q (d:T) : p -- q :-> prog_data
 Proof. by simpl. Qed.
 
 Lemma programMemIsSeq p q p1 p2 :
-  p -- q :-> prog_seq p1 p2 -|- Exists p':ADDR, p -- p' :-> p1 ** p' -- q :-> p2.
+  p -- q :-> prog_seq p1 p2 -|- Exists p', p -- mkCursor p' :-> p1 ** mkCursor p' -- q :-> p2.
 Proof. by simpl. Qed.
 
 Lemma programMemIsLabel (p q: ADDRCursor) l :
-  p -- q :-> prog_label l -|- p = q /\\ p = l /\\ empSP.
+  p -- q :-> prog_label l -|- p = q /\\ p = mkCursor l /\\ empSP.
 Proof. split.
-destruct p => //. simpl. destruct q => //. sbazooka. congruence. congruence.
+destruct p => //. simpl. destruct q => //. sbazooka. by subst. by congruence.  
 by simpl. sdestructs => -> ->. simpl. sbazooka.
 Qed.
 
@@ -124,6 +132,7 @@ Proof. simpl.
 rewrite /readPad. rewrite programMemIsData.
 Qed.
 *)
+
 Module ProgramTactic.
 
   (* This is identical to prod/pair/fst/snd from the standard library, repeated
@@ -139,14 +148,20 @@ Module ProgramTactic.
     let P := eval cbv [fs sn] in P in
     match P with
     | fun (x: ?X) => @?i x -- @?j x :-> (@?p1 x ;; @?p2 x) =>
-        let P1 := aux (fun i'x: pr ADDR X => i (sn i'x) -- fs i'x :-> p1 (sn i'x)) in
-        let P2 := aux (fun i'x: pr ADDR X => fs i'x -- j (sn i'x) :-> p2 (sn i'x)) in
-        constr:(fun (x:X) => Exists i': ADDR, P1 (pa i' x) ** P2 (pa i' x))
-    | fun (x: ?X) => @mkCursor _ (@?i x) -- @mkCursor _ (@?j x) :-> (@?l x :;) =>
-        constr:(fun (x:X) => i x = j x /\\ i x = l x /\\ empSP)
+        let P1 := aux (fun i'x: pr ADDRCursor X => i (sn i'x) -- fs i'x :-> p1 (sn i'x)) in
+        let P2 := aux (fun i'x: pr ADDRCursor X => fs i'x -- j (sn i'x) :-> p2 (sn i'x)) in
+        constr:(fun (x:X) => Exists i':ADDR, P1 (pa (mkCursor i') x) ** P2 (pa (mkCursor i') x))
 
     | fun (x: ?X) => @?i x -- @?j x :-> (@?l x :;) =>
-        constr:(fun (x:X) => i x = j x /\\ i x = l x /\\ empSP)
+        constr: (fun (x:X) =>
+        match (i x) with
+        | mkCursor i0 =>
+          match (j x) with
+          | mkCursor j0 => i0 = j0 /\\ i0 = (l x) /\\ empSP
+          | top => (i x) = (j x) /\\ (i x) = mkCursor (l x) /\\ empSP
+          end
+        | top => (i x) = (j x) /\\ (i x) = mkCursor (l x) /\\ empSP
+        end)
 
     | fun (x: ?X) => @?i x -- @?j x :-> (prog_instr (@?c x)) =>
         constr:(fun (x:X) => i x -- j x :-> c x)
@@ -154,16 +169,21 @@ Module ProgramTactic.
     | fun (x: ?X) => @?i x -- @?j x :-> (@prog_data _ _ _ _ (@?c x)) =>
         constr:(fun (x:X) => i x -- j x :-> c x)
 
-    | fun (x: ?X) => @mkCursor _ (@?i x) -- @mkCursor _ (@?j x) :-> (prog_skip) =>
-        constr:(fun (x:X) => i x = j x /\\ empSP)
-
-    | fun (x: ?X) => @?i x -- @?j x :-> (prog_skip) =>
-        constr:(fun (x:X) => i x = j x /\\ empSP)
+    | fun (x: ?X) => (@?i x) -- @?j x :-> (prog_skip) => 
+      constr: (fun (x:X) => match (i x) with
+      | mkCursor i0 =>
+          match (j x) with
+          | mkCursor j0 => i0 = j0 /\\ empSP
+          | top => (i x) = (j x) /\\ empSP
+          end
+      | top => (i x) = (j x) /\\ empSP
+      end)
 
     | fun (x: ?X) => @?i x -- @?j x :-> (prog_declabel (@?body x)) =>
         let P' := aux (fun lx: pr ADDR X =>
                       i (sn lx) -- j (sn lx) :-> body (sn lx) (fs lx)) in
-        constr:(fun (x:X) => Exists l, P' (pa l x))
+        constr:(fun (x:X) => Exists l:ADDR, P' (pa l x))
+
     | _ => P
     end.
 
@@ -173,7 +193,11 @@ Module ProgramTactic.
         let e := aux (fun (_: unit) => @memIs program _ i j p) in
         let e := eval cbv [fs sn] in (e tt) in
         let g := context C [e] in
-        change g
+        let progname := fresh "prog" in
+        set progname := g;
+        change progname; unfold progname; clear progname
+    | _ => 
+        fail 1 "Failed to unfold program"
     end.
 End ProgramTactic.
 
@@ -302,9 +326,10 @@ Global Instance progEq_decLabel_m:
   Proper (liftEq progEq ==> progEq) prog_declabel.
 Proof. move => f1 f2 EQ. by apply progEqDecLabel. Qed.
 
+
 (* Main lemma: memIs respects progEq *)
-Lemma memIsProgEquiv p1 p2 : progEq p1 p2 -> forall (l l':ADDR), l -- l' :-> p1 -|- l -- l' :-> p2.
-Proof. move => EQ. induction EQ => l l'; unfold_program; unfold_program; subst.
+Lemma memIsProgEquiv p1 p2 : progEq p1 p2 -> forall l l', mkCursor l -- mkCursor l' :-> p1 -|- mkCursor l -- mkCursor l' :-> p2.
+Proof. move => EQ. induction EQ => l l'. 
 (* progEqRefl *)
 + done.
 (* progEqSym *)
@@ -312,24 +337,24 @@ Proof. move => EQ. induction EQ => l l'; unfold_program; unfold_program; subst.
 (* progEqTrans *)
 + by rewrite IHEQ1 IHEQ2.
 (* progEqDecLabel *)
-+ split; sdestruct => lab; ssplit; [rewrite -> H0; reflexivity | rewrite <-H0; reflexivity ].
++ unfold_program; unfold_program; split; sdestruct => lab; ssplit; [rewrite -> H0; reflexivity | rewrite <-H0; reflexivity ].
 (* progEqSeq *)
-+ split; sdestructs => i; [rewrite IHEQ1 IHEQ2; sbazooka | rewrite -IHEQ1 -IHEQ2; by sbazooka].
++ unfold_program; unfold_program; split; sdestructs => i; [rewrite IHEQ1 IHEQ2; sbazooka | rewrite -IHEQ1 -IHEQ2; by sbazooka].
 (* progEqSeqAssoc *)
-+ split; sbazooka; rewrite sepSPA; reflexivity. 
++ unfold_program; unfold_program; by sbazooka.
 (* progEqSeqSkip *)
-+ sbazooka; by subst. 
++ unfold_program; unfold_program; sbazooka; by subst. 
 (* progEqSkipSeq *)
-+ sbazooka; by subst. 
++ unfold_program; unfold_program; sbazooka; by subst. 
 (* progEqSeqDecLabel *)
 + do 3 rewrite /memIs/=. split; sbazooka.
 (* progEqDecLabelSeq *)
 + do 3 rewrite /memIs/=. split; sbazooka.
 (* progEqDecLabelSkip *)
-+ split. sdestructs => i ->. sbazooka.  apply lexistsR with #0. sbazooka.
++ unfold_program; unfold_program. split. sdestructs => i ->. by sbazooka. apply lexistsR with #0. by sbazooka.
 Qed.
 
 (* Now declare memIs as a morphism wrt progEq *)
 Global Instance memIs_progEq_m (p p': ADDR):
-  Proper (progEq ==> lequiv) (@memIs _ _ p p').
+  Proper (progEq ==> lequiv) (@memIs _ _ (mkCursor p) (mkCursor p')).
 Proof. move => p1 p2 EQ. by apply memIsProgEquiv. Qed.

@@ -31,28 +31,45 @@ End instrruleconfig.
 Import Prenex Implicits.
 Require Import x86proved.x86.ioaction x86proved.x86.step.
 
+Lemma getReg_rule s (r: Reg s) v c O Q :
+  forall S,
+  TRIPLE (r ~= v ** S) (c v) O Q ->
+  TRIPLE (r ~= v ** S) (bind (getRegFromProcState r) c) O Q.
+Proof. Admitted.
+(*destruct s; [apply evalReg8_rule | apply evalReg16_rule | apply evalReg32_rule | apply evalReg64_rule].
+Qed.
+Opaque evalReg.*)
+
+Lemma triple_setRegSep s (r: Reg s) v w :
+  forall S, TRIPLE (r ~= v ** S) (setRegInProcState r w) nil
+                   (r ~= w ** S).
+Proof. destruct s;
+  [apply triple_setReg8Sep | apply triple_setReg16Sep | apply triple_setReg32Sep | apply triple_setReg64Sep]. Qed.
+Global Opaque setRegInProcState.
+
+
 (* Put this somewhere else *)
 Lemma decodeAndAdvance_rule P (i j: ADDR) R sij instr O c Q :
   sij |-- i -- j :-> instr ->
-  TRIPLE (P ** EIP ~= j ** sij ** R) (c instr) O (Q ** R) ->
-  TRIPLE (P ** EIP ~= i ** sij ** R) (bind decodeAndAdvance c) O (Q ** R).
+  TRIPLE (P ** UIP ~= j ** sij ** R) (c instr) O (Q ** R) ->
+  TRIPLE (P ** UIP ~= i ** sij ** R) (bind decodeAndAdvance c) O (Q ** R).
 Proof.
 move => HR T. rewrite /decodeAndAdvance.
-triple_apply triple_letGetReg32.
+triple_apply (getReg_rule (r:=UIP)). 
 try_triple_apply triple_letReadSep. rewrite -> HR. by ssimpl.
-triple_apply triple_setReg32Sep.
+triple_apply triple_setRegSep.
 triple_apply T.
 Qed.
 
 Lemma step_rule P (i j: ADDR) R sij instr O Q :
   sij |-- i -- j :-> instr ->
-  TRIPLE (EIP ~= j ** P ** sij ** R ** ltrue) (evalInstr instr) O (Q ** R ** ltrue) ->
-  TRIPLE (EIP ~= i ** P ** sij ** R ** ltrue) step O (Q ** R ** ltrue).
+  TRIPLE (UIP ~= j ** P ** sij ** R ** ltrue) (evalInstr instr) O (Q ** R ** ltrue) ->
+  TRIPLE (UIP ~= i ** P ** sij ** R ** ltrue) step O (Q ** R ** ltrue).
 Proof.
 move => HR T. rewrite /step/decodeAndAdvance. 
-triple_apply triple_letGetReg32.
+triple_apply (getReg_rule (r:=UIP)). 
 try_triple_apply triple_letReadSep. rewrite -> HR; by ssimpl.
-triple_apply triple_setReg32Sep.
+triple_apply triple_setRegSep.
 triple_apply T.
 Qed.
 
@@ -63,9 +80,9 @@ Section UnfoldSpec.
     eq_pred sij |-- i -- j :-> instr ->
     forall O',
     (forall (R: SPred),
-     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
+     TRIPLE (UIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
             (Q ** R)) ->
-    (obs O') @ Q |-- obs (catOP (eq_opred o) O') @ (EIP ~= i ** P ** eq_pred sij).
+    (obs O') @ Q |-- obs (catOP (eq_opred o) O') @ (UIP ~= i ** P ** eq_pred sij).
   Proof.
     move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
@@ -105,9 +122,9 @@ Section UnfoldSpec.
     eq_pred sij |-- i -- j :-> instr ->
     forall O' `{IsPointed_OPred O'},
     (forall (R: SPred),
-     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
+     TRIPLE (UIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
             (Q ** R)) ->
-    |> (obs O') @ Q |-- obs (catOP (eq_opred o) O') @ (EIP ~= i ** P ** eq_pred sij).
+    |> (obs O') @ Q |-- obs (catOP (eq_opred o) O') @ (UIP ~= i ** P ** eq_pred sij).
   Proof.
     move => Hsij O' ? HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
@@ -146,8 +163,8 @@ End UnfoldSpec.
 
 Lemma TRIPLE_safecatLater instr P Q (i j: ADDR) o O' `{IsPointed_OPred O'} :
   (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
-  |-- (|> (obs O') @ Q -->> obs (catOP (eq_opred o) O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- (|> (obs O') @ Q -->> obs (catOP (eq_opred o) O') @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
   rewrite sepSPA. apply limplValid.
@@ -156,8 +173,8 @@ Qed.
 
 Lemma TRIPLE_safecat instr P Q (i j: ADDR) o O':
   (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
-  |-- ((obs O') @ Q -->> obs (catOP (eq_opred o) O') @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- ((obs O') @ Q -->> obs (catOP (eq_opred o) O') @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
   rewrite sepSPA. apply limplValid.
@@ -166,8 +183,8 @@ Qed.
 
 Lemma TRIPLE_safeLater instr P Q (i j: ADDR) O `{IsPointed_OPred O}:
   (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
-  |-- (|> obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
+  |-- (|> obs O @ Q -->> obs O @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. have TS:= TRIPLE_safecatLater (o:= nil).
   eforalls TS;
@@ -181,8 +198,8 @@ Qed.
 
 Lemma TRIPLE_safe instr P Q (i j: ADDR) O :
   (forall (R: SPred),
-   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
-  |-- (obs O @ Q -->> obs O @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
+  |-- (obs O @ Q -->> obs O @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
   move=> H. have TS:= TRIPLE_safecat (o:= nil).
   eforalls TS. rewrite -> empOPL in TS. apply TS. done.
@@ -201,88 +218,110 @@ Qed.
     presentations of rules
   ---------------------------------------------------------------------------*)
 
-Definition interpMemSpecSrc ms (f: SPred -> ADDR -> spec) :=
+Definition interpUIP a : Reg (adSizeToOpSize a) := match a with AdSize4 => EIP | AdSize8 => RIP end.
+
+Definition interpMemSpecSrc s a (ms: MemSpec a) (f: SPred -> VWORD s -> spec) : spec :=
     let: mkMemSpec optSIB offset := ms in
-    if optSIB is Some (r, optix)
-    then
+    match optSIB with
+    | Some (mkSIB r optix) =>
       if optix is Some(rix,sc)
       then
-        Forall (pbase ixval addr:DWORD),
-        (f (r ~= pbase ** rix ~= ixval
-                       ** addB (addB pbase offset) (scaleBy sc ixval) :-> addr)
+        Forall pbase ixval (addr:VWORD s),
+        (f ((r:GPReg _) ~= pbase ** (rix:NonSPReg _) ~= ixval
+                       ** computeIxAddr pbase offset (scaleBy sc ixval) :-> addr)
           addr)
       else
-        Forall (pbase addr:DWORD),
-        f (r ~= pbase ** (addB pbase offset) :-> addr)
-          addr
-   else Forall addr, f (offset :-> addr) addr.
+        Forall (pbase:ADR a) (v:VWORD s),
+        f ((r:GPReg _) ~= pbase ** computeAddr pbase offset :-> v) v
+   | Some RIPrel =>
+     Forall (pbase:ADR a) (v:VWORD s),
+        f (interpUIP a ~= pbase ** computeAddr pbase offset :-> v) v
+   | None => 
+     Forall addr:VWORD s, f (ADRtoADDR (computeDisplacement a offset) :-> addr) addr
+   end.
 
-Definition interpJmpTgt (tgt: JmpTgt) (nextInstr: ADDR) (f: SPred -> ADDR -> spec) :=
-  match tgt with
-  | JmpTgtI t =>
-    let: mkTgt offset := t in
-    f empSP (addB nextInstr offset)
 
-  | JmpTgtR r =>
-    Forall addr:DWORD,
-    f (r ~= addr) addr
-
-  | JmpTgtM ms =>
-    interpMemSpecSrc ms f
-  end.
-
-Definition specAtMemSpecDst s ms (f: (VWORD s -> SPred) -> spec) :=
-    let: mkMemSpec optSIB offset := ms in
-    if optSIB is Some(r,ixspec)
-    then
+(*@TODO: work out what coercions we need to avoid all these explicit types *)
+Definition specAtMemSpecDst s a (ms:MemSpec a) (f: (VWORD s -> SPred) -> spec) :=
+    let: mkMemSpec optSIB offset := ms  in
+    match optSIB with
+    | Some (mkSIB r ixspec) =>
       if ixspec is Some(rix,sc)
       then
         Forall pbase ixval,
-        f (fun v => addB (addB pbase offset) (scaleBy sc ixval) :-> v)
-          @ (r ~= pbase ** rix ~= ixval)
+        f (fun v => (computeIxAddr pbase offset (scaleBy sc ixval) :-> v))
+          @ ((r:GPReg _) ~= pbase ** (rix:NonSPReg _) ~= ixval)
 
       else
         Forall pbase,
-        f (fun v => addB pbase offset :-> v)
-          @ (r ~= pbase)
-    else f (fun v => offset :-> v) @ empSP.
+        f (fun v => (computeAddr pbase offset) :-> v)
+          @ ((r:GPReg _) ~= pbase)
+ 
+    | Some RIPrel =>
+      Forall pbase,
+        f (fun v => (computeAddr pbase offset) :-> v)
+          @ (interpUIP a ~= pbase)
+      
+    | None =>
+      f (fun v => (ADRtoADDR (computeDisplacement a offset)) :-> v) @ empSP
+    end.
 
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 
-Definition specAtMemSpec s ms (f: VWORD s -> spec) :=
+Definition specAtMemSpec s a (ms:MemSpec a) (f: VWORD s -> spec) :=
     let: mkMemSpec optSIB offset := ms in
-    if optSIB is Some(r, ixspec)
-    then
+    match optSIB with
+    | Some(mkSIB r ixspec) =>
       if ixspec is Some(rix,sc)
       then
         Forall v pbase ixval,
-        f v @ (r ~= pbase ** rix ~= ixval
-               ** addB (addB pbase offset) (scaleBy sc ixval) :-> v)
+        f v @ ((r:GPReg _) ~= pbase ** (rix:NonSPReg _) ~= ixval
+               ** computeIxAddr pbase offset (scaleBy sc ixval) :-> v)
       else
         Forall v pbase,
-        f v @ (r ~= pbase ** addB pbase offset :-> v)
-    else Forall v, f v @ (offset :-> v).
+        f v @ ((r:GPReg _) ~= pbase ** computeAddr pbase offset :-> v)
+    | Some RIPrel =>
+        Forall v pbase,
+        f v @ (interpUIP a ~= pbase ** computeAddr pbase offset :-> v)
+
+    | None => 
+      Forall v, f v @ (ADRtoADDR (computeDisplacement a offset) :-> v)
+    end.
 
 Definition specAtRegMemDst s (src: RegMem s) (f: (VWORD s -> SPred) -> spec) :spec  :=
   match src with
   | RegMemR r =>
     f (fun v => r ~= v)
 
-  | RegMemM ms =>
+  | RegMemM a ms =>
     specAtMemSpecDst ms f
   end.
 
-Definition specAtSrc src (f: DWORD -> spec) : spec :=
+Definition interpJmpTgt (tgt: JmpTgt) (nextInstr: ADDR) (f: SPred -> ADDR -> spec) :=
+  match tgt with
+  | JmpTgtI t =>
+    let: mkTgt d := t in
+    f empSP (addB nextInstr (signExtend _ d))
+
+  | JmpTgtRegMem (RegMemR r) =>
+    Forall addr:ADDR,
+    f (r ~= addr) addr
+
+  | JmpTgtRegMem (RegMemM a ms) =>
+    interpMemSpecSrc (s:=OpSize8) ms f
+  end.
+
+Definition specAtSrc src (f: QWORD -> spec) : spec :=
   match src with
   | SrcI v =>
-    f v
+    f (signExtend _ v)
 
   | SrcR r =>
     Forall v,
-    (f v @ (r ~= v))
+    f v @ (r ~= v)
 
-  | SrcM ms =>
-    @specAtMemSpec _ ms f
+  | SrcM a ms =>
+    specAtMemSpec ms f
   end.
 
 Definition specAtDstSrc s (ds: DstSrc s) (f: (VWORD s -> SPred) -> VWORD s -> spec) : spec :=
@@ -292,16 +331,16 @@ Definition specAtDstSrc s (ds: DstSrc s) (f: (VWORD s -> SPred) -> VWORD s -> sp
     f (fun w => dst ~= w) v @ (src ~= v)
 
   | DstSrcRI dst src =>
-    f (fun w => dst ~= w) src
+    f (fun w => dst ~= w) (getImm src)
 
-  | DstSrcMI dst src =>
-    specAtMemSpecDst dst (fun V => f V src)
+  | DstSrcMI a dst src =>
+    specAtMemSpecDst dst (fun V => f V (getImm src))
 
-  | DstSrcMR dst src =>
+  | DstSrcMR a dst src =>
     Forall v,
     specAtMemSpecDst dst (fun V => f V v) @ (src ~= v)
 
-  | DstSrcRM dst src =>
+  | DstSrcRM a dst src =>
     specAtMemSpec src (fun v => f (fun w => dst ~= w) v)
   end.
 
@@ -310,6 +349,7 @@ Local Ltac specAt_morphism_step :=
   do [ progress move => *
      | hyp_setoid_rewrite -> *; reflexivity
      | progress destruct_head DstSrc
+     | progress destruct_head SIB
      | progress destruct_head MemSpec
      | progress destruct_head option
      | progress destruct_head prod
@@ -320,22 +360,22 @@ Local Ltac specAt_morphism_step :=
 Local Ltac specAt_morphism_t :=
   rewrite /pointwise_relation => *; do !specAt_morphism_step.
 
-Add Parametric Morphism s ms : (@specAtMemSpecDst s ms)
+Add Parametric Morphism a s ms : (@specAtMemSpecDst a s ms)
 with signature pointwise_relation _ lentails ++> lentails
   as specAtMemSpecDst_entails_m.
 Proof. rewrite /specAtMemSpecDst. specAt_morphism_t. Qed.
 
-Add Parametric Morphism s ms : (@specAtMemSpecDst s ms)
+Add Parametric Morphism a s ms : (@specAtMemSpecDst a s ms)
 with signature pointwise_relation _ (Basics.flip lentails) ++> Basics.flip lentails
   as specAtMemSpecDst_flip_entails_m.
 Proof. rewrite /specAtMemSpecDst. specAt_morphism_t. Qed.
 
-Add Parametric Morphism s ms : (@specAtMemSpec s ms)
+Add Parametric Morphism a s ms : (@specAtMemSpec a s ms)
 with signature pointwise_relation _ lentails ++> lentails
   as specAtMemSpec_entails_m.
 Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
 
-Add Parametric Morphism s ms : (@specAtMemSpec s ms)
+Add Parametric Morphism a s ms : (@specAtMemSpec a s ms)
 with signature pointwise_relation _ (Basics.flip lentails) ++> Basics.flip lentails
   as specAtMemSpec_flip_entails_m.
 Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
@@ -343,10 +383,7 @@ Proof. rewrite /specAtMemSpec. specAt_morphism_t. Qed.
 Add Parametric Morphism s ms : (@specAtDstSrc s ms)
 with signature pointwise_relation _ (pointwise_relation _ lentails) ++> lentails
   as specAtDstSrc_entails_m.
-Proof. rewrite /specAtDstSrc. 
-(* Coq Bug if we just do specAt_morphism_t *) 
-destruct ms; specAt_morphism_t.
-Qed.
+Proof. rewrite /specAtDstSrc. specAt_morphism_t. Qed.
 
 Add Parametric Morphism s ms : (@specAtDstSrc s ms)
 with signature pointwise_relation _ (pointwise_relation _ (Basics.flip lentails)) ++> Basics.flip lentails
@@ -376,45 +413,18 @@ Hint Unfold
   (** Perhaps we should have [evalMov_rule] and [evalUnaryOp_rule]? *)
   evalMOV evalUnaryOp evalBinOp
   (** Maybe we should write [_rule]s for [evalShiftOp] and [evalCondition]. *)
-  evalShiftOp
+  evalShiftOp evalPop
   makeBOP 
   OSZCP
   natAsDWORD
   (** Maybe we should find a better way to deal with [evalShiftCount], [evalRegImm], and [SrcToRegImm] *)
-  evalShiftCount evalRegImm SrcToRegImm
+  evalShiftCount evalRegImm (*SrcToRegImm*)
   (** Maybe we should find a better way to deal with [evalJmpTgt] and [evalRegMem] *)
-  evalJmpTgt evalRegMem 
+  evalJmpTgt evalRegMem getImm
+  computeDisplacement adSizeToOpSize computeAddr computeIxAddr getUIP
 : instrrules_eval.
 
-(** Originally, we had the following in a section:
-<<
-Hint Unfold
-  specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
-  BYTERegMemR DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  DWORDorBYTEregIs natAsDWORD BYTEtoDWORD
-  makeMOV makeBOP 
-  : basicapply.
-Hint Rewrite
-  addB0 low_catB : basicapply.
-
-Hint Unfold interpJmpTgt : specapply.
->> *)
-
 (** Anything with a rule gets opacified *)
-Lemma evalReg32_rule (r: Reg OpSize4) v c O Q :
-  forall S,
-  TRIPLE (r~=v ** S) (c v) O Q ->
-  TRIPLE (r~=v ** S) (bind (evalReg32 r) c) O Q.
-Proof. by apply triple_letGetReg32Sep. Qed.
-Global Opaque evalReg32.
-
-Lemma evalReg64_rule (r: Reg OpSize8) v c O Q :
-  forall S,
-  TRIPLE (r~=v ** S) (c v) O Q ->
-  TRIPLE (r~=v ** S) (bind (evalReg64 r) c) O Q.
-Proof. by apply triple_letGetReg64Sep. Qed.
-Global Opaque evalReg64.
-
 Lemma evalRegPiece_rule (rp: RegPiece) (v:BYTE) c O Q :
   forall S,
   TRIPLE (regPieceIs rp v ** S) (c v) O Q ->
@@ -425,91 +435,64 @@ triple_apply triple_letGetRegPieceSep.
 triple_apply T.
 Qed.
 
-Lemma evalReg8_rule (r: Reg OpSize1) (v:BYTE) c O Q :
+Lemma evalMemSpecDisp_rule a (offset:DWORD) c O Q :
   forall S,
-  TRIPLE (r ~= v ** S) (c v) O Q ->
-  TRIPLE (r ~= v ** S) (bind (evalReg8 r) c) O Q.
-Proof. destruct r; apply evalRegPiece_rule. Qed.
-Global Opaque evalReg8.
+  TRIPLE S (c (ADRtoADDR (computeDisplacement a offset))) O Q ->
+  TRIPLE S (bind (evalMemSpec (mkMemSpec a None offset)) c) O Q.
+Proof. move => S T. rewrite /evalMemSpec. destruct a; triple_apply T. Qed.
 
-Lemma evalReg16_rule (r: Reg OpSize2) (v:WORD) c O Q :
+Lemma evalMemSpecBase_rule a (r:BaseReg a) p (offset:DWORD) c O Q :
   forall S,
-  TRIPLE (r ~= v ** S) (c v) O Q ->
-  TRIPLE (r ~= v ** S) (bind (evalReg16 r) c) O Q.
-Proof.
-move => S T. rewrite /stateIs/reg16Is/evalReg16. destruct r as [r]. admit. 
-(*
-(* @TODO: this should be in bitsprops *)
-apply allBitsEq => i LT.
-setoid_rewrite -> getBit_catB. rewrite /slice/split3/split2.
-rewrite !getBit_high !getBit_low.
-case E: (i < 8). by rewrite addn0 E.
-rewrite subnK. by rewrite LT.
-rewrite ltnNge. by rewrite -ltnS E.*)
-Qed.
-Global Opaque evalReg16.
-
-Lemma evalReg_rule s (r: Reg s) v c O Q :
-  forall S,
-  TRIPLE (r ~= v ** S) (c v) O Q ->
-  TRIPLE (r ~= v ** S) (bind (evalReg r) c) O Q.
-Proof.
-destruct s; [apply evalReg8_rule | apply evalReg16_rule | apply evalReg32_rule | apply evalReg64_rule].
-Qed.
-Opaque evalReg.
-
-Lemma triple_setRegSep s (r: Reg s) v w :
-  forall S, TRIPLE (r ~= v ** S) (setVRegInProcState r w) nil
-                   (r ~= w ** S).
-Proof. destruct s;
-  [apply triple_setReg8Sep | apply triple_setReg16Sep | apply triple_setReg32Sep | apply triple_setReg64Sep]. Qed.
-Global Opaque setVRegInProcState.
-
-Lemma evalMemSpecNone_rule offset c O Q :
-  forall S,
-  TRIPLE S (c offset) O Q ->
-  TRIPLE S (bind (evalMemSpec (mkMemSpec None offset)) c) O Q.
-Proof. move => S T. rewrite /evalMemSpec. triple_apply T. Qed.
-
-Lemma evalMemSpecSomeNone_rule (r:GPReg OpSize4) p offset c O Q :
-  forall S,
-  TRIPLE (r ~= p ** S) (c (addB p offset)) O Q ->
-  TRIPLE (r ~= p ** S) (bind (evalMemSpec (mkMemSpec (Some (r, None)) offset)) c) O Q.
+  TRIPLE ((r:GPReg _) ~= p ** S) (c (computeAddr p offset)) O Q ->
+  TRIPLE ((r:GPReg _) ~= p ** S) (bind (evalMemSpec (mkMemSpec a (Some (mkSIB a r None)) offset)) c) O Q.
 Proof. move => S T. rewrite /evalMemSpec.
-triple_apply triple_letGetReg32Sep.
-triple_apply T.
+destruct a. 
+- triple_apply getReg_rule.
+  triple_apply T.
+- triple_apply getReg_rule.
+  triple_apply T.
 Qed.
 
-Lemma evalMemSpec_rule (r:GPReg OpSize4) (ix:NonSPReg OpSize4) sc (p indexval offset:DWORD) c O Q :
+Lemma evalMemSpecRIPrel_rule a p (offset:DWORD) c O Q :
   forall S,
-  TRIPLE (r ~= p ** ix ~= indexval ** S) (c (addB (addB p offset) (scaleBy sc indexval))) O Q ->
-  TRIPLE (r ~= p ** ix ~= indexval ** S) (bind (evalMemSpec (mkMemSpec (Some(r, Some (ix,sc))) offset)) c) O Q.
+  TRIPLE (interpUIP a ~= p ** S) (c (computeAddr p offset)) O Q ->
+  TRIPLE (interpUIP a ~= p ** S) (bind (evalMemSpec (mkMemSpec a (Some (RIPrel _)) offset)) c) O Q.
 Proof. move => S T. rewrite /evalMemSpec.
-triple_apply triple_letGetReg32Sep.
-triple_apply triple_letGetReg32Sep. 
-triple_apply T. 
+destruct a. 
+- triple_apply getReg_rule.
+  triple_apply T.
+- triple_apply getReg_rule.
+  triple_apply T.
+Qed.
+
+Lemma evalMemSpecSIB_rule a (r:BaseReg a) (ix:IxReg a) sc (p indexval:ADR a) (offset:DWORD) c O Q :
+  forall S,
+  TRIPLE ((r:GPReg _) ~= p ** (ix:NonSPReg _) ~= indexval ** S) (c (computeIxAddr p offset (scaleBy sc indexval))) O Q ->
+  TRIPLE ((r:GPReg _) ~= p ** (ix:NonSPReg _) ~= indexval ** S) (bind (evalMemSpec (mkMemSpec a (Some (mkSIB _ r (Some (ix,sc)))) offset)) c) O Q.
+Proof. move => S T. rewrite /evalMemSpec.
+destruct a. 
+- triple_apply getReg_rule.
+  triple_apply getReg_rule. 
+  triple_apply T. 
+- triple_apply getReg_rule.
+  triple_apply getReg_rule. 
+  triple_apply T. 
 Qed.
 Global Opaque evalMemSpec.
 
-Lemma evalPush_rule (sp:DWORD) (v w:DWORD) (S:SPred) :
-  TRIPLE (ESP~=sp ** (sp -# 4) :-> v ** S)
+Hint Unfold opSizeToNat computeDisplacement computeAddr computeIxAddr interpUIP : ssimpl. 
+
+Lemma evalPush_rule (sp:QWORD) (v w:QWORD) (S:SPred) :
+  TRIPLE (USP~=sp ** (sp -# 8) :-> v ** S)
          (evalPush w) nil
-         (ESP~=sp -# 4 ** (sp -# 4) :-> w ** S).
+         (USP~=sp -# 8 ** (sp -# 8) :-> w ** S).
 Proof.
 rewrite/evalPush.
-triple_apply triple_letGetReg32Sep.
-triple_apply triple_setReg32Sep.
-try_triple_apply triple_setDWORDSep. simpl. rewrite sepSPC sepSPA. reflexivity.
-rewrite -sepSPA.  rewrite sepSPC. reflexivity.  
+triple_apply (getReg_rule (s:=OpSize8)).
+triple_apply triple_setRegSep.
+triple_apply triple_setSep.
 Qed.
 Global Opaque evalPush.
-
-Lemma getReg_rule (r:Reg OpSize4) v c O Q :
-  forall S,
-  TRIPLE (r~=v ** S) (c v) O Q ->
-  TRIPLE (r~=v ** S) (bind (getReg32FromProcState r) c) O Q.
-Proof. by apply triple_letGetReg32Sep. Qed.
-Global Opaque getReg32FromProcState.
 
 Lemma triple_pre_introFlags P comp O Q :
   (forall o s z c p, TRIPLE (OSZCP o s z c p ** P) comp O Q) ->
@@ -531,13 +514,6 @@ Lemma triple_updateZPS P n (v: BITS n) z p s:
 Proof. rewrite /updateZPS. move => H. do 3 triple_apply triple_setFlagSep.
 Qed.
 Global Opaque updateZPS.
-
-Lemma triple_letVWORDSep s (p:ADDR) (v:VWORD s) c O Q :
-  forall S,
-  TRIPLE (p:->v ** S) (c v) O Q ->
-  TRIPLE (p:->v ** S) (bind (getVWORDFromProcState p) c) O Q.
-Proof. destruct s; apply triple_letGetSep. Qed.
-Global Opaque getVWORDFromProcState.
 
 Lemma basicForgetFlags T (MI: MemIs T) P (x:T) O Q o s z c p
       (H : |-- basic (P ** OSZCP?) x O (Q ** OSZCP o s z c p))
@@ -649,48 +625,47 @@ Proof. rewrite /evalLogicalOp. triple_op_bazooka. Qed.
 Global Opaque evalLogicalOp.
 
 Lemma evalPortI_rule (p: BYTE) c O Q S :
-  TRIPLE S (c (zeroExtend 8 p)) O Q ->
+  TRIPLE S (c (zeroExtend _ p)) O Q ->
   TRIPLE S (bind (evalPort p) c) O Q.
 Proof. move => T. rewrite /evalPort. triple_apply T. Qed.
 
 (** TODO(t-jagro): Find a better place for this opacity control *)
-Global Opaque setReg32InProcState getDWORDFromProcState updateFlagInProcState forgetFlagInProcState.
+Global Opaque getFromProcState updateFlagInProcState forgetFlagInProcState.
 
 Ltac instrrule_triple_bazooka_step tac :=
   idtac;
   let tapply H := triple_apply H using tac in
   lazymatch goal with
-    | [ |- TRIPLE _ (bind (@evalReg ?s ?r) _) _ _ ]                                              => tapply (@evalReg_rule s)
-    | [ |- TRIPLE _ (bind (evalReg64 ?r) _) _ _ ]                                                   => tapply evalReg64_rule
-    | [ |- TRIPLE _ (bind (evalReg32 ?r) _) _ _ ]                                                   => tapply evalReg32_rule
-    | [ |- TRIPLE _ (bind (evalReg16 ?r) _) _ _ ]                                               => tapply evalReg16_rule
-    | [ |- TRIPLE _ (bind (evalReg8 ?r) _) _ _ ]                                               => tapply evalReg8_rule
+  (* Get from registers and flags *)
+    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]  => do [ tapply triple_letGetFlagSep | tapply triple_letGetFlag ]
+    | [ |- TRIPLE _ (bind (@getRegFromProcState ?s ?r) _) _ _ ]    => tapply (@getReg_rule s r)
 
-    | [ |- TRIPLE _ (bind (evalPort (PortI ?r)) _) _ _ ]                                          => tapply evalPortI_rule
-    | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec None ?offset)) _) _ _ ]                         => tapply evalMemSpecNone_rule
-    | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec (Some (?r, None)) ?offset)) _) _ _ ]            => tapply evalMemSpecSomeNone_rule
-    | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec (Some (?r, Some (?ix, ?sc))) ?offset)) _) _ _ ] => tapply evalMemSpec_rule
-    | [ |- TRIPLE _ (bind (evalArithUnaryOpNoCarry ?f ?arg) _) _ _ ]                              => tapply evalArithUnaryOpNoCarry_rule
-    | [ |- TRIPLE _ (bind (evalArithUnaryOp ?f ?arg) _) _ _ ]                                     => tapply evalArithUnaryOp_rule
-    | [ |- TRIPLE _ (bind (evalArithOpNoCarry ?f ?arg1 ?arg2) _) _ _ ]                            => tapply evalArithOpNoCarry_rule
-    | [ |- TRIPLE _ (bind (evalArithOp ?f ?arg1 ?arg2) _) _ _ ]                                   => tapply evalArithOp_rule
-    | [ |- TRIPLE _ (bind (evalLogicalOp ?f ?arg1 ?arg2) _) _ _ ]                                 => tapply evalLogicalOp_rule
-    | [ |- TRIPLE _ (bind (evalCondition ?cc) _) _ _ ]                                            => tapply triple_letGetCondition
-    | [ |- TRIPLE _ (updateFlagInProcState ?f ?w) _ _ ]                                           => tapply triple_setFlagSep
-    | [ |- TRIPLE _ (updateZPS ?v) _ _ ]                                                          => tapply triple_updateZPS
-    | [ |- TRIPLE _ (forgetFlagInProcState ?f) _ _ ]                                              => do [ tapply triple_forgetFlagSep | tapply triple_forgetFlagSep' ]
-    | [ |- TRIPLE _ (setReg64InProcState ?d ?p) _ _ ]                                               => tapply triple_setReg64Sep
-    | [ |- TRIPLE _ (setReg32InProcState ?d ?p) _ _ ]                                               => tapply triple_setReg32Sep
-    | [ |- TRIPLE _ (setReg8InProcState ?d ?p) _ _ ]                                           => tapply triple_setReg8Sep
-    | [ |- TRIPLE _ (setVRegInProcState ?d ?p) _ _ ]                                              => tapply triple_setRegSep
-    | [ |- TRIPLE _ (setVWORDInProcState ?p ?w) _ _ ]                                             => tapply triple_setVWORDSep
-    | [ |- TRIPLE _ (setDWORDInProcState ?p ?w) _ _ ]                                             => tapply triple_setDWORDSep
-    | [ |- TRIPLE _ (retn tt) _ _ ]                                                               => tapply triple_skip
-    | [ |- TRIPLE _ (bind (getFlagFromProcState ?f) _) _ _ ]                                      => do [ tapply triple_letGetFlagSep | tapply triple_letGetFlag ]
-    | [ |- TRIPLE _ (bind (getReg32FromProcState ?r) _) _ _ ]                                       => tapply triple_letGetReg32Sep
-    | [ |- TRIPLE _ (bind (@getVWORDFromProcState ?s ?p) _) _ _ ]                                 => tapply (@triple_letGetVWORDSep s)
-    | [ |- TRIPLE _ (bind (getDWORDFromProcState ?p) _) _ _ ]                                     => tapply triple_letGetDWORDSep
-    | [ |- TRIPLE _ (evalPush ?p) _ _ ]                                                           => tapply evalPush_rule
+  (* Various derived notions *)
+    | [ |- TRIPLE _ (bind (evalPort (PortI ?r)) _) _ _ ]                   => tapply evalPortI_rule
+    | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec _ None ?offset)) _) _ _ ]  => tapply evalMemSpecDisp_rule
+    | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec _ (Some (@mkSIB _ ?r None)) ?offset)) _) _ _ ] => tapply evalMemSpecBase_rule
+    | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec _ (Some (@RIPrel _)) ?offset)) _) _ _ ] => tapply evalMemSpecRIPrel_rule
+    | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec _ (Some (@mkSIB _ ?r (Some (?ix, ?sc)))) ?offset)) _) _ _ ] => tapply evalMemSpecSIB_rule
+    | [ |- TRIPLE _ (bind (evalArithUnaryOpNoCarry ?f ?arg) _) _ _ ]       => tapply evalArithUnaryOpNoCarry_rule
+    | [ |- TRIPLE _ (bind (evalArithUnaryOp ?f ?arg) _) _ _ ]              => tapply evalArithUnaryOp_rule
+    | [ |- TRIPLE _ (bind (evalArithOpNoCarry ?f ?arg1 ?arg2) _) _ _ ]     => tapply evalArithOpNoCarry_rule
+    | [ |- TRIPLE _ (bind (evalArithOp ?f ?arg1 ?arg2) _) _ _ ]            => tapply evalArithOp_rule
+    | [ |- TRIPLE _ (bind (evalLogicalOp ?f ?arg1 ?arg2) _) _ _ ]          => tapply evalLogicalOp_rule
+    | [ |- TRIPLE _ (bind (evalCondition ?cc) _) _ _ ]                     => tapply triple_letGetCondition
+    | [ |- TRIPLE _ (updateFlagInProcState ?f ?w) _ _ ]                    => tapply triple_setFlagSep
+    | [ |- TRIPLE _ (updateZPS ?v) _ _ ]                                   => tapply triple_updateZPS
+    | [ |- TRIPLE _ (forgetFlagInProcState ?f) _ _ ]                       => do [ tapply triple_forgetFlagSep | tapply triple_forgetFlagSep' ]
+
+   (* Set registers *)
+    | [ |- TRIPLE _ (setRegInProcState ?d ?p) _ _ ]                       => tapply triple_setRegSep
+
+   (* Set memory *)
+    | [ |- TRIPLE _ (@setInProcState ?W (@writer.writeVWORD ?s) ?p ?w) _ _ ]       => tapply (@triple_setVWORDSep s)
+    | [ |- TRIPLE _ (@setInProcState ?W ?writer ?p ?w) _ _ ]               => tapply (@triple_setSep W _ writer)
+
+    | [ |- TRIPLE _ (retn tt) _ _ ]                                        => tapply triple_skip
+    | [ |- TRIPLE _ (bind (@getFromProcState ?R ?reader ?p) _) _ _ ]       => tapply (@triple_letGetSep R reader)
+    | [ |- TRIPLE _ (evalPush ?p) _ _ ]                                  => tapply evalPush_rule
     (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
     | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ] => eapply triple_seq
     | _ => do [ apply TRIPLE_basic => *
@@ -713,6 +688,8 @@ Ltac do_instrrule_using tac :=
         | [ ds : DstSrc _ |- _ ] => elim ds => ? ?
         | [ src : Src |- _ ] => elim src => ?
         | [ rm : RegMem _ |- _ ] => elim rm => ?
+        | [ a : AdSize |- _ ] => elim a
+        | [ s : SIB _ |- _ ] => elim s
       end;
   do ?[ elim_atomic_in_match' | case/(@id (option _)) | case/(@id (_ * _))
         | (* ensure that the goal is of the form [_ -> _] *) (test progress intros); move => ? ];
@@ -725,6 +702,6 @@ Ltac do_instrrule_triple := do_instrrule instrrule_triple_bazooka.
 Hint Unfold
   specAtDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst
   DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
-  natAsDWORD BYTEtoDWORD
+  natAsDWORD getImm
   makeMOV makeBOP 
   : instrrules_all.

@@ -27,8 +27,9 @@ Definition reg64Is (r:Reg64) (v:QWORD) : SPred :=
   let pi i := regPieceIs (mkRegPiece r i) (getRegPiece v i) in
    pi 0 ** pi 1 ** pi 2 ** pi 3 ** pi 4 ** pi 5 ** pi 6 ** pi 7.
 
+(* @TODO: get rid of this silly zero extension *)
 Definition reg32Is (r:Reg32) (v:DWORD) : SPred :=
-  let pi i := regPieceIs (mkRegPiece (Reg32_base r) i) (getRegPiece v i) in
+  let pi i := regPieceIs (mkRegPiece (Reg32_base r) i) (getRegPiece (zeroExtend 32 v) i) in
    pi 0 ** pi 1 ** pi 2 ** pi 3.
 
 Definition reg16Is (r:Reg16) (v:WORD) : SPred :=

@@ -158,8 +158,15 @@ Ltac eforalls_no_subst_evars H :=
 Ltac solve_code :=
   match goal with
     |- ?P |-- ?Q /\ _ =>
-      match P with context [@RegOrFlagR OpSize4 (Reg32_to_Reg EIP) ~= ?eip] =>
+      match P with 
+      | context [@RegOrFlagR OpSize4 (Reg32_to_Reg EIP) ~= ?eip] =>
         match Q with context [@RegOrFlagR OpSize4 (Reg32_to_Reg EIP) ~= ?evar] => unify eip evar
+        end
+      | context [@RegOrFlagR OpSize8 (Reg64_to_Reg RIP) ~= ?eip] =>
+        match Q with context [@RegOrFlagR OpSize8 (Reg64_to_Reg RIP) ~= ?evar] => unify eip evar
+        end
+      | context [@RegOrFlagR OpSize8 (Reg64_to_Reg UIP) ~= ?eip] =>
+        match Q with context [@RegOrFlagR OpSize8 (Reg64_to_Reg UIP) ~= ?evar] => unify eip evar
         end
       end
   end;

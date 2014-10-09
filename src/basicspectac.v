@@ -6,7 +6,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.spectac.
 Require Import x86proved.x86.reg x86proved.x86.flags (* for EIP *) x86proved.x86.instrrules.core (* for [VRegIs] *) x86proved.x86.program.
 Require Import x86proved.safe x86proved.opred x86proved.obs.
-Require Import x86proved.x86.instr (* for [Instr] *) x86proved.x86.basicprog (* for [get_instrrule_of] *) x86proved.x86.instrsyntax (* for [makeBOP] *).
+Require Import x86proved.x86.instr (* for [Instr] *) x86proved.x86.basic x86proved.x86.basicprog (* for [get_instrrule_of] *) x86proved.x86.instrsyntax (* for [makeBOP] *).
 Require Import x86proved.common_tactics.
 
 Set Implicit Arguments.
@@ -86,26 +86,26 @@ Ltac get_code_at_from eip G :=
 
 (** Get the code located at [EIP] *)
 Ltac get_eip_code G :=
-  let eip := get_post_reg_from (EIP:Reg OpSize4) G in
-  get_code_at_from (eip : DWORD) G.
+  let eip := get_post_reg_from (UIP:Reg _) G in
+  get_code_at_from (eip : ADDR) G.
 
 Ltac check_eips_match A B :=
-  let pre_eip_A := get_pre_reg_from (EIP:Reg OpSize4) A in
-  let post_eip_A := get_post_reg_from (EIP:Reg OpSize4) A in
-  let pre_eip_B := get_pre_reg_from (EIP:Reg OpSize4) B in
-  let post_eip_B := get_post_reg_from (EIP:Reg OpSize4) B in
+  let pre_eip_A := get_pre_reg_from (UIP:Reg _) A in
+  let post_eip_A := get_post_reg_from (UIP:Reg _) A in
+  let pre_eip_B := get_pre_reg_from (UIP:Reg _) B in
+  let post_eip_B := get_post_reg_from (UIP:Reg _) B in
   constr_eq pre_eip_A pre_eip_B;
     constr_eq post_eip_A post_eip_B.
 
 Ltac check_goal_eips_match :=
-  let pre_eip := get_pre_reg (EIP:Reg OpSize4) in
-  let post_eip := get_post_reg (EIP:Reg OpSize4) in
+  let pre_eip := get_pre_reg (UIP:Reg _) in
+  let post_eip := get_post_reg (UIP:Reg _) in
   constr_eq pre_eip post_eip.
 
 
 Ltac split_eip_match :=
   let G := match goal with |- ?G => constr:(G) end in
-  let eip := get_post_reg_from (EIP:Reg OpSize4) G in
+  let eip := get_post_reg_from (UIP:Reg _) G in
   let discriminee := match eip with
                        | context[match ?E with _ => _ end] => constr:(E)
                        | _ => fail 1 "No 'if ... then ... else' nor 'match ... with ... end' found in EIP =" eip

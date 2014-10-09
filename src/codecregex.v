@@ -129,7 +129,18 @@ move => [w I1]. exists (c w). rewrite interpCast. by exists w.
 Qed.
 
 (* Syntactic notion of non-ambiguous *)
-Fixpoint NonAmbiguous t (c: Codec t) :=
+Fixpoint NonAmbiguousRegex T (r: Regex T) :=
+match r with
+| RAlt c d =>
+  (NonOverlapping c d &&
+   NonOverlapping d c) &&
+  (NonAmbiguousRegex c && NonAmbiguousRegex d)
+| RSeq c d => NonAmbiguousRegex c && NonAmbiguousRegex d
+| RStar c => false
+| _ => true
+end.
+
+Fixpoint NonAmbiguous t (c: Codec t) := (*NonAmbiguousRegex (codecToRegex c).*)
 match c with
 | Alt _ c d =>
   (NonOverlapping (codecToRegex c) (codecToRegex d) &&
@@ -142,8 +153,9 @@ match c with
 end.
 
 Lemma NonAmbiguousFinite t (c: Codec t) : NonAmbiguous c -> finiteCodec c.
-Proof. induction c => //=.
-move/andP => [N1 N2]. rewrite finiteCodecSeq. split; [by apply IHc1 | by apply IHc2].
+Proof. 
+induction c => //=.
+rewrite /NonAmbiguous/NonAmbiguousRegex-/NonAmbiguousRegex/codecToRegex. move/andP => [N1 N2]. rewrite finiteCodecSeq. split; [by apply IHc1 | by apply IHc2].
 move/andP => [/andP[N1a N1b] /andP[N2a N2b]].
 rewrite finiteCodecAlt. split; [by apply IHc1 | by apply IHc2].
 Qed.
@@ -268,7 +280,7 @@ Lemma CodecComplete : forall t (c: Codec t),
   NonAmbiguous c ->
   forall l x, interp c l x ->
   forall e, dec c (l ++ e) = DecYes x e.
-Proof.
+Proof. 
 induction c => NA l x /=; autorewrite with interp => I e.
 (* Any *)
 by subst.

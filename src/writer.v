@@ -84,7 +84,7 @@ Fixpoint runWriterTm padSkip X (w: WriterTm X) (c: ADDRCursor) : option (X * seq
   | writerCursor w => runWriterTm padSkip (w c) c
   end.
 
-Lemma runWriterTm_bindCursor padSkip X (w: ADDRCursor -> WriterTm X) (p: ADDR) :
+Lemma runWriterTm_bindCursor padSkip X (w: ADDRCursor -> WriterTm X) (p: ADDRCursor) :
   runWriterTm padSkip (let! c = getWCursor; w c) p =
   runWriterTm padSkip (w p) p.
 Proof. done. Qed.

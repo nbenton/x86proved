@@ -110,7 +110,7 @@ Instance readBYTE : Reader BYTE | 0 :=
 (*=End *)
 
 Lemma runReader_readBYTE (p: ADDR) byte bytes :
-  runReader readBYTE p (byte::bytes) =
+  runReader readBYTE (mkCursor p) (byte::bytes) =
   Some (next p, bytes, byte).
 Proof. done. Qed.
 

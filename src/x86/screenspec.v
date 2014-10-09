@@ -11,18 +11,18 @@ Unset Strict Implicit.
 Import Prenex Implicits.
 
 (* This should be hidden behind an abstraction *)
-Definition screenBase: DWORD := #x"000b8000".
+Definition screenBase: ADR AdSize4 := #x"000b8000".
 Definition numCols := 80.
 Definition numRows := 50.
-Definition screenLimit : DWORD := screenBase +# numCols*numRows*2.
-Definition screenMapped := memAny screenBase screenLimit.
+Definition screenLimit : ADR AdSize4 := screenBase +# numCols*numRows*2.
+Definition screenMapped := memAny (ADRtoADDR screenBase) (ADRtoADDR screenLimit).
 
 Definition charPos col row := screenBase +# col*2 +# row*160.
 
-Definition charIs (p: DWORD) (b: BYTE) := p :-> b.
-Definition colourIs (p: DWORD) (c: BYTE) := p+#1 :-> c.
+Definition charIs (p: ADR AdSize4) (b: BYTE) := ADRtoADDR p :-> b.
+Definition colourIs (p: ADR AdSize4) (c: BYTE) := ADRtoADDR (a:=AdSize4) (p+#1) :-> c.
 
-Definition inlineComputeLinePos_spec (row:nat) (base:DWORD) (instrs: program) :=
+Definition inlineComputeLinePos_spec (row:nat) (base:ADR AdSize4) (instrs: program) :=
   basic (EDX ~= # row ** EDI ~= base) instrs empOP
         (EDX ~= # row ** EDI ~= base +# row*160) @ OSZCP?.
 

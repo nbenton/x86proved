@@ -174,22 +174,22 @@ Lemma triple_doGetFlag (f:Flag) (v:bool) (Q: SPred) O c :
 Proof. apply (triple_letGetFlagSep (c:=fun _ => c)). Qed.
 
 (** Get DWORDs from memory *)
-Lemma triple_letGetDWORDSep (p:ADDR) (v:DWORD) c O Q :
+(*
+Lemma triple_letGetDWORDSep a (p:ADR a) (v:DWORD) c O Q :
   forall S,
   TRIPLE (p:->v ** S) (c v) O Q ->
   TRIPLE (p:->v ** S) (bind (getDWORDFromProcState p) c) O Q.
 Proof. apply triple_letGetSep. Qed.
 
-Lemma triple_letGetVWORDSep {s} (p:ADDR) (v:VWORD s) c O Q :
+Lemma triple_letGetQWORDSep a (p:ADR a) (v:QWORD) c O Q :
+  forall S,
+  TRIPLE (p:->v ** S) (c v) O Q ->
+  TRIPLE (p:->v ** S) (bind (getQWORDFromProcState p) c) O Q.
+Proof. apply triple_letGetSep. Qed.
+
+Lemma triple_letGetVWORDSep {s} a (p:ADR a) (v:VWORD s) c O Q :
   forall S,
   TRIPLE (p:->v ** S) (c v) O Q ->
   TRIPLE (p:->v ** S) (bind (getVWORDFromProcState p) c) O Q.
 Proof. destruct s; apply triple_letGetSep. Qed.
-
-Lemma triple_letGetDWORDSepGen (p:ADDR) (v:DWORD) P c O Q :
-  P |-- p:->v ** ltrue ->
-  TRIPLE P (c v) O Q ->
-  TRIPLE P (bind (getDWORDFromProcState p) c) O Q.
-Proof. apply triple_letGetSepGen. Qed.
-
-
+*)

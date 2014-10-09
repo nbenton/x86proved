@@ -2,7 +2,7 @@
     Assembler for type [program]. Import this and call [assemble_program].
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.seq Ssreflect.eqtype Ssreflect.tuple.
-Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.cursor x86proved.update.
+Require Import x86proved.tuplehelp x86proved.bitsrep x86proved.bitsops x86proved.x86.mem x86proved.x86.reg x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrcodecprops x86proved.cursor x86proved.update.
 Require Import x86proved.x86.program x86proved.monad x86proved.monadinst x86proved.writer x86proved.x86.addr.
 
 Set Implicit Arguments.

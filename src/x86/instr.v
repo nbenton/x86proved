@@ -8,31 +8,56 @@
     - short and long forms for constants (e.g. PUSH constant)
     - special casing (e.g. special forms for EAX/AL register, special form for RET 0)
     - symmetry in direction (e.g. MOV r1, r2 has two encodings)
+
+    It is currently assumed that the processor is operating in IA-32e mode,
+    and that the code segment descriptor has the following settings:
+
+    - CS.L=1 and CS.D=0
+      i.e. we are in 64-bit mode with default operand size of 32 bits and
+      default address size of 64 bits
+
+    See Section 5.2.1 of Intel spec for more details.
   ===========================================================================*)
 (* We need ssreflect for the [if ... then ... else ...] syntax in an inlineable way. *)
 Require Import Ssreflect.ssreflect.
-Require Import x86proved.bitsrep x86proved.x86.reg.
+Require Import x86proved.bitsrep x86proved.x86.addr x86proved.x86.reg.
 
 
 (* Memory addressing. Note: using ESP for the index register is illegal *)
+Definition BaseReg a := GPReg (adSizeToOpSize a).
+Coercion GPReg32_to_BaseReg32 (r:GPReg32) : BaseReg AdSize4 := r.
+Coercion NonSPReg32_to_BaseReg32 (r:NonSPReg32) : BaseReg AdSize4 := r.
+Coercion GPReg64_to_BaseReg64 (r:GPReg64) : BaseReg AdSize8 := r.
+Coercion NonSPReg64_to_BaseReg64 (r:NonSPReg64) : BaseReg AdSize8 := r.
+
+Definition IxReg a := NonSPReg (adSizeToOpSize a).
+Coercion NonSPReg32_to_IxReg32 (r:NonSPReg32) : IxReg AdSize4 := r.
+Coercion NonSPReg64_to_IxReg64 (r:NonSPReg64) : IxReg AdSize8 := r.
+
 (*=MemSpec *)
 Inductive Scale := S1 | S2 | S4 | S8.
-Inductive MemSpec :=
-  mkMemSpec (sib: option (GPReg32 * option (NonSPReg32*Scale)))
-            (offset: DWORD).
+Inductive SIB a := 
+| mkSIB (base: BaseReg a) (ixdisp: option (IxReg a * Scale))
+| RIPrel.
+Inductive MemSpec (a: AdSize) :=
+| mkMemSpec (sib: option (SIB a)) (displacement: DWORD).
 (*=End *)
+
+(* Immediates are maximum 32-bits, sign-extended to 64-bit if necessary *)
+Definition IMM s := 
+  BITS (match s with OpSize1 => n8 | OpSize2 => n16 | OpSize4 => n32 | OpSize8 => n32 end).
 
 (* Register or memory *)
 (*=RegMem *)
 Inductive RegMem s :=
-| RegMemR (r: GPReg s) :> RegMem s
-| RegMemM (ms: MemSpec).
+| RegMemR (r: GPReg s) :> RegMem s 
+| RegMemM a (ms: MemSpec a).
 Inductive RegImm s :=
-| RegImmI (c: VWORD s)
-| RegImmR (r: GPReg s).
+| RegImmI (c: IMM s)
+| RegImmR (r: GPReg s) :> RegImm s.
 (*=End *)
 
-Coercion DWORDRegMemM (ms: MemSpec) := RegMemM OpSize4 ms.
+Coercion DWORDRegMemM a (ms: MemSpec a) := RegMemM OpSize4 a ms.
 Coercion DWORDRegImmI (d: DWORD)    := RegImmI OpSize4 d.
 
 (* Unary ops: immediate, register, or memory source *)
@@ -40,14 +65,14 @@ Coercion DWORDRegImmI (d: DWORD)    := RegImmI OpSize4 d.
 (*=Src *)
 Inductive Src :=
 | SrcI (c: DWORD) :> Src
-| SrcM (ms: MemSpec) :> Src
-| SrcR (r: GPReg32) :> Src.
-Inductive DstSrc (s: OpSize) :=
+| SrcM a (ms: MemSpec a) :> Src 
+| SrcR (r: GPReg64) :> Src.
+Inductive DstSrc (s: OpSize):=
 | DstSrcRR (dst src: GPReg s)
-| DstSrcRM (dst: GPReg s) (src: MemSpec)
-| DstSrcMR (dst: MemSpec) (src: GPReg s)
-| DstSrcRI (dst: GPReg s) (c: VWORD s)
-| DstSrcMI (dst: MemSpec) (c: VWORD s).
+| DstSrcRM a (dst: GPReg s) (src: MemSpec a)
+| DstSrcMR a (dst: MemSpec a) (src: GPReg s)
+| DstSrcRI (dst: GPReg s) (c: IMM s)
+| DstSrcMI a (dst: MemSpec a) (c: IMM s).
 (*=End *)
 
 (* Jump target: PC-relative offset *)
@@ -58,8 +83,7 @@ Inductive Tgt :=
 | mkTgt :> DWORD -> Tgt.
 Inductive JmpTgt :=
 | JmpTgtI :> Tgt -> JmpTgt
-| JmpTgtM :> MemSpec -> JmpTgt
-| JmpTgtR :> GPReg32 -> JmpTgt.
+| JmpTgtRegMem :> RegMem OpSize8 -> JmpTgt.
 Inductive ShiftCount :=
 | ShiftCountCL | ShiftCountI (c: BYTE).
 Inductive Port :=
@@ -100,12 +124,12 @@ Inductive Instr :=
 | SHIFTOP s (op: ShiftOp) (dst: RegMem s) (count: ShiftCount)
 | MUL {s} (src: RegMem s)
 | IMUL (dst: GPReg32) (src: RegMem OpSize4)
-| LEA (reg: GPReg32) (src: RegMem OpSize4)
+| LEA s a (reg: GPReg s) (src: MemSpec a)
 | XCHG s (reg: GPReg s) (src: RegMem s)
 | JCCrel (cc: Condition) (cv: bool) (tgt: Tgt)
 | PUSH (src: Src)
 | PUSHSegR (r: SegReg)
-| POP (dst: RegMem OpSize4)
+| POP (dst: RegMem OpSize8)
 | POPSegR (r: SegReg)
 | CALLrel (tgt: JmpTgt) | JMPrel (tgt: JmpTgt)
 | CLC | STC | CMC
