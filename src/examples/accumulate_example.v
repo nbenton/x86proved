@@ -280,7 +280,7 @@ Example accumulate_until_value_prog_safe value
                                           (P (accumulate initial x) ** AL? ** OF? ** SF? ** ZF? ** CF? ** PF?)))
 : S |-- (Forall initial x xs (pf1 : only_last (fun t : BYTE => t == value) x xs),
          (loopy_basic (P initial ** AL ~= al ** OSZCP o s z c p)
-                      (accumulate_until_value_prog value pbody ch)
+                      (accumulate_until_value_prog (zeroExtend _ value) pbody ch)
                       (foldr catOP empOP (map (inOP (zeroExtend n8 ch)) (x::xs)))
                       (P (foldl accumulate initial (drop_last x xs)) ** AL ~= (last x xs) ** OF? ** SF? ** ZF ~= true ** CF? ** PF?))).
 Proof.

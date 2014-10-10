@@ -14,8 +14,8 @@ Generalizable All Variables.
 Local Open Scope instr_scope.
 
 (* Example: It is safe to sit forever in a tight loop. *)
-Example safe_loop (p q: DWORD) (O : PointedOPred) :
-  |-- obs O @ (EIP ~= p ** p -- q :-> JMP p).
+Example safe_loop (p q: ADDR) (O : PointedOPred) :
+  |-- obs O @ (UIP ~= p ** p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
   have H := @JMP_I_loopy_rule p p q.
@@ -290,7 +290,7 @@ Definition echo_once in_c out_c :=
 
 Definition echo_once_clean (al in_c out_c : BYTE) :=
   (echo_once in_c out_c;;
-   MOV AL, al).
+   MOV AL, ConstSrc (zeroExtend _ al)).
 
 Definition echo_once_OP_helper (in_c out_c : BYTE) v := catOP (inOP (zeroExtend n8 in_c) v) (outOP (zeroExtend n8 out_c) v).
 

@@ -86,10 +86,7 @@ Proof.
   { rewrite <-spec_reads_frame. apply limplValid. apply landL2. finish_logic.
     rewrite /allocInv/stateIsAny/natAsDWORD. sbazooka.
 
-    apply memAnySplit.
-Admitted. 
-(*    { apply: addB_leB. admit. 
-      apply injective_projections. generalize @adcB. simpl. admit. simpl. ; [ by rewrite Hcarry
-                                   | by generalize @adcB ]. }
-    { simpl. rewrite ltBNle /natAsDWORD in LT. rewrite -> Bool.negb_false_iff in LT. by rewrite LT. } }
-Qed.*)
+    apply memAnySplit; last first.
+    { simpl. rewrite ltBNle /natAsDWORD in LT. rewrite -> Bool.negb_false_iff in LT. admit. } 
+    { apply: addB_leB. 
+      apply injective_projections. Admitted. 

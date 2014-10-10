@@ -5,27 +5,28 @@ Require Import x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import x86proved.common_tactics x86proved.basicspectac x86proved.chargetac.
 
-Definition retreg := EBP.
+Definition retreg := RBP.
 
 (* Toy function calling convention *)
 Definition parameterized_toyfun {T_OPred} {proj : T_OPred -> OPred} f P O Q :=
   Forall iret (O' : T_OPred),
-  obs (proj O') @ (EIP~=iret ** retreg? ** Q)
-      -->> obs (catOP O (proj O')) @ (EIP~=f ** retreg~=iret ** P).
+  obs (proj O') @ (UIP~=iret ** retreg? ** Q)
+      -->> obs (catOP O (proj O')) @ (UIP~=f ** retreg~=iret ** P).
 
 Notation toyfun := (@parameterized_toyfun OPred (fun x => x)).
 Notation loopy_toyfun := (@parameterized_toyfun PointedOPred OPred_pred).
 
 (* Use this macro for calling f *)
+(* Need extended version of MOV that can make use of 64-bit constants *)
 Definition call_toyfun f :=
   (LOCAL iret;
-   MOV retreg, iret;; JMP f;;
+   MOV retreg, ConstSrc iret;; JMP f;;
    iret:;)
     %asm.
 
 (* Use this macro to make a function that returns in the end *)
 Definition mkbody_toyfun (p: program) :=
-  p;; JMP retreg.
+  p;; JMPrel (JmpTgtRegMem (RegMemR OpSize8 retreg)).
 
 (* It's useful to define local functions *)
 Notation "'let_toyfun' f  ':=' p 'in' q" :=
