@@ -47,7 +47,6 @@ Proof. destruct s;
   [apply triple_setReg8Sep | apply triple_setReg16Sep | apply triple_setReg32Sep | apply triple_setReg64Sep]. Qed.
 Global Opaque setRegInProcState.
 
-
 (* Put this somewhere else *)
 Lemma decodeAndAdvance_rule P (i j: ADDR) R sij instr O c Q :
   sij |-- i -- j :-> instr ->
@@ -422,6 +421,7 @@ Hint Unfold
   (** Maybe we should find a better way to deal with [evalJmpTgt] and [evalRegMem] *)
   evalJmpTgt evalRegMem getImm
   computeDisplacement adSizeToOpSize computeAddr computeIxAddr getUIP
+  setAdrRegInProcState
 : instrrules_eval.
 
 (** Anything with a rule gets opacified *)
@@ -441,10 +441,28 @@ Lemma evalMemSpecDisp_rule a (offset:DWORD) c O Q :
   TRIPLE S (bind (evalMemSpec (mkMemSpec a None offset)) c) O Q.
 Proof. move => S T. rewrite /evalMemSpec. destruct a; triple_apply T. Qed.
 
+Lemma evalMemSpecAdrDisp_rule a (offset:DWORD) c O Q :
+  forall S,
+  TRIPLE S (c (computeDisplacement a offset)) O Q ->
+  TRIPLE S (bind (evalMemSpecAdr (mkMemSpec a None offset)) c) O Q.
+Proof. move => S T. rewrite /evalMemSpec. destruct a; triple_apply T. Qed.
+
 Lemma evalMemSpecBase_rule a (r:BaseReg a) p (offset:DWORD) c O Q :
   forall S,
   TRIPLE ((r:GPReg _) ~= p ** S) (c (computeAddr p offset)) O Q ->
   TRIPLE ((r:GPReg _) ~= p ** S) (bind (evalMemSpec (mkMemSpec a (Some (mkSIB a r None)) offset)) c) O Q.
+Proof. move => S T. rewrite /evalMemSpec/evalMemSpecAdr.
+destruct a. 
+- triple_apply getReg_rule.
+  triple_apply T.
+- triple_apply getReg_rule.
+  triple_apply T.
+Qed.
+
+Lemma evalMemSpecAdrBase_rule a (r:BaseReg a) p (offset:DWORD) c O Q :
+  forall S,
+  TRIPLE ((r:GPReg _) ~= p ** S) (c (computeAdr p offset)) O Q ->
+  TRIPLE ((r:GPReg _) ~= p ** S) (bind (evalMemSpecAdr (mkMemSpec a (Some (mkSIB a r None)) offset)) c) O Q.
 Proof. move => S T. rewrite /evalMemSpec/evalMemSpecAdr.
 destruct a. 
 - triple_apply getReg_rule.
@@ -463,6 +481,32 @@ destruct a.
   triple_apply T.
 - triple_apply getReg_rule.
   triple_apply T.
+Qed.
+
+Lemma evalMemSpecAdrRIPrel_rule a p (offset:DWORD) c O Q :
+  forall S,
+  TRIPLE (interpUIP a ~= p ** S) (c (computeAdr p offset)) O Q ->
+  TRIPLE (interpUIP a ~= p ** S) (bind (evalMemSpecAdr (mkMemSpec a (Some (RIPrel _)) offset)) c) O Q.
+Proof. move => S T. rewrite /evalMemSpecAdr.
+destruct a. 
+- triple_apply getReg_rule.
+  triple_apply T.
+- triple_apply getReg_rule.
+  triple_apply T.
+Qed.
+
+Lemma evalMemSpecAdrSIB_rule a (r:BaseReg a) (ix:IxReg a) sc (p indexval:ADR a) (offset:DWORD) c O Q :
+  forall S,
+  TRIPLE ((r:GPReg _) ~= p ** (ix:NonSPReg _) ~= indexval ** S) (c (computeIxAdr p offset (scaleBy sc indexval))) O Q ->
+  TRIPLE ((r:GPReg _) ~= p ** (ix:NonSPReg _) ~= indexval ** S) (bind (evalMemSpecAdr (mkMemSpec a (Some (mkSIB _ r (Some (ix,sc)))) offset)) c) O Q.
+Proof. move => S T. rewrite /evalMemSpecAdr.
+destruct a. 
+- triple_apply getReg_rule.
+  triple_apply getReg_rule. 
+  triple_apply T. 
+- triple_apply getReg_rule.
+  triple_apply getReg_rule. 
+  triple_apply T. 
 Qed.
 
 Lemma evalMemSpecSIB_rule a (r:BaseReg a) (ix:IxReg a) sc (p indexval:ADR a) (offset:DWORD) c O Q :
@@ -646,6 +690,10 @@ Ltac instrrule_triple_bazooka_step tac :=
     | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec _ (Some (@mkSIB _ ?r None)) ?offset)) _) _ _ ] => tapply evalMemSpecBase_rule
     | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec _ (Some (@RIPrel _)) ?offset)) _) _ _ ] => tapply evalMemSpecRIPrel_rule
     | [ |- TRIPLE _ (bind (evalMemSpec (mkMemSpec _ (Some (@mkSIB _ ?r (Some (?ix, ?sc)))) ?offset)) _) _ _ ] => tapply evalMemSpecSIB_rule
+    | [ |- TRIPLE _ (bind (evalMemSpecAdr (mkMemSpec _ None ?offset)) _) _ _ ]  => tapply evalMemSpecAdrDisp_rule
+    | [ |- TRIPLE _ (bind (evalMemSpecAdr (mkMemSpec _ (Some (@mkSIB _ ?r None)) ?offset)) _) _ _ ] => tapply evalMemSpecAdrBase_rule
+    | [ |- TRIPLE _ (bind (evalMemSpecAdr (mkMemSpec _ (Some (@RIPrel _)) ?offset)) _) _ _ ] => tapply evalMemSpecAdrRIPrel_rule
+    | [ |- TRIPLE _ (bind (evalMemSpecAdr (mkMemSpec _ (Some (@mkSIB _ ?r (Some (?ix, ?sc)))) ?offset)) _) _ _ ] => tapply evalMemSpecAdrSIB_rule
     | [ |- TRIPLE _ (bind (evalArithUnaryOpNoCarry ?f ?arg) _) _ _ ]       => tapply evalArithUnaryOpNoCarry_rule
     | [ |- TRIPLE _ (bind (evalArithUnaryOp ?f ?arg) _) _ _ ]              => tapply evalArithUnaryOp_rule
     | [ |- TRIPLE _ (bind (evalArithOpNoCarry ?f ?arg1 ?arg2) _) _ _ ]     => tapply evalArithOpNoCarry_rule

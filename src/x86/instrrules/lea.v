@@ -8,19 +8,19 @@ Lemma LEA_ruleSameBase (v indexval: ADDR) (offset:DWORD) (r: BaseReg AdSize8) (r
   |-- basic (r ~= v ** r1 ~= indexval)
             (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ (Some(mkSIB _ r (Some(r1, sc)))) offset))) empOP
             (r ~= computeIxAddr (a:=AdSize8) v offset (scaleBy sc indexval) ** r1 ~= indexval).
-Proof. Admitted. (*do_instrrule_triple. Qed.*)
+Proof. do_instrrule_triple. Qed.
 
 Lemma LEA_ruleSameBase32 (v indexval: DWORD) (offset:DWORD) (r: BaseReg AdSize4) (r1:IxReg AdSize4) sc :
   |-- basic (r ~= v ** r1 ~= indexval)
             (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ (Some(mkSIB _ r (Some(r1, sc)))) offset))) empOP
             (r ~= computeIxAdr (a:=AdSize4) v offset (scaleBy sc indexval) ** r1 ~= indexval).
-Proof. Admitted. (*do_instrrule_triple. Qed.*)
+Proof. do_instrrule_triple. Qed.
 
 Lemma LEA_rule (old v indexval offset: DWORD) (r r': GPReg32) (r1:NonSPReg32) sc :
   |-- basic (r ~= old ** r' ~= v ** r1 ~= indexval)
             (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ (Some(mkSIB _ r' (Some(r1, sc)))) offset))) empOP
             (r ~= addB (addB v offset) (scaleBy sc indexval) ** r' ~= v ** r1 ~= indexval).
-Proof. Admitted. (*do_instrrule_triple. Qed.*)
+Proof. do_instrrule_triple. Qed.
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
