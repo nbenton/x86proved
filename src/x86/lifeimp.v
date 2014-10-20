@@ -87,7 +87,7 @@ Proof.
   (* CMP r, 0 *)
   basic apply *.
 
-  attempt basic apply (if_rule
+  basic apply (if_rule
     (P:= fun b =>
     (m == 0) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?));
     (rewrite /stateIsAny; try specintros => *; idtac);
@@ -97,14 +97,7 @@ Proof.
     apply fromNatBounded_eq => //.
       by apply (ltn_trans LT2). }
 
-Admitted. 
-
-(*  { rewrite subB0.
-    apply fromNatBounded_eq => //.
-      by apply (ltn_trans LT2). }
-
-
-  { destruct m, n => //. rewrite -> add0n.
+  { destruct m, n => //. 
     rewrite decB_fromSuccNat.
     rewrite succnK addSnnS modnDr.
     rewrite modn_small => //.
@@ -113,8 +106,7 @@ Admitted.
 
   { destruct m, n => //.
     rewrite add0n modn_small => //. }
-*)
-(*Qed.*)
+Qed.
 
 Definition incModN_correct (r:Reg) n m : n < 2^32 -> m < n ->
   |-- basic (r ~= #m) (incModN r n) (r ~= #((m.+1) %% n)) @ OSZCP?.
@@ -127,28 +119,26 @@ move => LT1 LT2.
   (* CMP r, 0 *)
   basic apply *.
 
-  attempt basic apply (if_rule
+  basic apply (if_rule
     (P:= fun b =>
     (m == n.-1) = b /\\ r ~= #m ** OF? ** SF? ** CF? ** PF?));
     (rewrite /stateIsAny; try specintros => *; idtac);
-    do ?basic apply *.
+    do ?basic apply *;
 
-(*
     try match goal with
           | [ H : (_ == _) = true |- _ ] => move/eqP in H; progress subst
           | [ H : (_ == _.-1) = ~~true |- _ ] => rewrite -eqSS prednK in H
         end.
-*)
+
 
   { have B2: m < 2^32.
     { by apply (ltn_trans LT2). }
 
     rewrite subB_eq add0B.
     apply fromNatBounded_eq; try eassumption; by apply (leq_ltn_trans (leq_pred _)). }
-Admitted. 
-(*
+
   { rewrite incB_fromNat. rewrite modn_small => //.
-    rewrite ltn_neqAle. rewrite LT2 andbT.
+    rewrite ltn_neqAle. rewrite LT2 andbT. 
     by hyp_rewrite *. }
 
   { by destruct n. }
@@ -156,7 +146,7 @@ Admitted.
   { destruct n => //.
       by rewrite modnn. }
 Qed.
-*)
+
 (* Move ECX one column left, wrapping around if necessary *)
 Definition goLeft: program := decModN ECX numCols.
 

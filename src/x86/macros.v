@@ -231,11 +231,11 @@ Definition ifthenelse (cond: Condition) (value: bool)
       pose proof (Helse : instrrule pelse).
 
    Lemma if_rule cond (value:bool) pthen pelse P Q S:
-    S |-- basic (P value ** ConditionIs cond value) pthen (Q value) ->
-    S |-- basic (P (~~value) ** ConditionIs cond (~~value)) pelse (Q (~~value)) ->
-    S |-- Forall b, basic (P b ** ConditionIs cond b)
+    S |-- basic (P value ** ConditionIs cond value) pthen Q ->
+    S |-- basic (P (~~value) ** ConditionIs cond (~~value)) pelse Q ->
+    S |-- basic (Exists b, P b ** ConditionIs cond b)
                           (ifthenelse cond value pthen pelse) 
-                          (Q b).
+                          Q.
   Proof.
     pre_if pthen pelse.
     do ![ specapply *; first by ssimpl

@@ -38,29 +38,6 @@ Proof.
 Qed.
 Hint Rewrite @spec_at_toyfun : push_at.
 
-Lemma loopy_toyfun_call (f:DWORD) P Q:
-  |>toyfun f P Q |-- basic P (call_toyfun f) Q @ retreg?.
-Proof.
-  autorewrite with push_at. rewrite /call_toyfun.
-  rewrite /stateIsAny; specintros => *.
-  basic apply * => iret.
-  basic apply *.
-
-  rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.
-
-  specapply *; first by ssimpl.
-
-  rewrite /toyfun.
-  rewrite <-spec_reads_frame. autorewrite with push_at.
-  autorewrite with push_later; last by apply _. apply lforallL with iret.
-  autorewrite with push_later; last by apply _. 
-  rewrite /stateIsAny.
-  autorewrite with push_later. admit.  (*rewrite ->sepSPC. apply _.
-  rewrite <- spec_later_weaken.
-  cancel2. cancel1. by ssimpl. reflexivity.*)
-Qed.
-
-
 Lemma toyfun_call (f:DWORD) P Q:
   toyfun f P Q |-- basic P (call_toyfun f) Q @ retreg?.
 Proof.
@@ -172,26 +149,6 @@ Proof.
     ssimpl.
     rewrite -addB_addn. reflexivity. }
 Qed.
-
-(*
-Example loopy_toyfun_example_caller_correct a (f:DWORD):
-  Forall a', loopy_toyfun f (EAX ~= a') empOP (EAX ~= a' +# 2)
-                    |-- loopy_basic (EAX ~= a) (toyfun_example_caller f) empOP (EAX ~= a +# 4) @ retreg?.
-Proof.
-  rewrite /toyfun_example_caller. rewrite /RegOrFlag_target.
-  autorewrite with push_at.
-  have H := loopy_toyfun_call. setoid_rewrite spec_at_basic in H.
-  eapply loopy_basic_seq; first by done.
-  { apply lforallL with a.
-    eapply basic_basic_context; first (by apply H); try rewrite <- spec_later_weaken;
-    let c := constr:(OPred_pred (mkPointedOPred empOP _)) in (* the [let ... in] is a workaround for "Anomaly: undefined_evars_of_term: evar not found. Please report." *)
-    change empOP with c;
-      try syntax_unify_reflexivity; sbazooka. }
-  { apply lforallL with (a +# 2).
-    eapply basic_basic_context; first (by apply H); try rewrite <- spec_later_weaken; try syntax_unify_reflexivity; sbazooka.
-    rewrite -addB_addn. reflexivity. }
-Qed.
-*)
 
 Example toyfun_example_correct entry (i j: DWORD) a:
   |-- (

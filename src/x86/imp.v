@@ -256,8 +256,7 @@ Section LogicLemmas.
     |-- basic EDX? (compile_expr e) (EDX ~= eeval e s)
         @ (stack_denot s ** OSZCP?).
   Proof.
-admit. 
-(*    autorewrite with push_at.
+    autorewrite with push_at.
     Set Printing Coercions.
     case: e; rewrite /compile_expr/eeval/natAsDWORD/stateIsAny;
     intros;
@@ -286,8 +285,6 @@ admit.
              | [ |- context[carry_subB ?x ?y] ] => generalize (sbbB_ltB_leB x y); case_eq (carry_subB x y); intros
              | [ H : context[carry_subB ?x ?y] |- _ ] => revert H; generalize (sbbB_ltB_leB x y); destruct (carry_subB x y); intros
            end.
-  rewrite ->regs_read_var. simpl. instantiate (2:= x). ssimpl. 
-*)
   Qed.
 
   Lemma compile_condition_correct s e:
@@ -380,19 +377,17 @@ Section LogicRules.
     set (I := fun b:bool =>
       asn_denot ((blurb e b) //\\ P) **
       EDX? ** OF? ** SF? ** CF? ** PF?).
-admit. 
-(*    eapply basic_roc_post; first last; first apply (while_rule_ro (I:=I)).
+    eapply basic_roc_post; first last; first apply (while_rule (I:=I)).
     - rewrite /asn_denot. specintros => s HP.
       have He := (@compile_condition_correct s e).
       autorewrite with push_at in He.
       eapply (basic_basic_context (T:=program)); first apply He.
       + done.
       + by ssimpl.
-      + done.
       rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC.
       rewrite /I /ConditionIs /stateIsAny. by sbazooka.
-    - rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.*)
+    - rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.
 
   Qed.
 
@@ -413,12 +408,12 @@ admit.
     set (I := fun b:bool =>
       asn_denot ((blurb e b) //\\ P) **
       EDX? ** OF? ** SF? ** CF? ** PF?).
-admit.     (*apply: basic_roc_pre; last apply (if_rule (P:=I)).
+   apply: basic_roc_pre; last apply (if_rule (P:=I)).
     - rewrite /I /asn_denot /ConditionIs. by sbazooka.
     - eapply basic_roc_pre; last apply HC1.
       rewrite /I /ConditionIs /stateIsAny. by sbazooka.
     - eapply basic_roc_pre; last apply HC2.
-      rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.*)
+      rewrite /I /ConditionIs /stateIsAny /negb. by sbazooka.
   Qed.
 
   Local Transparent ILFun_Ops lentails.
