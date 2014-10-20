@@ -80,22 +80,12 @@ Section UnfoldSpec.
     apply lentails_eq in H3.
     specialize (HQ _ H3).
     destruct HQ as [s' [o' H5]].
-    clear H3 Hsij.
+    clear H3 Hsij. 
     destruct k. 
-    { do ![ apply runsForWithPrefixOf0
-          | eassumption
-          | esplit ]. }
-
-    (* k > 0 *)
-    have LE: k <= succn k by done. admit. 
-(*    apply (runsForWithPrefixOfLe LE) in H5.
-    destruct H5 as [sf' [o'' [PRE MANY]]].
-    exists (o ++ orest). rewrite /manyStep-/manyStep/oneStep.
-    split. by exists o, orest.
-    exists sf'. exists (o ++ o''). split; first by apply cat_preActions.
-    exists sf. exists o, o''. split; first done.
-    split; last done.
-    intuition.*)
+    - apply runsFor0. 
+    - apply: runsForS.
+      apply H1. apply: (runsForLe (k:=k.+1) (k':=k)) => //. 
+    rewrite /runsFor. eexists _, _. apply H5. 
   Qed.
 
   Lemma TRIPLE_safeLater_gen (instr:Instr) P o Q (i j: DWORD) sij:
@@ -126,14 +116,9 @@ Section UnfoldSpec.
     destruct HQ as [orest [H4 H5]].
     clear H3 Hsij.
 
-    rewrite /runsFor. admit. (*destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
-    exists (o ++ orest).
-    rewrite /manyStep-/manyStep/oneStep.
-    split. by exists o, orest.
-    exists sf'. exists (o ++ o''). split; first by apply cat_preActions.
-    exists sf. exists o, o''. split; first done.
-    split; last done.
-    intuition.*)
+    - apply: runsForS.
+      apply H1.
+    rewrite /runsFor. eexists _, _. eassumption. 
   Qed.
 
 End UnfoldSpec.
@@ -143,14 +128,9 @@ Lemma TRIPLE_safeLater instr P Q (i j: DWORD) :
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
   |-- (|> safe @ Q -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
-  move => H.  admit.  (*apply TRIPLE_safeLater_gen. 
-  move=> H. have TS:= TRIPLE_safeLater_gen (o:= nil).
-  apply: TS. 
-  eforalls TS;
-    repeat match goal with
-             | [ H : |-- _ |- |-- _ ] => by apply TS
-             | _ => done
-           end.*)
+  move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
+  rewrite sepSPA. apply limplValid.
+  eapply TRIPLE_safeLater_gen; try eassumption; []. move=> R. triple_apply H.
 Qed.
 
 Lemma TRIPLE_safe instr P o Q (i j: DWORD) :
@@ -158,8 +138,9 @@ Lemma TRIPLE_safe instr P o Q (i j: DWORD) :
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
   |-- (safe @ Q -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
-  admit.   (*move=> H. have TS:= TRIPLE_safecat (o:= nil).
-  eforalls TS. rewrite -> empOPL in TS. apply TS. done.*)
+  move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
+  rewrite sepSPA. apply limplValid.
+  eapply TRIPLE_safe_gen; [eassumption|]. move=> R. triple_apply H.
 Qed.
 
 Lemma TRIPLE_basicGen instr P o Q:
