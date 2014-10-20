@@ -6,7 +6,6 @@ Import x86.instrrules.core.instrruleconfig.
 Lemma INCDEC_rule sz (dir: bool) (src:RegMem sz) oldv o s z c pf:
   |-- specAtRegMemDst src (fun V =>
       basic (V oldv ** OSZCP o s z c pf) (if dir then UOP _ OP_INC src else UOP _ OP_DEC src)
-      empOP
       (let w := if dir then incB oldv else decB oldv in
       V w ** OSZCP (msb oldv!=msb w) (msb w) (w == #0) c (lsb w))).
 Proof. do_instrrule_triple. Qed.
@@ -23,18 +22,18 @@ Definition DEC_rule := Eval hnf in @INCDEC_rule OpSize4 false.
 (** Special case for increment register *)
 Corollary INC_R_rule (r:Reg) (v:DWORD) o s z c pf:
   let w := incB v in
-  |-- basic (r~=v ** OSZCP o s z c pf) (INC r) empOP
+  |-- basic (r~=v ** OSZCP o s z c pf) (INC r) 
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
 Proof. basic apply *. Qed.
 
 Corollary INC_M_rule (r:Reg) (offset:nat) (v pbase:DWORD) o s z c pf:
   let w := incB v in
-  |-- basic (r ~= pbase ** pbase +# offset :-> v ** OSZCP o s z c pf) (INC [r + offset]) empOP
+  |-- basic (r ~= pbase ** pbase +# offset :-> v ** OSZCP o s z c pf) (INC [r + offset]) 
             (r ~= pbase ** pbase +# offset :-> w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
 Proof. basic apply *. Qed.
 
 Lemma INC_R_ruleNoFlags (r:Reg) (v:DWORD):
-  |-- basic (r~=v) (INC r) empOP (r~=incB v) @ OSZCP?.
+  |-- basic (r~=v) (INC r) (r~=incB v) @ OSZCP?.
 Proof.
   autorewrite with push_at. rewrite /stateIsAny. specintros => *.
   basic apply *.
@@ -43,12 +42,12 @@ Qed.
 (* Special case for decrement *)
 Lemma DEC_R_rule (r:Reg) (v:DWORD) o s z c pf :
   let w := decB v in
-  |-- basic (r~=v ** OSZCP o s z c pf) (DEC r) empOP
+  |-- basic (r~=v ** OSZCP o s z c pf) (DEC r) 
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
 Proof. basic apply *. Qed.
 
 Lemma DEC_R_ruleNoFlags (r:Reg) (v:DWORD):
-  |-- basic (r~=v) (DEC r) empOP (r~=decB v) @ OSZCP?.
+  |-- basic (r~=v) (DEC r) (r~=decB v) @ OSZCP?.
 Proof.
   autorewrite with push_at. rewrite /stateIsAny. specintros => *.
   basic apply *.

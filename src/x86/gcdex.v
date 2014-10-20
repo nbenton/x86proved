@@ -1,10 +1,10 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.finfun Ssreflect.tuple Ssreflect.fintype.
 Require Import x86proved.bitsrep x86proved.charge.ilogic.
 Require Import x86proved.x86.program x86proved.x86.programassem x86proved.x86.programassemcorrect x86proved.x86.imp x86proved.x86.call.
-Require Import x86proved.reader x86proved.spred x86proved.opred x86proved.septac x86proved.pointsto x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.reg.
-Require Import x86proved.cursor x86proved.obs x86proved.x86.instrrules.
+Require Import x86proved.reader x86proved.spred x86proved.septac x86proved.pointsto x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.reg.
+Require Import x86proved.cursor x86proved.safe x86proved.x86.instrrules.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.macros Coq.Strings.Ascii x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.x86.screenspec x86proved.x86.screenimp x86proved.x86.lifeimp.
+Require Import x86proved.x86.screenspec x86proved.x86.screenimp.
 
 Open Scope instr_scope.
 Local Transparent ILFun_Ops.
@@ -66,11 +66,11 @@ Definition showOctal_program : program :=
       ).
 
 Theorem gcd_safe: forall endAddr: DWORD,
-  |-- Forall O : PointedOPred, (obs O @ (EIP ~= endAddr) -->> obs O @ (EIP ~= codeAddr))
+  |-- (safe @ (EIP ~= endAddr) -->> safe @ (EIP ~= codeAddr))
         @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
        <@ (codeAddr -- endAddr :-> gcd_bytes).
 Proof.
-  move=> endAddr. specintros => O. rewrite /gcd_bytes. 
+  move=> endAddr. rewrite /gcd_bytes. 
   rewrite ->assemble_correct; last first. by vm_compute.
   rewrite /gcd_program.
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.

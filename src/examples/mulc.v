@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.opred x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program.
+Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.basic x86proved.x86.macros.
 
 Set Implicit Arguments.
@@ -26,7 +26,7 @@ Lemma add_mulcCorrect nbits : forall (r1 r2: Reg) m, m < 2^nbits ->
   |-- Forall v, Forall w,
       basic
       (r1 ~= v ** r2 ~= w ** OSZCP?)
-      (add_mulc nbits r1 r2 m) empOP
+      (add_mulc nbits r1 r2 m) 
       (r1 ~= addB v (mulB w (fromNat m)) ** r2? ** OSZCP?).
 (*=End *)
 Proof.
@@ -77,7 +77,7 @@ Lemma add_mulcAuxCorrect nbits : forall (c:nat) (r1 r2: Reg) (m:nat),
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  (add_mulcAux nbits c r1 r2 m) empOP
+  (add_mulcAux nbits c r1 r2 m) 
   (r1 ~= addB v (w *# (m*2^c)) ** r2?) @ OSZCP?.
 Proof.
   induction nbits => c r1 r2 m LT1 LT3;
@@ -158,7 +158,7 @@ Lemma add_mulcOptCorrect (r1 r2: NonSPReg) (m:nat):
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  (add_mulcOpt r1 r2 m) empOP
+  (add_mulcOpt r1 r2 m) 
   (r1 ~= addB v (w *# m) ** r2?) @ OSZCP?.
 Proof.
 rewrite /add_mulcOpt.
@@ -205,7 +205,7 @@ Lemma genCorrect nbits : forall (c:nat) (r1:Reg) (r2:NonSPReg) (m:nat),
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  (gen nbits c r1 r2 m) empOP
+  (gen nbits c r1 r2 m) 
   (r1 ~= addB v (w *# (m*2^c)) ** r2?) @ OSZCP?.
 Proof.
   induction nbits => c r1 r2 m LT1 LT3;
@@ -300,7 +300,7 @@ Lemma add_mulcFastCorrect (r1 r2: NonSPReg) (d:DWORD):
   |-- Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  (add_mulcFast r1 r2 d) empOP
+  (add_mulcFast r1 r2 d) 
   (r1 ~= addB v (mulB w d) ** r2?) @ OSZCP?.
 Proof.
   rewrite /add_mulcFast.

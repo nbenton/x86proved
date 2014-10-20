@@ -6,7 +6,7 @@ Import x86.instrrules.core.instrruleconfig.
 Lemma ADC_rule sz (ds:DstSrc sz) v1 o s z (c : bool) p
 : |-- specAtDstSrc ds (fun D v2 =>
                          basic (D v1 ** OSZCP o s z c p)
-                               (BOP _ OP_ADC ds) empOP
+                               (BOP _ OP_ADC ds) 
                                (let (carry, v) := eta_expand (adcB c v1 v2) in
                                 D v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
@@ -19,7 +19,7 @@ Global Instance: forall d (ds : DstSrc d), instrrule (BOP d OP_ADC ds) := @ADC_r
 Lemma ADC_RI_rule_helper (r1:Reg) v1 (v2:DWORD) o s z c p
 : let: (carry, v) := eta_expand (adcB c v1 v2) in
   |-- (basic (r1~=v1 ** OSZCP o s z c p)
-             (ADC r1, v2) empOP
+             (ADC r1, v2) 
              (r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                 (v == #0) carry (lsb v))).
 Proof. basic apply *. Qed.
@@ -27,7 +27,7 @@ Proof. basic apply *. Qed.
 Lemma ADC_RI_rule (r1:Reg) v1 (v2:DWORD) carry v o s z c p
 : adcB c v1 v2 = (carry, v) ->
   |-- (basic (r1~=v1 ** OSZCP o s z c p)
-             (ADC r1, v2) empOP
+             (ADC r1, v2) 
              (r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                 (v == #0) carry (lsb v))).
 Proof.

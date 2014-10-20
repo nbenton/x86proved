@@ -1,6 +1,6 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spectac x86proved.spec x86proved.obs x86proved.pointsto x86proved.cursor x86proved.x86.instr.
+Require Import x86proved.spred x86proved.septac x86proved.spectac x86proved.spec x86proved.safe x86proved.pointsto x86proved.cursor x86proved.x86.instr.
 Require Import x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.instrsyntax x86proved.x86.macros x86proved.x86.instrrules.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import x86proved.common_tactics x86proved.basicspectac x86proved.chargetac.
@@ -8,13 +8,10 @@ Require Import x86proved.common_tactics x86proved.basicspectac x86proved.charget
 Definition retreg := EBP.
 
 (* Toy function calling convention *)
-Definition parameterized_toyfun {T_OPred} {proj : T_OPred -> OPred} f P O Q :=
-  Forall iret (O' : T_OPred),
-  obs (proj O') @ (EIP~=iret ** retreg? ** Q)
-      -->> obs (catOP O (proj O')) @ (EIP~=f ** retreg~=iret ** P).
-
-Notation toyfun := (@parameterized_toyfun OPred (fun x => x)).
-Notation loopy_toyfun := (@parameterized_toyfun PointedOPred OPred_pred).
+Definition toyfun f P Q :=
+  Forall iret,
+  safe @ (EIP~=iret ** retreg? ** Q)
+      -->> safe @ (EIP~=f ** retreg~=iret ** P).
 
 (* Use this macro for calling f *)
 Definition call_toyfun f :=
@@ -32,72 +29,68 @@ Notation "'let_toyfun' f  ':=' p 'in' q" :=
   (LOCAL skip; JMP skip;; LOCAL f; f:;; mkbody_toyfun p;; skip:;; q)%asm
                                                                     (at level 45, f ident, right associativity).
 
-Lemma spec_at_toyfun {T_OPred proj} f P O Q R:
-  @parameterized_toyfun T_OPred proj f P O Q @ R -|- @parameterized_toyfun T_OPred proj f (P**R) O (Q**R).
+Lemma spec_at_toyfun f P Q R:
+  toyfun f P Q @ R -|- toyfun f (P**R) (Q**R).
 Proof.
-  rewrite /parameterized_toyfun.
+  rewrite /toyfun.
   autorewrite with push_at. cancel1 => iret.
-  autorewrite with push_at. cancel1 => O'.
   autorewrite with push_at. rewrite -> !sepSPA. by cancel1.
 Qed.
 Hint Rewrite @spec_at_toyfun : push_at.
 
-Lemma loopy_toyfun_call (f:DWORD) P (O:PointedOPred) Q:
-  |>loopy_toyfun f P O Q |-- loopy_basic P (call_toyfun f) O Q @ retreg?.
+Lemma loopy_toyfun_call (f:DWORD) P Q:
+  |>toyfun f P Q |-- basic P (call_toyfun f) Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
   rewrite /stateIsAny; specintros => *.
   basic apply * => iret.
   basic apply *.
 
-  rewrite /loopy_basic. specintros => i j O'. unfold_program. specintros => *; do !subst.
+  rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.
 
-  loopy_specapply *; first by ssimpl.
+  specapply *; first by ssimpl.
 
-  rewrite /loopy_toyfun.
+  rewrite /toyfun.
   rewrite <-spec_reads_frame. autorewrite with push_at.
   autorewrite with push_later; last by apply _. apply lforallL with iret.
-  autorewrite with push_later; last by apply _. apply lforallL with O'.
+  autorewrite with push_later; last by apply _. 
   rewrite /stateIsAny.
-  autorewrite with push_later; last by apply _.
+  autorewrite with push_later. admit.  (*rewrite ->sepSPC. apply _.
   rewrite <- spec_later_weaken.
-  cancel2. cancel1. by ssimpl. reflexivity.
+  cancel2. cancel1. by ssimpl. reflexivity.*)
 Qed.
 
 
-Lemma toyfun_call (f:DWORD) P (O:OPred) Q:
-  toyfun f P O Q |-- basic P (call_toyfun f) O Q @ retreg?.
+Lemma toyfun_call (f:DWORD) P Q:
+  toyfun f P Q |-- basic P (call_toyfun f) Q @ retreg?.
 Proof.
   autorewrite with push_at. rewrite /call_toyfun.
   basic apply * => iret.
   rewrite /stateIsAny. specintros => *.
   basic apply *.
 
-  rewrite /basic. specintros => i j O'. unfold_program. specintros => *; do !subst.
+  rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.
   specapply *; first by ssimpl.
 
   rewrite <-spec_reads_frame. autorewrite with push_at.
   rewrite /toyfun.
   apply lforallL with iret.
-  apply lforallL with O'.
   rewrite /stateIsAny.
   cancel2. cancel1. by ssimpl.
 Qed.
 
 Global Opaque call_toyfun.
-Global Instance: forall f : DWORD, loopy_instrrule (call_toyfun f) := @loopy_toyfun_call.
 Global Instance: forall f : DWORD, instrrule (call_toyfun f) := @toyfun_call.
 
-Lemma toyfun_mkbody {T_OPred proj} (f f': DWORD) P p (O : OPred) Q:
-  (Forall iret, @parameterized_basic T_OPred proj _ _ P p O Q @ (retreg ~= iret))
-    |-- @parameterized_toyfun T_OPred proj f P O Q <@ (f--f' :-> mkbody_toyfun p).
+Lemma toyfun_mkbody (f f': DWORD) P p Q:
+  (Forall iret, basic P p Q @ (retreg ~= iret))
+    |-- toyfun f P Q <@ (f--f' :-> mkbody_toyfun p).
 Proof.
-  rewrite /parameterized_toyfun. specintro => iret. rewrite /mkbody_toyfun.
+  rewrite /toyfun. specintro => iret. rewrite /mkbody_toyfun.
   unfold_program. specintro => i1.
   apply lforallL with iret. autorewrite with push_at.
-  specintros => O'.
-  eapply safe_safe_ro; first reflexivity. reflexivity.
-  - apply lforallL with f. apply lforallL with i1. apply lforallL with O'. reflexivity.
+  eapply safe_safe_ro; first reflexivity. 
+  - apply lforallL with f. apply lforallL with i1. reflexivity.
   - split; sbazooka.
     specapply *; first by ssimpl.
     rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
@@ -128,13 +121,10 @@ Definition toyfun_example (entry: DWORD) : program :=
    entry:;;
    toyfun_example_caller f.
 
-Example toyfun_example_callee_correct_helper {T_OPred proj} mkCatOP mkEmpOP (f f': DWORD):
-  (forall O1 O2, proj (mkCatOP O1 O2) -|- catOP (proj O1) (proj O2)) ->
-  (proj mkEmpOP -|- empOP) ->
-  |-- (Forall a, @parameterized_toyfun T_OPred proj f (EAX ~= a) empOP (EAX ~= a +# 2))
+Example toyfun_example_callee_correct_helper (f f': DWORD):
+  |-- (Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
       @ OSZCP? <@ (f--f' :-> toyfun_example_callee).
 Proof.
-  move => HcOP HempOP.
   specintro => a. autorewrite with push_at.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
   autorewrite with push_at. rewrite /stateIsAny.
@@ -142,25 +132,24 @@ Proof.
   do ?attempt basic apply *;
   repeat match goal with
            | _ => progress intros
-           | [ |- context[proj mkEmpOP] ]              => rewrite HempOP
-           | [ |- proj _ -|- catOP (proj _) (proj _) ] => by rewrite -> HcOP
-           | [ |- proj _ |-- empOP ]     => by rewrite -> HempOP
            | _ => evar_safe_syntax_unify_reflexivity
          end.
   by rewrite addIsIterInc /iter.
 Qed.
 
 Definition toyfun_example_callee_correct (f f': DWORD):
-  |-- (Forall a, toyfun f (EAX ~= a) empOP (EAX ~= a +# 2))
+  |-- (Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
       @ OSZCP? <@ (f--f' :-> toyfun_example_callee)
-  := @toyfun_example_callee_correct_helper OPred id catOP empOP f f' (fun _ _ => reflexivity _) (reflexivity _).
+  := @toyfun_example_callee_correct_helper f f'.
 
+(*
 Definition loopy_toyfun_example_callee_correct (f f': DWORD):
   |-- (Forall a, loopy_toyfun f (EAX ~= a) empOP (EAX ~= a +# 2))
       @ OSZCP? <@ (f--f' :-> toyfun_example_callee)
   := @toyfun_example_callee_correct_helper PointedOPred OPred_pred (fun O1 O2 => mkPointedOPred (catOP O1 O2) _) (mkPointedOPred empOP _)
                                            f f' (fun _ _ => reflexivity _) (reflexivity _).
 
+*)
 
 (* The toyfun spec assumed for f here is actually stronger than what lemma
    toyfun_example_callee_correct guarantees: we ask for a function that does
@@ -169,12 +158,12 @@ Definition loopy_toyfun_example_callee_correct (f f': DWORD):
 (** TODO(t-jagro): Find a better way of doing this, or a better place for this [Opaque]. *)
 Local Opaque spec_at.
 Example toyfun_example_caller_correct a (f:DWORD):
-  Forall a', toyfun f (EAX ~= a') empOP (EAX ~= a' +# 2)
-                    |-- basic (EAX ~= a) (toyfun_example_caller f) empOP (EAX ~= a +# 4) @ retreg?.
+  Forall a', toyfun f (EAX ~= a') (EAX ~= a' +# 2)
+                    |-- basic (EAX ~= a) (toyfun_example_caller f) (EAX ~= a +# 4) @ retreg?.
 Proof.
   rewrite /toyfun_example_caller. rewrite /RegOrFlag_target.
   autorewrite with push_at.
-  eapply basic_seq; first by done.
+  eapply basic_seq. 
   (** FIXME: make [basic apply *] not take forever *)
   { apply lforallL with a.
     simple basic apply *; try evar_safe_syntax_unify_reflexivity; ssimpl. }
@@ -184,6 +173,7 @@ Proof.
     rewrite -addB_addn. reflexivity. }
 Qed.
 
+(*
 Example loopy_toyfun_example_caller_correct a (f:DWORD):
   Forall a', loopy_toyfun f (EAX ~= a') empOP (EAX ~= a' +# 2)
                     |-- loopy_basic (EAX ~= a) (toyfun_example_caller f) empOP (EAX ~= a +# 4) @ retreg?.
@@ -201,11 +191,12 @@ Proof.
     eapply basic_basic_context; first (by apply H); try rewrite <- spec_later_weaken; try syntax_unify_reflexivity; sbazooka.
     rewrite -addB_addn. reflexivity. }
 Qed.
+*)
 
-Example toyfun_example_correct entry (i j: DWORD) a (O : OPred):
+Example toyfun_example_correct entry (i j: DWORD) a:
   |-- (
-      obs O @ (EIP ~= j ** EAX ~= a +# 4) -->>
-          obs O @ (EIP ~= entry ** EAX ~= a)
+      safe @ (EIP ~= j ** EAX ~= a +# 4) -->>
+          safe @ (EIP ~= entry ** EAX ~= a)
     ) @ (retreg? ** OSZCP?) <@ (i--j :-> toyfun_example entry).
 Proof.
   rewrite /toyfun_example. unfold_program.
@@ -216,8 +207,8 @@ Proof.
      rule application. *)
   rewrite ->toyfun_example_caller_correct.
   cancel2; last reflexivity. autorewrite with push_at.
-  eapply safe_safe_ro; first reflexivity. reflexivity.
-  - eapply lforallL. eapply lforallL. apply lforallL with O. rewrite ->empOPL. reflexivity.
+  eapply safe_safe_ro; first reflexivity. 
+  - eapply lforallL. eapply lforallL. reflexivity.
   - split; sbazooka.
     rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
     rewrite spec_at_emp. cancel1. sbazooka.
@@ -246,16 +237,16 @@ Qed.
 (* It is possible but does not seem necessary to put a |> in front of the -->>.
    There will be a function call somewhere to provide the |> unless we're just
    making the apply function call itself in a tight loop. *)
-Example toyfun_apply_correct (f f' g: DWORD) P O Q:
+Example toyfun_apply_correct (f f' g: DWORD) P Q:
   |-- (
-      toyfun g (P ** EBX?) O Q -->> toyfun f (P ** EBX ~= g) O Q
+      toyfun g (P ** EBX?) Q -->> toyfun f (P ** EBX ~= g) Q
     ) <@ (f--f' :-> toyfun_apply).
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
-  specintro => iret. specintros => O'. rewrite limpland.
+  specintro => iret. rewrite limpland.
   specapply *; first by ssimpl.
   autorewrite with push_at.
   rewrite <-spec_reads_frame. rewrite -limpland. apply limplValid.
-  rewrite /toyfun. eapply lforallL. eapply lforallL.
+  rewrite /toyfun. eapply lforallL. 
   rewrite /stateIsAny. cancel2; cancel1; by sbazooka.
 Qed.

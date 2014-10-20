@@ -15,7 +15,7 @@ Definition splits (p q r: DWORD) (vs ws: seq DWORD) :=
 Definition nextCode := (ADD ESI, 4). 
 Definition nextSpec code := 
   Forall (p q r: DWORD), Forall vs w ws, 
-  basic (splits p q r vs (w::ws) ** ESI ~= q) code empOP
+  basic (splits p q r vs (w::ws) ** ESI ~= q) code 
         (splits p (q+#4) r (vs++[::w]) ws ** ESI ~= (q+#4)) @ OSZCP?.
 
 Lemma nextCorrect : |-- nextSpec nextCode. 
@@ -31,7 +31,7 @@ Definition opSizeToNat s := match s with OpSize1 => 1 | OpSize2 => 2 | OpSize4 =
 
 Lemma MOV_RM0aux_rule s (r1: VReg s) (r2:Reg)  (pd:DWORD) (v1 v2: VWORD s) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v2)
-            (MOV r1, [r2]) empOP
+            (MOV r1, [r2]) 
             (r1 ~= v2 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v2).
 Proof. rewrite ->memIsLe at 1. specintros => LE. rewrite ->memIs_pointsTo at 1.
 destruct s; basic apply *; rewrite -> (fixedMemIs_pointsTo (n:=_)) => //; reflexivity. 
@@ -41,7 +41,7 @@ Global Instance: forall s (r1: VReg s) (r2: Reg), instrrule (MOV r1, [r2]) := @M
 
 Lemma MOV_M0Raux_rule s (r1: VReg s) (r2:Reg)  (pd:DWORD) (v1 v2: VWORD s) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v2)
-            (MOV [r2], r1) empOP
+            (MOV [r2], r1) 
             (r1 ~= v1 ** r2 ~= pd ** pd -- (pd+#opSizeToNat s) :-> v1).
 Proof. rewrite -> memIsLe at 1. specintros => LE. rewrite -> memIs_pointsTo at 1. 
 destruct s; basic apply *; rewrite -> (fixedMemIs_pointsTo (n:=_)) => //; reflexivity. 
@@ -54,7 +54,6 @@ Definition getSpec (dst:Reg) code :=
   basic 
   (dst ~= oldv)
   code 
-  empOP
   (dst ~= w) @ (splits p q r vs (w::ws) ** ESI ~= q).
 
 Hint Unfold readVWORD opSizeToNat : instrrules_all.
@@ -71,7 +70,6 @@ Lemma putCorrect (p q r: DWORD) vs w ws oldv :
   |-- basic 
   (splits p q r vs (oldv::ws) ** ESI ~= q ** EAX ~= w)
   (MOV [ESI], EAX)
-  empOP
   (splits p q r vs (w::ws) ** ESI ~= q ** EAX ~= w).
 Proof.
 rewrite /splits. do 2 rewrite -> (seqFixedMemIsCons' _).
@@ -82,7 +80,6 @@ Lemma atEndCorrect (p q r: DWORD) (vs ws: seq DWORD):
   |-- basic
   (splits p q r vs ws ** ESI ~= q ** ZF? ** OF? ** SF? ** CF? ** PF?)
   (CMP ESI, r)
-  empOP
   (splits p q r vs ws ** ESI ~= q ** ZF ~= (if ws is nil then true else false) ** OF? ** SF? ** CF? ** PF?).
 Proof. rewrite /splits. destruct ws. 
 - rewrite seqMemIsNil. 

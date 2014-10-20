@@ -1,6 +1,6 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x86proved.spectac x86proved.obs x86proved.x86.basic x86proved.x86.program x86proved.x86.macros.
+Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
 Require Import x86proved.chargetac.
 
@@ -37,11 +37,11 @@ Definition allocImp (infoBlock:DWORD) (n: nat) (failed: DWORD) : program :=
   MOV [infoBlock], EDI.
 
 Definition allocSpec n (fail:DWORD) inv code :=
-  Forall i j : DWORD, Forall O : OPred, (
-      obs O @ (EIP ~= fail ** EDI?) //\\
-      obs O @ (EIP ~= j ** Exists p, EDI ~= p +# n ** memAny p (p +# n))
+  Forall i j : DWORD, (
+      safe @ (EIP ~= fail ** EDI?) //\\
+      safe @ (EIP ~= j ** Exists p, EDI ~= p +# n ** memAny p (p +# n))
     -->>
-      obs O @ (EIP ~= i ** EDI?)
+      safe @ (EIP ~= i ** EDI?)
     )
     @ (OSZCP? ** inv)
     <@ (i -- j :-> code).

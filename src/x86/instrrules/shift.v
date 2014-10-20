@@ -11,7 +11,7 @@ Qed.
 
 Lemma SHL_RI_rule s (r:VReg s) (v:VWORD s) (count:nat):
   count < n32 ->
-  |-- basic (r~=v ** OSZCP?) (SHL r, count) empOP
+  |-- basic (r~=v ** OSZCP?) (SHL r, count) 
             (r~=iter count shlB v ** OSZCP?).
 Proof.
   move => BOUND.
@@ -27,7 +27,7 @@ Qed.
 
 Lemma SHR_RI_rule s (r:VReg s) (v:VWORD s) (count:nat):
   count < n32 ->
-  |-- basic (r~=v ** OSZCP?) (SHR r, count) empOP
+  |-- basic (r~=v ** OSZCP?) (SHR r, count) 
             (r~=iter count shrB v ** OSZCP?).
 Proof.
   move => BOUND.

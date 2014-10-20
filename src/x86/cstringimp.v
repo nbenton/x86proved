@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.opred x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program.
+Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.flags x86proved.x86.macros.
 Require Import Coq.Strings.String x86proved.cstring Coq.Strings.Ascii.
 
@@ -73,7 +73,7 @@ Definition strlen : program :=
 (* Correctness of strlen *)
 Lemma strlen_correct p s :
   zeroFree s ->
-  |-- loopy_basic ECX? strlen empOP (ECX ~= #(length s))
+  |-- basic ECX? strlen (ECX ~= #(length s))
     @ (OSZCP? ** EDI ~= p ** pointsToCString p s).
 Proof.
   move => ISZF. rewrite /strlen.
@@ -103,7 +103,7 @@ Proof.
 
   (* Empty string *)
   + rewrite /ConditionIs.
-  eapply basic_basic; first (apply weaken_parameterized_basic; eapply CMP_MbxI_ZC_rule).
+  eapply basic_basic; first (eapply CMP_MbxI_ZC_rule).
   rewrite /stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString.
   sbazooka. subst. sbazooka. rewrite <-pointsToCString_append_op.
@@ -111,7 +111,7 @@ Proof.
 
   (* Non-empty string *)
   + subst. rewrite /ConditionIs.
-  eapply basic_basic; first (apply weaken_parameterized_basic; eapply CMP_MbxI_ZC_rule).
+  eapply basic_basic; first (eapply CMP_MbxI_ZC_rule).
   rewrite /stateIsAny/ConditionIs.
   subst. rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString.
   sbazooka.
@@ -124,7 +124,7 @@ Proof.
   rewrite /ConditionIs/I.
   specintros => prefix suffix APPEND END. rewrite /stateIsAny. specintros => ofl sfl cfl pfl.
   subst.
-  eapply basic_basic. apply weaken_parameterized_basic; eapply INC_R_rule.
+  eapply basic_basic. eapply INC_R_rule.
   rewrite /OSZCP. sbazooka.
 
   case E: suffix => [| a s'].

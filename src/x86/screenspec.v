@@ -23,24 +23,24 @@ Definition charIs (p: DWORD) (b: BYTE) := p :-> b.
 Definition colourIs (p: DWORD) (c: BYTE) := p+#1 :-> c.
 
 Definition inlineComputeLinePos_spec (row:nat) (base:DWORD) (instrs: program) :=
-  basic (EDX ~= # row ** EDI ~= base) instrs empOP
+  basic (EDX ~= # row ** EDI ~= base) instrs 
         (EDX ~= # row ** EDI ~= base +# row*160) @ OSZCP?.
 
 
 Definition inlineComputeCharPos_spec (col row:nat) (instrs: program) :=
-  basic (ECX ~= # col ** EDX ~= # row ** EDI?) instrs empOP
+  basic (ECX ~= # col ** EDX ~= # row ** EDI?) instrs 
         (ECX?         ** EDX? **         EDI ~= charPos col row) @ OSZCP?.
 
 Definition inlineOutputChar_spec (col row: nat) (char: BYTE) (instrs: program) :=
   basic
     (ECX ~= # col ** EDX ~= # row ** AL ~= char ** (Exists old, charIs (charPos col row) old))
-    instrs empOP
+    instrs 
     (ECX?        ** EDX?        ** AL ~= char ** charIs (charPos col row) char)
   @ (OSZCP? ** EDI?).
 
 Definition inlineReadChar_spec (col row: nat) (char:BYTE) (instrs: program) :=
   basic
     (ECX ~= # col ** EDX ~= # row ** AL? ** charIs (charPos col row) char)
-    instrs empOP
+    instrs 
     (ECX?        ** EDX?        ** AL ~= char ** charIs (charPos col row) char)
   @ (OSZCP? ** EDI?).

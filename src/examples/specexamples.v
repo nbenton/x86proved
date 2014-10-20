@@ -1,6 +1,6 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.opred x86proved.septac x86proved.spec x86proved.obs x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros.
+Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
 Require Import x86proved.spectac x86proved.basicspectac.
 Require Import x86proved.common_tactics x86proved.chargetac x86proved.common_definitions.
@@ -14,12 +14,11 @@ Generalizable All Variables.
 Local Open Scope instr_scope.
 
 (* Example: It is safe to sit forever in a tight loop. *)
-Example safe_loop (p q: DWORD) (O : PointedOPred) :
-  |-- obs O @ (EIP ~= p ** p -- q :-> JMP p).
+Example safe_loop (p q: DWORD) :
+  |-- safe @ (EIP ~= p ** p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
   have H := @JMP_I_loopy_rule p p q.
-  apply (lforallE_spec O) in H. cbv beta in H.
   rewrite ->spec_reads_entails_at in H; [|apply _].
   autorewrite with push_at in H. apply landAdj in H.
   etransitivity; [|apply H]. apply: landR; [sbazooka | reflexivity].
@@ -27,7 +26,7 @@ Qed.
 
 (* Example: It is safe to sit in a less tight loop forever. *)
 Example safe_loop_while eax :
-  |-- loopy_basic (EAX ~= eax ** OSZCP?) (while (TEST EAX, EAX) CC_O false prog_skip) empOP lfalse.
+  |-- basic (EAX ~= eax ** OSZCP?) (while (TEST EAX, EAX) CC_O false prog_skip) lfalse.
 Proof.
   basic apply (while_rule_ro (I := fun b => b == false /\\ EAX? ** SF? ** ZF? ** CF? ** PF?)) => //;
     rewrite /stateIsAny; specintros => *;
@@ -36,20 +35,20 @@ Qed.
 
 (* We can package up jumpy code in a triple by using labels. *)
 Example basic_loop:
-  |-- loopy_basic empSP (LOCAL l; l:;; JMP l) empOP lfalse.
+  |-- basic empSP (LOCAL l; l:;; JMP l) lfalse.
 Proof.
-  rewrite /loopy_basic. specintros => i j O'.
+  rewrite /basic. specintros => i j.
   unfold_program. specintros => _ _ <- <-.
   rewrite /spec_reads. specintros => code Hcode.
   autorewrite with push_at.
   apply: limplAdj. apply: landL1. rewrite -> Hcode.
-  etransitivity; [apply safe_loop|]. rewrite ->empOPL. cancel2. reflexivity. eexists _. split; by ssimpl.
+  etransitivity; [apply safe_loop|]. cancel1. by ssimpl. 
 Qed.
 
 (* Show off the sequencing rule for [basic]. *)
 Example basic_inc3 (x:DWORD):
   |-- basic (EAX ~= x)
-            (INC EAX;; INC EAX;; INC EAX) empOP
+            (INC EAX;; INC EAX;; INC EAX) 
             (EAX ~= x +# 3) @ OSZCP?.
 Proof.
   autorewrite with push_at. rewrite /stateIsAny.
@@ -59,14 +58,14 @@ Proof.
 Qed.
 
 Example incdec_while c a:
-  |-- loopy_basic
+  |-- basic
     (ECX ~= c ** EAX ~= a)
     (
       while (TEST ECX, ECX) CC_Z false (
         DEC ECX;;
         INC EAX
       )
-    ) empOP
+    ) 
     (ECX ~= #0 ** EAX ~= addB c a)
     @ OSZCP?.
 Proof.
@@ -104,9 +103,9 @@ Local Ltac prepare_basic_goal_for_spec :=
   autorewrite with push_at;
   do ?(idtac;
        match goal with
-         | [ |- _ |-- parameterized_basic _ (LOCAL _; _) _ _ ] => apply basic_local => ?
+         | [ |- _ |-- basic _ (LOCAL _; _) _ ] => apply basic_local => ?
        end);
-  rewrite /parameterized_basic;
+  rewrite /basic;
   do ?[ progress subst
       | progress specintros => *
       | progress unfold_program ].
@@ -122,6 +121,7 @@ Definition output_n_prog (pbody : program) (n : nat)
         JMP LOOP;;
         END:;).
 
+(*
 (** Example: We can observe the output of any given constant, n times *)
 Example safe_loop_n P (pbody : program) O (n : nat) d
         (small_enough : nat -> Prop)
@@ -375,3 +375,4 @@ Proof.
   { specintros => *; basic apply H. }
   { rewrite /stateIsAny; specintros => *; basic apply *. }
 Qed.
+*)

@@ -6,7 +6,7 @@ Import x86.instrrules.core.instrruleconfig.
 Lemma NEG_R_rule s (r:VReg s) (v:VWORD s) :
   let w := negB v in
   |-- basic
-    (r ~= v ** OSZCP?) (NEG r) empOP
+    (r ~= v ** OSZCP?) (NEG r) 
     (r ~= w ** OSZCP (msb v!=msb w) (msb w) (w == #0) (v != #0) (lsb w)).
 Proof. destruct s; do_instrrule_triple. Qed.
 
