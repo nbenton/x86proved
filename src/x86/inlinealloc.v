@@ -65,22 +65,25 @@ Proof.
   specapply ADD_RI_rule; first by ssimpl.
 
   (* JC failed *)
-  specapply JC_rule; first by rewrite /OSZCP; ssimpl.
-  case Hcarry:(carry_addB base n). 
-  { rewrite <-spec_reads_frame. apply limplValid. apply landL1. finish_logic. 
-    rewrite /stateIsAny/allocInv. sbazooka. }
+  specapply JC_rule; first by rewrite /OSZCP; ssimpl. 
+  specsplit.
+    rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
+    autorewrite with push_at. apply limplValid. apply landL1. cancel1.
+    rewrite /OSZCP /stateIsAny/allocInv. by sbazooka.
 
   (* CMP [infoBlock+#4], EDI *)
+  specintro. move/eqP => Hcarry. 
   specapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
 
   (* JC failed *)
   specapply JC_rule; first by ssimpl.
-
-  case LT:(ltB _ _).
-  { rewrite <-spec_reads_frame. apply limplValid. apply landL1. finish_logic. 
-    rewrite /stateIsAny/allocInv. sbazooka. }
+  specsplit.
+  - rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
+    autorewrite with push_at. apply limplValid. apply landL1. cancel1.
+    rewrite /OSZCP /stateIsAny /allocInv. by sbazooka.
 
   (* MOV [infoBlock], EDI *)
+  specintro => /eqP LT.
   specapply MOV_IndR_rule; first by ssimpl.
   { rewrite <-spec_reads_frame. apply limplValid. apply landL2. finish_logic.
     rewrite /allocInv/stateIsAny/natAsDWORD. sbazooka.

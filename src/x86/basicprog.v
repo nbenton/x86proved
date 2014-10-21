@@ -4,7 +4,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.pointsto x86proved.cursor x86proved.x86.instr x86proved.reader x86proved.x86.instrcodec.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import x86proved.x86.program x86proved.x86.basic x86proved.charge.ilogic.
-Require Import x86proved.common_tactics.
+Require Import x86proved.common_tactics x86proved.chargetac.
 
 (** Morphism for program equivalence *)
 Global Instance basic_progEq_m :
@@ -35,12 +35,9 @@ Proof.
   rewrite /basic. move=> Hc1 Hc2. specintros => i j.
   unfold_program. 
   specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst.
-  specapply Hc1.
-  - by ssimpl. 
-  specapply Hc2.   
-  - by ssimpl. 
-  rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
-  by rewrite spec_at_emp.
+  specapply Hc1; first by ssimpl. 
+  specapply Hc2; first by ssimpl.
+  finish_logic.
 Qed.
 
 (** Scoped label rule *)

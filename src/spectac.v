@@ -353,14 +353,13 @@ Module SpecApply.
       let tgoal := quote_term S in
       (* Apply safe_safe_nf, which will match if tgoal and tlem could
          be put into normal form. The first subgoal is the lemma to be
-         applied, the second and third subgoals are (O' |-- O) and (C
-         |-- C'), which are often trivial, the fourth subgoal is a
-         conjunction of assertion-logic entailments, and the last
+         applied, the second subgoal is (C |-- C'), which is often trivial, 
+         the third subgoal is a conjunction of assertion-logic entailments, and the last
          subgoal is the goal that's left after doing this
          application. *)
       eapply (@safe_safe_nf tgoal tlem C C'); [exact Hlem | try done | |];
       cbv [eval_ospec eval_oSPred osep oconj oimpl oat];
-      [.. | try solve_code |]
+      [.. | try solve_code | ]
     | .. ];
     clear Hlem.
 
@@ -383,7 +382,10 @@ Module SpecApply.
 End SpecApply.
 
 Ltac specapply := SpecApply.specapply.
+
 Ltac unhideReg r :=
   replace r? with (Exists x:DWORD, r ~= x) by done; specintro.
 Ltac unhideFlag f :=
   replace f? with (Exists x:FlagVal, f ~= x) by done; specintro.
+
+

@@ -18,7 +18,7 @@ Example safe_loop (p q: DWORD) :
   |-- safe @ (EIP ~= p ** p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
-  have H := @JMP_I_loopy_rule p p q.
+  have H := @JMP_I_rule p p q.
   rewrite ->spec_reads_entails_at in H; [|apply _].
   autorewrite with push_at in H. apply landAdj in H.
   etransitivity; [|apply H]. apply: landR; [sbazooka | reflexivity].
@@ -210,7 +210,7 @@ Example safe_loop_forever (PP : nat -> SPred -> Prop) (pbody : program) (O : nat
         (transition_correct : forall P n (H : PP n P), PP (n.+1) (transition P n H))
         (H : forall P n (H' : PP n P) (Q := transition P n H'), PP (S n) Q -> |--basic P pbody (O n) Q)
         (P0 : SPred) (start : nat) (H0 : PP start P0)
-: |-- (loopy_basic P0
+: |-- (basic P0
                    (loop_forever_prog pbody)
                    (roll_starOP O start)
                    lfalse).
@@ -234,7 +234,7 @@ Proof.
   by ssimpl. 
 
   (** The jump code *)
-  specapply JMP_I_loopy_rule. by ssimpl.
+  specapply JMP_I_rule. by ssimpl.
   simpl OPred_pred.
 
   finish_logic_with sbazooka.
@@ -244,7 +244,7 @@ Example safe_loop_forever_state_machine state (transition : state -> state)
         (P : state -> SPred) (pbody : program) (O : state -> OPred)
         (H : forall s, |--basic (P s) pbody (O s) (P (transition s)))
         (start : state) (state_n := fun n => rep_apply n transition start)
-: |-- (loopy_basic (P start)
+: |-- (basic (P start)
                    (loop_forever_prog pbody)
                    (roll_starOP (fun n => O (state_n n)) 0)
                    lfalse).
@@ -263,7 +263,7 @@ Qed.
 
 Example safe_loop_forever_constant P (pbody : program) O
         (H : |--basic P pbody O P)
-: |-- loopy_basic P (loop_forever_prog pbody) (starOP O) lfalse.
+: |-- basic P (loop_forever_prog pbody) (starOP O) lfalse.
 Proof.
   rewrite <- (roll_starOP__starOP 0 O).
   exact (@safe_loop_forever (fun _ => eq P) pbody (fun _ => O) (fun _ _ _ => P) (fun _ _ _ => reflexivity _)
@@ -272,7 +272,7 @@ Proof.
 Qed.
 
 Example loop_forever_one al
-: |-- (loopy_basic (AL ~= al)
+: |-- (basic (AL ~= al)
                    (MOV AL, (#1 : DWORD);;
                     loop_forever_prog (OUT #0, AL))
                    (starOP (outOP (zeroExtend n8 (#0 : BYTE)) (#1 : BYTE)))
@@ -357,8 +357,8 @@ Proof.
 Qed.
 
 (* Example: It is safe to sit in a less tight loop forever. *)
-Example safe_loop_io P c O (H : |-- loopy_basic P c O P @ (EAX? ** OSZCP?))
-: |-- loopy_basic (EAX? ** OSZCP? ** P) (while (TEST EAX, EAX) CC_O false c) (starOP O) lfalse.
+Example safe_loop_io P c O (H : |-- basic P c O P @ (EAX? ** OSZCP?))
+: |-- basic (EAX? ** OSZCP? ** P) (while (TEST EAX, EAX) CC_O false c) (starOP O) lfalse.
 Proof.
   basic apply (while_rule_ind
                  (transition_body := @id unit)

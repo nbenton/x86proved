@@ -7,22 +7,10 @@ Require Import x86proved.common_tactics (* for [evar_safe_reflexivity] *).
 Require Import x86proved.basicspectac (* for [specapply *] *).
 Require Import x86proved.chargetac (* for [finish_logic] *).
 
-Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD)
+Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) 
 : |-- interpJmpTgt tgt q (fun P addr =>
-                             (safe @ (EIP ~= addr ** P)
-                                 -->> safe @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt)).
-Proof.
-  rewrite /interpJmpTgt/interpMemSpecSrc.
-  do_instrrule
-    ((try specintros => *; autorewrite with push_at);
-     apply: TRIPLE_safe => ?;
-     do !instrrule_triple_bazooka_step idtac).
-Qed.
-
-Lemma JMPrel_loopy_rule (tgt: JmpTgt) (p q: DWORD)
-: |-- interpJmpTgt tgt q (fun P addr =>
-                            ((|> safe @ (EIP ~= addr ** P)
-                                 -->> safe @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt))).
+                            ((|> safe  @ (EIP ~= addr ** P)
+                            -->> safe @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt))).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
   do_instrrule
@@ -40,22 +28,12 @@ Section specapply_hint.
 Local Hint Unfold interpJmpTgt : specapply.
 
 Lemma JMPrel_I_rule (rel: DWORD) (p q: DWORD):
-  |-- ((safe @ (EIP ~= addB q rel)
-           -->> safe @ (EIP ~= p)) <@ (p -- q :-> JMPrel rel)).
-Proof. specapply *; finish_logic_with sbazooka. Qed.
-
-Lemma JMPrel_I_loopy_rule (rel: DWORD) (p q: DWORD):
   |-- ((|> safe @ (EIP ~= addB q rel)
            -->> safe @ (EIP ~= p)) <@ (p -- q :-> JMPrel rel)).
-Proof. specapply (@JMPrel_loopy_rule rel); finish_logic_with sbazooka. Qed.
+Proof. specapply (@JMPrel_rule rel); finish_logic_with sbazooka. Qed.
 
 Lemma JMPrel_R_rule (r:Reg) (addr: DWORD) (p q: DWORD) :
-  |-- ((safe @ (EIP ~= addr ** r ~= addr)
-           -->> safe @ (EIP ~= p ** r ~= addr)) <@ (p -- q :-> JMPrel r)).
-Proof. specapply *; finish_logic_with sbazooka. Qed.
-
-Lemma JMPrel_R_loopy_rule (r:Reg) (addr: DWORD) (p q: DWORD) :
   |-- ((|> safe @ (EIP ~= addr ** r ~= addr)
            -->> safe @ (EIP ~= p ** r ~= addr)) <@ (p -- q :-> JMPrel r)).
-Proof. specapply (@JMPrel_loopy_rule r); finish_logic_with sbazooka. Qed.
+Proof. specapply (@JMPrel_rule r); finish_logic_with sbazooka. Qed.
 End specapply_hint.

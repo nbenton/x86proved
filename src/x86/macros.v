@@ -57,20 +57,6 @@ Notation "'JS'"  := (JCC CC_S true)   : instr_scope.
 Notation "'JZ'"  := (JCC CC_Z true)   : instr_scope.
 
 Lemma JCC_rule a cc cv (b:bool) (p q: DWORD) :
-  |-- (
-      safe @ (EIP ~= (if b == cv then a else q) ** ConditionIs cc b) -->>
-      safe @ (EIP ~= p ** ConditionIs cc b)
-    ) <@ (p -- q :-> JCC cc cv a).
-Proof.
-rewrite /JCC/relToAbs.
-unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2. rewrite H1. specapply JCCrel_rule; first by ssimpl. 
-rewrite addB_subBK.
-rewrite <-spec_reads_frame. apply: limplAdj.
-apply: landL2. autorewrite with push_at. cancel1. sbazooka. 
-Qed.
-
-Lemma JCC_loopy_rule a cc cv (b:bool) (p q: DWORD) :
   |-- ((|> safe @ (b == cv /\\ EIP ~= a ** ConditionIs cc b)) //\\
          safe @ (b == (~~cv) /\\ EIP ~= q ** ConditionIs cc b) -->>
       safe @ (EIP ~= p ** ConditionIs cc b))
@@ -78,7 +64,7 @@ Lemma JCC_loopy_rule a cc cv (b:bool) (p q: DWORD) :
 Proof.
 rewrite /JCC/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2. rewrite H1. specapply JCCrel_loopy_rule; first by ssimpl. 
+rewrite -H2. rewrite H1. specapply JCCrel_rule; first by ssimpl. 
 rewrite addB_subBK.
 rewrite <-spec_reads_frame. apply: limplAdj.
 apply: landL2. autorewrite with push_at. subst.
@@ -89,16 +75,6 @@ Qed.
 Global Instance: forall a cc cv, instrrule (JCC cc cv a) := @JCC_rule.
 
 Lemma JZ_rule a (b:bool) (p q: DWORD) :
-  |-- (safe @ (EIP ~= (if b then a else q) ** ZF ~= b) -->>
-      safe @ (EIP ~= p ** ZF ~= b))
-      <@ (p -- q :-> JZ a).
-Proof.
-  change (ZF ~= b) with (ConditionIs CC_Z b).
-  replace (if b then a else q) with (if b == true then a else q) by by case b.
-  apply: JCC_rule.
-Qed.
-
-Lemma JZ_loopy_rule a (b:bool) (p q: DWORD) :
   |-- (
       |> safe @ (b == true  /\\ EIP ~= a ** ZF ~= b) //\\
          safe @ (b == false /\\ EIP ~= q ** ZF ~= b) -->>
@@ -106,48 +82,26 @@ Lemma JZ_loopy_rule a (b:bool) (p q: DWORD) :
     ) <@ (p -- q :-> JZ a).
 Proof.
   change (ZF ~= b) with (ConditionIs CC_Z b).
-  apply: JCC_loopy_rule.
-Qed.
-
-Lemma JC_rule a (b:bool) (p q: DWORD) :
-  |-- (safe @ (EIP ~= (if b then a else q) ** CF ~= b) -->>
-      safe @ (EIP ~= p ** CF ~= b)
-    ) <@ (p -- q :-> JC a).
-Proof.
-  change (CF ~= b) with (ConditionIs CC_B b).
-  replace (if b then a else q) with (if b == true then a else q) by by case b.
   apply: JCC_rule.
 Qed.
 
-Lemma JC_loopy_rule a (b:bool) (p q: DWORD) :
+Lemma JC_rule a (b:bool) (p q: DWORD) :
   |-- (|> safe @ (b == true  /\\ EIP ~= a ** CF ~= b) //\\
          safe @ (b == false /\\ EIP ~= q ** CF ~= b) -->>
       safe @ (EIP ~= p ** CF ~= b)
     ) <@ (p -- q :-> JC a).
 Proof.
   change (CF ~= b) with (ConditionIs CC_B b).
-  apply: JCC_loopy_rule.
+  apply: JCC_rule.
 Qed.
 
 Lemma JMP_I_rule (a: DWORD) (p q: DWORD) :
-  |-- (safe @ (EIP ~= a) -->> safe @ (EIP ~= p)) <@
-        (p -- q :-> JMP a).
-Proof.
-rewrite /JMP/relToAbs.
-unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2 H1. specapply JMPrel_I_rule; first by ssimpl. 
-rewrite addB_subBK. rewrite <-spec_reads_frame.
-apply: limplAdj. apply: landL2. autorewrite with push_at.
-cancel1. sbazooka.
-Qed.
-
-Lemma JMP_I_loopy_rule (a: DWORD) (p q: DWORD) :
   |-- (|> safe @ (EIP ~= a) -->> safe @ (EIP ~= p)) <@
         (p -- q :-> JMP a).
 Proof.
 rewrite /JMP/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2 H1. specapply JMPrel_I_loopy_rule; first by ssimpl.
+rewrite -H2 H1. specapply JMPrel_I_rule; first by ssimpl. 
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 apply: limplAdj. apply: landL2. autorewrite with push_at.
 cancel1. cancel1. sbazooka.
@@ -156,38 +110,15 @@ Qed.
 Global Instance: forall (a : DWORD), instrrule (JMP a) := @JMP_I_rule.
 
 Lemma JMP_R_rule (r:Reg) addr (p q: DWORD) :
-  |-- (safe @ (EIP ~= addr ** r ~= addr) -->> safe @ (EIP ~= p ** r ~= addr)) <@
+  |-- (|> safe @ (EIP ~= addr ** r ~= addr) -->> safe @ (EIP ~= p ** r ~= addr)) <@
         (p -- q :-> JMP (JmpTgtR r)).
 Proof.
   rewrite /JMP. apply JMPrel_R_rule.
 Qed.
 
-Lemma JMP_R_loopy_rule (r:Reg) addr (p q: DWORD) :
-  |-- (|> safe @ (EIP ~= addr ** r ~= addr) -->> safe @ (EIP ~= p ** r ~= addr)) <@
-        (p -- q :-> JMP (JmpTgtR r)).
-Proof.
-  rewrite /JMP. apply JMPrel_R_loopy_rule.
-Qed.
-
 Global Instance: forall (a : Reg), instrrule (JMP (JmpTgtR a)) := @JMP_R_rule.
 
 Lemma CALL_I_rule (a:DWORD) (p q: DWORD) :
-  |-- Forall w: DWORD, Forall sp:DWORD, (
-         safe @ (EIP ~= a ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
-         safe @ (EIP ~= p  ** ESP~=sp    ** sp-#4 :-> w)
-    ) <@ (p -- q :-> CALL a).
-Proof.
-specintros => w sp.
-rewrite /CALL/relToAbs.
-unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2 H1. specapply CALLrel_I_rule; first by ssimpl.
-rewrite addB_subBK. rewrite <-spec_reads_frame.
-autorewrite with push_at.
-apply: limplAdj. apply: landL2. cancel1.
-sbazooka.
-Qed.
-
-Lemma CALL_I_loopy_rule (a:DWORD) (p q: DWORD) :
   |-- Forall w: DWORD, Forall sp:DWORD, (
       |> safe @ (EIP ~= a ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
          safe @ (EIP ~= p  ** ESP~=sp    ** sp-#4 :-> w)
@@ -196,7 +127,7 @@ Proof.
 specintros => w sp.
 rewrite /CALL/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.
-rewrite -H2 H1. specapply CALLrel_I_loopy_rule; first by ssimpl.
+rewrite -H2 H1. specapply CALLrel_I_rule; first by ssimpl. 
 rewrite addB_subBK. rewrite <-spec_reads_frame.
 autorewrite with push_at.
 apply: limplAdj. apply: landL2. cancel1. cancel1.
@@ -238,9 +169,10 @@ Definition ifthenelse (cond: Condition) (value: bool)
                           Q.
   Proof.
     pre_if pthen pelse.
-    do ![ specapply *; first by ssimpl
-        | split_eip_match
-        | finish_logic ].
+    specapply *; first by ssimpl. rewrite <- spec_later_weaken.
+    specsplit; specintro => /eqP ->; (specapply *; first by ssimpl).
+    - finish_logic. 
+    - specapply *; first by ssimpl. rewrite <- spec_later_weaken. finish_logic.
   Qed.
 
   Global Instance: forall cond value pthen pelse, instrrule (ifthenelse cond value pthen pelse) := @if_rule.
@@ -291,17 +223,14 @@ Definition while (ptest: program)
 
     specsplit.
     (* JMP TEST *)
-    - specapply JMP_I_loopy_rule; first by ssimpl.
-      rewrite <-spec_reads_frame. apply: limplAdj.
-      apply: landL2. apply: landL2. by (autorewrite with push_at; reflexivity).
+    - specapply *; first by ssimpl. finish_logic.  
 
     (* ptest *)
-    specapply Htest.
-    - by ssimpl.
+    specapply Htest; first by ssimpl. 
 
     (* JCC cond value BODY *)
     specintro => b.
-    specapply JCC_loopy_rule; first by ssimpl.
+    specapply *; first by ssimpl.
 
     (* Now there are two cases. Either we jumped to the loop body, or we fell
        through and exited the loop. *)
@@ -310,9 +239,7 @@ Definition while (ptest: program)
       rewrite <-spec_later_impl, <-spec_later_weaken.
       (* pbody *)
       specapply Hbody.
-      - sdestruct. move/eqP => ->. by ssimpl.
-      rewrite <-spec_reads_frame. apply: limplAdj.
-      apply: landL2. autorewrite with push_at. cancel1. by ssimpl.
+      - sdestruct. move/eqP => ->. by ssimpl. finish_logic.
 
     (* End of loop *)
     rewrite <-spec_reads_frame. apply: limplAdj.

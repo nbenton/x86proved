@@ -6,7 +6,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.program.
 Require Import x86proved.x86.call x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.inlinealloc
                x86proved.x86.listspec x86proved.x86.listimp x86proved.triple.
-Require Import x86proved.x86.macros.
+Require Import x86proved.x86.macros x86proved.chargetac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -41,12 +41,11 @@ Proof.
 rewrite /inlineCons_spec/inlineCons/updateCons. unfold_program.
 specintros => i1 i2 i3.
 
-specapply inlineAlloc_correct. by ssimpl.
+specapply inlineAlloc_correct; first by ssimpl.
 
 (* Failure case *)
 specsplit.
-  rewrite <-spec_reads_frame. autorewrite with push_at.
-  apply limplValid. apply landL1. cancel1. rewrite /stateIsAny. by sbazooka.
+- finish_logic_with sbazooka. 
 
 (* Success case *)
 specintros => pb.
@@ -59,11 +58,11 @@ assert (H:= subB_equiv_addB_negB (pb+#8) #8).
 rewrite E0 addB_negBn /snd in H.
 rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.
 
-specapply SUB_RI_rule. sbazooka.
+specapply SUB_RI_rule; first by ssimpl. 
 
-specapply MOV_M0R_rule. rewrite E0. simpl fst. simpl snd. by sbazooka.
+specapply MOV_M0R_rule. rewrite E0. simpl fst. simpl snd. by ssimpl.  
 
-specapply MOV_MR_rule. by ssimpl.
+specapply MOV_MR_rule; first by ssimpl.
 
 (* Final stuff *)
 rewrite <-spec_reads_frame. autorewrite with push_at.
@@ -96,19 +95,14 @@ unhideReg EDI => olddi.
 (* mov EDI, 0 *)
 specapply MOV_RI_rule. sbazooka.
 
-rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. cancel1. ssimpl. apply: lorR1. by rewrite /natAsDWORD.
+rewrite /natAsDWORD. finish_logic_with sbazooka. by apply lorR1. 
 
 (* success case *)
-autorewrite with push_at.
-
 (* jmp SUCCEED *)
 specapply JMP_I_rule. by ssimpl.
 
-(* Final stuff *)
-rewrite <-spec_reads_frame.
-apply: limplAdj. autorewrite with push_at.
-apply: landL2. cancel1.
-rewrite /OSZCP/stateIsAny. sbazooka.
+(* Final stuff *) 
+rewrite <- spec_later_weaken.
+finish_logic_with sbazooka.
 apply: lorR2. sbazooka.
 Qed.

@@ -48,12 +48,11 @@ Proof.
 
   rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.
   specapply *; first by ssimpl.
-
   rewrite <-spec_reads_frame. autorewrite with push_at.
   rewrite /toyfun.
   apply lforallL with iret.
   rewrite /stateIsAny.
-  cancel2. cancel1. by ssimpl.
+  cancel2. cancel1. by ssimpl. rewrite <- spec_later_weaken. by ssimpl.
 Qed.
 
 Global Opaque call_toyfun.
@@ -72,7 +71,7 @@ Proof.
     specapply *; first by ssimpl.
     rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
     rewrite /stateIsAny. autorewrite with push_at.
-    cancel1. by sbazooka.
+    rewrite <- spec_later_weaken. cancel1. by sbazooka.
 Qed.
 
 
@@ -118,15 +117,6 @@ Definition toyfun_example_callee_correct (f f': DWORD):
   |-- (Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
       @ OSZCP? <@ (f--f' :-> toyfun_example_callee)
   := @toyfun_example_callee_correct_helper f f'.
-
-(*
-Definition loopy_toyfun_example_callee_correct (f f': DWORD):
-  |-- (Forall a, loopy_toyfun f (EAX ~= a) empOP (EAX ~= a +# 2))
-      @ OSZCP? <@ (f--f' :-> toyfun_example_callee)
-  := @toyfun_example_callee_correct_helper PointedOPred OPred_pred (fun O1 O2 => mkPointedOPred (catOP O1 O2) _) (mkPointedOPred empOP _)
-                                           f f' (fun _ _ => reflexivity _) (reflexivity _).
-
-*)
 
 (* The toyfun spec assumed for f here is actually stronger than what lemma
    toyfun_example_callee_correct guarantees: we ask for a function that does
@@ -201,7 +191,7 @@ Example toyfun_apply_correct (f f' g: DWORD) P Q:
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
   specintro => iret. rewrite limpland.
-  specapply *; first by ssimpl.
+  specapply *; first by ssimpl. rewrite <-spec_later_weaken.
   autorewrite with push_at.
   rewrite <-spec_reads_frame. rewrite -limpland. apply limplValid.
   rewrite /toyfun. eapply lforallL. 

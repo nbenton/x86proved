@@ -186,7 +186,7 @@ specapply CMP_RI_rule. sbazooka.
 
 rewrite subB_eq0.
 
-specapply JZ_loopy_rule.
+specapply JZ_rule.
 rewrite /OSZCP.
 by ssimpl.
 
@@ -230,7 +230,7 @@ rewrite /makeBOP.
 specapply CMP_RbI_ZC_rule.
 by ssimpl.
 
-specapply JZ_loopy_rule.
+specapply JZ_rule.
 sbazooka.
 
 rewrite low_catB.
