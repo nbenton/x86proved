@@ -18,10 +18,8 @@ Example safe_loop (p q: DWORD) :
   |-- safe @ (EIP ~= p ** p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
-  have H := @JMP_I_rule p p q.
-  rewrite ->spec_reads_entails_at in H; [|apply _].
-  autorewrite with push_at in H. apply landAdj in H.
-  etransitivity; [|apply H]. apply: landR; [sbazooka | reflexivity].
+  eapply (safe_safe (@JMP_I_rule p p q)); first ssimpl.
+  finish_logic_with sbazooka. 
 Qed.
 
 (* Example: It is safe to sit in a less tight loop forever. *)
@@ -29,19 +27,20 @@ Example safe_loop_while eax :
   |-- basic (EAX ~= eax ** OSZCP?) (while (TEST EAX, EAX) CC_O false prog_skip) lfalse.
 Proof.
   basic apply (while_rule_ro (I := fun b => b == false /\\ EAX? ** SF? ** ZF? ** CF? ** PF?)) => //;
-    rewrite /stateIsAny; specintros => *;
-    basic apply *.
+    rewrite /stateIsAny; specintros => *.
+  do !basic apply *.
+  basic apply TEST_self_rule.
 Qed.
 
 (* We can package up jumpy code in a triple by using labels. *)
 Example basic_loop:
   |-- basic empSP (LOCAL l; l:;; JMP l) lfalse.
 Proof.
+  apply basic_local => l. 
   rewrite /basic. specintros => i j.
-  unfold_program. specintros => _ _ <- <-.
-  rewrite /spec_reads. specintros => code Hcode.
+  unfold_program. specintros => _ <- <-.  
   autorewrite with push_at.
-  apply: limplAdj. apply: landL1. rewrite -> Hcode.
+  apply: limplAdj. apply: landL1. 
   etransitivity; [apply safe_loop|]. cancel1. by ssimpl. 
 Qed.
 
@@ -53,7 +52,7 @@ Example basic_inc3 (x:DWORD):
 Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  do !basic apply *.
+  do !basic apply *.   
   by rewrite addIsIterInc/iter.
 Qed.
 

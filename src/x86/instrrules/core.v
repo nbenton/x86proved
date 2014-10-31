@@ -60,11 +60,11 @@ Section UnfoldSpec.
   Local Transparent ILPre_Ops lentails.
 
   Lemma TRIPLE_safe_gen (instr:Instr) P o Q (i j: DWORD) sij:
-    eq_pred sij |-- i -- j :-> instr ->
+    sij |-- i -- j :-> instr ->
     (forall (R: SPred),
-     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
+     TRIPLE (EIP ~= j ** P ** sij ** R) (evalInstr instr) o
             (Q ** R)) ->
-    safe @ Q |-- safe @ (EIP ~= i ** P ** eq_pred sij).
+    safe @ Q |-- safe @ (EIP ~= i ** P ** sij).
   Proof.
     move => Hsij HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
@@ -89,11 +89,11 @@ Section UnfoldSpec.
   Qed.
 
   Lemma TRIPLE_safeLater_gen (instr:Instr) P o Q (i j: DWORD) sij:
-    eq_pred sij |-- i -- j :-> instr ->
+    sij |-- i -- j :-> instr ->
     (forall (R: SPred),
-     TRIPLE (EIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
+     TRIPLE (EIP ~= j ** P ** sij ** R) (evalInstr instr) o
             (Q ** R)) ->
-    |> safe @ Q |-- safe @ (EIP ~= i ** P ** eq_pred sij).
+    |> safe @ Q |-- safe @ (EIP ~= i ** P ** sij).
   Proof.
     move => Hsij HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
@@ -126,21 +126,21 @@ End UnfoldSpec.
 Lemma TRIPLE_safeLater instr P Q (i j: DWORD) :
   (forall (R: SPred),
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
-  |-- (|> safe @ Q -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+  |-- (|> safe @ Q -->> safe @ (EIP ~= i ** P)) @ (i -- j :-> instr).
 Proof.
-  move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
-  rewrite sepSPA. apply limplValid.
-  eapply TRIPLE_safeLater_gen; try eassumption; []. move=> R. triple_apply H.
+  move=> H.  autorewrite with push_at. rewrite sepSPA.
+  apply limplValid. 
+  apply: TRIPLE_safeLater_gen. reflexivity. move => R. triple_apply H. 
 Qed.
 
 Lemma TRIPLE_safe instr P o Q (i j: DWORD) :
   (forall (R: SPred),
    TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
-  |-- (safe @ Q -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> instr).
+  |-- (safe @ Q -->> safe @ (EIP ~= i ** P)) @ (i -- j :-> instr).
 Proof.
-  move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
-  rewrite sepSPA. apply limplValid.
-  eapply TRIPLE_safe_gen; [eassumption|]. move=> R. triple_apply H.
+  move=> H. autorewrite with push_at. rewrite sepSPA. 
+  apply limplValid.
+  eapply TRIPLE_safe_gen. reflexivity. move=> R. triple_apply H.
 Qed.
 
 Lemma TRIPLE_basicGen instr P o Q:
@@ -696,3 +696,30 @@ Hint Unfold
   natAsDWORD BYTEtoDWORD
   makeMOV makeBOP 
   : instrrules_all.
+
+
+Definition basic' {T} {_:MemIs T} P (c:T) Q := 
+  Forall i j:DWORD, Forall sij (*bytes: seq BYTE*) , (sij (*i -- j :-> bytes *) |-- i -- j :-> c) ->>
+  (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) @ (sij (*i -- j :-> bytes *)). 
+
+Lemma TRIPLE_basic' instr P Q:
+  (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) nil (Q ** R)) ->
+  |-- basic' P instr Q.
+Proof.
+  move=> H. rewrite /basic'. specintros => i j bytes sij.
+  have TSG :=TRIPLE_safe_gen (o:=nil) sij.
+  autorewrite with push_at. 
+  rewrite 2!sepSPA. apply limplAdj. apply landL2. apply TSG. 
+  move => R. triple_apply H.
+Qed.
+
+(** ** AND r1, r2 *)
+Corollary AND_RR_rule (r1 r2:Reg) v1 (v2:DWORD) :
+  |-- basic' (r1~=v1 ** r2 ~= v2 ** OSZCP?)
+            (AND r1, r2) 
+            (let v := andB v1 v2 in r1~=v ** r2 ~= v2 **
+             OSZCP false (msb v) (v == #0) false (lsb v)).
+Proof. 
+apply TRIPLE_basic' => *. 
+do !instrrule_triple_bazooka_step idtac.
+Qed. 

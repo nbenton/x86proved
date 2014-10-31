@@ -21,9 +21,7 @@ Proper (lequiv ==> progEq ==> lequiv ==> lequiv) (@basic _ _).
 Lemma basic_skip P: |-- @basic _ _ P prog_skip P.
 Proof.
   rewrite /basic. specintros => i j. unfold_program.
-  specintro => ->.
-  rewrite emp_unit spec_reads_eq_at; rewrite <- emp_unit.
-  rewrite spec_at_emp. by apply limplValid.
+  specintro => ->. rewrite spec_at_emp. by apply limplValid. 
 Qed.
 
 (** Sequencing rule *)
@@ -32,12 +30,11 @@ Lemma basic_seq (c1 c2: program) S P Q R:
   S |-- basic Q c2 R ->
   S |-- basic P (c1;; c2) R.
 Proof.
-  rewrite /basic. move=> Hc1 Hc2. specintros => i j.
-  unfold_program. 
-  specintro => i'. rewrite -> memIsNonTop. specintros => p' EQ. subst.
-  specapply Hc1; first by ssimpl. 
-  specapply Hc2; first by ssimpl.
-  finish_logic.
+  move=> Hc1 Hc2. rewrite /basic. specintros => i j. unfold_program. specintro => i'.
+  autorewrite with push_at. apply limplAdj.
+  eapply basic_safe_context. apply Hc1. by apply landL1. by ssimpl. 
+  eapply basic_safe_context. apply Hc2. by apply landL1. by ssimpl. 
+  apply landL2. cancel1. by ssimpl.  
 Qed.
 
 (** Scoped label rule *)
@@ -52,9 +49,15 @@ Proof.
 Qed.
 
 (** Needed to avoid problems with coercions *)
+Require Import writer roundtrip.
 Lemma basic_instr S P i Q :
   S |-- @basic _ _ P i Q ->
   S |-- @basic _ _ P (prog_instr i) Q.
+Proof. done. Qed.
+
+Lemma basic_data {T} {R: Reader T} {W: Writer T} {RT: Roundtrip R W} S P (d:T) Q :
+  S |-- @basic _ _ P d Q ->
+  S |-- @basic _ _ P (prog_data _ d) Q.
 Proof. done. Qed.
 
 (** ** Automated application of basic lemmas *)
@@ -242,6 +245,7 @@ Module Import BasicProgInternalsLookup.
     match P with
       | prog_seq ?P' _ => get_first_instr P'
       | prog_instr ?I => constr:(I)
+      | @prog_data Instr _ _ _ I => constr:(I)
       | ?P' => constr:(P')
     end.
 
@@ -493,8 +497,10 @@ Module Import BasicProgInternalsIsolation.
     let rec_tac := basicseq code_tac in
     (idtac;
      lazymatch goal with
-     | [ |- _ |-- basic ?P (prog_instr ?i) ?Q ]
+     | [ |- _ |-- basic ?P (@prog_instr ?i) ?Q ]
        => (eapply basic_instr; rec_tac)
+     | [ |- _ |-- basic ?P (@prog_data _ _ _ _ ?i) ?Q ]
+       => (eapply basic_data; rec_tac)
      | [ |- _ |-- basic ?P (prog_seq ?p1 ?p2) ?Q ]
        => (eapply basic_seq; [rec_tac | ]; instantiate; [ .. ])
      | [ |- _ |-- @basic _ _ _ _ _ ] => code_tac

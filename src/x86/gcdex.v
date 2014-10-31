@@ -66,13 +66,41 @@ Definition showOctal_program : program :=
       ).
 
 Theorem gcd_safe: forall endAddr: DWORD,
-  |-- (safe @ (EIP ~= endAddr) -->> safe @ (EIP ~= codeAddr))
-        @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
-       <@ (codeAddr -- endAddr :-> gcd_bytes).
+  |-- (safe @ (EIP ~= endAddr ** codeAddr -- endAddr :-> compile_cmd Cgcd) -->> 
+       safe @ (EIP ~= codeAddr ** codeAddr -- endAddr :-> gcd_bytes))
+        @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?).
 Proof.
   move=> endAddr. rewrite /gcd_bytes. 
-  rewrite ->assemble_correct; last first. by vm_compute.
-  rewrite /gcd_program.
+  autorewrite with push_at.
+  rewrite -> assemble_correct; last first. by vm_compute.
+  rewrite /gcd_program. 
+  have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
+  autorewrite with push_at. apply limplAdj.
+  rewrite /basic in H. eforalls H.
+  eapply safe_safe. apply H.
+(*  specapply H.*)
+  - ssimpl. rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
+    sdestructs => a b c.
+    pose s x := match x with | xa => a | xb => b | xc => c end.
+    ssplit. instantiate (2:=s). ssplit; first done. rewrite /s. by ssimpl.
+
+
+  apply landL2. autorewrite with push_at. cancel1. 
+  rewrite /asn_denot /stack_denot /stateIsAny. by sbazooka. 
+Qed.
+
+
+(*
+(* This is not true because the code might update gcd_bytes but leave their decoding the same *)
+Theorem gcd_safe: forall endAddr: DWORD,
+  |-- (safe @ (EIP ~= endAddr) -->> safe @ (EIP ~= codeAddr))
+        @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
+        @ (codeAddr -- endAddr :-> gcd_bytes).
+Proof.
+  move=> endAddr. rewrite /gcd_bytes. 
+  autorewrite with push_at.
+  rewrite <-assemble_correct. ; last first. by vm_compute.
+  rewrite /gcd_program.\
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
   specapply H.
   - ssimpl. rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
@@ -82,6 +110,7 @@ Proof.
   rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
   cancel1. rewrite /asn_denot /stack_denot /stateIsAny. by sbazooka.
 Qed.
+*)
 
 (* This is the plain version of the theorem, not obscured by fancy spec logic
    constructs. *)

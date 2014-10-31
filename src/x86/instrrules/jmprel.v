@@ -10,11 +10,11 @@ Require Import x86proved.chargetac (* for [finish_logic] *).
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) 
 : |-- interpJmpTgt tgt q (fun P addr =>
                             ((|> safe  @ (EIP ~= addr ** P)
-                            -->> safe @ (EIP ~= p ** P)) <@ (p -- q :-> JMPrel tgt))).
+                            -->> safe @ (EIP ~= p ** P)) @ (p -- q :-> JMPrel tgt))).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
   do_instrrule
-    ((try specintros => *; autorewrite with push_at);
+    (try specintros => *;
      apply: TRIPLE_safeLater => ?;
      do !instrrule_triple_bazooka_step idtac).
 Qed.
@@ -29,11 +29,17 @@ Local Hint Unfold interpJmpTgt : specapply.
 
 Lemma JMPrel_I_rule (rel: DWORD) (p q: DWORD):
   |-- ((|> safe @ (EIP ~= addB q rel)
-           -->> safe @ (EIP ~= p)) <@ (p -- q :-> JMPrel rel)).
-Proof. specapply (@JMPrel_rule rel); finish_logic_with sbazooka. Qed.
+           -->> safe @ (EIP ~= p)) @ (p -- q :-> JMPrel rel)).
+Proof. safeapply (JMPrel_rule rel); first ssimpl. 
+finish_logic. 
+(*
+specapply (@JMPrel_rule rel); finish_logic_with sbazooka. *) Qed.
 
 Lemma JMPrel_R_rule (r:Reg) (addr: DWORD) (p q: DWORD) :
   |-- ((|> safe @ (EIP ~= addr ** r ~= addr)
-           -->> safe @ (EIP ~= p ** r ~= addr)) <@ (p -- q :-> JMPrel r)).
-Proof. specapply (@JMPrel_rule r); finish_logic_with sbazooka. Qed.
+           -->> safe @ (EIP ~= p ** r ~= addr)) @ (p -- q :-> JMPrel r)).
+Proof. 
+safeapply (JMPrel_rule r); first ssimpl. finish_logic.
+(*
+specapply (@JMPrel_rule r); finish_logic_with sbazooka. *) Qed.
 End specapply_hint.

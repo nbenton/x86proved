@@ -383,6 +383,22 @@ End SpecApply.
 
 Ltac specapply := SpecApply.specapply.
 
+Ltac safeapply lem :=
+    let Hlem := fresh "Hlem" in
+    (* Move the lemma to be applied into the context so we can preprocess it
+       from there. *)
+    move: (lem) => Hlem;
+    (* Unfold definitions as needed to expose a [safe]. Wrappers around [safe]
+       should be added to the specapply db with Hint Unfold. *)
+    repeat autounfold with specapply in Hlem;
+    (* Instantiate binders with evars so we can reflect the hypothesis. *)
+    eforalls Hlem; 
+    autorewrite with push_at;
+    eapply (safe_safe_pre Hlem); [ try done | .. ];
+    clear Hlem.
+
+
+
 Ltac unhideReg r :=
   replace r? with (Exists x:DWORD, r ~= x) by done; specintro.
 Ltac unhideFlag f :=

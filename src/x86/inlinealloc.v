@@ -44,7 +44,7 @@ Definition allocSpec n (fail:DWORD) inv code :=
       safe @ (EIP ~= i ** EDI?)
     )
     @ (OSZCP? ** inv)
-    <@ (i -- j :-> code).
+    @ (i -- j :-> code).
 
 Hint Unfold allocSpec : specapply.
 
@@ -55,37 +55,44 @@ Proof.
   rewrite /allocSpec/allocImp.
   specintros => *. 
   unfold_program. specintros => *.
-  autorewrite with push_at.
+  autorewrite with push_at. apply limplValid.
 
   (* MOV EDI, [infoBlock] *)
-  rewrite {3}/allocInv. specintros => base limit. 
-  specapply MOV_RanyInd_rule; first by ssimpl. 
+  rewrite /allocInv. specintros => base limit. 
 
+  apply limplValid. 
+  
+  safeapply (@MOV_RanyInd_rule infoBlock); first by ssimpl. 
   (* ADD EDI, bytes *)
-  specapply ADD_RI_rule; first by ssimpl.
+  safeapply ADD_RI_rule; first by ssimpl. 
 
-  (* JC failed *)
-  specapply JC_rule; first by rewrite /OSZCP; ssimpl. 
+  (* JC failed *)  
+  intros. 
+  safeapply JC_rule; first by rewrite /OSZCP; ssimpl.
+
   specsplit.
-    rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
-    autorewrite with push_at. apply limplValid. apply landL1. cancel1.
-    rewrite /OSZCP /stateIsAny/allocInv. by sbazooka.
+    rewrite <-spec_later_weaken.
+    autorewrite with push_at. apply limplValid. apply landL1.  
+    rewrite /OSZCP /stateIsAny/allocInv. finish_logic_with sbazooka. 
 
   (* CMP [infoBlock+#4], EDI *)
-  specintro. move/eqP => Hcarry. 
-  specapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
+  specintro => /eqP => Hcarry. 
+
+  safeapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka. 
 
   (* JC failed *)
-  specapply JC_rule; first by ssimpl.
+  safeapply JC_rule; first by ssimpl. 
   specsplit.
-  - rewrite <-spec_reads_frame. rewrite <-spec_later_weaken.
+  - rewrite <-spec_later_weaken.
     autorewrite with push_at. apply limplValid. apply landL1. cancel1.
     rewrite /OSZCP /stateIsAny /allocInv. by sbazooka.
 
   (* MOV [infoBlock], EDI *)
   specintro => /eqP LT.
-  specapply MOV_IndR_rule; first by ssimpl.
-  { rewrite <-spec_reads_frame. apply limplValid. apply landL2. finish_logic.
+  safeapply MOV_IndR_rule; first by ssimpl. 
+
+  { apply limplValid. apply landL2. autorewrite with push_at. 
+    cancel1. 
     rewrite /allocInv/stateIsAny/natAsDWORD. sbazooka.
 
     apply memAnySplit.

@@ -41,38 +41,47 @@ Hint Rewrite @spec_at_toyfun : push_at.
 Lemma toyfun_call (f:DWORD) P Q:
   toyfun f P Q |-- basic P (call_toyfun f) Q @ retreg?.
 Proof.
-  autorewrite with push_at. rewrite /call_toyfun.
+  rewrite /call_toyfun.
   basic apply * => iret.
   rewrite /stateIsAny. specintros => *.
-  basic apply *.
+  basic apply MOV_RI_rule.
 
-  rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.
-  specapply *; first by ssimpl.
-  rewrite <-spec_reads_frame. autorewrite with push_at.
-  rewrite /toyfun.
-  apply lforallL with iret.
-  rewrite /stateIsAny.
-  cancel2. cancel1. by ssimpl. rewrite <- spec_later_weaken. by ssimpl.
-Qed.
+  rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.  
+  rewrite empSPR. (* cleanup *)  
+  safeapply JMP_I_rule; first by ssimpl. 
+  rewrite (sepSPC (i -- iret :-> JMP f)).  
+  apply limplAdj. apply landAdj. rewrite <-spec_at_at. rewrite <-(@spec_at_at _ _ (i -- iret :-> JMP f)). 
+  rewrite <- spec_at_impl. rewrite <- spec_frame.
+  rewrite <- spec_later_weaken. 
+  rewrite /toyfun. apply lforallL with iret.
+  rewrite /stateIsAny. cancel2. cancel1. by ssimpl. rewrite spec_at_at. by cancel1. 
+Qed. 
 
 Global Opaque call_toyfun.
 Global Instance: forall f : DWORD, instrrule (call_toyfun f) := @toyfun_call.
 
 Lemma toyfun_mkbody (f f': DWORD) P p Q:
   (Forall iret, basic P p Q @ (retreg ~= iret))
-    |-- toyfun f P Q <@ (f--f' :-> mkbody_toyfun p).
+    |-- toyfun f P Q @ (f--f' :-> mkbody_toyfun p).
 Proof.
   rewrite /toyfun. specintro => iret. rewrite /mkbody_toyfun.
   unfold_program. specintro => i1.
   apply lforallL with iret. autorewrite with push_at.
-  eapply safe_safe_ro; first reflexivity. 
-  - apply lforallL with f. apply lforallL with i1. reflexivity.
-  - split; sbazooka.
-    specapply *; first by ssimpl.
-    rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
-    rewrite /stateIsAny. autorewrite with push_at.
-    rewrite <- spec_later_weaken. cancel1. by sbazooka.
-Qed.
+  (*rewrite /basic. apply lforallL with f. apply lforallL with i1. *)
+  eapply limplAdj.
+  set S'' := basic _ _ _.
+  eapply (safe_safe_context (S'':=S'')).
+  rewrite /S''/basic. apply lforallL with f. apply lforallL with i1. reflexivity.
+  by apply landL1.  
+  by ssimpl.  
+  
+  have JR := @JMP_R_rule retreg iret i1 f'. unfold S''.
+  rewrite spec_at_at.
+  eapply safe_safe_context. apply JR. done.
+  by ssimpl.
+  rewrite <- spec_later_weaken.
+  finish_logic_with sbazooka.
+Qed. 
 
 
 (*
@@ -98,24 +107,21 @@ Definition toyfun_example (entry: DWORD) : program :=
    toyfun_example_caller f.
 
 Example toyfun_example_callee_correct_helper (f f': DWORD):
-  |-- (Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
-      @ OSZCP? <@ (f--f' :-> toyfun_example_callee).
+  |-- ((Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
+      @ OSZCP?) @ (f--f' :-> toyfun_example_callee).
 Proof.
-  specintro => a. autorewrite with push_at.
+  specintro => a. rewrite spec_at_toyfun. (*autorewrite with push_at.*)
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  do ?attempt basic apply *;
-  repeat match goal with
-           | _ => progress intros
-           | _ => evar_safe_syntax_unify_reflexivity
-         end.
+  basic apply INC_R_rule.
+  basic apply INC_R_rule.
   by rewrite addIsIterInc /iter.
 Qed.
 
 Definition toyfun_example_callee_correct (f f': DWORD):
   |-- (Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
-      @ OSZCP? <@ (f--f' :-> toyfun_example_callee)
+      @ OSZCP? @ (f--f' :-> toyfun_example_callee)
   := @toyfun_example_callee_correct_helper f f'.
 
 (* The toyfun spec assumed for f here is actually stronger than what lemma
@@ -140,26 +146,30 @@ Proof.
     rewrite -addB_addn. reflexivity. }
 Qed.
 
+(*
 Example toyfun_example_correct entry (i j: DWORD) a:
   |-- (
       safe @ (EIP ~= j ** EAX ~= a +# 4) -->>
           safe @ (EIP ~= entry ** EAX ~= a)
-    ) @ (retreg? ** OSZCP?) <@ (i--j :-> toyfun_example entry).
+    ) @ (retreg? ** OSZCP?) @ (i--j :-> toyfun_example entry).
 Proof.
   rewrite /toyfun_example. unfold_program.
   specintros => f _ <- -> {i} i1 _ <- ->. rewrite !empSPL.
-  rewrite [X in _ <@ X]sepSPC. rewrite <-spec_reads_merge.
+  rewrite [X in _ @ X]sepSPC. rewrite <-spec_at_at. 
   rewrite ->toyfun_example_callee_correct.
   (* The following rewrite underneath a @ is essentially a second-order frame
      rule application. *)
   rewrite ->toyfun_example_caller_correct.
   cancel2; last reflexivity. autorewrite with push_at.
-  eapply safe_safe_ro; first reflexivity. 
+
+  apply limplAdj.
+  eapply safe_safe_context; first reflexivity. 
   - eapply lforallL. eapply lforallL. reflexivity.
   - split; sbazooka.
     rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
     rewrite spec_at_emp. cancel1. sbazooka.
 Qed.
+*)
 
 (*
    Higher-order function example.
@@ -170,30 +180,19 @@ Qed.
 Definition toyfun_apply :=
   JMP EBX.
 
-Lemma limpland (S1 S2 S3: spec) :
-  S1 -->> S2 -->> S3 -|- S1 //\\ S2 -->> S3.
-Proof.
-  split.
-  - apply: limplAdj.
-    apply: limplL; first exact: landL1.
-    apply: limplL; first exact: landL2. exact: landL1.
-  - apply: limplAdj.  apply: limplAdj. rewrite landA.
-    exact: landAdj.
-Qed.
-
 (* It is possible but does not seem necessary to put a |> in front of the -->>.
    There will be a function call somewhere to provide the |> unless we're just
    making the apply function call itself in a tight loop. *)
 Example toyfun_apply_correct (f f' g: DWORD) P Q:
   |-- (
       toyfun g (P ** EBX?) Q -->> toyfun f (P ** EBX ~= g) Q
-    ) <@ (f--f' :-> toyfun_apply).
+    ) @ (f--f' :-> toyfun_apply).
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
-  specintro => iret. rewrite limpland.
-  specapply *; first by ssimpl. rewrite <-spec_later_weaken.
-  autorewrite with push_at.
-  rewrite <-spec_reads_frame. rewrite -limpland. apply limplValid.
+  specintro => iret. 
+  autorewrite with push_at. apply limplValid.
+  safeapply JMP_R_rule; first by ssimpl.
+  rewrite <-spec_later_weaken. autorewrite with push_at.
   rewrite /toyfun. eapply lforallL. 
-  rewrite /stateIsAny. cancel2; cancel1; by sbazooka.
+  rewrite 4!sepSPA. cancel1. finish_logic_with sbazooka.
 Qed.

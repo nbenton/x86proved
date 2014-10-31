@@ -9,7 +9,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.pointsto x86proved.cursor x86proved.x86.instr x86proved.reader x86proved.x86.instrcodec.
+Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.pointsto x86proved.cursor x86proved.reader.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 
 Section Basic.
@@ -18,7 +18,7 @@ Section Basic.
 
   Definition basic P (c : T) Q : spec :=
     Forall (i j : DWORD),
-    (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) <@ (i -- j :-> c).
+    (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) @ (i -- j :-> c).
 
   Global Strategy 10000 [basic].
 
@@ -31,7 +31,7 @@ Section Basic.
              | [ |- Forall _ : ?T, _ -|- Forall _ : ?T, _ ] => cancel1 => ?
              | _ => progress autorewrite with push_at
            end.
-      by rewrite -2!sepSPA.
+    rewrite (sepSPC _ R). by rewrite -4!sepSPA. 
   Qed.
 
   (* We need to rewrite with [spec_at_basic] so much in applying
@@ -153,9 +153,43 @@ Section Basic.
   Proof.
     move=> Hc HP HQ. apply: basic_basic_context; try eassumption. done. 
   Qed.
+
+  Lemma basic_safe_context P P' Q' R S' S c (i j: DWORD):
+    S' |-- basic P' c Q' ->
+    S |-- S' ->
+    (* The order of separating conjuncts in the following premise is crucial for
+       allowing ssimpl to solve it in practice. *)
+    P |-- EIP ~= i ** i -- j :-> c ** P' ** R ->
+    S |-- safe @ (Q' ** EIP ~= j ** i -- j :-> c ** R) ->
+    S |-- safe @ P.
+  Proof.
+    move=> Hbasic HS' HP HS.
+    lforwardR Hbasic.
+    - apply lforallL with i. apply lforallL with j. apply (spec_frame R).
+    eapply safe_safe_context.
+    - rewrite ->spec_at_at in Hbasic. apply Hbasic.
+    - apply HS'.
+    - rewrite ->HP. by ssimpl.
+    - rewrite ->HS. autorewrite with push_at. cancel1. by ssimpl.
+  Qed.
+
+  Lemma basic_safe P P' Q' R S (c: T) (i j: DWORD):
+    |-- basic P' c Q' ->
+  (* The order of separating conjuncts in the following premise is crucial for
+     allowing ssimpl to solve it in practice. *)
+  P |-- EIP ~= i ** i -- j :-> c ** P' ** R ->
+  S |-- safe @ (Q' ** EIP ~= j ** i -- j :-> c ** R) ->
+  S |-- safe @ P.
+  Proof.
+    move=> Hbasic HP HS. eapply (basic_safe_context); try eassumption.
+    done.
+  Qed.
+
 End Basic.
 
 Hint Rewrite @spec_at_basic @spec_at_basic : push_at.
+
+
 
 Hint Unfold basic : specapply.
 

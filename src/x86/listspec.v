@@ -21,14 +21,14 @@ Definition inlineHead_spec (r1 r2:Reg) (i j p e: DWORD) v vs (instrs: program) :
   |-- 
   (safe @ (EIP ~= j ** r1~=v) -->>
    safe @ (EIP ~= i ** r1?)) @
-  (listSeg p e (v::vs) ** r2~=p) <@ (i -- j :-> instrs).
+  (listSeg p e (v::vs) ** r2~=p) @ (i -- j :-> instrs).
 Implicit Arguments inlineHead_spec [].
 
 Definition inlineTail_spec (r1 r2:Reg) (i j p e: DWORD) v vs (instrs: program) :=
   |-- 
   (safe @ (Exists q, EIP ~= j ** r1~=q ** listSeg p q (v::nil) ** listSeg q e vs) -->>
    safe @ (EIP ~= i ** r1? ** listSeg p e (v::vs))) @
-  (r2~=p) <@ (i -- j :-> instrs).
+  (r2~=p) @ (i -- j :-> instrs).
 Implicit Arguments inlineTail_spec [].
 
 (* Head is in EAX, tail is in EDI, result in EDI, ESI trashed *)
@@ -40,10 +40,10 @@ Definition inlineCons_spec (r1 r2:Reg) heapInfo (failLabel:DWORD) (i j h t e: DW
       safe @ (EIP ~= i ** r1~=h ** r2~=t ** EDI?)
     ) @
     (ESI? ** OSZCP? ** allocInv heapInfo ** listSeg t e vs)
-    <@ (i -- j :-> instrs).
+    @ (i -- j :-> instrs).
 
 Definition callCons_spec (r1 r2: Reg) heapInfo (i j h t e: DWORD) vs (instrs: program):=
   (toyfun i (r1~=h ** r2~=t ** EDI?) 
             (r1? ** r2? ** (EDI ~= #0 \\// (Exists pb, EDI ~= pb ** listSeg pb t [::h])))) @
   (ESI? ** OSZCP? ** allocInv heapInfo ** listSeg t e vs)
-  <@ (i -- j :-> mkbody_toyfun instrs).
+  @ (i -- j :-> mkbody_toyfun instrs).

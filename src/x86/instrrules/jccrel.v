@@ -10,7 +10,7 @@ Lemma JCCrel_rule (rel: DWORD) cc cv (b:bool) (p q: DWORD) :
   |-- (
       |> safe @ (EIP ~= (if b == cv then addB q rel else q) ** ConditionIs cc b) -->>
       safe @ (EIP ~= p ** ConditionIs cc b)
-    ) <@ (p -- q :-> JCCrel cc cv rel).
+    ) @ (p -- q :-> JCCrel cc cv rel).
 Proof.
   apply: TRIPLE_safeLater => R. autounfold with instrrules_eval.
   triple_apply triple_letGetCondition.
