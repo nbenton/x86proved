@@ -55,45 +55,38 @@ Proof.
   rewrite /allocSpec/allocImp.
   specintros => *. 
   unfold_program. specintros => *.
-  autorewrite with push_at. apply limplValid.
+  (* Push invariant under implication so that we can instantiate existential pre and post *)
+  rewrite spec_at_impl. rewrite spec_at_at. rewrite /allocInv. specintros => base limit. 
 
-  (* MOV EDI, [infoBlock] *)
-  rewrite /allocInv. specintros => base limit. 
+  (* MOV EDI, [infoBlock] *)  
+  supersafeapply MOV_RanyInd_rule. 
 
-  apply limplValid. 
-  
-  safeapply (@MOV_RanyInd_rule infoBlock); first by ssimpl. 
   (* ADD EDI, bytes *)
-  safeapply ADD_RI_rule; first by ssimpl. 
+  rewrite spec_at_at. supersafeapply ADD_RI_rule. 
 
   (* JC failed *)  
-  intros. 
-  safeapply JC_rule; first by rewrite /OSZCP; ssimpl.
+  rewrite spec_at_at. rewrite /OSZCP. supersafeapply JC_rule. 
 
   specsplit.
-    rewrite <-spec_later_weaken.
-    autorewrite with push_at. apply limplValid. apply landL1.  
-    rewrite /OSZCP /stateIsAny/allocInv. finish_logic_with sbazooka. 
+    rewrite <-spec_later_weaken, <- spec_frame. finish_logic_with sbazooka.
 
   (* CMP [infoBlock+#4], EDI *)
   specintro => /eqP => Hcarry. 
 
-  safeapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka. 
+  rewrite spec_at_at. safeapply CMP_IndR_ZC_rule; rewrite /stateIsAny; sbazooka. 
 
   (* JC failed *)
-  safeapply JC_rule; first by ssimpl. 
+  rewrite spec_at_at. supersafeapply JC_rule. 
   specsplit.
-  - rewrite <-spec_later_weaken.
-    autorewrite with push_at. apply limplValid. apply landL1. cancel1.
-    rewrite /OSZCP /stateIsAny /allocInv. by sbazooka.
+  - rewrite <-spec_later_weaken, <- spec_frame. finish_logic_with sbazooka.
 
   (* MOV [infoBlock], EDI *)
-  specintro => /eqP LT.
-  safeapply MOV_IndR_rule; first by ssimpl. 
+  rewrite spec_at_at. supersafeapply MOV_IndR_rule. 
 
-  { apply limplValid. apply landL2. autorewrite with push_at. 
-    cancel1. 
-    rewrite /allocInv/stateIsAny/natAsDWORD. sbazooka.
+  specintro => /eqP LT.
+
+  { rewrite <- spec_frame. rewrite /stateIsAny/natAsDWORD. apply limplValid.
+    autorewrite with push_at. apply landL2. finish_logic_with sbazooka.  
 
     apply memAnySplit.
     { apply: addB_leB.

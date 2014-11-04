@@ -47,14 +47,10 @@ Proof.
   basic apply MOV_RI_rule.
 
   rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.  
-  rewrite empSPR. (* cleanup *)  
-  safeapply JMP_I_rule; first by ssimpl. 
-  rewrite (sepSPC (i -- iret :-> JMP f)).  
-  apply limplAdj. apply landAdj. rewrite <-spec_at_at. rewrite <-(@spec_at_at _ _ (i -- iret :-> JMP f)). 
-  rewrite <- spec_at_impl. rewrite <- spec_frame.
-  rewrite <- spec_later_weaken. 
-  rewrite /toyfun. apply lforallL with iret.
-  rewrite /stateIsAny. cancel2. cancel1. by ssimpl. rewrite spec_at_at. by cancel1. 
+  supersafeapply JMP_I_rule. 
+  rewrite <- spec_later_weaken. rewrite /toyfun. apply lforallL with iret. rewrite /stateIsAny.
+  rewrite <-(spec_frame (i -- iret :-> JMP f)).
+  autorewrite with push_at. rewrite (sepSPC _ Q). cancel1.
 Qed. 
 
 Global Opaque call_toyfun.
@@ -67,17 +63,16 @@ Proof.
   rewrite /toyfun. specintro => iret. rewrite /mkbody_toyfun.
   unfold_program. specintro => i1.
   apply lforallL with iret. autorewrite with push_at.
-  (*rewrite /basic. apply lforallL with f. apply lforallL with i1. *)
-  eapply limplAdj.
+  eapply limplAdj. 
   set S'' := basic _ _ _.
-  eapply (safe_safe_context (S'':=S'')).
+  eapply (safe_safe_context _ (S'':=S'')).
   rewrite /S''/basic. apply lforallL with f. apply lforallL with i1. reflexivity.
   by apply landL1.  
   by ssimpl.  
   
   have JR := @JMP_R_rule retreg iret i1 f'. unfold S''.
   rewrite spec_at_at.
-  eapply safe_safe_context. apply JR. done.
+  eapply (safe_safe_context _). apply JR. done.
   by ssimpl.
   rewrite <- spec_later_weaken.
   finish_logic_with sbazooka.
@@ -189,10 +184,9 @@ Example toyfun_apply_correct (f f' g: DWORD) P Q:
     ) @ (f--f' :-> toyfun_apply).
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
-  specintro => iret. 
-  autorewrite with push_at. apply limplValid.
-  safeapply JMP_R_rule; first by ssimpl.
-  rewrite <-spec_later_weaken. autorewrite with push_at.
-  rewrite /toyfun. eapply lforallL. 
-  rewrite 4!sepSPA. cancel1. finish_logic_with sbazooka.
+  specintro => iret.
+  supersafeapply JMP_R_rule. 
+  rewrite <-spec_later_weaken.
+  autorewrite with push_at. rewrite /toyfun. apply limplValid. eapply lforallL.
+  rewrite /toyfun. rewrite 4!sepSPA. cancel1. finish_logic_with sbazooka. 
 Qed.

@@ -18,7 +18,7 @@ Example safe_loop (p q: DWORD) :
   |-- safe @ (EIP ~= p ** p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
-  eapply (safe_safe (@JMP_I_rule p p q)); first ssimpl.
+  eapply (safe_safe _ (@JMP_I_rule p p q)); first ssimpl.
   finish_logic_with sbazooka. 
 Qed.
 
@@ -41,7 +41,7 @@ Proof.
   unfold_program. specintros => _ <- <-.  
   autorewrite with push_at.
   apply: limplAdj. apply: landL1. 
-  etransitivity; [apply safe_loop|]. cancel1. by ssimpl. 
+  etransitivity; [apply safe_loop|]. finish_logic. 
 Qed.
 
 (* Show off the sequencing rule for [basic]. *)

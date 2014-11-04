@@ -83,6 +83,38 @@ Proof.
   autorewrite with push_at. reflexivity.
 Qed.
 
+(* Analagous to safe_safe_ro for  *)
+Lemma safe_safe_frame1 C C' P P' R'' RP S' S R R' SAFE (_:AtContra SAFE):
+  C' |-- (S' -->> SAFE @ P') @ R' ->
+  C |-- C' ->
+  P |-- P' ** RP /\ (R -|- R' ** R'') ->
+  C |-- (S -->> S' @ RP) @ R ->
+  C |-- (S -->> SAFE @ P) @ R.
+Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
+eapply safe_safe_context; try eassumption. by apply landL1. 
+rewrite -> HP. rewrite -> HR. by ssimpl. 
+apply landAdj. autorewrite with push_at in Hobl.
+rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
+rewrite sepSPC. assumption. 
+Qed.
+
+Lemma safe_safe_frame2 C C' P P' R'' RP S' S1 S2 R R':
+  C' |-- (S' -->> safe @ P') @ R' ->
+  C |-- C' ->
+  P |-- P' ** RP /\ (R -|- R' ** R'') ->
+  C |-- (S1 -->> S2 -->> S' @ RP) @ R ->
+  C |-- (S1 -->> S2 -->> safe @ P) @ R.
+Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. apply limplAdj.
+eapply safe_safe_context; try eassumption. apply _. 
+apply landL1. by apply landL1. rewrite -> HP. rewrite -> HR. by ssimpl. 
+apply landAdj. apply landAdj. autorewrite with push_at in Hobl.
+rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
+rewrite sepSPC. assumption. 
+Qed.
+
+
+
+
 Lemma lforallE_spec A (S':spec) S a:
   S' |-- Forall x:A, S x ->
   S' |-- S a.
@@ -383,6 +415,16 @@ End SpecApply.
 
 Ltac specapply := SpecApply.specapply.
 
+Ltac solve_codeaux :=
+  match goal with
+    |- ?P |-- ?Q /\ _ =>
+      match P with context [@RegOrFlagR OpSize4 (AnyRegToVRegAny EIP) ~= ?eip] =>
+        match Q with context [@RegOrFlagR OpSize4 (AnyRegToVRegAny EIP) ~= ?evar] => unify eip evar
+        end
+      end
+  end;
+  split; [|(split; by ssimpl)]; instantiate.
+
 Ltac safeapply lem :=
     let Hlem := fresh "Hlem" in
     (* Move the lemma to be applied into the context so we can preprocess it
@@ -393,11 +435,17 @@ Ltac safeapply lem :=
     repeat autounfold with specapply in Hlem;
     (* Instantiate binders with evars so we can reflect the hypothesis. *)
     eforalls Hlem; 
-    autorewrite with push_at;
-    eapply (safe_safe_pre Hlem); [ try done | .. ];
+    (match goal with 
+      |- ?P |-- ?Q -->> safe @ ?R => eapply (safe_safe_pre Hlem); [ try done | .. ]
+    | |- ?P |-- safe @ ?Q => eapply (safe_safe Hlem); [try done | ..]
+    | |- ?P |-- (?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame1 _ Hlem); [try done | try solve_codeaux | .. ]
+    | |- ?P |-- (?W -->> ?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame2 Hlem); [try done | try solve_codeaux | .. ]
+    end)
+    ;
     clear Hlem.
 
-
+Ltac supersafeapply lem:= safeapply lem; [ssimpl | try rewrite ->spec_at_emp; try rewrite ->empSPR].
+  
 
 Ltac unhideReg r :=
   replace r? with (Exists x:DWORD, r ~= x) by done; specintro.

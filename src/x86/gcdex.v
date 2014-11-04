@@ -77,7 +77,7 @@ Proof.
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
   autorewrite with push_at. apply limplAdj.
   rewrite /basic in H. eforalls H.
-  eapply safe_safe. apply H.
+  eapply (safe_safe _). apply H.
 (*  specapply H.*)
   - ssimpl. rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
     sdestructs => a b c.
