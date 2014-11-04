@@ -17,18 +17,13 @@ Fixpoint listSeg (p e:DWORD) (vs: seq DWORD) :SPred :=
   then Exists q, p :-> v ** p +#4 :-> q ** listSeg q e vs
   else p == e /\\ empSP.
 
-Definition inlineHead_spec (r1 r2:Reg) (i j p e: DWORD) v vs (instrs: program) :=
-  |-- 
-  (safe @ (EIP ~= j ** r1~=v) -->>
-   safe @ (EIP ~= i ** r1?)) @
-  (listSeg p e (v::vs) ** r2~=p) @ (i -- j :-> instrs).
+Definition inlineHead_spec (r1 r2:Reg) (p e: DWORD) v vs (instrs: program) :=
+  |-- basic r1? instrs (r1~=v) @ (listSeg p e (v::vs) ** r2~=p).
 Implicit Arguments inlineHead_spec [].
 
-Definition inlineTail_spec (r1 r2:Reg) (i j p e: DWORD) v vs (instrs: program) :=
-  |-- 
-  (safe @ (Exists q, EIP ~= j ** r1~=q ** listSeg p q (v::nil) ** listSeg q e vs) -->>
-   safe @ (EIP ~= i ** r1? ** listSeg p e (v::vs))) @
-  (r2~=p) @ (i -- j :-> instrs).
+Definition inlineTail_spec (r1 r2:Reg) (p e: DWORD) v vs (instrs: program) :=
+  |-- basic (r1? ** listSeg p e (v::vs)) instrs
+            (Exists q, r1~=q ** listSeg p q (v::nil) ** listSeg q e vs) @ (r2~=p). 
 Implicit Arguments inlineTail_spec [].
 
 (* Head is in EAX, tail is in EDI, result in EDI, ESI trashed *)

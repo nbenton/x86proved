@@ -18,7 +18,7 @@ Example safe_loop (p q: DWORD) :
   |-- safe @ (EIP ~= p ** p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
-  eapply (safe_safe _ (@JMP_I_rule p p q)); first ssimpl.
+  supersafeapply JMP_I_rule.  
   finish_logic_with sbazooka. 
 Qed.
 

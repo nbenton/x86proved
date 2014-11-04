@@ -14,34 +14,22 @@ Import Prenex Implicits.
 
 Local Open Scope instr_scope.
 
-Lemma inlineHead_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
-  inlineHead_spec r1 r2 i j p e v vs (inlineHead r1 r2).
+Lemma inlineHead_correct (r1 r2: Reg) (p e: DWORD) v vs :
+  inlineHead_spec r1 r2 p e v vs (inlineHead r1 r2).
 Proof.
-rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. unfold_program.
+rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. 
 rewrite /stateIsAny.
 specintros => q old.
-autorewrite with push_at. apply limplAdj. eapply safe_safe.
-have R:= (MOV_RM0_rule (r1:=r1)). rewrite /basic in R. eforalls R. apply R. by ssimpl.
-apply landL2. autorewrite with push_at. cancel1. by ssimpl. 
-(*specapply MOV_RM0_rule. sbazooka.
-rewrite <-spec_reads_frame. autorewrite with push_at.
-apply limplValid. cancel1. by ssimpl.*)
+basic apply *. 
 Qed.
 
-Lemma inlineTail_correct (r1 r2: Reg) (i j p e: DWORD) v vs :
-  inlineTail_spec r1 r2 i j p e v vs (inlineTail r1 r2).
+Lemma inlineTail_correct (r1 r2: Reg) (p e: DWORD) v vs :
+  inlineTail_spec r1 r2 p e v vs (inlineTail r1 r2).
 Proof.
-rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. unfold_program.
+rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. 
 rewrite /stateIsAny.
 specintros => q old. 
-autorewrite with push_at. apply limplAdj. eapply safe_safe.
-have R:= (MOV_RM_rule (r1:=r1)). rewrite /basic in R. eforalls R. apply R. by ssimpl.
-apply landL2. autorewrite with push_at. cancel1. by sbazooka. 
-(*
-specapply MOV_RM_rule. by ssimpl.
-rewrite <-spec_reads_frame. autorewrite with push_at.
-apply limplValid. cancel1. by sbazooka.
-*)
+basic apply *. 
 Qed.
 
 Lemma inlineCons_correct (r1 r2: Reg) heapInfo failAddr (i j h t e: DWORD) vs :
@@ -49,11 +37,15 @@ Lemma inlineCons_correct (r1 r2: Reg) heapInfo failAddr (i j h t e: DWORD) vs :
 Proof.
 rewrite /inlineCons_spec/inlineCons/updateCons. unfold_program.
 specintros => i1 i2 i3.
-admit. 
-(*specapply inlineAlloc_correct; first by ssimpl.
 
-(* Failure case *)
-specsplit.
+instLem inlineAlloc_correct => H.
+rewrite ->spec_at_impl, ->spec_at_at in H. 
+rewrite spec_at_impl spec_at_at. 
+supersafeapply H. clear H.
+
+admit. 
+(*(* Failure case *)
+autorewrite with push_at. specsplit.
 - finish_logic_with sbazooka. 
 
 (* Success case *)
@@ -67,9 +59,10 @@ assert (H:= subB_equiv_addB_negB (pb+#8) #8).
 rewrite E0 addB_negBn /snd in H.
 rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.
 
-specapply SUB_RI_rule; first by ssimpl. 
+safeapply (SUB_RI_rule (r1:= EDI)). by ssimpl. 
 
-specapply MOV_M0R_rule. rewrite E0. simpl fst. simpl snd. by ssimpl.  
+basic apply *. have R:=MOV_M0R_rule (r1:=r1).
+safeapply R. (MOV_M0R_rule (r1:=r1)). rewrite E0. simpl fst. simpl snd. by ssimpl.  
 
 specapply MOV_MR_rule; first by ssimpl.
 

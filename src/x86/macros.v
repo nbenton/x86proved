@@ -235,10 +235,8 @@ Definition while (ptest: program)
        through and exited the loop. *)
     specsplit.
     - autorewrite with push_at. rewrite <-spec_later_impl, <-spec_later_weaken. 
-      specintros => /eqP ->. apply limplAdj. apply limplAdj. eapply (safe_safe_context _). 
-      rewrite /basic in Hbody. eforalls Hbody. 
-      apply Hbody. apply landL1. by apply landL1. by ssimpl. 
-      apply landL2. finish_logic_with sbazooka. 
+      specintros => /eqP ->. supersafeapply Hbody.  
+      finish_logic_with sbazooka. 
 
     (* End of loop *)
     specintros => /eqP ->.

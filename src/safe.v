@@ -76,17 +76,6 @@ Lemma safe_safe P P' R' R S S' SAFE (_:AtContra SAFE):
   S |-- SAFE @ P.
 Proof. move=> HS' HP HS. eapply safe_safe_context; try eassumption. done. Qed.
 
-Lemma safe_safe_pre P P' R' R S S' S0 S0' SAFE (_:AtContra SAFE):
-  S0' |-- (S' -->> SAFE @ P') @ R' ->
-  S0 |-- S0' ->
-  (* The order of separating conjuncts in the following premise is crucial for
-     allowing ssimpl to solve it in practice. *)
-  P |-- P' ** R' ** R ->
-  S0 |-- S -->> S' @ (R' ** R) ->
-  S0 |-- S -->> SAFE @ P.
-Proof. move=> HS0' HS' HP HS. apply limplAdj. eapply safe_safe_context; try eassumption. 
-by apply landL1. apply landAdj. assumption. Qed.
-
 Lemma runsTo_safe s s':
   runsTo s s' ->
   safe @ eq_pred s' |-- safe @ eq_pred s.

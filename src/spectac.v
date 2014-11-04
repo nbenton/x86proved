@@ -84,6 +84,20 @@ Proof.
 Qed.
 
 (* Analagous to safe_safe_ro for  *)
+Lemma safe_safe_frame0 C C' P P' R'' RP S' R R' SAFE (_:AtContra SAFE):
+  C' |-- (S' -->> SAFE @ P') @ R' ->
+  C |-- C' ->
+  P |-- P' ** RP /\ (R -|- R' ** R'') ->
+  C |-- (S' @ RP) @ R ->
+  C |-- (SAFE @ P) @ R.
+Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. 
+eapply safe_safe_context; try eassumption. 
+rewrite -> HP. rewrite -> HR. by ssimpl. 
+autorewrite with push_at in Hobl.
+rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
+rewrite sepSPC. assumption. 
+Qed.
+
 Lemma safe_safe_frame1 C C' P P' R'' RP S' S R R' SAFE (_:AtContra SAFE):
   C' |-- (S' -->> SAFE @ P') @ R' ->
   C |-- C' ->
@@ -113,6 +127,27 @@ rewrite sepSPC. assumption.
 Qed.
 
 
+Lemma safe_safe_noframe1 P P' R' R S S' S0 S0' SAFE (_:AtContra SAFE):
+  S0' |-- (S' -->> SAFE @ P') @ R' ->
+  S0 |-- S0' ->
+  (* The order of separating conjuncts in the following premise is crucial for
+     allowing ssimpl to solve it in practice. *)
+  P |-- P' ** R' ** R ->
+  S0 |-- S -->> S' @ (R' ** R) ->
+  S0 |-- S -->> SAFE @ P.
+Proof. move=> HS0' HS' HP HS. apply limplAdj. eapply safe_safe_context; try eassumption. 
+by apply landL1. apply landAdj. assumption. Qed.
+
+Lemma safe_safe_noframe2 P P' R' R S1 S2 S' S0 S0' SAFE (_:AtContra SAFE):
+  S0' |-- (S' -->> SAFE @ P') @ R' ->
+  S0 |-- S0' ->
+  (* The order of separating conjuncts in the following premise is crucial for
+     allowing ssimpl to solve it in practice. *)
+  P |-- P' ** R' ** R ->
+  S0 |-- S1 -->> S2 -->> S' @ (R' ** R) ->
+  S0 |-- S1 -->> S2 -->> SAFE @ P.
+Proof. move=> HS0' HS' HP HS. apply limplAdj. apply limplAdj. eapply safe_safe_context; try eassumption. 
+apply landL1. by apply landL1. apply landAdj. apply landAdj. assumption. Qed.
 
 
 Lemma lforallE_spec A (S':spec) S a:
@@ -195,6 +230,20 @@ Ltac solve_code :=
       end
   end;
   split; [|by ssimpl]; instantiate.
+
+(* Create hint database by putting a dummy entry in it. *)
+Hint Unfold not : specapply.
+
+Ltac instLem lem :=
+    let Hlem := fresh "Hlem" in
+    (* Move the lemma to be applied into the context so we can preprocess it
+       from there. *)
+    move: (lem) => Hlem;
+    (* Unfold definitions as needed to expose a [safe]. Wrappers around [safe]
+       should be added to the specapply db with Hint Unfold. *)
+    repeat autounfold with specapply in Hlem;
+    (* Instantiate binders with evars so we can reflect the hypothesis. *)
+    eforalls Hlem; move: Hlem.
 
 Module SpecApply.
 
@@ -364,19 +413,12 @@ Module SpecApply.
     apply: safe_safe_ro.
   Qed.
 
-  (* Create hint database by putting a dummy entry in it. *)
-  Hint Unfold not : specapply.
-
   Ltac specapply lem :=
     let Hlem := fresh "Hlem" in
     (* Move the lemma to be applied into the context so we can preprocess it
        from there. *)
-    move: (lem) => Hlem;
-    (* Unfold definitions as needed to expose a [safe]. Wrappers around [safe]
-       should be added to the specapply db with Hint Unfold. *)
-    repeat autounfold with specapply in Hlem;
-    (* Instantiate binders with evars so we can reflect the hypothesis. *)
-    eforalls Hlem; [
+    instLem (lem) => Hlem;
+    [
       let C' := match type_of Hlem with ?C' |-- ?S' => constr:(C') end in
       let S' := match type_of Hlem with ?C' |-- ?S' => constr:(S') end in
       let C := match goal with |- ?C |-- ?S => constr:(C) end in
@@ -429,15 +471,15 @@ Ltac safeapply lem :=
     let Hlem := fresh "Hlem" in
     (* Move the lemma to be applied into the context so we can preprocess it
        from there. *)
-    move: (lem) => Hlem;
-    (* Unfold definitions as needed to expose a [safe]. Wrappers around [safe]
-       should be added to the specapply db with Hint Unfold. *)
-    repeat autounfold with specapply in Hlem;
-    (* Instantiate binders with evars so we can reflect the hypothesis. *)
-    eforalls Hlem; 
+    instLem (lem) => Hlem;
     (match goal with 
-      |- ?P |-- ?Q -->> safe @ ?R => eapply (safe_safe_pre Hlem); [ try done | .. ]
-    | |- ?P |-- safe @ ?Q => eapply (safe_safe Hlem); [try done | ..]
+    (* Frameless versions *)
+      |- ?P |-- ?W -->> ?Q -->> safe @ ?R => eapply (safe_safe_noframe2 _ Hlem); [ try done | .. ]
+    | |- ?P |-- ?Q -->> safe @ ?R => eapply (safe_safe_noframe1 _ Hlem); [ try done | .. ]
+    | |- ?P |-- safe @ ?Q => eapply (safe_safe_context _ Hlem); [try done | ..]
+
+    (* Framed versions *)
+    | |- ?P |-- (safe @ ?R) @ ?F => eapply (safe_safe_frame0 _ Hlem); [try done | try solve_codeaux | .. ]
     | |- ?P |-- (?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame1 _ Hlem); [try done | try solve_codeaux | .. ]
     | |- ?P |-- (?W -->> ?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame2 Hlem); [try done | try solve_codeaux | .. ]
     end)

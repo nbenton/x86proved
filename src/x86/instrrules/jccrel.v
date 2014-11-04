@@ -3,8 +3,6 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 Require Import x86proved.triple (* for [triple_apply] *).
-Require Import x86proved.spectac (* for [eforalls] *).
-Require Import x86proved.common_tactics (* for [f_equiv'] *).
 
 Lemma JCCrel_rule (rel: DWORD) cc cv (b:bool) (p q: DWORD) :
   |-- (

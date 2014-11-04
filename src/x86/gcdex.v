@@ -2,7 +2,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.bitsrep x86proved.charge.ilogic.
 Require Import x86proved.x86.program x86proved.x86.programassem x86proved.x86.programassemcorrect x86proved.x86.imp x86proved.x86.call.
 Require Import x86proved.reader x86proved.spred x86proved.septac x86proved.pointsto x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.reg.
-Require Import x86proved.cursor x86proved.safe x86proved.x86.instrrules.
+Require Import x86proved.cursor x86proved.safe x86proved.x86.instrrules x86proved.chargetac.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.macros Coq.Strings.Ascii x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.x86.screenspec x86proved.x86.screenimp.
 
@@ -75,18 +75,14 @@ Proof.
   rewrite -> assemble_correct; last first. by vm_compute.
   rewrite /gcd_program. 
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
-  autorewrite with push_at. apply limplAdj.
-  rewrite /basic in H. eforalls H.
-  eapply (safe_safe _). apply H.
-(*  specapply H.*)
-  - ssimpl. rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
+  supersafeapply H. 
+  - rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
     sdestructs => a b c.
     pose s x := match x with | xa => a | xb => b | xc => c end.
     ssplit. instantiate (2:=s). ssplit; first done. rewrite /s. by ssimpl.
 
-
-  apply landL2. autorewrite with push_at. cancel1. 
-  rewrite /asn_denot /stack_denot /stateIsAny. by sbazooka. 
+  rewrite /asn_denot /stack_denot /stateIsAny. 
+  finish_logic_with sbazooka.   
 Qed.
 
 

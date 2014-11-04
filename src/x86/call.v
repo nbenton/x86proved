@@ -70,10 +70,7 @@ Proof.
   by apply landL1.  
   by ssimpl.  
   
-  have JR := @JMP_R_rule retreg iret i1 f'. unfold S''.
-  rewrite spec_at_at.
-  eapply (safe_safe_context _). apply JR. done.
-  by ssimpl.
+  supersafeapply JMP_R_rule. 
   rewrite <- spec_later_weaken.
   finish_logic_with sbazooka.
 Qed. 

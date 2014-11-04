@@ -166,9 +166,8 @@ Section Basic.
     move=> Hbasic HS' HP HS.
     lforwardR Hbasic.
     - apply lforallL with i. apply lforallL with j. apply (spec_frame R).
-    eapply safe_safe_context. apply _. 
-    - rewrite ->spec_at_at in Hbasic. apply Hbasic.
-    - apply HS'.
+    rewrite ->spec_at_at in Hbasic.
+    safeapply Hbasic.
     - rewrite ->HP. by ssimpl.
     - rewrite ->HS. autorewrite with push_at. cancel1. by ssimpl.
   Qed.

@@ -3,7 +3,7 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 Require Import Coq.Classes.Morphisms.
-Require Import x86proved.spectac (* for [eforalls] *) x86proved.bitsprops (* for [low_catB] *) x86proved.septac (* for [ssplits] *).
+Require Import x86proved.bitsprops (* for [low_catB] *) x86proved.septac (* for [ssplits] *).
 
 (** ** Generic rule *)
 Lemma CMP_rule sz (ds:DstSrc sz) v1 :
