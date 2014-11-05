@@ -164,14 +164,12 @@ Definition ifthenelse (cond: Condition) (value: bool)
                           Q.
   Proof.
     pre_if pthen pelse.
-    supersafeapply JCC_rule. 
-    rewrite <- spec_later_weaken.
-    specsplit; specintro => /eqP ->. rewrite empSPL. 
-    rewrite spec_at_at. supersafeapply Hthen. 
-    rewrite <- spec_frame. finish_logic_with ssimpl. 
-    rewrite spec_at_at. supersafeapply Helse. 
-    supersafeapply JMP_I_rule. 
-    rewrite <- spec_later_weaken. finish_logic_with ssimpl. 
+    supersafeapply JCC_rule. rewrite <- spec_later_weaken.
+    specsplit; specintro => /eqP ->. 
+    - supersafeapply Hthen. rewrite <- spec_frame. finish_logic_with ssimpl. 
+    - supersafeapply Helse. 
+      supersafeapply JMP_I_rule. rewrite <- spec_later_weaken. 
+      finish_logic_with ssimpl. 
   Qed.
 
   Global Instance: forall cond value pthen pelse, instrrule (ifthenelse cond value pthen pelse) := @if_rule.
@@ -206,7 +204,7 @@ Definition while (ptest: program)
   Proof.
     move=> Htest Hbody. apply basic_local => BODY. apply basic_local => test.
     rewrite /basic. specintros => i j. unfold_program.
-    specintros => _ _ <- ->  _ _ <- -> i1. rewrite !empSPL.
+    specintros => _ _ <- ->  _ _ <- -> i1. 
 
     (* We need to set up Lob induction but not for this instruction. This is a
        bit awkward. *)

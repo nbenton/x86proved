@@ -40,10 +40,10 @@ rewrite /wrappedAlloc/basic. specintros => i1 i2. unfold_program.
 specintros => i3 i4 i5 i6 i7 i8 -> -> i9 -> ->.
 
 (* Deal with the allocator spec itself *)
-rewrite empSPR. rewrite spec_at_swap. rewrite spec_at_at.
-have IC := @inlineAlloc_correct bytes.
-rewrite /allocSpec in IC. 
-eforalls IC. rewrite -> spec_at_impl in IC. rewrite -> spec_at_at in IC. 
+rewrite spec_at_swap. rewrite spec_at_at.
+instLem (inlineAlloc_correct) => IC.
+rewrite -> spec_at_impl in IC. rewrite -> spec_at_at in IC.
+ 
 supersafeapply IC. 
 
 (* Now we deal with failure and success cases *)
@@ -52,7 +52,7 @@ specsplit.
 (* failure case *)
 
 (* MOV EDI, 0 *)
-rewrite spec_at_at. rewrite spec_at_at. supersafeapply (MOV_RanyI_rule (r:=EDI)). 
+supersafeapply (MOV_RanyI_rule (r:=EDI)). 
 rewrite /natAsDWORD. finish_logic_with sbazooka. by apply: lorR2. 
 
 (* success case *)
@@ -65,11 +65,10 @@ assert (H:= subB_equiv_addB_negB (pb+#bytes) # bytes).
 rewrite E0 in H. simpl (snd _) in H. rewrite addB_negBn in H.
 rewrite H in E0.
 
-rewrite spec_at_at. rewrite spec_at_at. supersafeapply (SUB_RI_rule (r1:=EDI)).  
+supersafeapply (SUB_RI_rule (r1:=EDI)).  
 
 (* JMP SUCCEED *)
-rewrite spec_at_at. supersafeapply JMP_I_rule. 
-rewrite <- spec_later_weaken. 
+supersafeapply JMP_I_rule. rewrite <- spec_later_weaken. 
 
 (* Final stuff *)
 rewrite E0. simpl snd. 

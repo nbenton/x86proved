@@ -62,10 +62,10 @@ Proof.
   supersafeapply MOV_RanyInd_rule. 
 
   (* ADD EDI, bytes *)
-  rewrite spec_at_at. supersafeapply ADD_RI_rule. 
+  supersafeapply ADD_RI_rule. 
 
   (* JC failed *)  
-  rewrite spec_at_at. rewrite /OSZCP. supersafeapply JC_rule. 
+  rewrite /OSZCP. supersafeapply JC_rule. 
 
   specsplit.
     rewrite <-spec_later_weaken, <- spec_frame. finish_logic_with sbazooka.
@@ -73,15 +73,15 @@ Proof.
   (* CMP [infoBlock+#4], EDI *)
   specintro => /eqP => Hcarry. 
 
-  rewrite spec_at_at. safeapply CMP_IndR_ZC_rule; rewrite /stateIsAny; sbazooka. 
+  safeapply CMP_IndR_ZC_rule; rewrite /stateIsAny; sbazooka. 
 
   (* JC failed *)
-  rewrite spec_at_at. supersafeapply JC_rule. 
+  supersafeapply JC_rule. 
   specsplit.
   - rewrite <-spec_later_weaken, <- spec_frame. finish_logic_with sbazooka.
 
   (* MOV [infoBlock], EDI *)
-  rewrite spec_at_at. supersafeapply MOV_IndR_rule. 
+  supersafeapply MOV_IndR_rule. 
 
   specintro => /eqP LT.
 

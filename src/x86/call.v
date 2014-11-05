@@ -138,7 +138,6 @@ Proof.
     rewrite -addB_addn. reflexivity. }
 Qed.
 
-(*
 Example toyfun_example_correct entry (i j: DWORD) a:
   |-- (
       safe @ (EIP ~= j ** EAX ~= a +# 4) -->>
@@ -147,21 +146,19 @@ Example toyfun_example_correct entry (i j: DWORD) a:
 Proof.
   rewrite /toyfun_example. unfold_program.
   specintros => f _ <- -> {i} i1 _ <- ->. rewrite !empSPL.
-  rewrite [X in _ @ X]sepSPC. rewrite <-spec_at_at. 
+  rewrite [X in _ @ X]sepSPC. rewrite <- spec_at_at.
   rewrite ->toyfun_example_callee_correct.
   (* The following rewrite underneath a @ is essentially a second-order frame
      rule application. *)
   rewrite ->toyfun_example_caller_correct.
   cancel2; last reflexivity. autorewrite with push_at.
 
-  apply limplAdj.
-  eapply safe_safe_context; first reflexivity. 
+  eapply (safe_safe_noframe1 _); first reflexivity. 
   - eapply lforallL. eapply lforallL. reflexivity.
-  - split; sbazooka.
-    rewrite <-spec_reads_frame. apply: limplAdj. apply: landL2.
-    rewrite spec_at_emp. cancel1. sbazooka.
+  - by ssimpl. 
+  - autorewrite with push_at. apply: limplAdj. apply: landL2.
+    cancel1. sbazooka.
 Qed.
-*)
 
 (*
    Higher-order function example.

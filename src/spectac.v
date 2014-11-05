@@ -112,6 +112,35 @@ rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewr
 rewrite sepSPC. assumption. 
 Qed.
 
+Lemma safe_safe_frame11 C C' P1 P2 P' R'' RP S' S R R' SAFE (_:AtContra SAFE):
+  C' |-- (S' -->> SAFE @ P') @ R' ->
+  C |-- C' ->
+  P1**P2 |-- P' ** RP /\ (R -|- R' ** R'') ->
+  C |-- (S -->> S' @ RP) @ R ->
+  C |-- (S -->> SAFE @ P1 @ P2) @ R.
+Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
+eapply safe_safe_context; try eassumption. by apply landL1. 
+rewrite <- sepSPA. rewrite -> HP. rewrite -> HR. by ssimpl. 
+apply landAdj. autorewrite with push_at in Hobl.
+rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
+rewrite sepSPC. assumption. 
+Qed.
+
+Lemma safe_safe_frame111 C C' P1 P2 P3 P' R'' RP S' S R R' SAFE (_:AtContra SAFE):
+  C' |-- (S' -->> SAFE @ P') @ R' ->
+  C |-- C' ->
+  P1**P2**P3 |-- P' ** RP /\ (R -|- R' ** R'') ->
+  C |-- (S -->> S' @ RP) @ R ->
+  C |-- (S -->> SAFE @ P1 @ P2 @ P3) @ R.
+Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
+eapply safe_safe_context; try eassumption. by apply landL1. 
+rewrite <- (sepSPA P2). 
+rewrite <- (sepSPA P1). rewrite -> HP. rewrite -> HR. by ssimpl. 
+apply landAdj. autorewrite with push_at in Hobl.
+rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
+rewrite sepSPC. assumption. 
+Qed.
+
 Lemma safe_safe_frame2 C C' P P' R'' RP S' S1 S2 R R':
   C' |-- (S' -->> safe @ P') @ R' ->
   C |-- C' ->
@@ -472,6 +501,8 @@ Ltac safeapply lem :=
     (* Move the lemma to be applied into the context so we can preprocess it
        from there. *)
     instLem (lem) => Hlem;
+    (* Collapse uses of safe @ _ @ _ *)
+    try repeat rewrite (spec_at_at safe);
     (match goal with 
     (* Frameless versions *)
       |- ?P |-- ?W -->> ?Q -->> safe @ ?R => eapply (safe_safe_noframe2 _ Hlem); [ try done | .. ]
@@ -481,12 +512,15 @@ Ltac safeapply lem :=
     (* Framed versions *)
     | |- ?P |-- (safe @ ?R) @ ?F => eapply (safe_safe_frame0 _ Hlem); [try done | try solve_codeaux | .. ]
     | |- ?P |-- (?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame1 _ Hlem); [try done | try solve_codeaux | .. ]
+(*    | |- ?P |-- (?Q -->> safe @ ?R1 @ ?R2) @ ?F => eapply (safe_safe_frame11 _ Hlem); [try done | try solve_codeaux | .. ]
+    | |- ?P |-- (?Q -->> safe @ ?R1 @ ?R2 @ ?R3) @ ?F => eapply (safe_safe_frame111 _ Hlem); [try done | try solve_codeaux | .. ] *)
     | |- ?P |-- (?W -->> ?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame2 Hlem); [try done | try solve_codeaux | .. ]
     end)
     ;
     clear Hlem.
 
-Ltac supersafeapply lem:= safeapply lem; [ssimpl | try rewrite ->spec_at_emp; try rewrite ->empSPR].
+Ltac supersafeapply lem:= 
+  safeapply lem; [ssimpl | try rewrite ->spec_at_emp; try rewrite ->empSPR; try rewrite ->empSPL].
   
 
 Ltac unhideReg r :=

@@ -169,7 +169,7 @@ Section Basic.
     rewrite ->spec_at_at in Hbasic.
     safeapply Hbasic.
     - rewrite ->HP. by ssimpl.
-    - rewrite ->HS. autorewrite with push_at. cancel1. by ssimpl.
+    - rewrite ->HS. Require Import chargetac. finish_logic_with ssimpl. 
   Qed.
 
   Lemma basic_safe P P' Q' R S (c: T) (i j: DWORD):
