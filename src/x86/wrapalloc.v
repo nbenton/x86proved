@@ -5,7 +5,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.program.
 Require Import x86proved.x86.call x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrrules x86proved.x86.instrcodec x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.inlinealloc
-               x86proved.x86.listspec x86proved.x86.listimp x86proved.triple x86proved.x86.macros x86proved.chargetac.
+               x86proved.x86.listspec x86proved.x86.listimp x86proved.triple x86proved.x86.macros x86proved.chargetac x86proved.basicspectac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -44,7 +44,7 @@ rewrite spec_at_swap. rewrite spec_at_at.
 instLem (inlineAlloc_correct) => IC.
 rewrite -> spec_at_impl in IC. rewrite -> spec_at_at in IC.
  
-supersafeapply IC. 
+superspecapply IC. 
 
 (* Now we deal with failure and success cases *)
 specsplit.
@@ -52,8 +52,8 @@ specsplit.
 (* failure case *)
 
 (* MOV EDI, 0 *)
-supersafeapply (MOV_RanyI_rule (r:=EDI)). 
-rewrite /natAsDWORD. finish_logic_with sbazooka. by apply: lorR2. 
+unhideReg EDI => oldedi.
+superspecapply *. rewrite /natAsDWORD. finish_logic_with sbazooka. by apply: lorR2. 
 
 (* success case *)
 (* SUB EDI, bytes *)
@@ -65,10 +65,10 @@ assert (H:= subB_equiv_addB_negB (pb+#bytes) # bytes).
 rewrite E0 in H. simpl (snd _) in H. rewrite addB_negBn in H.
 rewrite H in E0.
 
-supersafeapply (SUB_RI_rule (r1:=EDI)).  
+superspecapply *. 
 
 (* JMP SUCCEED *)
-supersafeapply JMP_I_rule. rewrite <- spec_later_weaken. 
+superspecapply *. rewrite <- spec_later_weaken. 
 
 (* Final stuff *)
 rewrite E0. simpl snd. 

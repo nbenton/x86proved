@@ -19,6 +19,8 @@ Ltac locate_reg_component choose_arrow_component G :=
   match G with
     | _ |-- ?G'           => locate G'
     | ?G' <@ _            => locate G'
+    | safe @ ?G'          => locate G'
+    | ?G' @ _             => locate G'
     | (?G0 -->> ?G1) @ ?R => let G' := constr:(G0 @ R -->> G1 @ R) in locate G'
     | ?G0 -->> ?G1        => let G' := choose_arrow_component G0 G1 in locate G'
     | _ @ ?G1 @ ?G2       => let G' := constr:(G1 ** G2) in locate G'
@@ -30,7 +32,8 @@ Ltac locate_pre_reg_component G := locate_reg_component ltac:(fun G0 G1 => const
 Ltac locate_frame G :=
   match G with
     | _ |-- ?G'  => locate_frame G'
-    | _ <@ ?F   => constr:(F)
+    | _ @ ?F   => constr:(F)
+    | _ -->> ?G' => locate_frame G'
     | _         => fail 2 "No frame in" G
   end.
 Ltac locate_regIsReg regIsReg G :=
@@ -124,8 +127,14 @@ Ltac pre_specapply_any :=
   cbv beta iota zeta;
   do ?((test progress intros); move => ?).
 Tactic Notation "specapply" open_constr(lem) := specapply lem.
+Tactic Notation "superspecapply" open_constr(lem) := superspecapply lem.
 Tactic Notation "specapply" "*" :=
   pre_specapply_any;
   let R := get_next_instrrule_from_eip in
   first [ specapply R
+        | fail 1 "Failed to specapply basic lemma" R ].
+Tactic Notation "superspecapply" "*" :=
+  pre_specapply_any;
+  let R := get_next_instrrule_from_eip in
+  first [ superspecapply R
         | fail 1 "Failed to specapply basic lemma" R ].

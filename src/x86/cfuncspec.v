@@ -147,7 +147,7 @@ specintros => arg sp iret.
 (*autorewrite with push_at.*)
 unfold_program. specintros => i'.
 
-rewrite spec_at_impl. do 2 rewrite ->spec_at_at. rewrite /basic in H. eforalls H. safeapply H. sbazooka.
+rewrite spec_at_impl. do 2 rewrite ->spec_at_at. rewrite /basic in H. eforalls H. specapply H. sbazooka.
 specapply RET_rule. sbazooka.
 rewrite <-spec_reads_frame. autorewrite with push_at.
 (*rewrite <-spec_later_weaken. *) apply: limplAdj. apply: landL2. cancel1. sbazooka.
@@ -205,7 +205,7 @@ unfold_program. specintro => f''.
 
 Admitted.
 (*(* It's rather unpleasant that we have to do this! *)
-safeapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?) 
+specapply (@stackframe_rule (FI [EBP+8]%ms) (pre FS arg ** ECX? ** EDX? ** EAX? ** sp-#4 :-> arg ** OSZCP?) 
                                           (snd (post FS arg) ** EAX ~= fst (post FS arg) ** ECX? ** EDX? ** OSZCP? ** sp-#4 :-> ?:DWORD) ebp (sp-#8)).
 
 rewrite /C. ssimpl.

@@ -484,7 +484,9 @@ Module SpecApply.
 
 End SpecApply.
 
+(*
 Ltac specapply := SpecApply.specapply.
+*)
 
 Ltac solve_codeaux :=
   match goal with
@@ -496,7 +498,7 @@ Ltac solve_codeaux :=
   end;
   split; [|(split; by ssimpl)]; instantiate.
 
-Ltac safeapply lem :=
+Ltac specapply lem :=
     let Hlem := fresh "Hlem" in
     (* Move the lemma to be applied into the context so we can preprocess it
        from there. *)
@@ -519,8 +521,8 @@ Ltac safeapply lem :=
     ;
     clear Hlem.
 
-Ltac supersafeapply lem:= 
-  safeapply lem; [ssimpl | try rewrite ->spec_at_emp; try rewrite ->empSPR; try rewrite ->empSPL].
+Ltac superspecapply lem:= 
+  specapply lem; [ssimpl | try rewrite ->spec_at_emp; try rewrite ->empSPR; try rewrite ->empSPL].
   
 
 Ltac unhideReg r :=

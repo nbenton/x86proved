@@ -167,7 +167,7 @@ Section Basic.
     lforwardR Hbasic.
     - apply lforallL with i. apply lforallL with j. apply (spec_frame R).
     rewrite ->spec_at_at in Hbasic.
-    safeapply Hbasic.
+    specapply Hbasic.
     - rewrite ->HP. by ssimpl.
     - rewrite ->HS. Require Import chargetac. finish_logic_with ssimpl. 
   Qed.

@@ -65,11 +65,11 @@ Proof.
 rewrite /JCC/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2. subst. 
 rewrite -H2. 
-supersafeapply JCCrel_rule. 
+superspecapply *.  
 case E: (b == cv).
 + rewrite addB_subBK. finish_logic_with sbazooka. 
 + replace (b == ~~cv) with true by (destruct b; by destruct cv).  
-  autorewrite with push_at. apply limplValid. apply landL2. rewrite <-spec_later_weaken. 
+  setoid_rewrite <-spec_later_weaken at 2. 
   finish_logic_with sbazooka. 
 Qed.
 
@@ -102,7 +102,7 @@ Lemma JMP_I_rule (a: DWORD) (p q: DWORD) :
 Proof.
 rewrite /JMP/relToAbs.
 unfold_program. specintros => i1 i2 -> <-. 
-supersafeapply JMPrel_I_rule. 
+superspecapply *. 
 rewrite addB_subBK. 
 finish_logic_with sbazooka. 
 Qed.
@@ -125,7 +125,7 @@ Proof.
 specintros => w sp.
 rewrite /CALL/relToAbs.
 unfold_program. specintros => i1 i2 -> <-.
-supersafeapply CALLrel_I_rule.
+superspecapply *. 
 rewrite addB_subBK. finish_logic_with sbazooka. 
 Qed.
 
@@ -164,11 +164,11 @@ Definition ifthenelse (cond: Condition) (value: bool)
                           Q.
   Proof.
     pre_if pthen pelse.
-    supersafeapply JCC_rule. rewrite <- spec_later_weaken.
+    superspecapply *. rewrite <- spec_later_weaken.
     specsplit; specintro => /eqP ->. 
-    - supersafeapply Hthen. rewrite <- spec_frame. finish_logic_with ssimpl. 
-    - supersafeapply Helse. 
-      supersafeapply JMP_I_rule. rewrite <- spec_later_weaken. 
+    - superspecapply Hthen. rewrite <- spec_frame. finish_logic_with ssimpl. 
+    - superspecapply Helse. 
+      superspecapply *. rewrite <- spec_later_weaken. 
       finish_logic_with ssimpl. 
   Qed.
 
@@ -220,20 +220,20 @@ Definition while (ptest: program)
 
     specsplit.
     (* JMP TEST *)
-    - supersafeapply JMP_I_rule. by finish_logic.
+    - superspecapply *. by finish_logic.
 
     (* ptest *)
-    supersafeapply Htest. 
+    superspecapply Htest. 
 
     (* JCC cond value BODY *)
     specintro => b.
-    supersafeapply JCC_rule.  
+    superspecapply *. 
 
     (* Now there are two cases. Either we jumped to the loop body, or we fell
        through and exited the loop. *)
     specsplit.
     - autorewrite with push_at. rewrite <-spec_later_impl, <-spec_later_weaken. 
-      specintros => /eqP ->. supersafeapply Hbody.  
+      specintros => /eqP ->. superspecapply Hbody.  
       finish_logic_with sbazooka. 
 
     (* End of loop *)

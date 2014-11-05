@@ -30,11 +30,11 @@ Local Hint Unfold interpJmpTgt : specapply.
 Lemma JMPrel_I_rule (rel: DWORD) (p q: DWORD):
   |-- ((|> safe @ (EIP ~= addB q rel)
            -->> safe @ (EIP ~= p)) @ (p -- q :-> JMPrel rel)).
-Proof. supersafeapply (JMPrel_rule rel). finish_logic. Qed.
+Proof. superspecapply *. finish_logic. Qed.
 
 Lemma JMPrel_R_rule (r:Reg) (addr: DWORD) (p q: DWORD) :
   |-- ((|> safe @ (EIP ~= addr ** r ~= addr)
            -->> safe @ (EIP ~= p ** r ~= addr)) @ (p -- q :-> JMPrel r)).
-Proof. supersafeapply (JMPrel_rule r). finish_logic. Qed.
+Proof. superspecapply *. finish_logic. Qed.
 
 End specapply_hint.

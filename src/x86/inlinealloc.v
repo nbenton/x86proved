@@ -49,7 +49,7 @@ Definition allocSpec n (fail:DWORD) inv code :=
 Hint Unfold allocSpec : specapply.
 
 (* Perhaps put a |> on the failLabel case *)
-
+Require Import x86proved.basicspectac.
 Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).
 Proof.
   rewrite /allocSpec/allocImp.
@@ -59,13 +59,13 @@ Proof.
   rewrite spec_at_impl. rewrite spec_at_at. rewrite /allocInv. specintros => base limit. 
 
   (* MOV EDI, [infoBlock] *)  
-  supersafeapply MOV_RanyInd_rule. 
+  superspecapply MOV_RanyInd_rule. 
 
   (* ADD EDI, bytes *)
-  supersafeapply ADD_RI_rule. 
+  superspecapply *. 
 
   (* JC failed *)  
-  rewrite /OSZCP. supersafeapply JC_rule. 
+  rewrite /OSZCP. superspecapply JC_rule. 
 
   specsplit.
     rewrite <-spec_later_weaken, <- spec_frame. finish_logic_with sbazooka.
@@ -73,15 +73,15 @@ Proof.
   (* CMP [infoBlock+#4], EDI *)
   specintro => /eqP => Hcarry. 
 
-  safeapply CMP_IndR_ZC_rule; rewrite /stateIsAny; sbazooka. 
+  specapply CMP_IndR_ZC_rule; rewrite /stateIsAny; sbazooka. 
 
   (* JC failed *)
-  supersafeapply JC_rule. 
+  superspecapply JC_rule. 
   specsplit.
   - rewrite <-spec_later_weaken, <- spec_frame. finish_logic_with sbazooka.
 
   (* MOV [infoBlock], EDI *)
-  supersafeapply MOV_IndR_rule. 
+  superspecapply MOV_IndR_rule. 
 
   specintro => /eqP LT.
 

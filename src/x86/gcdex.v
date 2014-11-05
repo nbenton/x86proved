@@ -75,7 +75,7 @@ Proof.
   rewrite -> assemble_correct; last first. by vm_compute.
   rewrite /gcd_program. 
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
-  supersafeapply H. 
+  superspecapply H. 
   - rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
     sdestructs => a b c.
     pose s x := match x with | xa => a | xb => b | xc => c end.

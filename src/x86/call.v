@@ -47,7 +47,7 @@ Proof.
   basic apply MOV_RI_rule.
 
   rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.  
-  supersafeapply JMP_I_rule. 
+  superspecapply *. 
   rewrite <- spec_later_weaken. rewrite /toyfun. apply lforallL with iret. rewrite /stateIsAny.
   rewrite <-(spec_frame (i -- iret :-> JMP f)).
   autorewrite with push_at. rewrite (sepSPC _ Q). cancel1.
@@ -70,7 +70,7 @@ Proof.
   by apply landL1.  
   by ssimpl.  
   
-  supersafeapply JMP_R_rule. 
+  superspecapply *. 
   rewrite <- spec_later_weaken.
   finish_logic_with sbazooka.
 Qed. 
@@ -179,7 +179,7 @@ Example toyfun_apply_correct (f f' g: DWORD) P Q:
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
   specintro => iret.
-  supersafeapply JMP_R_rule. 
+  superspecapply *.
   rewrite <-spec_later_weaken.
   autorewrite with push_at. rewrite /toyfun. apply limplValid. eapply lforallL.
   rewrite /toyfun. rewrite 4!sepSPA. cancel1. finish_logic_with sbazooka. 

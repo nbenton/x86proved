@@ -41,11 +41,10 @@ specintros => i1 i2 i3.
 instLem inlineAlloc_correct => H.
 rewrite ->spec_at_impl, ->spec_at_at in H. 
 rewrite spec_at_impl spec_at_at. 
-supersafeapply H. clear H.
+superspecapply H. clear H.
 
-admit. 
-(*(* Failure case *)
-autorewrite with push_at. specsplit.
+(* Failure case *)
+specsplit.
 - finish_logic_with sbazooka. 
 
 (* Success case *)
@@ -59,25 +58,26 @@ assert (H:= subB_equiv_addB_negB (pb+#8) #8).
 rewrite E0 addB_negBn /snd in H.
 rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.
 
-safeapply (SUB_RI_rule (r1:= EDI)). by ssimpl. 
-
-basic apply *. have R:=MOV_M0R_rule (r1:=r1).
-safeapply R. (MOV_M0R_rule (r1:=r1)). rewrite E0. simpl fst. simpl snd. by ssimpl.  
-
-specapply MOV_MR_rule; first by ssimpl.
+Require Import basicspectac.
+(* SUB EDI, 8 *)
+superspecapply *. 
+(* MOV [EDI], r1 *)
+rewrite /OSZCP. specapply MOV_M0R_rule. rewrite E0. simpl fst. simpl snd. by ssimpl.
+(* MOV [EDI+4], r2 *)
+superspecapply MOV_MR_rule.
 
 (* Final stuff *)
-rewrite <-spec_reads_frame. autorewrite with push_at.
-apply limplValid. apply landL2. cancel1.
-rewrite /OSZCP/listSeg-/listSeg. rewrite /stateIsAny. sbazooka.
+rewrite /OSZCP/listSeg-/listSeg /stateIsAny. finish_logic_with sbazooka. 
 Qed.
 
+(*
 Lemma callCons_correct (r1 r2: Reg) heapInfo (i j h t e: DWORD) vs :
   |-- callCons_spec r1 r2 heapInfo i j h t e vs (callCons r1 r2 heapInfo).
 Proof.
 
 (* First deal with the calling-convention wrapper *)
 rewrite /callCons_spec.
+Check toyfun_mkbody.
 autorewrite with push_at.
 etransitivity; [|apply toyfun_mkbody]. specintro => iret.
 
@@ -107,5 +107,5 @@ specapply JMP_I_rule. by ssimpl.
 rewrite <- spec_later_weaken.
 finish_logic_with sbazooka.
 apply: lorR2. sbazooka.
-*)
 Qed.
+*)

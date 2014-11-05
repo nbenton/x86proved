@@ -34,12 +34,12 @@ Corollary CALLrel_R_rule (r:Reg) (p q: DWORD) :
       |> safe @ (EIP ~= p' ** r~=p' ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
          safe @ (EIP ~= p  ** r~=p' ** ESP~=sp    ** sp-#4 :-> w)
     ) @ (p -- q :-> CALLrel r).
-Proof. specintros => *. supersafeapply (@CALLrel_rule p q r). finish_logic_with sbazooka. Qed.
+Proof. specintros => *. superspecapply *. finish_logic_with sbazooka. Qed.
 
 Corollary CALLrel_I_rule (rel: DWORD) (p q: DWORD) :
   |-- Forall (w sp: DWORD), (
       |> safe @ (EIP ~= addB q rel ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
          safe @ (EIP ~= p          ** ESP~=sp    ** sp-#4 :-> w)
     ) @ (p -- q :-> CALLrel rel).
-Proof. specintros => *. supersafeapply (@CALLrel_rule p q rel). finish_logic_with sbazooka. Qed.
+Proof. specintros => *. superspecapply *. finish_logic_with sbazooka. Qed.
 End specapply_hint.
