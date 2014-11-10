@@ -22,6 +22,18 @@ Proof.
   finish_logic_with sbazooka. 
 Qed.
 
+(* Example: It is safe to sit forever in a tight loop. *)
+Example safe_loopAlt (p r: DWORD) :
+  |-- safe @ (EIP ~= p ** p -- r :-> (JMP p;; NOP)).
+Proof.
+  apply: spec_lob.
+  unfold_program. unfold_program. 
+  specintros => q. superspecapply *. 
+  autorewrite with push_at. cancel1. cancel1.
+  sbazooka.  
+Qed.
+
+
 (* Example: It is safe to sit in a less tight loop forever. *)
 Example safe_loop_while eax :
   |-- basic (EAX ~= eax ** OSZCP?) (while (TEST EAX, EAX) CC_O false prog_skip) lfalse.
@@ -42,6 +54,17 @@ Proof.
   autorewrite with push_at.
   apply: limplAdj. apply: landL1. 
   etransitivity; [apply safe_loop|]. finish_logic. 
+Qed.
+
+Example basic_loopAlt:
+  |-- basic empSP (LOCAL l; l:;; (JMP l;; NOP)) lfalse.
+Proof.
+  apply basic_local => l. 
+  rewrite /basic. specintros => i j.
+  unfold_program. specintros => _ <- <- i'.  
+  autorewrite with push_at.
+  apply: limplAdj. apply: landL1. rewrite empSPL empSPR. 
+  etransitivity; [apply safe_loopAlt|]. unfold_program. cancel1. sbazooka. 
 Qed.
 
 (* Show off the sequencing rule for [basic]. *)

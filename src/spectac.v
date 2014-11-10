@@ -504,7 +504,7 @@ Ltac specapply lem :=
        from there. *)
     instLem (lem) => Hlem;
     (* Collapse uses of safe @ _ @ _ *)
-    try repeat rewrite (spec_at_at safe);
+    try repeat rewrite -> (spec_at_at safe);
     (match goal with 
     (* Frameless versions *)
       |- ?P |-- ?W -->> ?Q -->> safe @ ?R => eapply (safe_safe_noframe2 _ Hlem); [ try done | .. ]

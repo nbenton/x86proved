@@ -773,7 +773,7 @@ Hint Rewrite <-
   spec_reads_later
   : push_later.
 
-Hint Rewrite @spec_later_exists_inhabited
+Hint Rewrite (@spec_later_exists_inhabited _ _ _ ILSpec)
   using repeat constructor : push_later.
 
 Lemma spec_lob_context C S: (C //\\ |> S |-- S) -> C |-- S.
