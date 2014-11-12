@@ -103,7 +103,7 @@ x86\instrrules\xor.vo \
 x86\instrrules.vo \
 x86\macros.vo \
 x86\call.vo \
-x86\callrec.vo
+x86\callrec.vo \
 examples\specexamples.vo \
 x86\inlinealloc.vo \
 x86\listspec.vo \
