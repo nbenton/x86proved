@@ -66,15 +66,6 @@ Proof.
 Qed.
 Hint Rewrite spec_at_toyfun : push_at.
 
-Lemma contraco (A:spec) A' B B' : (A' |-- A) -> (B |-- B') -> (A -->> B) |-- (A' -->> B').
-move => Ha Hb.
-apply: limplAdj.
-apply: limplL.
-assumption.
-apply landL1.
-assumption.
-Qed.
-
 Lemma basic_seq_frame (c1 c2: program) S P Q R F:
   S |-- basic P c1 Q @ F ->
   S |-- basic Q c2 R @ F ->
@@ -116,6 +107,31 @@ Proof.
   cancel2. rewrite <- spec_later_weaken. finish_logic_with sbazooka. finish_logic_with sbazooka. 
 Qed.
 
+Lemma toyfun_call_recAux (f:DWORD) P Q vs (i j:DWORD):
+  |-- (|> toyfun f P Q -->> (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) @ (retreg? ** stackinv vs)) @ (i -- j :-> call_toyfun f).
+Proof. rewrite /call_toyfun. unfold_program. 
+  autorewrite with push_at.
+  specintros => i1 i2 i3 H1 H2. rewrite -H1 -H2.
+  apply limplValid. rewrite /toyfun.
+  autorewrite with push_later; last apply _. eapply lforallL.   
+  autorewrite with push_at. 
+  autorewrite with push_later; last apply _. eapply lforallL.
+
+  superspecapply pushaxiom.
+  superspecapply JMP_I_rule. autorewrite with push_at. 
+  autorewrite with push_later; last apply _.
+  cancel2.
+  rewrite <- spec_later_weaken. cancel1. sbazooka.
+  cancel1. sbazooka. 
+Qed.
+
+Corollary toyfun_call_rec (f:DWORD) P Q R vs (i j:DWORD):
+ |> toyfun f P Q @ (i -- j :-> call_toyfun f ** R)  |-- (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) @ (retreg? ** stackinv vs) @ (i -- j :-> call_toyfun f ** R).
+Proof.
+apply limplValid. rewrite <- spec_at_later. rewrite <- spec_at_impl. 
+rewrite <-spec_at_at. rewrite <- spec_frame. apply toyfun_call_recAux. 
+Qed. 
+
 Lemma toyfun_mkbody (f f': DWORD) P p Q:
   (Forall vs, basic P p Q @ (stackinv vs)) |--
     toyfun f P Q @ (f--f' :-> mkbody_toyfun p).
@@ -154,13 +170,6 @@ Proof.
   superspecapply *.
   superspecapply *. rewrite <-spec_later_weaken. 
   finish_logic_with sbazooka. 
-Qed.
-
-Lemma lobimp S : (|-- (|> S -->> S) -->> S).
-apply limplValid.
-apply spec_lob_context.
-apply landAdj.
-reflexivity.
 Qed.
 
 Lemma lobentails S : (|> S -->> S) |-- S.
@@ -229,41 +238,45 @@ Qed.
 
 Definition exSpec f := Forall a b, toyfun f (EAX ~= a ** EBX ~= b) (EAX ~= #0 ** EBX ~= addB b a) @ OSZCP?.
 Example toyfun_example_body_correct (f f': DWORD):
-  |> exSpec f @ (f -- f' :-> toyfun_example_recursivecallee) |-- exSpec f @ (f--f' :-> toyfun_example_recursivecallee).
+  |-- (|> exSpec f -->> exSpec f) @ (f -- f' :-> toyfun_example_recursivecallee).
 Proof.  
-  rewrite /toyfun_example_recursivecallee.
+  rewrite /toyfun_example_recursivecallee/mkbody_toyfun. (*unfold_program.*)
   rewrite {2}/exSpec. 
   specintros => a b. 
   rewrite /toyfun.
-  specintros => iret vs. 
+  specintros => iret vs.
   rewrite spec_at_impl. 
   rewrite spec_at_impl.
+  rewrite spec_at_impl. 
+
+(*  specintro => i1. specintro => i2 i3 i4 <- <- i5 i6 i7 i8 <- <- i9. *)
   rewrite /stateIsAny.
   specintros => o s z c p r.
-  simpl in o,s,z,c,p,a,b.
-  set FF := (f--f' :-> toyfun_example_recursivecallee).
-  rewrite {2}/FF/toyfun_example_recursivecallee/mkbody_toyfun. 
+  simpl in o,s,z,c,p,a,r.
 
-  (* Don't introduce all of it? *)
-  unfold_program. specintros => i1 i2 i3 i4 <- <- i5 i6 i7 i8 <- <- i9. 
+  apply limplValid. 
 
   (* Why do we need this? Answer: because specapply doesn't unfold stuff in rules in contrast to basic apply  *)
   (* INC EBX *)
-  instLem INC_R_rule => RULE. 
-  rewrite /OSZCP in RULE.
+  unfold_program. unfold_program.
+  specintros => i1 i2 i3 i4 <- <- i5 i6 i7 i8 <- <- i9.
+  instrrule pose (INC_R_rule (r:=EBX)) as RULE.
+  rewrite /OSZCP in RULE. rewrite spec_at_at. 
   superspecapply RULE. clear RULE.
 
   (* DEC EAX *)
-  instLem DEC_R_rule => RULE. 
+  instLem (DEC_R_rule (r:=EAX)) => RULE. 
   rewrite /OSZCP in RULE.
   superspecapply RULE. clear RULE. 
 
   (* JZ SKIP *)
   superspecapply JZ_rule. 
   specsplit. 
-  - setoid_rewrite <- spec_later_weaken at 2. specintros => H. 
-    specapply popaxiom. rewrite /stateIsAny. sbazooka. 
-    superspecapply *. setoid_rewrite <- spec_later_weaken at 2. autorewrite with push_at.
+  - setoid_rewrite <- spec_later_weaken at 2. specintros => H.
+    specapply popaxiom. 
+      rewrite /stateIsAny. sbazooka. 
+    superspecapply *. setoid_rewrite <- spec_later_weaken at 2. 
+    autorewrite with push_at.
     finish_logic. apply landL2. cancel1. sbazooka.
     rewrite -{2}(decBK a).  
     rewrite (eqP (eqP H)). rewrite incB_fromNat addB1. by ssimpl. 
@@ -275,37 +288,52 @@ Proof.
      rewrite spec_at_toyfun.
    set PRE := (EAX ~= decB _ ** _) ** _. 
    rewrite  -addB_decB_incB  decBK incBK.  
-   set POST := (EAX ~= #0 ** _) ** _. 
-   instLem (@toyfun_call f (PRE) (POST)) => TFC.
+   set POST := (EAX ~= #0 ** _) ** _.       
+   
+   set I1 := (f -- i5 :-> _). 
+   set I2 := (i5 -- i6 :-> _). 
+   set I3 := (i6 -- i7 :-> _). 
+   set I4 := (i8 -- i9 :-> _). 
+   set I5 := (i9 -- f' :-> _). 
+   instLem (@toyfun_call_rec f (PRE) (POST) (I1**I2**I3**I4**I5)) => TFC.
+   unfold I1, I2, I3, I4, I5 in *.
+
+   
    (* call_toyfun L *)
    (* Have to rearrange in order to get frame right *)
-   rewrite -> (spec_at_swap _ (_ -- _ :-> call_toyfun f)) in TFC.
-   rewrite -> spec_at_impl in TFC. do 2 rewrite -> (spec_at_at safe) in TFC.
+(*   rewrite -> (spec_at_swap _ (_ -- _ :-> call_toyfun f)) in TFC. *)
+   rewrite -> spec_at_impl in TFC. 
+   do 2 rewrite -> (spec_at_at safe) in TFC.
    rewrite /toyfun in TFC.
    (* But now we do at least get to use specapply *)
    specapply TFC; last first.
 
    (* popcode *)
    rewrite /PRE/POST.
-   rewrite /FF. superspecapply *. 
+   superspecapply popaxiom. 
    (* JMP retreg *)
    superspecapply *. 
    (* Usual logic stuff *)
-   setoid_rewrite <- spec_later_weaken at 2. autorewrite with push_at. apply limplAdj. apply landL2. 
+   setoid_rewrite <- spec_later_weaken at 2. autorewrite with push_at. 
+   apply limplAdj. apply landL2. 
    rewrite /POST/stateIsAny. cancel1. sbazooka. 
    rewrite /PRE/stateIsAny. sbazooka.
 
 
    (* Now the remaining obligation from specapply TFC. *)
-   autorewrite with push_later; last apply _. autorewrite with push_at. specintros => iret'. cancel1. 
-   specintros => vs'. rewrite /toyfun. apply lforallL with iret'. apply lforallL with vs'. 
-   (* This is wrong because we have a FF hanging around still *)
-   admit. 
+   autorewrite with push_later; last apply _. rewrite /toyfun. 
+   autorewrite with push_at. specintros => iret'. 
+   autorewrite with push_at. cancel1. 
+   specintros => vs'. apply lforallL with iret'. rewrite spec_at_forall. 
+   apply lforallL with vs'. 
+   rewrite spec_at_at. rewrite spec_at_at.
+   autorewrite with push_at. cancel2. cancel1. admit.  cancel1. sbazooka. 
 Qed.
 
 Corollary toyfun_example_correct (f f': DWORD):
   |-- exSpec f @ (f--f' :-> toyfun_example_recursivecallee).
 Proof.
-apply spec_lob. apply toyfun_example_body_correct. 
+apply spec_lob. apply limplValid. rewrite <-spec_at_later. 
+rewrite <- spec_at_impl. apply toyfun_example_body_correct. 
 Qed. 
 
