@@ -16,6 +16,7 @@ Transparent ILFun_Ops.
 Definition toPState (s:ProcState) : PState :=
   fun f:Frag =>
   match f return fragDom f -> option (fragTgt f) with
+  | SegRegisters => fun r => Some (segregisters s r)
   | Registers => fun rp => let: mkRegPiece r ix := rp in Some (getRegPiece (registers s r) ix)
   | Flags => fun f => Some (flags s f)
   | Memory => fun p => Some (memory s p)

@@ -27,9 +27,10 @@ Require Import Coq.Logic.FunctionalExtensionality.
     - a partial flag file
   ---------------------------------------------------------------------------*)
 
-Inductive Frag := Registers | Memory | Flags.
+Inductive Frag := SegRegisters | Registers | Memory | Flags.
 Definition fragDom d :=
   match d with
+  | SegRegisters => SegReg
   | Registers => RegPiece
   | Memory => ADDR
   | Flags => Flag
@@ -37,6 +38,8 @@ Definition fragDom d :=
 
 Definition fragTgt d :=
   match d with
+  | SegRegisters => WORD
+
   | Registers => BYTE
     (* None = "memory not mapped" or "memory inaccessible".
        Access to such memory should cause a trap handler to be executed *)
@@ -55,6 +58,7 @@ Canonical Structure Reg64StateFrag := @Build_StateFrag Registers Reg64.
 Canonical Structure NonSPReg64StateFrag := @Build_StateFrag Registers NonSPReg64.
 Canonical Structure GPReg64StateFrag := @Build_StateFrag Registers GPReg64.
 Canonical Structure FlagStateFrag := Build_StateFrag Flags Flag.
+Canonical Structure SegRegStateFrag := Build_StateFrag SegRegisters SegReg.
 
 Definition fragOf {sf: StateFrag} (x: carrier sf) := frag sf.
 
@@ -63,7 +67,17 @@ Definition emptyPState : PState := fun _ => empFun _.
 Definition addRegPieceToPState (s:PState) (rp:RegPiece) (v:BYTE) : PState :=
   fun (f:Frag) =>
   match f as f in Frag return fragDom f -> option (fragTgt f) with
+  | SegRegisters => s SegRegisters
   | Registers => fun rp' => if rp == rp' then Some v else s Registers rp'
+  | Flags => s Flags
+  | Memory => s Memory
+  end.
+
+Definition addSegRegToPState (s:PState) (rp:SegReg) (v:WORD) : PState :=
+  fun (f:Frag) =>
+  match f as f in Frag return fragDom f -> option (fragTgt f) with
+  | Registers => s Registers
+  | SegRegisters => fun rp' => if rp == rp' then Some v else s SegRegisters rp'
   | Flags => s Flags
   | Memory => s Memory
   end.
@@ -71,6 +85,7 @@ Definition addRegPieceToPState (s:PState) (rp:RegPiece) (v:BYTE) : PState :=
 Definition addFlagToPState (s:PState) f v : PState :=
   fun (fr:Frag) =>
   match fr as fr in Frag return fragDom fr -> option (fragTgt fr) with
+  | SegRegisters => s SegRegisters
   | Registers => s Registers
   | Flags => fun f' => if f == f' then Some v else s Flags f'
   | Memory => s Memory
@@ -79,6 +94,7 @@ Definition addFlagToPState (s:PState) f v : PState :=
 Definition addBYTEToPState (s:PState) (p:ADDR) b : PState :=
   fun (fr:Frag) =>
   match fr as fr in Frag return fragDom fr -> option (fragTgt fr) with
+  | SegRegisters => s SegRegisters
   | Memory => fun p' => if p == p' then Some (Some b) else s Memory p'
   | Registers => s Registers
   | Flags => s Flags

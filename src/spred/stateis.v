@@ -22,6 +22,7 @@ Global Coercion lbool (b:bool) := lpropand b ltrue.
 
 Definition regPieceIs r v : SPred := eq_pred (addRegPieceToPState emptyPState r v).
 Definition flagIs f b : SPred := eq_pred (addFlagToPState emptyPState f b).
+Definition segRegIs r w : SPred := eq_pred (addSegRegToPState emptyPState r w).
 
 Definition reg64Is (r:Reg64) (v:QWORD) : SPred :=
   let pi i := regPieceIs (mkRegPiece r i) (getRegPiece v i) in
@@ -41,16 +42,19 @@ Definition reg8Is (r:Reg8) (v:BYTE) : SPred :=
 
 Inductive RegOrFlag :=
 | RegOrFlagR s :> Reg s -> RegOrFlag
+| RegOrFlagS :> SegReg -> RegOrFlag
 | RegOrFlagF :> Flag -> RegOrFlag.
 
 Definition RegOrFlag_target rf :=
 match rf with
 | RegOrFlagR s _   => VWORD s
+| RegOrFlagS _     => WORD
 | RegOrFlagF _     => FlagVal
 end.
 
 Definition stateIs (x: RegOrFlag) : RegOrFlag_target x -> SPred :=
 match x with
+| RegOrFlagS r => segRegIs r
 | RegOrFlagR OpSize1 r => reg8Is r
 | RegOrFlagR OpSize2 r => reg16Is r
 | RegOrFlagR OpSize4 r => reg32Is r

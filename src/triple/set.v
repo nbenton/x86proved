@@ -230,6 +230,10 @@ Lemma addRegPieceIsSepAux rp b b' (P:SPred) s :
 Proof. move => [s1 [s2 [Hs [Hs1 Hs2]]]].
 exists (addRegPieceToPState emptyPState rp b), s2. split => //. 
 elim. 
+(* segment registers *)
+- move => v. specialize (Hs SegRegisters v). simpl. destruct (s _ v). 
+  destruct Hs. specialize (Hs1 _ v). simpl in Hs1. rewrite <- Hs1 in H. by destruct H. 
+  right. intuition. by destruct Hs. 
 (* registers *)
 - specialize (Hs Registers).  
 destruct (splitsAsIncludes Hs) as [Hsa Hsb].
@@ -261,7 +265,9 @@ Proof. move => pre.
 exists (addRegPieceToPState emptyPState rp b). 
 exists s.
 split => //. 
-simpl. move => fr/=. destruct fr. move => rp'. simpl. 
+simpl. move => fr/=. destruct fr. 
+move => p. simpl. case E': (s _ p) => [x |]. by right. done.
+move => rp'. simpl. 
 case E: (rp == rp'). left. rewrite -(eqP E). done.
 case E': (s Registers rp') => [x |]. by right. done.
 move => p. simpl. case E': (s Memory p) => [x |]. by right. done.
