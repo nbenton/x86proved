@@ -69,12 +69,12 @@ Definition incIfDot buf: program :=
 skip:;.
 
 Definition decModN (r:GPReg32) n : program :=
-  CMP r, 0;;
-  ifthenelse CC_Z true (MOV r, (n.-1)) (DEC r).
+  CMP r, ((0:DWORD):IMM OpSize4);;
+  ifthenelse CC_Z true (MOV r, (n.-1:DWORD)) (DEC r).
 
 Definition incModN (r: GPReg32) n : program :=
-  CMP r, (n.-1);;
-  ifthenelse CC_Z true (MOV r, 0) (INC r).
+  CMP r, (((n.-1):DWORD):IMM OpSize4);;
+  ifthenelse CC_Z true (MOV r, (0:DWORD)) (INC r).
 
 Require Import Ssreflect.div.
 Lemma decModN_correct (r:GPReg32) n m : n < 2^32 -> m < n ->
@@ -84,6 +84,8 @@ Proof.
 
   autorewrite with push_at.
   rewrite /decModN.
+
+  Set Printing Coercions.
 
   (* CMP r, 0 *)
   basic apply *.
@@ -179,7 +181,7 @@ Proof. apply incModN_correct => //. Qed.
 Definition countNeighbours (buf:DWORD) : program :=
   let_toyfun f := incIfDot buf
   in
-  MOV ESI, 0;;
+  MOV ESI, (0:DWORD);;
   goLeft;; call_toyfun f;;
   goUp;; call_toyfun f;;
   goRight;; call_toyfun f;;
@@ -190,10 +192,10 @@ Definition countNeighbours (buf:DWORD) : program :=
   goLeft;; call_toyfun f;;
   goUp;; goRight.
 
-Definition bufDefined (buf:DWORD) := memAny buf (buf +# numRows*numCols*2).
+Definition bufDefined (buf:DWORD) := memAny (zeroExtend _ buf) (zeroExtend _ (buf +# numRows*numCols*2)).
 
 Definition writeChar buf ch: program :=
-  MOV EDI, buf;;
+  MOV EDI, (buf:DWORD);;
   inlineComputeLinePos;;
   MOV BYTE [EDI+ECX*2], charToBYTE ch.
 
@@ -227,7 +229,7 @@ Definition clearColour := toNat (n:=8) (#x"4F").
 
 Definition clsProg :program :=
       MOV EBX, screenBase;;
-      while (CMP EBX, screenLimit) CC_B true ( (* while EBX < screenLimit *)
+      while (CMP EBX, (screenLimit:IMM OpSize4)) CC_B true ( (* while EBX < screenLimit *)
         MOV BYTE [EBX], #c" ";;
         MOV BYTE [EBX+1], # clearColour;;
         INC EBX;; INC EBX (* move one character right on the screen *)
@@ -249,7 +251,7 @@ Definition oneStepScreen screen buf :program :=
 Definition copyBuf (src dst:DWORD) : program:=
       MOV ESI, src;;
       MOV EDI, dst;;
-      while (CMP ESI, (src +# numCols*numRows.*2:DWORD)) CC_B true ( (* while ESI < screenLimit *)
+      while (CMP ESI, (src +# numCols*numRows.*2:IMM OpSize4)) CC_B true ( (* while ESI < screenLimit *)
         MOV EAX, [ESI];;
         MOV [EDI], EAX;;
         ADD ESI, 4;; ADD EDI, 4
@@ -263,7 +265,7 @@ Definition delay:program :=
 Definition copyBlock (src dst:DWORD) : program:=
       MOV ESI, src;;
       MOV EDI, dst;;
-      while (CMP ESI, (src +# numCols*numRows.*2:DWORD)) CC_B true ( (* while ESI < screenLimit *)
+      while (CMP ESI, (src +# numCols*numRows.*2:IMM OpSize4)) CC_B true ( (* while ESI < screenLimit *)
         MOV EAX, [ESI];;
         MOV [EDI], EAX;;
         ADD ESI, 4;; ADD EDI, 4

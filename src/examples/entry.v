@@ -6,8 +6,8 @@ Local Open Scope instr_scope.
 
 Definition sumEx :=
   LOCAL loopBody;
-      MOV EAX, 1;;
-      MOV EBX, 10;;
+      MOV EAX, (1:DWORD);;
+      MOV EBX, (10:DWORD);;
       XOR ECX, ECX;;
     loopBody:;;
       ADD ECX, EAX;;
@@ -18,8 +18,8 @@ Definition sumEx :=
 
 Definition outEx :=
   LOCAL loopBody;
-      MOV EAX, 1;;
-      MOV EBX, 10;;
+      MOV EAX, (1:DWORD);;
+      MOV EBX, (10:DWORD);;
       XOR ECX, ECX;;
     loopBody:;;
       OUT 50, AL;;
@@ -34,8 +34,8 @@ Definition simpleScreenEx :=
   LOCAL busyBody;
     busyBody:;;
       MOV EDI, screenAddr;;
-      MOV BYTE [EDI], #(nat_of_ascii "D");;
-      MOV BYTE [EDI+1], #63;;
+      MOV BYTE PTR [EDI], (#(nat_of_ascii "D"):BYTE);;
+      MOV BYTE PTR [EDI+1], (#63:BYTE);;
       JMP busyBody
   .
 
@@ -43,14 +43,14 @@ Definition prettyEx :=
   LOCAL loopBody;
   LOCAL busyBody;
       MOV EDI, screenAddr;;
-      MOV EAX, 31;;
-      MOV EBX, 255;;
+      MOV EAX, (31:DWORD);;
+      MOV EBX, (255:DWORD);;
     loopBody:;;
-      MOV BYTE [EDI], #1;;
+      MOV BYTE PTR [EDI], (#1:BYTE);;
       INC EDI;;
       MOV [EDI], AL;;
       INC EDI;;
-      ADD EAX, 16;;
+      ADD EAX, (16:DWORD);;
       CMP EAX, EBX;;
       JNZ loopBody;;
     busyBody:;;

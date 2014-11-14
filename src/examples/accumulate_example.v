@@ -260,10 +260,9 @@ Proof.
   { basic apply H_test; eassumption. }
 Qed.
 
-Definition accumulate_until_value_prog value
+Definition accumulate_until_value_prog (value:BYTE)
            (pbody: program) in_ch
-  := accumulate_prog (CMP (AL : Reg8), (value : DWORD)) CC_Z false pbody in_ch.
-
+  := accumulate_prog (CMP AL, value) CC_Z false pbody in_ch.
 
 (** TODO: put in the reasoning that [last x xs == value]; we'll need a lemma relating [last] and [only_last] *)
 Example accumulate_until_value_prog_safe value
@@ -280,7 +279,7 @@ Example accumulate_until_value_prog_safe value
                                           (P (accumulate initial x) ** AL? ** OF? ** SF? ** ZF? ** CF? ** PF?)))
 : S |-- (Forall initial x xs (pf1 : only_last (fun t : BYTE => t == value) x xs),
          (loopy_basic (P initial ** AL ~= al ** OSZCP o s z c p)
-                      (accumulate_until_value_prog (zeroExtend _ value) pbody ch)
+                      (accumulate_until_value_prog (value) pbody ch)
                       (foldr catOP empOP (map (inOP (zeroExtend n8 ch)) (x::xs)))
                       (P (foldl accumulate initial (drop_last x xs)) ** AL ~= (last x xs) ** OF? ** SF? ** ZF ~= true ** CF? ** PF?))).
 Proof.
@@ -302,8 +301,7 @@ Proof.
            end. }
   { assumption. }
   { basic apply H_body; eassumption. }
-  { attempt basic apply *.
-    rewrite low_catB subB_eq0.
+  { basic apply *. rewrite  subB_eq0.
     repeat match goal with
              | _ => done
              | [ |- context[if ?x then _ else _] ] => case_eq x
@@ -321,8 +319,7 @@ Example addB_until_zero_prog_safe ch o s z c p S al
                          ** AL ~= (last x xs) ** OF? ** SF? ** ZF ~= true ** CF? ** PF?))).
 Proof.
   specintros => *. 
-  admit. 
-(* basic apply (@accumulate_until_value_prog_safe #0 _ (fun x => AH ~= x)) => *; first assumption.
+  admit. (*basic apply (@accumulate_until_value_prog_safe #0 _ (fun x => AH ~= x)) => *. first assumption.
   basic apply *. *)
 Qed.
 

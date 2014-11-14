@@ -34,17 +34,17 @@ Definition unRegImmI d : CAST (IMM d) (RegImm d).
 apply: MakeCast (RegImmI d) (fun rm => if rm is RegImmI v then Some v else None) _.
 by elim; congruence. Defined.
 
-Definition unJmpTgtI : CAST Tgt JmpTgt.
-apply: MakeCast JmpTgtI (fun t => if t is JmpTgtI d then Some d else None) _.
+Definition unJmpTgtI a : CAST (Tgt a) (JmpTgt a).
+apply: (MakeCast (JmpTgtI a) (fun t => if t is JmpTgtI d then Some d else None) _).
 elim; elim; congruence. Defined.
 
-Definition unJmpTgtRM : CAST (RegMem OpSize8) JmpTgt.
-apply: (MakeCast JmpTgtRegMem
+Definition unJmpTgtRM a : CAST (RegMem (adSizeToOpSize a)) (JmpTgt a).
+apply: (MakeCast (JmpTgtRegMem _)
   (fun i => if i is JmpTgtRegMem rm then Some rm else None) _).
 by elim; congruence. Defined.
 
-Definition unTgt : CAST DWORD Tgt.
-apply: MakeCast mkTgt (fun t => let: mkTgt d := t in Some d) _.
+Definition unTgt a : CAST (VWORD (adSizeToOpSize a)) (Tgt a).
+apply: (MakeCast (mkTgt a) (fun t => let: mkTgt d := t in Some d) _).
 by move => [d] y [<-].
 Defined.
 
@@ -390,17 +390,25 @@ Definition tryEqAdSize F (a1 a2: AdSize): F a1 -> option (F a2) :=
   | _, _ => fun x => None
   end. 
 
-Definition dispOffsetSIBCast s a : CAST (SIB a * DWORD) (RegMem s).
-apply: (MakeCast (fun p => RegMemM s a (mkMemSpec a (Some (mkSIB _ (p.1.1) (p.1.2))) p.2))
-  (fun rm => if rm is RegMemM a' (mkMemSpec (Some (mkSIB base ixopt)) offset) 
-             then @tryEqAdSize (fun a => (SIB a * DWORD)%type) a' a ((base,ixopt),offset) else None) _).
+Definition dispOffsetSIBCast (seg:option SegReg) s a : CAST (SIB a * DWORD) (RegMem s).
+apply: (MakeCast (fun p => RegMemM s a (mkMemSpec a seg (Some (mkSIB _ (p.1.1) (p.1.2))) p.2))
+  (fun rm => if rm is RegMemM a' (mkMemSpec seg' (Some (mkSIB base ixopt)) offset) 
+             then if seg == seg' then 
+               @tryEqAdSize (fun a => (SIB a * DWORD)%type) a' a ((base,ixopt),offset) 
+             else None else None) _).
 case a. 
-elim => //. elim => //. elim => //. elim => //.  elim => //. 
-move => [x y] z [x' y'].  simpl. by move => [<- <-]. 
-elim => //. elim => //. elim => //. elim => //. 
-elim => //. elim => //. elim => //. elim => //. elim => //. elim => //. 
-elim => //. move => x y z [x' y']. by move => [<- ->]. 
-Defined.
++ elim => //. elim => //. elim => //. move => seg'. elim => //. elim => //.
+  move => [x y] z [x' y']. simpl. 
+  case E: (seg==seg') => //. rewrite (eqP E). move => [<- <-]. by simpl.
+  elim => //. move => seg'. elim => //. elim => //. 
+  case E: (seg==seg') => //. 
++ elim => //. elim => //. elim => //. move => seg'. elim => //. elim => //. 
+  elim => //. move => x y z [x' y']. 
+  case E: (seg==seg') => //. 
+  elim => //. move => seg'. elim => //. elim => //.
+  move => x y z [x' y'].   case E: (seg==seg') => //. rewrite (eqP E). 
+  by move => [<- ->]. 
+Defined. 
 
 (*
 Definition dispOffsetCast s a : CAST (IxReg a * DWORD) (RegMem s). 
@@ -410,25 +418,26 @@ elim => //. elim => //. elim => //. move => [x y] z [x' y'].
 case: x => // r. case: r => //. move => r'. case: y => //. by move => [<- ->]. Defined.
 *)
 
-Definition dispOffsetNoBaseCast s (a:AdSize) : CAST DWORD (RegMem s).
-apply: (MakeCast (fun offset => RegMemM s a (mkMemSpec a None offset))
-                (fun rm => if rm is RegMemM a' (mkMemSpec None offset)
-                           then @tryEqAdSize _ a' a offset else None) _).
+Definition dispOffsetNoBaseCast (seg: option SegReg) s (a:AdSize) : CAST DWORD (RegMem s).
+apply: (MakeCast (fun offset => RegMemM s a (mkMemSpec a seg None offset))
+                (fun rm => if rm is RegMemM a' (mkMemSpec seg' None offset)
+                           then if seg==seg' then @tryEqAdSize _ a' a offset else None else None) _).
 case a. 
 elim => //. elim => //. 
-elim => //. elim => //. by  move => ? ? [<-]. 
-repeat elim => //. 
-elim => //. elim => //. elim => //. elim => //. elim => //. 
-elim => //. by  move => ? ? [<-]. 
+elim => //. move => seg'. elim => //. case E: (seg == seg') => //. rewrite (eqP E). by move => ? ? [<-]. 
+elim => //. move => seg'. case E: (seg == seg'); repeat elim => //. 
+elim => //. elim => //. elim => //. move => seg'. case E: (seg == seg'). elim => //. elim => //. 
+elim => //. move => seg'. case E: (seg == seg'). rewrite (eqP E). elim => //. by  move => ? ? [<-]. 
+elim => //. 
 Defined. 
 
-Definition RegMemCodec T (a:AdSize) (R X B:bool) (regOrOpcodeCodec : Codec T) s : Codec (T * RegMem s) :=
-    #b"00" .$ regOrOpcodeCodec $ SIBRM .$ (SIBCodec a X B $ always #0 ~~> dispOffsetSIBCast s a)
+Definition RegMemCodec T seg (a:AdSize) (R X B:bool) (regOrOpcodeCodec : Codec T) s : Codec (T * RegMem s) :=
+    #b"00" .$ regOrOpcodeCodec $ SIBRM .$ (SIBCodec a X B $ always #0 ~~> dispOffsetSIBCast seg s a)
 (*||| #b"00" .$ regOrOpcodeCodec $ (NonBPNonSPReg32Codec $ always #0 ~~> dispOffsetCast dword)*)
-||| #b"00" .$ regOrOpcodeCodec $ (#b"101" .$ DWORDCodec ~~> dispOffsetNoBaseCast s a)
-||| #b"01" .$ regOrOpcodeCodec $ SIBRM .$ (SIBCodec a X B $ shortDWORDCodec ~~> dispOffsetSIBCast s a)
+||| #b"00" .$ regOrOpcodeCodec $ (#b"101" .$ DWORDCodec ~~> dispOffsetNoBaseCast seg s a)
+||| #b"01" .$ regOrOpcodeCodec $ SIBRM .$ (SIBCodec a X B $ shortDWORDCodec ~~> dispOffsetSIBCast seg s a)
 (*(||| #b"01" .$ regOrOpcodeCodec $ (NonSPReg32Codec false $ shortDWORDCodec ~~> dispOffsetCast dword)*)
-||| #b"10" .$ regOrOpcodeCodec $ (SIBRM .$ SIBCodec a X B $ DWORDCodec ~~> dispOffsetSIBCast s a)
+||| #b"10" .$ regOrOpcodeCodec $ (SIBRM .$ SIBCodec a X B $ DWORDCodec ~~> dispOffsetSIBCast seg s a)
 (*||| #b"10" .$ regOrOpcodeCodec $ (NonSPReg32Codec false $ DWORDCodec ~~> dispOffsetCast dword)*)
 ||| #b"11" .$ regOrOpcodeCodec $ (VRegCodec B s ~~> unRegMemR s).
 
@@ -466,8 +475,8 @@ by rewrite /= tc totalDWORD.
 Qed.
 *)
 
-Definition RegMemOpCodec (a:AdSize) R X B (op: BITS 3) dword :=
-  RegMemCodec a R X B (Const op) dword ~~> sndUnitCast _.
+Definition RegMemOpCodec seg (a:AdSize) R X B (op: BITS 3) dword :=
+  RegMemCodec seg a R X B (Const op) dword ~~> sndUnitCast _.
 
 Definition mkOpSize p W b := 
   if b then
@@ -515,6 +524,49 @@ apply: (MakeCast (fun p => DstSrcRI _ p.1 p.2)
 move => ds [rm c].
 elim: ds => //. by move => ? ? [<- ->]. Defined.
 
+Definition unMovDstSrcRMR s : CAST (GPReg s * RegMem s) (MovDstSrc s).
+apply: (MakeCast
+       (fun p => match p.2 with RegMemR y => MovDstSrcRR s p.1 y
+                              | RegMemM a y => MovDstSrcRM s a p.1 y end)
+       (fun ds => match ds with MovDstSrcRR x y => Some (x,RegMemR _ y)
+                              | MovDstSrcRM a x y => Some (x,RegMemM _ a y)
+                              | _ => None end) _).
+elim => //.  
+- by move => ? ? [? ?] [<- <-]. 
+- by move => ? ? ? [? ?] [<-] [<-]. 
+Defined. 
+
+Definition unMovDstSrcMRR s : CAST (GPReg s * RegMem s) (MovDstSrc s).
+apply: (MakeCast
+       (fun p => match p.2 with RegMemR y => MovDstSrcRR s y p.1
+                              | RegMemM a y => MovDstSrcMR s a y p.1 end)
+       (fun ds => match ds with MovDstSrcRR x y => Some (y, RegMemR _ x)
+                              | MovDstSrcMR a x y => Some (y, RegMemM _ a x)
+                              | _ => None end) _).
+elim => //. 
+- by move => ? ? [? ?] [<-] <-. 
+- by move => ? ? ? [? ?] [<- <-]. 
+Defined.
+
+(*
+Definition unMovDstSrcMRI s : CAST (RegMem s * VWORD s) (MovDstSrc s).
+eapply (MakeCast
+       (fun p => match p.1 with RegMemR y => (MovDstSrcRI s y p.2)
+                              | RegMemM a y => (MovDstSrcMI s a y p.2) end)
+       (fun ds => match ds with MovDstSrcRI x y => Some (RegMemR _ x, y)
+                              | MovDstSrcMI a x y => Some (RegMemM _ a x, y)
+                              | _ => None end) _).
+move => ds [rm c].
+elim: ds => //. by move => ? ? [<- ->]. by move => ? ? ? [<- ->]. Defined.
+*)
+
+Definition unMovDstSrcRI s : CAST (GPReg s * VWORD s) (MovDstSrc s).
+apply: (MakeCast (fun p => MovDstSrcRI _ p.1 p.2)
+       (fun ds => match ds with MovDstSrcRI x y => Some (x, y)
+                              | _ => None end) _).
+move => ds [rm c].
+elim: ds => //. by move => ? ? [<- ->]. Defined.
+
 (*---------------------------------------------------------------------------
     Casts for instructions
   ---------------------------------------------------------------------------*)
@@ -547,6 +599,15 @@ Definition rexPrefixCodec X (c: bool -> bool -> bool -> bool -> Codec X) : Codec
     c W R X B))))
 ||| c false false false false.
 
+Definition segPrefixCodec X (f:option SegReg -> Codec X) : Codec X :=
+    #x"2E" .$ f (Some CS)
+||| #x"36" .$ f (Some SS)
+||| #x"3E" .$ f (Some DS)
+||| #x"26" .$ f (Some ES)
+||| #x"64" .$ f (Some FS)
+||| #x"65" .$ f (Some GS)
+||| f None.
+
 Definition isCMC : CAST unit Instr.
 apply: MakeCast (fun _ => CMC) (fun i => if i is CMC then Some tt else None) _; by elim; elim.
 Defined.
@@ -571,8 +632,32 @@ Definition isENCLS : CAST unit Instr.
 apply: MakeCast (fun _ => ENCLS) (fun i => if i is ENCLS then Some tt else None) _; by elim; elim.
 Defined.
 
-Definition TgtCodec : Codec Tgt := DWORDCodec ~~> unTgt.
-Definition ShortTgtCodec : Codec Tgt := shortDWORDCodec ~~> unTgt.
+Definition shortQWORDEmb : CAST BYTE QWORD.
+apply: MakeCast (@signExtend _ 7) (@signTruncate _ 7) _.
+Proof. move => d b/= H. by apply signTruncateK. Defined.
+
+Definition longQWORDEmb : CAST DWORD QWORD.
+apply: MakeCast (@signExtend _ 31) (@signTruncate _ 31) _.
+Proof. move => d b/= H. by apply signTruncateK. Defined.
+
+Definition shortDWORDCodec: Codec DWORD :=
+  BYTECodec ~~> shortDWORDEmb.
+Definition shortQWORDCodec: Codec QWORD :=
+  BYTECodec ~~> shortQWORDEmb.
+Definition longQWORDCodec: Codec QWORD :=
+  DWORDCodec ~~> longQWORDEmb.
+
+Definition ShortTgtCodec a : Codec (Tgt a) :=
+(match a as a return Codec (VWORD (adSizeToOpSize a)) with
+| AdSize4 => shortDWORDCodec
+| AdSize8 => shortQWORDCodec
+end) ~~> unTgt a.
+
+Definition DWORDTgtCodec a : Codec (Tgt a) := 
+(match a as a return Codec (VWORD (adSizeToOpSize a)) with
+| AdSize4 => DWORDCodec
+| AdSize8 => longQWORDCodec
+end) ~~> unTgt a.
 
 Definition VAXCodec s : Codec (GPReg s) :=
 match s return Codec (GPReg s) with
@@ -605,6 +690,7 @@ elim:s; elim => //; elim => //; move => ? src [? ?]; case src => // ?; by move =
 Defined.
 
 Definition TESTCodec :=
+  segPrefixCodec (fun seg => 
   sizesPrefixCodec (fun w a =>
   rexPrefixCodec (fun W R X B =>
     (* Short form for TEST AL/AX/EAX/RAX, imm8/imm16/imm32 *)
@@ -612,11 +698,11 @@ Definition TESTCodec :=
         (VAXCodec (mkOpSize w W d) ~~> unRegMemR _) $ (IMMCodec _ ~~> unRegImmI _) ~~> unTEST _)
     (* TEST r/m8, imm8 | TEST r/m16, imm16 | TEST r/m32, imm32 | TEST r/m64, imm32 *)
     ||| opcodeWithSizeCodec #x"F6" (fun d =>
-        RegMemOpCodec a R X B #0 (mkOpSize w W d) $ (IMMCodec _ ~~> unRegImmI _) ~~> unTEST _)
+        RegMemOpCodec seg a R X B #0 (mkOpSize w W d) $ (IMMCodec _ ~~> unRegImmI _) ~~> unTEST _)
     (* TEST r/m8, r8 | TEST r/m16, r16 | TEST r/m32, r32 | TEST r/m64, r64 *)
     ||| opcodeWithSizeCodec #x"84" (fun d =>
-        RegMemCodec a R X B (VRegCodec R _ ~~> unRegImmR _) _ ~~> swapPairCast _ _ ~~> unTEST (mkOpSize w W d))
-    )).
+        RegMemCodec seg a R X B (VRegCodec R _ ~~> unRegImmR _) _ ~~> swapPairCast _ _ ~~> unTEST (mkOpSize w W d))
+    ))).
 
 (*---------------------------------------------------------------------------
     RET instruction (near)
@@ -634,47 +720,53 @@ Definition RETCodec :=
     JMP instruction
     @TODO: 16-bit variants, far jumps
   ---------------------------------------------------------------------------*)
-Definition unJMP : CAST JmpTgt Instr.
-apply: MakeCast JMPrel (fun i => if i is JMPrel t then Some t else None) _.
-by elim => // ? ? [->]. 
+Definition unJMP a : CAST (JmpTgt a) Instr. 
+apply: (MakeCast (JMPrel a) (fun i => if i is JMPrel a' t 
+  then @tryEqAdSize (fun a => (JmpTgt a)) a' a t else None) _).
+by case: a; case => //; case => // ? ? [->]. 
 Defined.
 
+(* This is an example of a codec that is mode-dependent: the DEFAULT for 64-bit mode is 64-bit,
+  with or without a rex prefix *)
 Definition JMPCodec :=
-    #x"EB" .$ ShortTgtCodec ~~> unJmpTgtI ~~> unJMP
-||| #x"E9" .$ DWORDCodec ~~> unTgt ~~> unJmpTgtI ~~> unJMP
-||| adSizePrefixCodec (fun a =>
+    #x"EB" .$ ShortTgtCodec _ ~~> unJmpTgtI _ ~~> unJMP AdSize8
+||| #x"E9" .$ DWORDTgtCodec _ ~~> unJmpTgtI _ ~~> unJMP AdSize8
+||| segPrefixCodec (fun seg =>
+    adSizePrefixCodec (fun a =>
     rexPrefixCodec (fun W R X B =>
-    #x"FF" .$ RegMemOpCodec a R X B #4 OpSize8 ~~> unJmpTgtRM ~~> unJMP)).
+    #x"FF" .$ RegMemOpCodec seg a R X B #4 (adSizeToOpSize a) ~~> unJmpTgtRM a ~~> unJMP a))).
 
 (*---------------------------------------------------------------------------
     CALL instruction
     @TODO: 16-bit variants, far calls
   ---------------------------------------------------------------------------*)
-Definition unCALL : CAST JmpTgt Instr.
-apply: MakeCast CALLrel (fun i => if i is CALLrel t then Some t else None) _.
-by elim => // ? ? [->]. 
+Definition unCALL a : CAST (JmpTgt a) Instr.
+apply: MakeCast (CALLrel a) (fun i => if i is CALLrel a' t 
+  then @tryEqAdSize (fun a => (JmpTgt a)) a' a t else None) _.
+by case: a; case => //; case => // ? ? [->]. 
 Defined.
 
 Definition CALLCodec :=
-    #x"E8" .$ DWORDCodec ~~> unTgt ~~> unJmpTgtI ~~> unCALL
-||| adSizePrefixCodec (fun a =>
+    #x"E8" .$ DWORDTgtCodec _ ~~> unJmpTgtI _ ~~> unCALL AdSize8
+||| segPrefixCodec (fun seg =>
+    adSizePrefixCodec (fun a =>
     rexPrefixCodec (fun W R X B =>
-    #x"FF" .$ RegMemOpCodec a R X B #2 OpSize8 ~~> unJmpTgtRM ~~> unCALL)).
+    #x"FF" .$ RegMemOpCodec seg a R X B #2 (adSizeToOpSize a) ~~> unJmpTgtRM a ~~> unCALL _))).
 
 
 (*---------------------------------------------------------------------------
     JCC instruction
     @TODO: 16-bit variants
   ---------------------------------------------------------------------------*)
-Definition unJCC : CAST (Condition*bool*Tgt) Instr.
-apply: MakeCast (fun p => let: (c,d,t) := p in JCCrel c (negb d) t)
-                (fun i => if i is JCCrel c d t then Some(c,negb d,t) else None) _.
+Definition unJCC : CAST (Condition*bool*Tgt AdSize8) Instr.
+apply: (MakeCast (fun p => let: (c,d,t) := p in JCCrel c (negb d) t)
+                (fun i => if i is JCCrel c d t then Some(c,negb d,t) else None) _).
 Proof. elim => //. move => cc cv tgt [[cc' cv'] tgt']. move => [-> <- ->].
 by rewrite negbK. Defined.
 
 Definition JCCCodec :=
-    #x"0F" .$ JCC32PREF .$ conditionCodec $ Any $ TgtCodec ~~> unJCC
-||| JCC8PREF .$ conditionCodec $ Any $ ShortTgtCodec  ~~> unJCC.
+    #x"0F" .$ JCC32PREF .$ conditionCodec $ Any $ DWORDTgtCodec AdSize8 ~~> unJCC
+||| JCC8PREF .$ conditionCodec $ Any $ ShortTgtCodec AdSize8  ~~> unJCC.
 
 
 (*---------------------------------------------------------------------------
@@ -693,7 +785,8 @@ Definition PUSHCodec :=
     #x"68" .$ DWORDCodec ~~> unSrcI ~~> unPUSH
 ||| #x"6A" .$ shortDWORDCodec ~~> unSrcI ~~> unPUSH
 ||| #b"01010" .$ GPReg64Codec false ~~> unSrcR ~~> unPUSH
-||| #x"FF" .$ RegMemOpCodec AdSize4 false false false #6 _ ~~> unSrcRM ~~> unPUSH
+||| segPrefixCodec (fun seg =>
+    #x"FF" .$ RegMemOpCodec seg AdSize4 false false false #6 _ ~~> unSrcRM ~~> unPUSH)
 ||| #x"0E" .$ always CS ~~> unPUSHSegR
 ||| #x"16" .$ always SS ~~> unPUSHSegR
 ||| #x"1E" .$ always DS ~~> unPUSHSegR
@@ -714,7 +807,8 @@ apply: MakeCast POPSegR (fun i => if i is POPSegR r then Some r else None) _.
 by elim => // ? ? [->]. Defined.
 
 Definition POPCodec :=
-    #x"8F" .$ RegMemOpCodec AdSize4 false false false #0 _ ~~> unPOP
+    segPrefixCodec (fun seg =>
+    #x"8F" .$ RegMemOpCodec seg AdSize4 false false false #0 _ ~~> unPOP)
 ||| #b"01011" .$ GPReg64Codec false ~~> unRegMemR OpSize8 ~~> unPOP
 ||| #x"17" .$ always SS ~~> unPOPSegR
 ||| #x"1F" .$ always DS ~~> unPOPSegR
@@ -735,32 +829,38 @@ apply: (MakeCast (fun p => MOVSegRM p.1 p.2) (fun i => if i is MOVSegRM x y then
 by elim => // ? ? [? ?] [-> ->]. 
 Defined.
 
-Definition unMOV w d : CAST (DstSrc (mkOpSize w false d)) Instr.
+Definition unMOV w W d : CAST (MovDstSrc (mkOpSize w W d)) Instr.
 apply (MakeCast (MOVOP _) (fun i => if i is MOVOP _ d then tryEqOpSize _ d else None)). 
-by elim:w; elim:d; elim => //; elim => //; move => ? src [->]. 
+by elim:w; elim:d; elim:W; elim => //; elim => //; move => ? src [->]. 
 Defined. 
 
-Definition MOVCodec :=
+Definition MOVCodec :=  
+  segPrefixCodec (fun seg =>
   sizesPrefixCodec (fun w a =>
   rexPrefixCodec (fun W R X B =>
       (* MOV r/m8, r8 | MOV r/m16, r16 | MOV r/m32, r32 *)
       opcodeWithSizeCodec #x"88" (fun d =>
-        RegMemCodec a R X B (VRegCodec R _) _ ~~> unDstSrcMRR _ ~~> unMOV w d)
+        RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unMovDstSrcMRR _ ~~> unMOV w W d)
       (* MOV r8, r/m8 | MOV r16, r/m16 | MOV r32, r/m32 *)
   ||| opcodeWithSizeCodec #x"8A" (fun d =>   
-        RegMemCodec a R X B (VRegCodec R _) _  ~~> unDstSrcRMR _ ~~> unMOV w d)
+        RegMemCodec seg a R X B (VRegCodec R _) _  ~~> unMovDstSrcRMR _ ~~> unMOV w W d)
+(*
       (* MOV r/m8, imm8 | MOV r/m16, imm16 | MOV r/m32, imm32 *)
   ||| opcodeWithSizeCodec #x"C6" (fun d =>
-        RegMemOpCodec a R X B #0 _ $ IMMCodec _ ~~> unDstSrcMRI _ ~~> unMOV w d)
-      (* MOV r8, imm8 | MOV r16, imm16 | MOV r32, imm32 *)
+        RegMemOpCodec a R X B #0 _ $ IMMCodec _ ~~> unMovDstSrcMRI _ ~~> unMOV w d)
+*)
+
+      (* TODO: get this right. It takes a full 64-bit immediate! *)
+      (* MOV r8, imm8 | MOV r16, imm16 | MOV r32, imm32 | MOV r64, imm64 *)
   ||| #x"B" .$ Cond (fun d => 
-        VRegCodec R _ $ IMMCodec _ ~~> unDstSrcRI _ ~~> unMOV w d)
+        VRegCodec R _ $ VWORDCodec _ ~~> unMovDstSrcRI _ ~~> unMOV w W d)
   ))
+
   (* MOV r/m16, Sreg *)
-||| #x"8C" .$ RegMemCodec AdSize4 false false false sreg3Codec _ ~~> unMOVRMSeg
+||| #x"8C" .$ RegMemCodec seg AdSize4 false false false sreg3Codec _ ~~> unMOVRMSeg
 
   (* MOV Sreg, r/m16 *)
-||| #x"8E" .$ RegMemCodec AdSize4 false false false sreg3Codec _ ~~> unMOVSegRM.
+||| #x"8E" .$ RegMemCodec seg AdSize4 false false false sreg3Codec _ ~~> unMOVSegRM).
 
 (*---------------------------------------------------------------------------
     MOVX instruction
@@ -801,8 +901,9 @@ elim => //. move => op dst src [[op' dst'] src']. case src => // r. by move => [
 Defined.
 
 Definition BITCodec :=
-    #x"0F" .$ BITOPPREF .$ bitOpCodec $ BITOPSUFF .$ (RegMemCodec AdSize4 false false false (GPReg32Codec false) _) ~~> unBITOPR
-||| #x"0F" .$ #x"BA" .$ RegMemCodec AdSize4 false false false (#b"1" .$ bitOpCodec) _ $ BYTECodec ~~> unBITOPI.
+    segPrefixCodec (fun seg =>
+    #x"0F" .$ BITOPPREF .$ bitOpCodec $ BITOPSUFF .$ (RegMemCodec seg AdSize4 false false false (GPReg32Codec false) _) ~~> unBITOPR
+||| #x"0F" .$ #x"BA" .$ RegMemCodec seg AdSize4 false false false (#b"1" .$ bitOpCodec) _ $ BYTECodec ~~> unBITOPI).
 
 
 (*---------------------------------------------------------------------------
@@ -826,17 +927,18 @@ eapply (MakeCast (fun p => let: (op,v,count) := p in SHIFTOP _ op v count)
 elim:s; elim => //; elim => //; move => ? ? src [[? ?] ?]; by move => [-> -> ->]. 
 Defined.
 
-Definition SHIFTCodec :=
+Definition SHIFTCodec :=  
+  segPrefixCodec (fun seg =>
   sizesPrefixCodec (fun w a => 
     (
       opcodeWithSizeCodec #x"C0" (fun d => 
-        RegMemCodec a false false false shiftOpCodec (mkOpSize w false d) $ (BYTECodec ~~> unShiftCountI) ~~> unSHIFT _) |||
+        RegMemCodec seg a false false false shiftOpCodec (mkOpSize w false d) $ (BYTECodec ~~> unShiftCountI) ~~> unSHIFT _) |||
       opcodeWithSizeCodec #x"D0" (fun d =>
-        RegMemCodec a false false false shiftOpCodec (mkOpSize w false d) $ (always #1 ~~> unShiftCountI) ~~> unSHIFT _) |||
+        RegMemCodec seg a false false false shiftOpCodec (mkOpSize w false d) $ (always #1 ~~> unShiftCountI) ~~> unSHIFT _) |||
       opcodeWithSizeCodec #x"D2" (fun d =>
-        RegMemCodec a false false false shiftOpCodec (mkOpSize w false d) $ (Emp ~~> unShiftCountCL) ~~> unSHIFT _)
+        RegMemCodec seg a false false false shiftOpCodec (mkOpSize w false d) $ (Emp ~~> unShiftCountCL) ~~> unSHIFT _)
     )
-  ).
+  )).
 
 (*---------------------------------------------------------------------------
     ADC/ADD/SUB/SBB/OR/AND/XOR/CMP instructions
@@ -859,6 +961,7 @@ Definition shortVWORDCodec w: Codec _ :=
   BYTECodec ~~> shortVWORDEmb w.
 
 Definition BINOPCodec :=
+    segPrefixCodec (fun seg =>
     sizesPrefixCodec (fun w a => 
     rexPrefixCodec (fun W R X B =>
       (* OP AL, imm8 | OP AX, imm16 | OP EAX, imm32 | OP RAX, imm32 *)
@@ -869,18 +972,18 @@ Definition BINOPCodec :=
 
     (* OP r/m8, r8 | OP r/m16, r16 | OP r/m32, r32 | OP r/m64, r64 *)
 ||| #b"00" .$ opCodec $ #b"000" .$ 
-      (RegMemCodec a R X B (VRegCodec R _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w W false)
+      (RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w W false)
 ||| #b"00" .$ opCodec $ #b"001" .$ 
-      (RegMemCodec a R X B (VRegCodec R _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w W true)
+      (RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w W true)
 
     (* OP r8, r/m8 | OP r16, r/m16 | OP r32, r/m32 | OP r64, r/m64 *)
 ||| #b"00" .$ opCodec $ #b"010" .$ 
-      (RegMemCodec a R X B (VRegCodec R _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w W false)
+      (RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w W false)
 ||| #b"00" .$ opCodec $ #b"011" .$ 
-      (RegMemCodec a R X B (VRegCodec R _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w W true)
+      (RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w W true)
 
     (* OP r/m8, imm8 | OP r/m16, imm16 | OP r/m32, imm32 | OP r/m64, imm32 *)
-||| opcodeWithSizeCodec #x"80" (fun d => RegMemCodec a R X B opCodec _ $ IMMCodec _
+||| opcodeWithSizeCodec #x"80" (fun d => RegMemCodec seg a R X B opCodec _ $ IMMCodec _
     ~~> pairAssocCastOp _ _ _ ~~> pairOfCasts (idCast _) (unDstSrcMRI _) ~~> unBOP (mkOpSize w W d))
 
 (*
@@ -888,7 +991,7 @@ Definition BINOPCodec :=
 ||| #x"83" .$ (RegMemCodec opCodec _ $ shortVWORDCodec w) 
     ~~> pairAssocCastOp _ _ _ ~~> pairOfCasts (idCast _) (unDstSrcMRI _) ~~> unBOP _ 
 *)
-    ))
+    )))
 .
 
 (*---------------------------------------------------------------------------
@@ -915,26 +1018,27 @@ apply: MakeCast (fun v => UOP _ OP_NOT v)
 elim: s; elim => //; elim => op src q; destruct op => H; by inversion H. Defined.
 
 Definition UOPCodec :=
+  segPrefixCodec (fun seg =>
   sizesPrefixCodec (fun w a => 
   rexPrefixCodec (fun W R X B =>
     opcodeWithSizeCodec #x"FE" (fun d =>
-    RegMemOpCodec a R X B #0 _ ~~> unINC (mkOpSize w false d))
+    RegMemOpCodec seg a R X B #0 _ ~~> unINC (mkOpSize w false d))
 
 ||| opcodeWithSizeCodec #x"FE" (fun d =>
-    RegMemOpCodec a R X B #1 _ ~~> unDEC (mkOpSize w false d))
+    RegMemOpCodec seg a R X B #1 _ ~~> unDEC (mkOpSize w false d))
 
 ||| opcodeWithSizeCodec #x"F6" (fun d =>
-    RegMemOpCodec a R X B #2 _ ~~> unNOT (mkOpSize w false d))
+    RegMemOpCodec seg a R X B #2 _ ~~> unNOT (mkOpSize w false d))
 
 ||| opcodeWithSizeCodec #x"F6" (fun d =>
-    RegMemOpCodec a R X B #3 _ ~~> unNEG (mkOpSize w false d))
+    RegMemOpCodec seg a R X B #3 _ ~~> unNEG (mkOpSize w false d))
 
 (* @TODO: make these available only in 32-bit mode; in 64-bit mode these are REX prefixes *)
 (*
 ||| INCPREF .$ VRegCodec _ ~~> unRegMemR _ ~~> unINC (mkOpSize w false false)
 ||| DECPREF .$ VRegCodec _ ~~> unRegMemR _ ~~> unDEC (mkOpSize w false false)
 *)
-  )).
+  ))).
 
 
 (*---------------------------------------------------------------------------
@@ -983,13 +1087,14 @@ elim: s; elim => //; elim => //; move => r q H; by inversion H.
 Defined.
 
 Definition MULCodec :=
+    segPrefixCodec (fun seg =>
     (* IMUL r32, r/m32 *)
-    #x"0F" .$ #x"AF" .$ RegMemCodec AdSize4 false false false (GPReg32Codec false) _ ~~> unIMUL
+    #x"0F" .$ #x"AF" .$ RegMemCodec seg AdSize4 false false false (GPReg32Codec false) _ ~~> unIMUL
 
     (* MUL r/m8 | MUL r/m16 | MUL r/m32 *)
 ||| sizesPrefixCodec (fun w a => 
     opcodeWithSizeCodec #x"F6" (fun d =>  
-    RegMemOpCodec a false false false #4 _ ~~> unMUL (mkOpSize w false d))).
+    RegMemOpCodec seg a false false false #4 _ ~~> unMUL (mkOpSize w false d)))).
 
 (*---------------------------------------------------------------------------
     LEA instruction 
@@ -1000,9 +1105,10 @@ apply: (MakeCast (fun p => LEA s p.1 p.2) (fun i => if i is LEA s' x y then
 by elim: s; elim => //; elim => //; move => r q [a b] [-> <-]. Defined.
 
 Definition LEACodec :=
+  segPrefixCodec (fun seg =>
   sizesPrefixCodec (fun w a =>     
   rexPrefixCodec (fun W R X B =>
-  #x"8D" .$ RegMemCodec a R X B (VRegCodec R _) _ ~~> unLEA (mkOpSize w W true))).
+  #x"8D" .$ RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unLEA (mkOpSize w W true)))).
 
 (*---------------------------------------------------------------------------
     XCHG instruction 
@@ -1028,7 +1134,7 @@ Definition XCHGCodec :=
 (*---------------------------------------------------------------------------
     All instructions
   ---------------------------------------------------------------------------*)
-Definition InstrCodec : Codec Instr :=
+Definition InstrCodec : Codec (Instr) :=
 (* Nullary operations *)
     #x"F4" ~~> isHLT
 ||| #x"F5" ~~> isCMC
@@ -1039,8 +1145,7 @@ Definition InstrCodec : Codec Instr :=
 (* Everything else *)
 ||| JMPCodec ||| CALLCodec ||| TESTCodec ||| PUSHCodec ||| POPCodec ||| RETCodec
 ||| MOVCodec ||| BITCodec ||| SHIFTCodec ||| JCCCodec ||| BINOPCodec ||| UOPCodec
-||| INOUTCodec ||| LEACodec ||| (* XCHGCodec ||| *) MULCodec
-.
+||| INOUTCodec ||| LEACodec ||| (* XCHGCodec ||| *) MULCodec.
 
 Definition MaxBits := Eval vm_compute in Option.default 0 (maxSize InstrCodec).
 

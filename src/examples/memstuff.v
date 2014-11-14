@@ -9,14 +9,14 @@ Import Prenex Implicits.
 
 Open Scope instr_scope.
 
-Definition splits (p q r: DWORD) (vs ws: seq DWORD) :=
+Definition splits (p q r: ADDR) (vs ws: seq ADDR) :=
   p -- q :-> vs ** q -- r :-> ws.
 
-Definition nextCode := (ADD ESI, 4). 
+Definition nextCode := (ADD RSI, natAsDWORD 4). 
 Definition nextSpec code := 
-  Forall (p q r: DWORD), Forall vs w ws, 
-  basic (splits p q r vs (w::ws) ** ESI ~= q) code empOP
-        (splits p (q+#4) r (vs++[::w]) ws ** ESI ~= (q+#4)) @ OSZCP?.
+  Forall (p q r: ADDR), Forall vs w ws, 
+  basic (splits p q r vs (w::ws) ** RSI ~= q) code empOP
+        (splits p (q+#4) r (vs++[::w]) ws ** RSI ~= (q+#4)) @ OSZCP?.
 
 Lemma nextCorrect : |-- nextSpec nextCode. 
 Proof. rewrite /nextSpec/nextCode. specintros => *. autorewrite with push_at.

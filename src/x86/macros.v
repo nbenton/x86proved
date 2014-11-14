@@ -18,17 +18,17 @@ Inductive JmpAbsTgt :=
 
 (* We define absolute jumps, calls and branches using labels *)
 (* We assume that the jump is smaller than 2G! *)
-Definition relToAbs (c : DWORD -> Instr) : ADDR -> program :=
-  fun a => LOCAL Next; c (low 32 (subB a Next));; Next:;.
+Definition relToAbs (c : QWORD -> Instr) : ADDR -> program :=
+  fun a => LOCAL Next; c (subB a Next);; Next:;.
 
 Definition JMP (t:JmpAbsTgt) := 
-  match t with JmpAbsTgtI a => relToAbs (fun d => JMPrel (mkTgt d)) a 
-             | JmpAbsTgtRegMem rm => JMPrel (JmpTgtRegMem rm) end.
+  match t with JmpAbsTgtI a => relToAbs (fun d => JMPrel _ (mkTgt AdSize8 d)) a 
+             | JmpAbsTgtRegMem rm => JMPrel _ (JmpTgtRegMem AdSize8 rm) end.
 Definition CALL t := 
-  match t with JmpAbsTgtI a => relToAbs (fun d => CALLrel (mkTgt d)) a 
-             | JmpAbsTgtRegMem rm => CALLrel (JmpTgtRegMem rm) end.
+  match t with JmpAbsTgtI a => relToAbs (fun d => CALLrel _ (mkTgt AdSize8 d)) a 
+             | JmpAbsTgtRegMem rm => CALLrel _ (JmpTgtRegMem AdSize8 rm) end.
 
-Definition JCC cc cv := relToAbs (JCCrel cc cv).
+Definition JCC cc cv := relToAbs (fun d:QWORD => JCCrel cc cv (mkTgt AdSize8 d)).
 
 Arguments CALL (t)%ms.
 Arguments JMP (t)%ms.
@@ -78,7 +78,7 @@ specapply JCCrel_rule; first by ssimpl.
 
 rewrite <-spec_reads_frame. apply: limplAdj. 
 apply: landL2. autorewrite with push_at. cancel1. ssimpl. 
-case: (b == cv) => //. admit.  
+case: (b == cv) => //. by rewrite addB_subBK. 
 Qed.
 
 Lemma JCC_loopy_rule a cc cv (b:bool) (p q: ADDR) :
@@ -91,11 +91,11 @@ Proof.
 rewrite /JCC/relToAbs.
 unfold_program. specintros => O i1 i2 H1 H2.
 rewrite -H2. rewrite H1. specapply JCCrel_loopy_rule; first by ssimpl. 
-(*rewrite addB_subBK.*)
+rewrite addB_subBK.
 rewrite <-spec_reads_frame. apply: limplAdj.
 apply: landL2. autorewrite with push_at.
 specsplit.
-- apply: landL1. cancel1. cancel1. sbazooka. admit. 
+- apply: landL1. cancel1. cancel1. sbazooka. 
 - apply: landL2. cancel1. sbazooka.
 Qed.
 
@@ -153,10 +153,10 @@ Proof.
 rewrite /JMP/relToAbs.
 unfold_program. specintros => O i1 i2 H1 H2.
 rewrite -H2 H1. specapply JMPrel_I_rule; first by ssimpl. 
-(*rewrite addB_subBK. *)
+rewrite addB_subBK. 
 rewrite <-spec_reads_frame.
 apply: limplAdj. apply: landL2. autorewrite with push_at.
-cancel1. ssimpl. admit. 
+cancel1. ssimpl. 
 Qed.
 
 Lemma JMP_I_loopy_rule (a: ADDR) (p q: ADDR) :
@@ -166,9 +166,9 @@ Proof.
 rewrite /JMP/relToAbs. 
 unfold_program. specintros => O i1 i2 H1 H2.
 rewrite -H2 H1. specapply JMPrel_I_loopy_rule; first by ssimpl.
-(*rewrite addB_subBK. *) rewrite <-spec_reads_frame.
+rewrite addB_subBK. rewrite <-spec_reads_frame.
 apply: limplAdj. apply: landL2. autorewrite with push_at.
-cancel1. cancel1. sbazooka. admit.
+cancel1. cancel1. sbazooka. 
 Qed.
 
 Global Instance: forall (a : ADDR), instrrule (JMP a) := @JMP_I_rule.
@@ -178,7 +178,7 @@ Lemma JMP_R_rule (r:GPReg64) (addr p q: ADDR) :
   |-- Forall O, (obs O @ (UIP ~= addr ** r ~= addr) -->> obs O @ (UIP ~= p ** r ~= addr)) <@
         (p -- q :-> JMP (JmpAbsTgtRegMem (RegMemR _ r))).
 Proof.
-  rewrite /JMP. admit. (*apply JMPrel_R_rule.*)
+  rewrite /JMP. apply JMPrel_R_rule.
 
 Qed.
 
@@ -186,7 +186,7 @@ Lemma JMP_R_loopy_rule (r:GPReg64) addr (p q: ADDR) :
   |-- Forall (O : PointedOPred), (|> obs O @ (UIP ~= addr ** r ~= addr) -->> obs O @ (UIP ~= p ** r ~= addr)) <@
         (p -- q :-> JMP (JmpAbsTgtRegMem (RegMemR _ r))).
 Proof.
-  rewrite /JMP. admit. (*apply JMPrel_R_loopy_rule.*)
+  rewrite /JMP. apply JMPrel_R_loopy_rule.
 Qed.
 
 Global Instance: forall (a : GPReg64), instrrule (JMP (JmpAbsTgtRegMem (RegMemR _ a))) := @JMP_R_rule.
@@ -202,10 +202,10 @@ specintros => O w sp.
 rewrite /CALL/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2.
 rewrite -H2 H1. specapply CALLrel_I_rule; first by ssimpl.
-(*rewrite addB_subBK. *) rewrite <-spec_reads_frame.
+rewrite addB_subBK. rewrite <-spec_reads_frame.
 autorewrite with push_at.
 apply: limplAdj. apply: landL2. cancel1.
-sbazooka. admit. 
+sbazooka. 
 Qed.
 
 Lemma CALL_I_loopy_rule (a:ADDR) (p q: ADDR) :
@@ -218,10 +218,10 @@ specintros => O w sp.
 rewrite /CALL/relToAbs. 
 unfold_program. specintros => i1 i2 H1 H2.
 rewrite -H2 H1. specapply CALLrel_I_loopy_rule; first by ssimpl.
-(*rewrite addB_subBK. *) rewrite <-spec_reads_frame.
+rewrite addB_subBK. rewrite <-spec_reads_frame.
 autorewrite with push_at.
 apply: limplAdj. apply: landL2. cancel1. cancel1.
-sbazooka. admit. 
+sbazooka.
 Qed.
 
 Global Instance: forall (a : ADDR), instrrule (CALL a) := @CALL_I_rule.

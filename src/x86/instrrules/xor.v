@@ -11,6 +11,16 @@ Lemma XOR_rule s (ds:DstSrc s) (v1: VWORD s) :
               D v ** OSZCP false (msb v) (v == #0) false (lsb v))).
 Proof. do_instrrule_triple. Qed.
 
+Lemma XOR_self_rule s (r:GPReg s) (v:VWORD s) :
+  |-- basic (r ~= v ** OSZCP?) (XOR r, r) empOP
+            (r ~= #0 ** OSZCP false false true false false).
+Proof.
+  destruct s; do_instrrule (instrrule_triple_bazooka; rewrite bitsopsprops.xorBB eq_refl; instrrule_triple_bazooka).
+Qed.
+
+
+Global Instance: forall s (r: GPReg s), instrrule (XOR r, r) | 1 := @XOR_self_rule.
+
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
     [get_instrrule_of]. *)

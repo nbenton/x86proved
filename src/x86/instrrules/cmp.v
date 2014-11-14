@@ -103,10 +103,10 @@ Lemma CMP_RR_rule (r1 r2:GPReg32) v1 (v2:DWORD):
 Proof. basic apply *. Qed.
 
 
-Lemma CMP_RI_ZC_rule (r1:GPReg32) v1 (v2:DWORD):
+Lemma CMP_RI_ZC_rule (r1:GPReg32) v1 (v2:VWORD OpSize4):
   |-- basic (r1 ~= v1 ** OSZCP?) (CMP r1, v2) empOP
             (r1 ~= v1 ** OF? ** SF? ** PF? ** CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
-Proof. basicCMP_ZC. Qed.
+Proof. unfold makeBOP, VWORDasIMM. basicCMP_ZC. Qed.
 
 (*
 Lemma CMP_MbR_ZC_rule (r1:GPReg32) (r2: Reg8) (p:DWORD) (v1 v2:BYTE):

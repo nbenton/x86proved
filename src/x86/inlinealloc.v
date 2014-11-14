@@ -30,7 +30,7 @@ Definition allocInv (infoBlock: ADR AdSize4) :=
 *)
 Definition allocImp (infoBlock:DWORD) (n: nat) (failed: ADDR) : program :=
   MOV EDI, [infoBlock];;
-  ADD EDI, n;;
+  ADD EDI, (n:DWORD);;
   JC  failed;;  (* A carry indicates unsigned overflow *)
   CMP [infoBlock+#4:DWORD], EDI;;
   JC  failed;;  (* A carry indicates unsigned underflow *)

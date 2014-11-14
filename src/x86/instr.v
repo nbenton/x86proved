@@ -40,7 +40,7 @@ Inductive SIB a :=
 | mkSIB (base: BaseReg a) (ixdisp: option (IxReg a * Scale))
 | RIPrel.
 Inductive MemSpec (a: AdSize) :=
-| mkMemSpec (sib: option (SIB a)) (displacement: DWORD).
+| mkMemSpec (seg: option SegReg) (sib: option (SIB a)) (displacement: DWORD).
 (*=End *)
 
 (* Immediates are maximum 32-bits, sign-extended to 64-bit if necessary *)
@@ -75,15 +75,22 @@ Inductive DstSrc (s: OpSize):=
 | DstSrcMI a (dst: MemSpec a) (c: IMM s).
 (*=End *)
 
+Inductive MovDstSrc (s: OpSize):=
+| MovDstSrcRR (dst src: GPReg s)
+| MovDstSrcRM a (dst: GPReg s) (src: MemSpec a)
+| MovDstSrcMR a (dst: MemSpec a) (src: GPReg s)
+| MovDstSrcRI (dst: GPReg s) (c: VWORD s)
+| MovDstSrcMI a (dst: MemSpec a) (c: IMM s).
+
 (* Jump target: PC-relative offset *)
 (* We make this a separate type constructor to pick up type class instances later *)
 (* Jump ops: immediate, register, or memory source *)
 (*=Tgt *)
-Inductive Tgt :=
-| mkTgt :> DWORD -> Tgt.
-Inductive JmpTgt :=
-| JmpTgtI :> Tgt -> JmpTgt
-| JmpTgtRegMem :> RegMem OpSize8 -> JmpTgt.
+Inductive Tgt a :=
+| mkTgt :> VWORD (adSizeToOpSize a) -> Tgt a.
+Inductive JmpTgt a :=
+| JmpTgtI (t:Tgt a) :> JmpTgt a
+| JmpTgtRegMem (rm: RegMem (adSizeToOpSize a)) :> JmpTgt a.
 Inductive ShiftCount :=
 | ShiftCountCL | ShiftCountI (c: BYTE).
 Inductive Port :=
@@ -117,7 +124,7 @@ Inductive Instr :=
 | BOP s (op: BinOp) (ds: DstSrc s)
 | BITOP (op: BitOp) (dst: RegMem OpSize4) (bit: GPReg32 + BYTE)
 | TESTOP s (dst: RegMem s) (src: RegImm s)
-| MOVOP s (ds: DstSrc s)
+| MOVOP s (ds: MovDstSrc s)
 | MOVSegRM (dst: SegReg) (src: RegMem OpSize2)
 | MOVRMSeg (dst: RegMem OpSize2) (dst: SegReg)
 | MOVX (signextend:bool) s (dst: GPReg32) (src: RegMem s)
@@ -126,12 +133,12 @@ Inductive Instr :=
 | IMUL (dst: GPReg32) (src: RegMem OpSize4)
 | LEA s (reg: GPReg s) (src: RegMem s)
 | XCHG s (reg: GPReg s) (src: RegMem s)
-| JCCrel (cc: Condition) (cv: bool) (tgt: Tgt)
+| JCCrel (cc: Condition) (cv: bool) (tgt: Tgt AdSize8)
 | PUSH (src: Src)
 | PUSHSegR (r: SegReg)
 | POP (dst: RegMem OpSize8)
 | POPSegR (r: SegReg)
-| CALLrel (tgt: JmpTgt) | JMPrel (tgt: JmpTgt)
+| CALLrel a (tgt: JmpTgt a) | JMPrel a (tgt: JmpTgt a)
 | CLC | STC | CMC
 | RETOP (size: WORD)
 | OUTOP (s: OpSize) (port: Port)

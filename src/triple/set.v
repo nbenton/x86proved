@@ -445,14 +445,14 @@ Lemma triple_setBYTEbind (v w: BYTE) (p: ADDR) Q (W: WriterTm unit) Q' :
   (p :-> w ** Q)
   (let!s = getProcState;
    if writeMemTm W s (next p) is Some(_, m')
-   then setProcState {| registers := s; flags := s; memory := m' |}
+   then setProcState {| segregisters := s; registers := s; flags := s; memory := m' |}
    else raiseUnspecified) nil
   (p :-> w ** Q') ->
  TRIPLE
  (p :-> v ** Q)
   (let!s = getProcState;
    if writeMemTm (do! writeNext w; W) s p is Some(_, m')
-   then setProcState {| registers := s; flags := s; memory := m' |}
+   then setProcState {| segregisters := s; registers := s; flags := s; memory := m' |}
    else raiseUnspecified) nil
   (p :-> w ** Q').
 Proof.

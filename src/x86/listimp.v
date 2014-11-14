@@ -20,7 +20,7 @@ Definition inlineTail (r1 r2:GPReg32) :program :=
 
 (* Head is in r1, tail is in r2, result in EDI, ESI trashed *)
 Definition updateCons (r1 r2:GPReg32) :program :=
-    SUB EDI, 8;;
+    SUB EDI, (8:DWORD);;
     MOV [EDI], r1;;
     MOV [EDI+4], r2.
 
@@ -34,5 +34,5 @@ Definition callCons (r1 r2:GPReg32) heapInfo: program :=
     inlineCons r1 r2 heapInfo FAIL;;
     JMP SUCCEED;;
   FAIL:;;
-    MOV EDI, 0;;
+    MOV EDI, (0:DWORD);;
   SUCCEED:;.

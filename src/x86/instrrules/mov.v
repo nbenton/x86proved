@@ -6,7 +6,7 @@ Require Import x86proved.spectac (* for [unhideReg] *).
 
 (** ** Generic rule *)
 Lemma MOV_rule d ds oldv:
-  |-- specAtDstSrc ds (fun V v =>
+  |-- specAtMovDstSrc ds (fun V v =>
       basic (V oldv) (MOVOP d ds) empOP (V v)).
 Proof. do_instrrule_triple. Qed.
 
@@ -29,24 +29,26 @@ Lemma MOV_RI_rule (r:GPReg32) (v1 v2:DWORD) :
   |-- basic (r ~= v1) (MOV r, v2) empOP (r ~= v2).
 Proof. basic apply *. Qed.
 
+Lemma MOV_RI64_rule (r:GPReg64) (v1 v2:QWORD) :
+  |-- basic (r ~= v1) (MOV r, v2) empOP (r ~= v2).
+Proof. basic apply *. Qed.
+
 Lemma MOV_RanyI_rule (r:GPReg32) (v2:DWORD) :
   |-- basic r? (MOV r, v2) empOP (r ~= v2).
-Proof. unhideReg r => old. basic apply *. Qed.
+Proof. unhideReg r => old. basic apply MOV_RI_rule.  Qed.
 
 (** ** Memory to register *)
-(*
 Lemma MOV_RM_rule (pd:DWORD) (r1 r2:GPReg32) offset (v1 v2: DWORD) :
-  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2)
+  |-- basic (r1 ~= v1 ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2)
             (MOV r1, [r2 + offset]) empOP
-            (r1 ~= v2 ** r2 ~= pd ** pd +# offset :-> v2).
+            (r1 ~= v2 ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2).
 Proof. basic apply *. Qed.
 
 Lemma MOV_RanyM_rule (pd:DWORD) (r1 r2:GPReg32) offset (v2: DWORD) :
-  |-- basic (r1? ** r2 ~= pd ** pd +# offset :-> v2)
+  |-- basic (r1? ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2)
             (MOV r1, [r2 + offset]) empOP
-            (r1 ~= v2 ** r2 ~= pd ** pd +# offset :-> v2).
+            (r1 ~= v2 ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2).
 Proof. unhideReg r1 => old. basic apply *. Qed.
-*)
 
 Lemma MOV_RanyInd_rule (pd:DWORD) (r1:GPReg32) (v2: DWORD) :
   |-- basic (r1? ** ADRtoADDR (a:=AdSize4) pd :-> v2)

@@ -20,7 +20,7 @@ Global Instance: forall d (ds : DstSrc d), instrrule (BOP d OP_ADD ds) := @ADDSU
 
 (** ** Special cases *)
 (** *** ADD r, v2 *)
-Corollary ADD_RI_rule (r:GPReg32) v1 (v2:DWORD):
+Corollary ADD_RI_rule (r:GPReg32) v1 (v2:VWORD OpSize4):
   |-- basic (r~=v1 ** OSZCP?) (ADD r, v2) empOP
             (let: (carry,v) := eta_expand (adcB false v1 v2) in
              r~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)

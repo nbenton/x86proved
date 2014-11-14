@@ -61,14 +61,14 @@ Section Compiler.
         if x1 == x2 then
           (* this special case is my coward's way out of proving a general rule
              for CMP. *)
-          (MOV EDX, 0): program
+          (MOV EDX, (0:DWORD)): program
         else
           let r1 := var_reg x1 in
           let r2 := var_reg x2 in
           (* The tricky bit is to move the carry flag into a register *)
           CMP r1, r2;;
-          MOV EDX, 0;;
-          ADC EDX, 0
+          MOV EDX, (0:DWORD);;
+          ADC EDX, (0:DWORD)
     end.
 
   Definition compile_condition (e: expr) : program :=

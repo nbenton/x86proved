@@ -150,6 +150,14 @@ Definition evalIxReg {a} : IxReg a -> ST (ADR a) :=
   | AdSize8 => getRegFromProcState
   end.
 
+Definition evalSegBase {a} (seg : option SegReg) : ST (ADR a) :=
+  match seg with
+  | None => retn #0
+  | Some r =>
+    let! w = getSegRegFromProcState r;
+    retn #0 (* Should actually look up GDT or LDT *)
+  end.
+
 (* Displacement for effective address calculation. Note that this is sign-extended to 64-bits *)
 Definition computeDisplacement a : DWORD -> ADR a :=
   match a return DWORD -> ADR a with 
@@ -177,9 +185,16 @@ Definition getUIP a :=
   | AdSize8 => getRegFromProcState RIP
   end.
 
+Definition setUIP a := 
+  match a return ADR a -> ST unit with
+  | AdSize4 => setRegInProcState EIP
+  | AdSize8 => setRegInProcState RIP
+  end.
+
 Definition evalMemSpecAdr {a} (m:MemSpec a) : ST (ADR a) :=
   match m with
-    mkMemSpec optSIB displacement =>
+    mkMemSpec seg optSIB displacement =>
+    let! segbase = evalSegBase (a:=a) seg;
     if optSIB is Some SIB
     then
       match SIB with
@@ -263,13 +278,17 @@ Definition evalRegMemWORD (rm: RegMem OpSize2) :=
   | RegMemM a m => let! addr = evalMemSpec m; getFromProcState addr
   end.
 
-Definition evalJmpTgt tgt : ST ADDR :=
+Definition evalJmpAdr {a} (tgt: JmpTgt a) : ST (ADR a) :=
   match tgt with
   | JmpTgtI (mkTgt r) =>
-    let! nextIP = getRegFromProcState UIP;
-    retn (addB nextIP (signExtend _ r))
+    let! nextIP = getUIP a;
+    retn (addB nextIP r)
   | JmpTgtRegMem rm => evalRegMem rm
   end.
+
+Definition evalJmpAddr {a} (tgt: JmpTgt a) : ST ADDR :=
+  let! adr = evalJmpAdr tgt;
+  retn (ADRtoADDR adr).
 
 Definition getImm {s} : IMM s -> VWORD s :=
   match s with
@@ -316,26 +335,26 @@ Definition evalDstSrc {s} (drop: bool) (ds: DstSrc s)
   end.
 
 
-Definition evalMOV {s} (ds: DstSrc s) :=
+Definition evalMOV {s} (ds: MovDstSrc s) :=
   match ds with
-  | DstSrcRR dst src =>
+  | MovDstSrcRR dst src =>
     let! v = getRegFromProcState src;
     setRegInProcState dst v
 
-  | DstSrcRM a dst src =>
+  | MovDstSrcRM a dst src =>
     let! addr = evalMemSpec src;
     let! v = getFromProcState addr;
     setRegInProcState dst v
 
-  | DstSrcMR a dst src =>
+  | MovDstSrcMR a dst src =>
     let! v = getRegFromProcState src;
     let! addr = evalMemSpec dst;
     setInProcState addr v
 
-  | DstSrcRI dst c   =>
-    setRegInProcState dst (getImm c)
+  | MovDstSrcRI dst c   =>
+    setRegInProcState dst c
 
-  | DstSrcMI a dst c   =>
+  | MovDstSrcMI a dst c   =>
     let! addr = evalMemSpec dst;
     setInProcState addr (getImm c)
   end.
@@ -356,7 +375,7 @@ Definition evalPop {s} (f: VWORD s -> ST unit) : ST unit :=
   do! f v;
   setRegInProcState USP newSP.
 
-Definition evalInstr instr : ST unit :=
+Definition evalInstr (instr:Instr) : ST unit :=
   match instr with
   | POP dst =>
     evalPop (fun v => evalDst false dst (fun _ => retn v))
@@ -439,15 +458,15 @@ Definition evalInstr instr : ST unit :=
     do! setRegInProcState r v2;
     setInProcState addr v1
 
-  | JMPrel src =>
-    let! newIP = evalJmpTgt src;
-    setRegInProcState UIP newIP
+  | JMPrel a src =>
+    let! newIP = evalJmpAdr src;
+    setUIP a newIP
 
   | JCCrel cc cv (mkTgt tgt) =>
     let! b = evalCondition cc;
     if b == cv then
-      let! oldIP = getRegFromProcState UIP;
-      setRegInProcState UIP (addB oldIP (signExtend _ tgt))
+      let! oldIP = getUIP AdSize8;
+      setRegInProcState UIP (addB oldIP tgt)
     else
       retn tt
 
@@ -473,18 +492,19 @@ Definition evalInstr instr : ST unit :=
     let! v = evalSrc src;
     evalPush (s:=OpSize8) v
 
-  | CALLrel src =>
-    let! oldIP = getRegFromProcState UIP;
-    let! newIP = evalJmpTgt src;
-    do! setRegInProcState UIP newIP;
+  | CALLrel a src =>
+    let! oldIP = getUIP a;
+    let! newIP = evalJmpAdr src;
+    do! setUIP a newIP;
     evalPush oldIP
+
 (*=evalRET *)
   | RETOP offset =>
     let! oldSP = getRegFromProcState USP;
     let! IP' = getFromProcState oldSP;
     do! setRegInProcState USP
       (addB (oldSP+#8) (zeroExtend _ offset));
-    setRegInProcState UIP IP'
+    setUIP AdSize8 IP'
 (*=End *)
 
   | INOP OpSize1 port =>

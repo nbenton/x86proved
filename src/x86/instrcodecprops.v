@@ -51,9 +51,13 @@ Proof. induction xs => //. Qed.
 Module Examples.
 Require Import instrsyntax. Open Scope instr_scope.
 
-Definition exinstr := LEA ECX, [R9D+EAX*4+1234].
+Definition exinstr := MOV ECX, [R9D+EAX*4+1234].
 
-Compute (bytesToHex (snd (fromBin (if enc InstrCodec exinstr is Some bs then bs else nil)))).
+Definition exinstr2 := MOVOP OpSize4 (MovDstSrcRM _ _ ECX (mkMemSpec _ (Some GS) (Some (mkSIB _ EDX None)) #0)).
+Print exinstr2.
+(*Definition exinstr2 := MOV RDX, (#x"0011223344556677":QWORD).*)
+
+Compute (bytesToHex (snd (fromBin (if enc InstrCodec exinstr2 is Some bs then bs else nil)))).
 End Examples.
 
 (* Qed step takes similar time to actual vm_compute! *)

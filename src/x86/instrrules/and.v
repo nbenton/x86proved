@@ -16,13 +16,14 @@ do_instrrule_triple.
 Qed.
 *)
 
+Require Import x86proved.monad monadinst eval. 
 Lemma AND_rule sz (ds:DstSrc sz) (v1: VWORD sz) :
    |-- specAtDstSrc ds (fun D v2 =>
        basic (D v1 ** OSZCP?)
              (BOP _ OP_AND ds) empOP
              (let v := andB v1 v2 in
               D v ** OSZCP false (msb v) (v == #0) false (lsb v))).
-Proof. do_instrrule_triple. Qed. 
+Proof. do_instrrule_triple. Qed.
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic

@@ -13,20 +13,20 @@ Import Prenex Implicits.
 Local Open Scope instr_scope.
 
 Definition defproc (p: program) :=
-  p;; JMP EDI.
+  p;; JMPrel (JmpTgtRegMem RDI).
 
 Notation "'letproc' f ':=' p 'in' q" :=
   (LOCAL skip; JMP skip;; LOCAL f; f:;; defproc p;; skip:;; q)
   (at level 65, f ident, right associativity).
 
 Definition callproc f :=
-  LOCAL iret; MOV EDI, iret;; JMP f;;
+  LOCAL iret; MOV RDI, iret;; JMP f;;
   iret:;.
 
 (*=main *)
 Definition call_cdecl3 f arg1 arg2 arg3 :=
   PUSH arg3;; PUSH arg2;; PUSH arg1;;
-  CALL f;; ADD ESP, 12.
+  CALL f;; ADD ESP, (fromNat 12:IMM OpSize4).
 
 Definition main (printfSlot: DWORD) :=
   (* Argument in EBX *)

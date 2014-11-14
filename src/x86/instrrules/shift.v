@@ -13,9 +13,9 @@ Lemma SmallCount64 : forall count, count < 64 -> toNat (n:=8) (andB #x"3f" (from
 Proof. do 64 case => //.
 Qed.
 
-Lemma SHL_RI_rule s (r:GPReg s) (v:VWORD s) (count:nat):
+Lemma SHL_RI_rule s (r:GPReg s) (v:VWORD s) (count:nat) o sf z c p:
   count < (if s is OpSize8 then n64 else n32) ->
-  |-- basic (r~=v ** OSZCP?) (SHL r, count) empOP
+  |-- basic (r~=v ** OSZCP o sf z c p) (SHL r, count) empOP
             (r~=iter count shlB v ** OSZCP?).
 Proof.
   move => BOUND.
@@ -30,9 +30,9 @@ Proof.
        | destruct count as [|count]; rewrite /(iter 0) ?dropmsb_iter_shlB ].
 Qed.
 
-Lemma SHR_RI_rule s (r:GPReg s) (v:VWORD s) (count:nat):
+Lemma SHR_RI_rule s (r:GPReg s) (v:VWORD s) (count:nat) o sf z c p:
   count < (if s is OpSize8 then n64 else n32) ->
-  |-- basic (r~=v ** OSZCP?) (SHR r, count) empOP
+  |-- basic (r~=v ** OSZCP o sf z c p) (SHR r, count) empOP
             (r~=iter count shrB v ** OSZCP?).
 Proof.
   move => BOUND.

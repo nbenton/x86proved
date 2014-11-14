@@ -14,7 +14,7 @@ Import Prenex Implicits.
 
 Local Open Scope instr_scope.
 
-Lemma inlineHead_correct (r1 r2: GPReg32) (i j p e: DWORD) v vs :
+Lemma inlineHead_correct (r1 r2: GPReg32) (i j: ADDR) (p e: DWORD) v vs :
   inlineHead_spec r1 r2 i j p e v vs (inlineHead r1 r2).
 Proof.
 rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. unfold_program.
@@ -25,17 +25,18 @@ rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. cancel1. by ssimpl.
 Qed.
 
-Lemma inlineTail_correct (r1 r2: GPReg32) (i j p e: DWORD) v vs :
+Lemma inlineTail_correct (r1 r2: GPReg32) (i j:ADDR) (p e: DWORD) v vs :
   inlineTail_spec r1 r2 i j p e v vs (inlineTail r1 r2).
 Proof.
 rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. unfold_program.
 specintro => O. rewrite /stateIsAny.
-specintros => q old. specapply MOV_RM_rule. by ssimpl.
+specintros => q old. specapply MOV_RM_rule. unfold eval.computeAddr, eval.computeAdr, ADRtoADDR, natAsDWORD.
+by ssimpl.
 rewrite <-spec_reads_frame. autorewrite with push_at.
-apply limplValid. cancel1. by sbazooka.
+apply limplValid. cancel1. unfold eval.computeAddr, eval.computeAdr, ADRtoADDR, natAsDWORD. by sbazooka.
 Qed.
 
-Lemma inlineCons_correct (r1 r2: GPReg32) heapInfo failAddr (i j h t e: DWORD) vs :
+Lemma inlineCons_correct (r1 r2: GPReg32) heapInfo failAddr (i j:ADDR) (h t e: DWORD) vs :
   inlineCons_spec r1 r2 heapInfo failAddr i j h t e vs (inlineCons r1 r2 heapInfo failAddr).
 Proof.
 rewrite /inlineCons_spec/inlineCons/updateCons. unfold_program.
@@ -50,7 +51,7 @@ specsplit.
 
 (* Success case *)
 specintros => pb.
-rewrite (memAnySplitAdd pb (m1:=4)) => //.
+have MASA := (memAnySplitAdd (ADRtoADDR (a:=AdSize4) pb) (m1:=4)). => //.
 rewrite -> addB_addn.
 do 2 rewrite -> memAny_entails_pointsToDWORD. specintros => d1 d2.
 

@@ -29,6 +29,10 @@ Definition getReg64FromProcState r : ST QWORD :=
   let! s = getProcState;
   retn (registers s r).
 
+Definition getSegRegFromProcState r : ST WORD :=
+  let! s = getProcState;
+  retn (segregisters s r).
+
 (* Get an 8-bit slice of a 64-bit register *)
 Definition getRegPieceFromProcState rp :=
   let: mkRegPiece r ix := rp in
@@ -61,6 +65,10 @@ Definition getRegFromProcState {s} : Reg s -> ST (VWORD s) :=
 Definition setReg64InProcState (r:Reg64) d :=
   let! s = getProcState;
   setProcState (s!r:=d).
+
+Definition setSegRegInProcState (r:SegReg) w :=
+  let! s = getProcState;
+  setProcState (s!r:=w).
 
 Definition setReg32InProcState (r: Reg32) (w: DWORD) :=
     let! v = getReg64FromProcState (Reg32_base r);
@@ -117,6 +125,16 @@ Lemma letGetReg {Y} (s: ProcState) r (f: QWORD -> ST Y):
 Proof. rewrite /getReg64FromProcState/getProcState assoc.
 by rewrite EMT_bind_lift SMT_bindGet id_l. Qed.
 
+Lemma doSetSegReg {Y} r v (f: ST Y) s :
+  (do! setSegRegInProcState r v; f) s = f (s !r:=v).
+Proof.  rewrite /setSegRegInProcState/setProcState assoc.
+by rewrite EMT_bind_lift SMT_bindGet EMT_bind_lift SMT_doSet. Qed.
+
+Lemma letGetSegReg {Y} (s: ProcState) r (f: WORD -> ST Y):
+  bind (getSegRegFromProcState r) f s = f (segregisters s r) s.
+Proof. rewrite /getSegRegFromProcState/getProcState assoc.
+by rewrite EMT_bind_lift SMT_bindGet id_l. Qed.
+
 (*---------------------------------------------------------------------------
     Flag getters and setters
   ---------------------------------------------------------------------------*)
@@ -164,7 +182,7 @@ Definition setInProcState {X} {W:Writer X} (p:ADDR) (x:X) :=
   let! s = getProcState;
   match writeMem W (memory s) p x with
   | Some (p', m') =>
-      setProcState (mkProcState (registers s) (flags s) m')
+      setProcState (mkProcState (segregisters s) (registers s) (flags s) m')
   | None => raiseUnspecified
   end.
 

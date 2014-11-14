@@ -14,22 +14,25 @@ Local Open Scope update_scope.
 (* Processor state consists of a register file, flags and memory *)
 (*=ProcState *)
 Record ProcState := mkProcState
-{ registers:> RegState; flags:> FlagState; memory:> Mem }.
+{ segregisters:> SegRegState; registers:> RegState; flags:> FlagState; memory:> Mem }.
 (*=End *)
 Require Import Coq.Strings.String.
 Definition procStateToString s :=
-  (let: mkProcState rs fs ms := s in
+  (let: mkProcState sr rs fs ms := s in
   regStateToString rs ++ " EFL=" ++ flagsToString fs ++ " " ++ memToString ms)%string.
 
 (* Functional update notation, for registers and memory *)
 Global Instance ProcStateUpdateOps : UpdateOps ProcState Reg64 QWORD :=
-  fun s r v => mkProcState (registers s !r:=v) (flags s) (memory s).
+  fun s r v => mkProcState (segregisters s) (registers s !r:=v) (flags s) (memory s).
+
+Global Instance ProcStateUpdateSegOps : UpdateOps ProcState SegReg WORD :=
+  fun s r v => mkProcState (segregisters s !r:=v) (registers s) (flags s) (memory s).
 
 Global Instance ProcStateUpdateFlagOpsBool : UpdateOps ProcState Flag bool :=
-  fun s f v => mkProcState (registers s) (flags s!f:=mkFlag v) (memory s).
+  fun s f v => mkProcState (segregisters s) (registers s) (flags s!f:=mkFlag v) (memory s).
 
 Global Instance ProcStateUpdateFlagOps : UpdateOps ProcState Flag FlagVal :=
-  fun s f v => mkProcState (registers s) (flags s!f:=v) (memory s).
+  fun s f v => mkProcState (segregisters s) (registers s) (flags s!f:=v) (memory s).
 
 Global Instance ProcStateUpdate : Update ProcState Reg64 QWORD.
 apply Build_Update.
@@ -37,8 +40,14 @@ move => m k v w. rewrite /update /ProcStateUpdateOps. by rewrite update_same.
 move => m k l v w kl. rewrite /update /ProcStateUpdateOps. by rewrite update_diff.
 Qed.
 
+Global Instance ProcStateSegUpdate : Update ProcState SegReg WORD.
+apply Build_Update.
+move => m k v w. rewrite /update /ProcStateUpdateSegOps. by rewrite update_same.
+move => m k l v w kl. rewrite /update /ProcStateUpdateSegOps. by rewrite update_diff.
+Qed.
+
 Global Instance ProcStateUpdateOpsBYTE : UpdateOps ProcState ADDR BYTE :=
-  fun s p v => mkProcState (registers s) (flags s) ((memory s) !p:=v).
+  fun s p v => mkProcState (segregisters s) (registers s) (flags s) ((memory s) !p:=v).
 
 (*
 Global Instance ProcStateUpdateOpsDWORD : UpdateOps ProcState ADDR DWORD :=

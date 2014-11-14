@@ -44,8 +44,8 @@ Definition clearColour := toNat (n:=8) (#x"4F").
 (* Todo: get syntax for byte instructions to work! *)
 Definition clsProg:program :=
       MOV EBX, screenBase;;
-      while (CMP EBX, screenLimit) CC_B true ( (* while EBX < screenLimit *)
-        MOV BYTE [EBX], #c" ";;
-        MOV BYTE [EBX+1], # clearColour;;
+      while (CMP EBX, (screenLimit:DWORD)) CC_B true ( (* while EBX < screenLimit *)
+        MOV BYTE PTR [EBX], (#c" ":BYTE);;
+        MOV BYTE PTR [EBX+1], (# clearColour:BYTE);;
         INC EBX;; INC EBX (* move one character right on the screen *)
       ).

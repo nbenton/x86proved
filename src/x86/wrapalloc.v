@@ -23,8 +23,8 @@ Definition wrappedAlloc bytes (r1 r2:GPReg32) heapInfo: program :=
   %asm.
 
 Lemma wrappedAlloc_correct bytes (r1 r2: GPReg32) heapInfo :
-  |-- Forall i j: DWORD,
-  toyfun i EDI? empOP ((Exists p:DWORD, EDI ~= p ** memAny p (p +# bytes)) \\// EDI ~= #0)
+  |-- Forall i j: ADDR,
+  toyfun i EDI? empOP ((Exists p:DWORD, EDI ~= p ** memAny (zeroExtend _ p) (zeroExtend _ (p +# bytes))) \\// EDI ~= #0)
 
   @  (ESI? ** OSZCP? ** allocInv heapInfo)
   <@ (i -- j :-> mkbody_toyfun (wrappedAlloc bytes r1 r2 heapInfo)).

@@ -115,7 +115,7 @@ Definition output_n_prog (pbody : program) (n : nat)
   := (LOCAL LOOP;
       LOCAL END;
       LOOP:;;
-        CMP ECX, 0;;
+        CMP ECX, (0:DWORD);;
         JCC CC_Z true END;;
         pbody;;
         DEC ECX;;
@@ -138,7 +138,7 @@ Proof.
   unfold output_n_prog.
   prepare_basic_goal_for_spec.
   induction n.
-  { 
+  { unfold VWORDasIMM. 
     do? [ progress rewrite ?subB0 ?eq_refl /OSZCP/ConditionIs
         | check_goal_eips_match; by finish_logic_with sbazooka
         | specapply * ]. }
@@ -273,15 +273,14 @@ Qed.
 
 Example loop_forever_one al
 : |-- (loopy_basic (AL ~= al)
-                   (MOV AL, (#1 : DWORD);;
+                   (MOV AL, (1:BYTE);;
                     loop_forever_prog (OUT #0, AL))
                    (starOP (outOP (zeroExtend n8 (#0 : BYTE)) (#1 : BYTE)))
                    lfalse).
 Proof.
   basic apply loopy *.
-  change (@low 24 8 (@fromNat n32 1)) with (@fromNat n8 1).
   eapply safe_loop_forever_constant.
-  basic apply *.
+  basic apply *. reflexivity. 
 Qed.
 
 Definition echo_once in_c out_c :=
@@ -290,7 +289,7 @@ Definition echo_once in_c out_c :=
 
 Definition echo_once_clean (al in_c out_c : BYTE) :=
   (echo_once in_c out_c;;
-   MOV AL, ConstSrc (zeroExtend _ al)).
+   MOV AL, al).
 
 Definition echo_once_OP_helper (in_c out_c : BYTE) v := catOP (inOP (zeroExtend n8 in_c) v) (outOP (zeroExtend n8 out_c) v).
 
@@ -316,7 +315,6 @@ Proof.
   rewrite /echo_once_clean/echo_once_OP_helper.
   basic apply *.
   basic apply *.
-  rewrite low_catB. by ssimpl.
 Qed.
 
 Instance: forall al in_c out_c, instrrule (echo_once_clean al in_c out_c) := @safe_echo_once_clean.
