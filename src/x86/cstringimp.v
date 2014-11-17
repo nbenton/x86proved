@@ -27,20 +27,20 @@ Lemma append_cons s1 c s2 : (s1 ++ String c s2 = (s1 ++ String c EmptyString) ++
 Proof. induction s1 => //. by rewrite /= IHs1.  Qed.
 
 (* The bytes between p and q correspond precisely to the contents of string s *)
-Fixpoint memIsString (p q: DWORD) (s: string)  :=
+Fixpoint memIsString (p q: ADR AdSize4) (s: string)  :=
   if s is String c s
-  then p :-> charToBYTE c ** memIsString (p +# 1) q s
+  then ADRtoADDR p :-> charToBYTE c ** memIsString (p +# 1) q s
   else p == q /\\ empSP.
 
 (* The memory at [p] contains a null-terminated string [s]
    (Note that [s] should not itself not contain null characters) *)
-Fixpoint pointsToCString (p: DWORD) (s: string) : SPred :=
+Fixpoint pointsToCString (p: ADR AdSize4) (s: string) : SPred :=
   if s is String c s
-  then p :-> charToBYTE c ** pointsToCString (p+#1) s
-  else p :-> (#0:BYTE).
+  then ADRtoADDR p :-> charToBYTE c ** pointsToCString (p+#1) s
+  else ADRtoADDR p :-> (#0:BYTE).
 
-Lemma pointsToCStringCons p c s :
-  pointsToCString p (String c s) -|- p :-> charToBYTE c ** pointsToCString (p+#1) s.
+Lemma pointsToCStringCons (p:ADR AdSize4) c s :
+  pointsToCString p (String c s) -|- ADRtoADDR p :-> charToBYTE c ** pointsToCString (p+#1) s.
 Proof. split; rewrite /pointsToCString; by ssimpl. Qed.
 
 (* If [p] points to a C-string [prefix ++ suffix] then it can be split into memory
@@ -66,12 +66,12 @@ Qed.
 
 (* Given a pointer to a C-style string in EDI, return its length in ECX *)
 Definition strlen : program :=
-  (MOV ECX, 0;;
-   while (CMP BYTE [EDI + ECX + 0], #0) CC_Z false
+  (MOV ECX, (#0:DWORD);;
+   while (CMP BYTE PTR [EDI + ECX + 0], BOPArgI _ #0) CC_Z false
      (INC ECX))%asm.
 
 (* Correctness of strlen *)
-Lemma strlen_correct p s :
+Lemma strlen_correct (p:ADR AdSize4) s :
   zeroFree s ->
   |-- loopy_basic ECX? strlen empOP (ECX ~= #(length s))
     @ (OSZCP? ** EDI ~= p ** pointsToCString p s).

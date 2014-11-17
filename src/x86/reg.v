@@ -36,9 +36,9 @@ Canonical Structure GPReg64_EqType := Eval hnf in EqType _ GPReg64_EqMixin.
 (*---------------------------------------------------------------------------
     Control registers
   ---------------------------------------------------------------------------*)
-Inductive CReg := CR0 | CR1 | CR2 | CR3 | CR4.
+Inductive CReg := CR0 | CR1 | CR2 | CR3 | CR4 | GDTR | LDTR | IDTR.
 Definition CRegToNat r :=  
-  match r with CR0 => 0 | CR1 => 1 | CR2 => 2 | CR3 => 3 | CR4 => 4 end. 
+  match r with CR0 => 0 | CR1 => 1 | CR2 => 2 | CR3 => 3 | CR4 => 4 | GDTR => 5 | LDTR => 6 | IDTR => 7 end. 
 Lemma CRegToNat_inj : injective CRegToNat. Proof. by repeat case => //. Qed.
 Canonical Structure CRegEqMixin := InjEqMixin CRegToNat_inj.
 Canonical Structure CRegEqType := Eval hnf in EqType _ CRegEqMixin.
@@ -48,7 +48,7 @@ Canonical Structure CRegEqType := Eval hnf in EqType _ CRegEqMixin.
   ---------------------------------------------------------------------------*)
 (* All registers, including RIP and control registers but still excluding the flags *)
 (*=Reg64 *)
-Inductive Reg64 := mkReg64 (r: GPReg64) :> Reg64 | mkCReg (r: CReg) | RIP.
+Inductive Reg64 := mkReg64 (r: GPReg64) :> Reg64 | mkCReg (r: CReg) :> Reg64 | RIP.
 (*=End *)
 Definition Reg64_toNat r :=  
   match r with | RIP => 16 | mkReg64 r => GPReg64_toNat r | mkCReg r => 17+CRegToNat r end.

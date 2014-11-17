@@ -22,7 +22,7 @@ Lemma ADC_RI_rule_helper (r1:GPReg32) v1 (v2:DWORD) o s z c p
              (ADC r1, v2) empOP
              (r1~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
                 (v == #0) carry (lsb v))).
-Proof. basic apply *. Qed.
+Proof. unfold BOPArgI4. basic apply *. Qed.
 
 Lemma ADC_RI_rule (r1:GPReg32) v1 (v2:DWORD) carry v o s z c p
 : adcB c v1 v2 = (carry, v) ->

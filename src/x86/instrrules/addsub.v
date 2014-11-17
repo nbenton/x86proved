@@ -20,7 +20,7 @@ Global Instance: forall d (ds : DstSrc d), instrrule (BOP d OP_ADD ds) := @ADDSU
 
 (** ** Special cases *)
 (** *** ADD r, v2 *)
-Corollary ADD_RI_rule (r:GPReg32) v1 (v2:VWORD OpSize4):
+Corollary ADD_RI_rule (r:GPReg32) v1 (v2:DWORD):
   |-- basic (r~=v1 ** OSZCP?) (ADD r, v2) empOP
             (let: (carry,v) := eta_expand (adcB false v1 v2) in
              r~=v ** OSZCP (computeOverflow v1 v2 v) (msb v)
@@ -46,7 +46,7 @@ Proof. basic apply *. Qed.
 
 Corollary ADD_RM_rule (pd:ADDR) (r1 r2:GPReg64) v1 (v2:ADDR) (offset:nat):
   |-- basic (r1~=v1 ** r2 ~= pd ** eval.computeAddr (a:=AdSize8) pd offset :-> v2 ** OSZCP?)
-            (ADD r1, [r2 + offset]) empOP
+            (ADD r1, QWORD PTR [r2 + offset]) empOP
             (let: (carry,v) := eta_expand (adcB false v1 v2) in
              r1~=v ** r2 ~= pd ** eval.computeAddr (a:=AdSize8) pd offset :-> v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).

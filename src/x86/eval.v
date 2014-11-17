@@ -150,12 +150,16 @@ Definition evalIxReg {a} : IxReg a -> ST (ADR a) :=
   | AdSize8 => getRegFromProcState
   end.
 
+(* Simplified model of segment addressing *)
+(* Assume that segments always index from GDTR. Also, no limit checking *)
 Definition evalSegBase {a} (seg : option SegReg) : ST (ADR a) :=
   match seg with
   | None => retn #0
   | Some r =>
     let! w = getSegRegFromProcState r;
-    retn #0 (* Should actually look up GDT or LDT *)
+    let! gdt = getReg64FromProcState GDTR;
+    let! base = getFromProcState (addB gdt (zeroExtend _ w));
+    retn base
   end.
 
 (* Displacement for effective address calculation. Note that this is sign-extended to 64-bits *)

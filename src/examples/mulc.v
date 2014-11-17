@@ -40,7 +40,7 @@ Proof.
 
   (** Tell Coq about the induction hypothesis, so [basic apply *] can use it *)
   instrrule remember IHnbits as IHnbits_instrrule.
-
+  rewrite /stateIsAny. specintros => o sf z c p.
   have H: m./2 < 2 ^nbits.
   rewrite expnS mul2n in LT.
   rewrite -(odd_double_half m) in LT.
@@ -111,7 +111,7 @@ Proof.
   rewrite muln2. rewrite -{2}(odd_double_half m) ODD. rewrite /stateIs mulB_addn mulB1. rewrite -> addBA.
   sbazooka.
 
-  rewrite (eqP ZERO) add0n in LT1. by rewrite add1n.
+  rewrite (eqP ZERO) add0n in LT1. sbazooka. ssimpl. rewrite add1n.
 
   (* c is not 0 *)
 

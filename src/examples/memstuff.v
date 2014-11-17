@@ -12,7 +12,7 @@ Open Scope instr_scope.
 Definition splits (p q r: ADDR) (vs ws: seq ADDR) :=
   p -- q :-> vs ** q -- r :-> ws.
 
-Definition nextCode := (ADD RSI, natAsDWORD 4). 
+Definition nextCode := (ADD RSI, BOPArgI _ #4). 
 Definition nextSpec code := 
   Forall (p q r: ADDR), Forall vs w ws, 
   basic (splits p q r vs (w::ws) ** RSI ~= q) code empOP

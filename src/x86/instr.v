@@ -53,7 +53,7 @@ Inductive RegMem s :=
 | RegMemR (r: GPReg s) :> RegMem s 
 | RegMemM a (ms: MemSpec a).
 Inductive RegImm s :=
-| RegImmI (c: IMM s)
+| RegImmI (c: IMM s) :> RegImm s
 | RegImmR (r: GPReg s) :> RegImm s.
 (*=End *)
 

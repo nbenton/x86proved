@@ -432,7 +432,7 @@ Hint Unfold OSZCP : finish_logic_unfolder.
 
 (** We never want to see these when solving a goal, but they're
     convenient for statements *)
-Hint Unfold makeBOP makeMOV makeUOP makeLEA VWORDasIMM : instrrules_all.
+Hint Unfold BOPArgM4 BOPArgI1 BOPArgI2 BOPArgI4 MOVArgM4 UOPArgM4 makeBOP makeMOV makeUOP VWORDasIMM : instrrules_all.
 Hint Unfold OSZCP scaleBy BYTE DWORD WORD VWORD RegOrFlag_target : instrrules_side_conditions_spred.
 
 (*---------------------------------------------------------------------------
@@ -448,7 +448,7 @@ Hint Unfold
   evalMOV evalUnaryOp evalBinOp
   (** Maybe we should write [_rule]s for [evalShiftOp] and [evalCondition]. *)
   evalShiftOp evalPop
-  makeBOP makeUOP makeLEA VWORDasIMM
+  makeBOP makeUOP makeMOV VWORDasIMM BOPArgM4 MOVArgM4 BOPArgI1 BOPArgI2 BOPArgI4 UOPArgM4 
   OSZCP
   natAsDWORD
   (** Maybe we should find a better way to deal with [evalShiftCount], [evalRegImm], and [SrcToRegImm] *)
