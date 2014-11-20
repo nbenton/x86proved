@@ -8,33 +8,22 @@ Require Import x86proved.basicspectac (* for [specapply *] *).
 Require Import x86proved.chargetac (* for [finish_logic] *).
 
 Require Import x86proved.x86.addr.
+
 Lemma CALLrel_rule (p q: ADDR) (tgt: JmpTgt AdSize8) (sp:ADDR) (w:ADDR) O :
-  |-- interpJmpTgt tgt q (fun P p' =>
+  |-- specAtJmpTgt tgt q (fun p' =>
       (
-         obs O @ (UIP ~= p' ** P ** USP ~= sp-#8 ** (sp-#8) :-> q) -->>
-         obs O @ (UIP ~= p  ** P ** USP ~= sp    ** (sp-#8) :-> w)
+         obs O @ (UIP ~= p' ** USP ~= sp-#8 ** (sp-#8) :-> q) -->>
+         obs O @ (UIP ~= p  ** USP ~= sp    ** (sp-#8) :-> w)
     ) <@ (p -- q :-> CALLrel _ tgt)).
-Proof.
-  rewrite /interpJmpTgt/interpMemSpecSrc. 
-  do_instrrule
-    ((try specintros => *; autorewrite with push_at);
-     apply: TRIPLE_safe => ?;
-     do !instrrule_triple_bazooka_step idtac).
-Qed.
+Proof. destruct tgt; do_instrrule_triple. Qed.
 
 Lemma CALLrel_loopy_rule (p q: ADDR) (tgt: JmpTgt AdSize8) (w sp:ADDR) (O : PointedOPred) :
-  |-- interpJmpTgt tgt q (fun P p' =>
+  |-- specAtJmpTgt tgt q (fun p' =>
       (
-      |> obs O @ (UIP ~= p' ** P ** USP~=sp-#8 ** sp-#8 :-> q) -->>
-         obs O @ (UIP ~= p  ** P ** USP~=sp    ** sp-#8 :-> w)
+      |> obs O @ (UIP ~= p' ** USP~=sp-#8 ** sp-#8 :-> q) -->>
+         obs O @ (UIP ~= p  ** USP~=sp    ** sp-#8 :-> w)
     ) <@ (p -- q :-> CALLrel _ tgt)).
-Proof.
-  rewrite /interpJmpTgt/interpMemSpecSrc.
-  do_instrrule
-    ((try specintros => *; autorewrite with push_at);
-     apply: TRIPLE_safeLater => ?;
-     do !instrrule_triple_bazooka_step idtac).
-Qed.
+Proof. destruct tgt; do_instrrule_triple. Qed.
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
@@ -43,7 +32,7 @@ Global Instance: forall tgt : JmpTgt AdSize8, instrrule (CALLrel _ tgt) := fun t
 Global Instance: forall tgt : JmpTgt AdSize8, loopy_instrrule (CALLrel _ tgt) := fun tgt p q => @CALLrel_loopy_rule p q tgt.
 
 Section specapply_hint.
-Local Hint Unfold interpJmpTgt : specapply.
+Local Hint Unfold specAtJmpTgt : specapply.
 
 Corollary CALLrel_R_rule (r:GPReg64) (p q: ADDR) :
   |-- Forall O (w sp: ADDR) p', (

@@ -63,36 +63,12 @@ Proof. basic apply *. Qed.
 Proof. attempt basic apply (@CMP_rule OpSize1 _ v1). by rewrite low_catB. Qed.
 *)
 
-Lemma CMP_RM_rule (pd:DWORD) (r1 r2:GPReg32) offset (v1 v2:DWORD) :
-  |-- basic (r1 ~= v1 ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2 ** OSZCP?)
-            (CMP r1, [r2+offset]) empOP
-            (let: (carry,res) := eta_expand (sbbB false v1 v2) in
-             r1 ~= v1 ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2 **
-             OSZCP (computeOverflow v1 v2 res) (msb res)
-                   (res == #0) carry (lsb res)).
-Proof. basic apply *. Qed.
-
-(*Lemma CMP_MR_rule (pd:DWORD) (r1 r2:GPReg32) offset (v1 v2:DWORD):
-  |-- basic (r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 ** OSZCP?)
-            (CMP [r2+offset], r1) empOP
-            (let: (carry,res) := eta_expand (sbbB false v2 v1) in
-             r1 ~= v1 ** r2 ~= pd ** pd +# offset :-> v2 **
-             OSZCP (computeOverflow v2 v1 res) (msb res)
-                   (res == #0) carry (lsb res)).
-Proof. basic apply *. Qed.
-
-Lemma CMP_MR_ZC_rule (pd: DWORD) (r1 r2:GPReg32) offset (v1 v2:DWORD):
-  |-- basic (r1 ~= pd ** r2 ~= v2 ** pd +# offset :-> v1 ** OSZCP?) (CMP [r1+offset], r2) empOP
-            (r1 ~= pd ** r2 ~= v2 ** pd +# offset :-> v1 ** OF? ** SF? ** PF? **
-                        CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
-Proof. basicCMP_ZC. Qed.
-*)
-
-Lemma CMP_IndR_ZC_rule (pd: DWORD) (r:GPReg32) (v1 v2:DWORD):
+(*Lemma CMP_IndR_ZC_rule (pd: DWORD) (r:GPReg32) (v1 v2:DWORD):
   |-- basic (r ~= v2 ** ADRtoADDR (a:=AdSize4) pd :-> v1 ** OSZCP?) (CMP [pd], r) empOP
             (r ~= v2 ** ADRtoADDR (a:=AdSize4) pd :-> v1 ** OF? ** SF? ** PF? **
                         CF ~= ltB v1 v2 ** ZF ~= (v1==v2)).
 Proof. basicCMP_ZC. Qed.
+*)
 
 Lemma CMP_RR_rule (r1 r2:GPReg32) v1 (v2:DWORD):
   |-- basic (r1 ~= v1 ** r2 ~= v2 ** OSZCP?) (CMP r1, r2) empOP

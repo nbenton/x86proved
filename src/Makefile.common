@@ -83,6 +83,7 @@ bitreader.vo \
 writer.vo \
 roundtrip.vo \
 x86\basic.vo \
+x86\instrrules\instrspec.vo \
 x86\instrrules\core.vo \
 x86\instrrules\adc.vo \
 x86\instrrules\addsub.vo \

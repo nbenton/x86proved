@@ -20,8 +20,7 @@
     [spec_frame].
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple Ssreflect.seq Ssreflect.fintype.
-Require Import x86proved.bitsrep x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.spred.
-Require Import x86proved.x86.instr x86proved.x86.eval x86proved.monad x86proved.monadinst x86proved.reader x86proved.cursor.
+Require Import x86proved.spred.
 Require Import x86proved.common_tactics.
 
 (* Importing this file really only makes sense if you also import ilogic, so we
@@ -615,9 +614,11 @@ Corollary spec_reads_byteIs S p b:
   S <@ byteIs p b -|- S @ byteIs p b.
 Proof. apply spec_reads_eq_at. Qed.
 
+(*
 Corollary spec_reads_flagIs S (p:Flag) b:
   S <@ (p~=b) -|- S @ (p~=b).
 Proof. apply spec_reads_eq_at. Qed.
+*)
 
 Lemma spec_reads_merge S R1 R2:
   S <@ R1 <@ R2 |-- S <@ (R1 ** R2).

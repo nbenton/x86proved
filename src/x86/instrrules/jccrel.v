@@ -11,7 +11,7 @@ Lemma JCCrel_rule_later (rel: QWORD) cc cv (b:bool) (p q: ADDR) :
       |> obs O @ (UIP ~= (if b == cv then addB q rel else q) ** ConditionIs cc b) -->>
       obs O @ (UIP ~= p ** ConditionIs cc b)
     ) <@ (p -- q :-> JCCrel cc cv (mkTgt AdSize8 rel)).
-Proof.
+Proof. 
   specintros => O.
   apply: TRIPLE_safeLater => R. autounfold with instrrules_eval.
   triple_apply triple_letGetCondition.

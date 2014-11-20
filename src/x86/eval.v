@@ -14,11 +14,96 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrnat Ssreflect.ssrbool Ssreflect.
 Require Import x86proved.bitsops x86proved.x86.instr x86proved.monad x86proved.reader x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.x86.exn.
 Require Import x86proved.common_definitions.
 
+(*---------------------------------------------------------------------------
+    Helpers used for address computation
+    Also used in specAtX in instrrules/instrspec.v
+  ---------------------------------------------------------------------------*)
+Definition scaleBy {n} s (d: BITS n) :=
+  match s with
+  | S1 => d
+  | S2 => shlB d
+  | S4 => shlB (shlB d)
+  | S8 => shlB (shlB (shlB d))
+  end.
+
+(* Displacement for effective address calculation. For 64-bit addresses this is sign-extended to 64-bits *)
+Definition computeDisplacement a : DWORD -> ADR a :=
+  match a return DWORD -> ADR a with 
+  | AdSize4 => fun x => x
+  | AdSize8 => fun x => signExtend _ x
+  end.
+
+(* Compute the effective address, given a base, optional index/scale and signed 32-bit displacement *)
+Definition computeEA {a} (base: ADR a) (ixOpt: option (ADR a * Scale)) disp : ADR a :=
+  let p := if ixOpt is Some(ix, sc) then addB base (scaleBy sc ix) else base
+  in addB p (computeDisplacement a disp).
+
+Definition computeRIPrel a (base: ADDR) (disp: DWORD) :=
+  ADDRtoADR a (addB base (signExtend n32 disp)).
+
+(*---------------------------------------------------------------------------
+    Helpers used for address evaluation
+  ---------------------------------------------------------------------------*)
+(* Base register for effective address calculation *)
+Definition evalBaseReg {a} : BaseReg a -> ST (ADR a) :=
+  match a return BaseReg a -> ST (ADR a) with
+  | AdSize4 => getRegFromProcState
+  | AdSize8 => getRegFromProcState
+  end.
+
+(* Index register for effective address calculation *)
+Definition evalIxReg {a} : IxReg a -> ST (ADR a) :=
+  match a return IxReg a -> ST (ADR a) with
+  | AdSize4 => getRegFromProcState
+  | AdSize8 => getRegFromProcState
+  end.
+Definition evalIndexAndScale {a} (ixOpt: option (IxReg a * Scale)) : ST (option (ADR a * Scale)) :=
+  if ixOpt is Some (ixReg,sc) then let! ix = evalIxReg ixReg; retn (Some (ix,sc))
+  else retn None.
+  
+Definition evalMemSpecEA {a} (m:MemSpec a) : ST (ADR a) :=
+  let: mkMemSpec seg optSIB disp := m
+  in
+    if optSIB is Some SIB
+    then
+      match SIB with
+      | mkSIB base ixopt =>
+        let! baseval = evalBaseReg base;
+        let! ixoptval = evalIndexAndScale ixopt;
+        retn (computeEA baseval ixoptval disp)
+        (* See section 2.2.1.6 *)
+      | RIPrel =>
+        let! baseval = getRegFromProcState RIP;
+        retn (computeRIPrel a baseval disp)
+      end
+    else retn (computeDisplacement a disp).
+
+
+(* Simplified model of segment addressing *)
+(* Assume that segments always index from GDTR. Also, no limit checking *)
+Definition evalSegBase a (sreg : SegReg) : ST (ADR a) :=
+    let! w = getSegRegFromProcState sreg;
+    let! gdt = getReg64FromProcState GDTR;
+    let! base = getFromProcState (addB gdt (zeroExtend _ w));
+    retn base.
+
+(* Logical address calculation, from segment and EA.
+   Currently we assume 64-bit mode, no segments unless overridden by FS/GS *)
+Definition evalMemSpec {a} (m: MemSpec a) : ST ADDR :=
+  let! adr = evalMemSpecEA m;
+  if m is mkMemSpec (Some sreg) _ _
+  then 
+    let! segBase = evalSegBase a sreg;
+    retn (ADRtoADDR (addB segBase adr))
+  else retn (ADRtoADDR adr).
+
+(*---------------------------------------------------------------------------
+    Helpers used for evaluation
+  ---------------------------------------------------------------------------*)
 Definition updateZPS {n} (result: BITS n) :=
   do! updateFlagInProcState ZF (result == #0);
   do! updateFlagInProcState PF (lsb result);
   updateFlagInProcState SF (msb result).
-
 
 Definition evalArithOp {n}
   (f : bool -> BITS n -> BITS n -> bool * BITS n) (arg1 arg2: BITS n)  :=
@@ -113,6 +198,7 @@ Definition evalUnaryOp {n} op : BITS n -> ST (BITS n) :=
   | OP_NOT => fun arg => retn (invB arg)
   | OP_NEG => evalArithUnaryOp (fun arg => (arg != #0, negB arg))
   end.
+Hint Unfold evalUnaryOp : eval.
 
 Definition evalCondition cc : ST bool :=
   match cc with
@@ -127,99 +213,7 @@ Definition evalCondition cc : ST bool :=
     let! sf = getFlagFromProcState SF; let! f = getFlagFromProcState OF; let! zf = getFlagFromProcState ZF;
     retn ((xorb sf f) || zf)
   end.
-
-Definition scaleBy {n} s (d: BITS n) :=
-  match s with
-  | S1 => d
-  | S2 => shlB d
-  | S4 => shlB (shlB d)
-  | S8 => shlB (shlB (shlB d))
-  end.
-
-(* Base register for effective address calculation *)
-Definition evalBaseReg {a} : BaseReg a -> ST (ADR a) :=
-  match a return BaseReg a -> ST (ADR a) with
-  | AdSize4 => getRegFromProcState
-  | AdSize8 => getRegFromProcState
-  end.
-
-(* Index register for effective address calculation *)
-Definition evalIxReg {a} : IxReg a -> ST (ADR a) :=
-  match a return IxReg a -> ST (ADR a) with
-  | AdSize4 => getRegFromProcState
-  | AdSize8 => getRegFromProcState
-  end.
-
-(* Simplified model of segment addressing *)
-(* Assume that segments always index from GDTR. Also, no limit checking *)
-Definition evalSegBase {a} (seg : option SegReg) : ST (ADR a) :=
-  match seg with
-  | None => retn #0
-  | Some r =>
-    let! w = getSegRegFromProcState r;
-    let! gdt = getReg64FromProcState GDTR;
-    let! base = getFromProcState (addB gdt (zeroExtend _ w));
-    retn base
-  end.
-
-(* Displacement for effective address calculation. Note that this is sign-extended to 64-bits *)
-Definition computeDisplacement a : DWORD -> ADR a :=
-  match a return DWORD -> ADR a with 
-  | AdSize4 => fun x => x
-  | AdSize8 => fun x => signExtend _ x
-  end.
-
-(* Compute the effective address, given a base and signed 32-bit displacement *)
-Definition computeAdr {a} (base: ADR a) (displacement:DWORD) : ADR a :=
-  addB base (computeDisplacement a displacement).
-
-(* Compute the effective address, given a base, index and signed 32-bit displacement *)
-Definition computeIxAdr {a} (base: ADR a) (displacement:DWORD) (ix: ADR a) : ADR a :=
-  addB (computeAdr base displacement) ix.
-
-Definition computeAddr {a} (base: ADR a) (displacement:DWORD) : ADDR :=
-  ADRtoADDR (computeAdr base displacement). 
-
-Definition computeIxAddr {a} (base: ADR a) (displacement:DWORD) (ix: ADR a) : ADDR :=
-  ADRtoADDR (computeIxAdr base displacement ix).
-
-Definition getUIP a := 
-  match a return ST (ADR a) with
-  | AdSize4 => getRegFromProcState EIP
-  | AdSize8 => getRegFromProcState RIP
-  end.
-
-Definition setUIP a := 
-  match a return ADR a -> ST unit with
-  | AdSize4 => setRegInProcState EIP
-  | AdSize8 => setRegInProcState RIP
-  end.
-
-Definition evalMemSpecAdr {a} (m:MemSpec a) : ST (ADR a) :=
-  match m with
-    mkMemSpec seg optSIB displacement =>
-    let! segbase = evalSegBase (a:=a) seg;
-    if optSIB is Some SIB
-    then
-      match SIB with
-      | mkSIB base ixopt =>
-        let! baseval = evalBaseReg base;
-        if ixopt is Some(index,sc)
-        then
-          let! indexval = evalIxReg index;
-          retn (computeIxAdr baseval displacement (scaleBy sc indexval))
-        else 
-          retn (computeAdr baseval displacement)
-      | RIPrel =>
-        let! baseval = getUIP a;
-        retn (computeAdr baseval displacement)
-      end
-    else retn (computeDisplacement a displacement)
-  end.
-
-Definition evalMemSpec {a} (m: MemSpec a) : ST ADDR :=
-  let! adr = evalMemSpecAdr m;
-  retn (ADRtoADDR adr).
+Hint Unfold evalCondition : eval.
 
 Definition evalSrc src :=
   match src with
@@ -237,7 +231,7 @@ Definition setAdrRegInProcState {s a} : GPReg s -> ADR a -> ST unit :=
   | OpSize2, AdSize8 => fun r addr => setRegInProcState (s:=OpSize2) r (low 16 addr)
   | OpSize4, AdSize4 => fun r addr => setRegInProcState (s:=OpSize4) r addr
   | OpSize4, AdSize8 => fun r addr => setRegInProcState (s:=OpSize4) r (low 32 addr)
-  | OpSize8, AdSize4 => fun r addr => setRegInProcState (s:=OpSize8) r (zeroExtend 32 addr)
+  | OpSize8, AdSize4 => fun r addr => setRegInProcState (s:=OpSize8) r (zeroExtend n32 addr)
   | OpSize8, AdSize8 => fun r addr => setRegInProcState (s:=OpSize8) r addr
   | _, _ => fun _ _ => raiseUnspecified
   end.
@@ -282,17 +276,15 @@ Definition evalRegMemWORD (rm: RegMem OpSize2) :=
   | RegMemM a m => let! addr = evalMemSpec m; getFromProcState addr
   end.
 
-Definition evalJmpAdr {a} (tgt: JmpTgt a) : ST (ADR a) :=
+Definition evalJmpAddr {a} (tgt: JmpTgt a) : ST ADDR :=
   match tgt with
   | JmpTgtI (mkTgt r) =>
-    let! nextIP = getUIP a;
-    retn (addB nextIP r)
-  | JmpTgtRegMem rm => evalRegMem rm
+    let! nextIP = getRegFromProcState UIP;
+    retn (addB nextIP (ADRtoADDR r))
+  | JmpTgtRegMem rm => 
+    let! offset = evalRegMem rm;
+    retn (ADRtoADDR offset)
   end.
-
-Definition evalJmpAddr {a} (tgt: JmpTgt a) : ST ADDR :=
-  let! adr = evalJmpAdr tgt;
-  retn (ADRtoADDR adr).
 
 Definition getImm {s} : IMM s -> VWORD s :=
   match s with
@@ -443,8 +435,8 @@ Definition evalInstr (instr:Instr) : ST unit :=
     forgetFlagInProcState ZF
 
   | LEA s r (RegMemM a m) =>
-    let! addr = evalMemSpecAdr m;
-    setAdrRegInProcState r addr
+    let! adr = evalMemSpecEA m;
+    setAdrRegInProcState r adr
 
   | LEA s r (RegMemR _) =>
     raiseExn ExnUD
@@ -463,13 +455,13 @@ Definition evalInstr (instr:Instr) : ST unit :=
     setInProcState addr v1
 
   | JMPrel a src =>
-    let! newIP = evalJmpAdr src;
-    setUIP a newIP
+    let! newIP = evalJmpAddr src;
+    setRegInProcState UIP newIP
 
   | JCCrel cc cv (mkTgt tgt) =>
     let! b = evalCondition cc;
     if b == cv then
-      let! oldIP = getUIP AdSize8;
+      let! oldIP = getRegFromProcState RIP;
       setRegInProcState UIP (addB oldIP tgt)
     else
       retn tt
@@ -497,9 +489,9 @@ Definition evalInstr (instr:Instr) : ST unit :=
     evalPush (s:=OpSize8) v
 
   | CALLrel a src =>
-    let! oldIP = getUIP a;
-    let! newIP = evalJmpAdr src;
-    do! setUIP a newIP;
+    let! oldIP = getRegFromProcState RIP;
+    let! newIP = evalJmpAddr src;
+    do! setRegInProcState UIP newIP;
     evalPush oldIP
 
 (*=evalRET *)
@@ -508,7 +500,7 @@ Definition evalInstr (instr:Instr) : ST unit :=
     let! IP' = getFromProcState oldSP;
     do! setRegInProcState USP
       (addB (oldSP+#8) (zeroExtend _ offset));
-    setUIP AdSize8 IP'
+    setRegInProcState UIP IP'
 (*=End *)
 
   | INOP OpSize1 port =>

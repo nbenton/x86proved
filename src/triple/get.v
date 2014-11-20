@@ -130,6 +130,22 @@ Proof.
   done.  
 Qed.
 
+Lemma getSegRegSep (r : SegReg) (w : WORD) (P : SPred) (s : ProcState)
+: P |-- r ~= w ** ltrue -> P s -> w = segregisters s r.
+Proof. Admitted. (*pose SegReg. get_t. Qed.*)
+
+
+Lemma triple_letGetSegReg (r:SegReg) (w:WORD) (P Q: SPred) O c:
+  (P |-- r ~= w ** ltrue) ->
+  TRIPLE P (c w) O Q ->
+  TRIPLE P (bind (getSegRegFromProcState r) c) O Q.
+Proof.
+  move => ?. pre_let. triple_by_compute; trivial.
+  erewrite <- getSegRegSep by eassumption.
+  done.  
+Qed.
+
+
 Lemma triple_letGetReg64 (r:Reg OpSize8) v (P Q:SPred) O c:
   (P |-- r ~= v ** ltrue) ->
   TRIPLE P (c v) O Q ->
@@ -160,6 +176,12 @@ Lemma triple_letGetFlagSep (fl:Flag) (v:bool) c O Q :
   TRIPLE (fl~=v ** S) (c v) O Q ->
   TRIPLE (fl~=v ** S) (bind (getFlagFromProcState fl) c) O Q.
 Proof. move => S T. apply: triple_letGetFlag. cancel2. reflexivity. done. Qed.
+
+Lemma triple_letGetSegRegSep (r:SegReg) (v:WORD) c O Q :
+  forall S,
+  TRIPLE (r~=v ** S) (c v) O Q ->
+  TRIPLE (r~=v ** S) (bind (getSegRegFromProcState r) c) O Q.
+Proof. move => S T. apply: triple_letGetSegReg. cancel2. reflexivity. done. Qed.
 
 Lemma triple_doGetReg64 (r:Reg OpSize8) (P Q: SPred) O c :
   TRIPLE P c O Q ->

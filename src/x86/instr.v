@@ -37,8 +37,8 @@ Coercion NonSPReg64_to_IxReg64 (r:NonSPReg64) : IxReg AdSize8 := r.
 (*=MemSpec *)
 Inductive Scale := S1 | S2 | S4 | S8.
 Inductive SIB a := 
-| mkSIB (base: BaseReg a) (ixdisp: option (IxReg a * Scale))
-| RIPrel.
+| mkSIB (base: BaseReg a) (ixdisp: option (IxReg a * Scale)) : SIB a
+| RIPrel : SIB a (* Only valid in 64-bit mode *).
 Inductive MemSpec (a: AdSize) :=
 | mkMemSpec (seg: option SegReg) (sib: option (SIB a)) (displacement: DWORD).
 (*=End *)
@@ -86,6 +86,7 @@ Inductive MovDstSrc (s: OpSize):=
 (* We make this a separate type constructor to pick up type class instances later *)
 (* Jump ops: immediate, register, or memory source *)
 (*=Tgt *)
+(* 64-bit offsets aren't actually supported by the codec so why do we have them here? *)
 Inductive Tgt a :=
 | mkTgt :> VWORD (adSizeToOpSize a) -> Tgt a.
 Inductive JmpTgt a :=

@@ -44,6 +44,7 @@ Corollary ADD_RR_ruleNoFlags (r1 r2:GPReg32) v1 (v2:DWORD):
             (r1~=addB v1 v2 ** r2~=v2 ** OSZCP?).
 Proof. basic apply *. Qed.
 
+(*
 Corollary ADD_RM_rule (pd:ADDR) (r1 r2:GPReg64) v1 (v2:ADDR) (offset:nat):
   |-- basic (r1~=v1 ** r2 ~= pd ** eval.computeAddr (a:=AdSize8) pd offset :-> v2 ** OSZCP?)
             (ADD r1, QWORD PTR [r2 + offset]) empOP
@@ -51,6 +52,7 @@ Corollary ADD_RM_rule (pd:ADDR) (r1 r2:GPReg64) v1 (v2:ADDR) (offset:nat):
              r1~=v ** r2 ~= pd ** eval.computeAddr (a:=AdSize8) pd offset :-> v2 **
              OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v)).
 Proof. basic apply *. Qed.
+*)
 
 (*
 Corollary ADD_RM_ruleNoFlags (pd:DWORD) (r1 r2:GPReg32) v1 (v2:DWORD) (offset:nat):

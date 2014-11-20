@@ -58,6 +58,7 @@ Ltac unifyPT P :=
   | (byteIs ?p ?v, byteIs ?p ?w) => unify v w
   | (?p :-> ?v, ?p :-> ?w) => unify v w
   | (@mkCursor ?m ?p :-> ?v, @mkCursor ?n ?p :-> ?w) => unify v w
+  | (@mkCursor ?m (@zeroExtend _ _ ?p) :-> ?v, @mkCursor ?m (@zeroExtend _ _ ?p) :-> ?w) => unify v w
   | (@mkCursor ?m ?i -- ?j :-> ?v, @mkCursor ?n ?i -- ?k :-> ?v) => unify j k
     (* These might be overlapping ranges, but typically we don't expect to see this *)
   | (@mkCursor ?m ?i -- ?j :-> ?v, @mkCursor ?n ?i -- ?k :-> ?w) => (unify j k; unify v w)

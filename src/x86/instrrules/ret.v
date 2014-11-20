@@ -8,10 +8,7 @@ Lemma RET_rule p' (sp:ADDR) (offset:WORD) (p q: ADDR) O :
          obs O @ (UIP ~= p' ** USP ~= sp' ** sp :-> p') -->>
          obs O @ (UIP ~= p  ** USP ~= sp  ** sp :-> p')
     ) <@ (p -- q :-> RETOP offset).
-Proof.
-  apply: TRIPLE_safe => R.
-  do_instrrule_triple.
-Qed.
+Proof. do_instrrule_triple. Qed.
 
 Lemma RET_loopy_rule p' (sp:ADDR) (offset:WORD) (p q: ADDR) O `{IsPointed_OPred O} :
   let sp' := addB (sp+#8) (zeroExtend _ offset) in
@@ -19,10 +16,7 @@ Lemma RET_loopy_rule p' (sp:ADDR) (offset:WORD) (p q: ADDR) O `{IsPointed_OPred 
       |> obs O @ (UIP ~= p' ** USP ~= sp' ** sp :-> p') -->>
          obs O @ (UIP ~= p  ** USP ~= sp  ** sp :-> p')
     ) <@ (p -- q :-> RETOP offset).
-Proof.
-  apply: TRIPLE_safeLater => R.
-  do_instrrule_triple.
-Qed.
+Proof. do_instrrule_triple. Qed.
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic

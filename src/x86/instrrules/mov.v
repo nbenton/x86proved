@@ -38,6 +38,7 @@ Lemma MOV_RanyI_rule (r:GPReg32) (v2:DWORD) :
 Proof. unhideReg r => old. basic apply MOV_RI_rule.  Qed.
 
 (** ** Memory to register *)
+(*
 Lemma MOV_RM_rule (pd:DWORD) (r1 r2:GPReg32) offset (v1 v2: DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2)
             (MOV r1, [r2 + offset]) empOP
@@ -49,6 +50,7 @@ Lemma MOV_RanyM_rule (pd:DWORD) (r1 r2:GPReg32) offset (v2: DWORD) :
             (MOV r1, [r2 + offset]) empOP
             (r1 ~= v2 ** r2 ~= pd ** eval.computeAddr (a:=AdSize4) pd offset :-> v2).
 Proof. unhideReg r1 => old. basic apply *. Qed.
+*)
 
 Lemma MOV_RanyInd_rule (pd:DWORD) (r1:GPReg32) (v2: DWORD) :
   |-- basic (r1? ** ADRtoADDR (a:=AdSize4) pd :-> v2)
@@ -56,6 +58,7 @@ Lemma MOV_RanyInd_rule (pd:DWORD) (r1:GPReg32) (v2: DWORD) :
             (r1 ~= v2 ** ADRtoADDR (a:=AdSize4) pd :-> v2).
 Proof. unhideReg r1 => old. basic apply *. Qed.
 
+(*
 Lemma MOV_RM0_rule (pd:DWORD) (r1 r2:GPReg32) (v1 v2: DWORD) :
   |-- basic (r1 ~= v1 ** r2 ~= pd ** zeroExtend _ pd :-> v2)
             (MOV r1, [r2]) empOP
@@ -70,6 +73,7 @@ Lemma MOV_RanyM0_rule (pd:DWORD) (r1 r2:GPReg32) (v2: DWORD) :
             (MOV r1, [r2]) empOP
             (r1 ~= v2 ** r2 ~= pd ** zeroExtend _ pd :-> v2).
 Proof. unhideReg r1 => old. basic apply MOV_RM0_rule. Qed.
+*)
 
 (** ** Register to memory *)
 (*
@@ -87,6 +91,7 @@ Lemma MOV_MI_rule s (pd:DWORD) (r:GPReg32) offset (v:VWORD s) (w:IMM s) :
 Proof. basic apply *. Qed.
 *)
 
+(*
 Lemma MOV_M0R_rule (pd:DWORD) (r1 r2:GPReg32) (v1 v2: DWORD) :
   |-- basic (r1 ~= pd ** zeroExtend _ pd :-> v1 ** r2 ~= v2)
             (MOV [r1], r2) empOP
@@ -102,6 +107,7 @@ Lemma MOV_IndR_rule (pd:DWORD) (r:GPReg32) (v1 v2: DWORD) :
             (MOV [pd], r) empOP
             (ADRtoADDR (a:=AdSize4) pd :-> v2 ** r ~= v2).
 Proof. basic apply *. Qed.
+*)
 
 (*
 Lemma MOV_MbR_rule (p: DWORD) (r1:GPReg32) (r2: Reg8) offset (v1:BYTE) (v2:BYTE) :

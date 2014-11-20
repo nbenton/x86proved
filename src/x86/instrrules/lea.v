@@ -2,24 +2,24 @@
 Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
-Require Import x86proved.x86.eval (* for [scaleBy] *).
+Require Import x86proved.x86.eval (* for [computeEA] *).
 
-Lemma LEA_ruleSameBase (v indexval: ADDR) (offset:DWORD) (r: BaseReg AdSize8) (r1:IxReg AdSize8) sc :
-  |-- basic (r ~= v ** r1 ~= indexval)
-            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some(mkSIB _ r (Some(r1, sc)))) offset))) empOP
-            (r ~= computeIxAddr (a:=AdSize8) v offset (scaleBy sc indexval) ** r1 ~= indexval).
+Lemma LEA_ruleSameBase (baseval indexval: ADDR) (disp: DWORD) (r: BaseReg AdSize8) (r1:IxReg AdSize8) sc :
+  |-- basic (r ~= baseval ** r1 ~= indexval)
+            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some(mkSIB _ r (Some(r1, sc)))) disp))) empOP
+            (r ~= computeEA (a:=AdSize8) baseval (Some(indexval,sc)) disp ** r1 ~= indexval).
 Proof. do_instrrule_triple. Qed.
 
-Lemma LEA_ruleSameBase32 (v indexval: DWORD) (offset:DWORD) (r: BaseReg AdSize4) (r1:IxReg AdSize4) sc :
-  |-- basic (r ~= v ** r1 ~= indexval)
-            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some(mkSIB _ r (Some(r1, sc)))) offset))) empOP
-            (r ~= computeIxAdr (a:=AdSize4) v offset (scaleBy sc indexval) ** r1 ~= indexval).
+Lemma LEA_ruleSameBase32 (baseval indexval: DWORD) (disp:DWORD) (r: BaseReg AdSize4) (r1:IxReg AdSize4) sc :
+  |-- basic (r ~= baseval ** r1 ~= indexval)
+            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some(mkSIB _ r (Some(r1, sc)))) disp))) empOP
+            (r ~= computeEA (a:=AdSize4) baseval (Some(indexval,sc)) disp ** r1 ~= indexval).
 Proof. do_instrrule_triple. Qed.
 
-Lemma LEA_rule (old v indexval offset: DWORD) (r r': GPReg32) (r1:NonSPReg32) sc :
-  |-- basic (r ~= old ** r' ~= v ** r1 ~= indexval)
-            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some(mkSIB _ r' (Some(r1, sc)))) offset))) empOP
-            (r ~= addB (addB v offset) (scaleBy sc indexval) ** r' ~= v ** r1 ~= indexval).
+Lemma LEA_rule (old baseval indexval disp: DWORD) (r r': GPReg32) (r1:NonSPReg32) sc :
+  |-- basic (r ~= old ** r' ~= baseval ** r1 ~= indexval)
+            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some(mkSIB _ r' (Some(r1, sc)))) disp))) empOP
+            (r ~= computeEA (a:=AdSize4) baseval (Some(indexval,sc)) disp ** r' ~= baseval ** r1 ~= indexval).
 Proof. do_instrrule_triple. Qed.
 
 (** We make this rule an instance of the typeclass, and leave

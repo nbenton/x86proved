@@ -138,7 +138,7 @@ Proof.
   unfold output_n_prog.
   prepare_basic_goal_for_spec.
   induction n.
-  { unfold VWORDasIMM. 
+  { unfold VWORDasIMM, BOPArgI4. 
     do? [ progress rewrite ?subB0 ?eq_refl /OSZCP/ConditionIs
         | check_goal_eips_match; by finish_logic_with sbazooka
         | specapply * ]. }

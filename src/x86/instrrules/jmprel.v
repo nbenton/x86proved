@@ -8,30 +8,18 @@ Require Import x86proved.basicspectac (* for [specapply *] *).
 Require Import x86proved.chargetac (* for [finish_logic] *).
 
 Lemma JMPrel_rule (tgt: JmpTgt AdSize8) (p q: ADDR)
-: |-- interpJmpTgt tgt q (fun P addr =>
+: |-- specAtJmpTgt tgt q (fun addr =>
                             (Forall O,
-                             (obs O @ (UIP ~= addr ** P)
-                         -->> obs O @ (UIP ~= p ** P)) <@ (p -- q :-> JMPrel _ tgt))).
-Proof.
-  rewrite /interpJmpTgt/interpMemSpecSrc.
-  do_instrrule
-    ((try specintros => *; autorewrite with push_at);
-     apply: TRIPLE_safe => ?;
-     do !instrrule_triple_bazooka_step idtac).
-Qed. 
+                             (obs O @ (UIP ~= addr)
+                         -->> obs O @ (UIP ~= p)) <@ (p -- q :-> JMPrel _ tgt))).
+Proof. destruct tgt; do_instrrule_triple. Qed. 
 
 Lemma JMPrel_loopy_rule (tgt: JmpTgt AdSize8 ) (p q: ADDR)
-: |-- interpJmpTgt tgt q (fun P addr =>
+: |-- specAtJmpTgt tgt q (fun addr =>
                             (Forall (O : PointedOPred),
-                             (|> obs O @ (UIP ~= addr ** P)
-                                 -->> obs O @ (UIP ~= p ** P)) <@ (p -- q :-> JMPrel _ tgt))).
-Proof.
-  rewrite /interpJmpTgt/interpMemSpecSrc.
-  do_instrrule
-    ((try specintros => *; autorewrite with push_at);
-     apply: TRIPLE_safeLater => ?;
-     do !instrrule_triple_bazooka_step idtac).
-Qed.
+                             (|> obs O @ (UIP ~= addr)
+                                 -->> obs O @ (UIP ~= p)) <@ (p -- q :-> JMPrel _ tgt))).
+Proof. destruct tgt; do_instrrule_triple. Qed.
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
@@ -40,7 +28,7 @@ Global Instance: forall (tgt : JmpTgt _), instrrule (JMPrel _ tgt) := @JMPrel_ru
 Global Instance: forall (tgt : JmpTgt _), loopy_instrrule (JMPrel _ tgt) := @JMPrel_loopy_rule.
 
 Section specapply_hint.
-Local Hint Unfold interpJmpTgt : specapply.
+Local Hint Unfold specAtJmpTgt : specapply.
 
 Lemma JMPrel_I_rule (rel: QWORD) (p q: ADDR):
   |-- (Forall O,

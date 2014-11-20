@@ -11,26 +11,21 @@ Lemma INCDEC_rule sz (dir: bool) (src:RegMem sz) oldv o s z c pf:
       V w ** OSZCP (msb oldv!=msb w) (msb w) (w == #0) c (lsb w))).
 Proof. do_instrrule_triple. Qed.
 
+Definition INC_rule s := Eval hnf in @INCDEC_rule s true.
+Definition DEC_rule s := Eval hnf in @INCDEC_rule s false.
+
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic
     [get_instrrule_of]. *)
-Global Instance: forall d (src : RegMem d), instrrule (UOP d OP_INC src) := fun d => @INCDEC_rule d true.
-Global Instance: forall d (src : RegMem d), instrrule (UOP d OP_DEC src) := fun d => @INCDEC_rule d false.
+Global Instance: forall s (src : RegMem s), instrrule (UOP _ OP_INC src) := INC_rule. 
+Global Instance: forall s (src : RegMem s), instrrule (UOP _ OP_DEC src) := DEC_rule. 
 
-Definition INC_rule := Eval hnf in @INCDEC_rule OpSize4 true.
-Definition DEC_rule := Eval hnf in @INCDEC_rule OpSize4 false.
 
 (** Special case for increment register *)
 Corollary INC_R_rule (r:GPReg32) (v:DWORD) o s z c pf:
   let w := incB v in
   |-- basic (r~=v ** OSZCP o s z c pf) (INC r) empOP
             (r~=w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
-Proof. basic apply *. Qed.
-
-Corollary INC_M_rule (r:GPReg32) (offset:nat) (v pbase:DWORD) o s z c pf:
-  let w := incB v in
-  |-- basic (r ~= pbase ** (eval.computeAddr (a:=AdSize4) pbase offset) :-> v ** OSZCP o s z c pf) (INC DWORD PTR [r + offset]) empOP
-            (r ~= pbase ** (eval.computeAddr (a:=AdSize4) pbase offset) :-> w ** OSZCP (msb v!=msb w) (msb w) (w == #0) c (lsb w)).
 Proof. basic apply *. Qed.
 
 Lemma INC_R_ruleNoFlags (r:GPReg32) (v:DWORD):

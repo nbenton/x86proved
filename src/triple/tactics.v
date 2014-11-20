@@ -9,7 +9,7 @@ Require Import x86proved.triple.monad.
 
 Import Prenex Implicits.
 
-Hint Rewrite -> (@assoc ST _ _) (@id_l ST _ _) : triple.
+Hint Rewrite -> (@assoc ST _ _) (@id_l ST _ _) bitsopsprops.addB0 : triple.
 
 Ltac triple_apply lemma tac :=
  autounfold with spred;

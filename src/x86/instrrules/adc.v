@@ -3,11 +3,11 @@ Require Import x86proved.x86.instrrules.core.
 Import x86.instrrules.core.instrruleconfig.
 
 (** TODO(t-jagro): Generalize this to [VWORD] *)
-Lemma ADC_rule sz (ds:DstSrc sz) v1 o s z (c : bool) p
+Lemma ADC_rule s (ds:DstSrc s) v1 Of Sf Zf (Cf : bool) Pf
 : |-- specAtDstSrc ds (fun D v2 =>
-                         basic (D v1 ** OSZCP o s z c p)
+                         basic (D v1 ** OSZCP Of Sf Zf Cf Pf)
                                (BOP _ OP_ADC ds) empOP
-                               (let (carry, v) := eta_expand (adcB c v1 v2) in
+                               (let (carry, v) := eta_expand (adcB Cf v1 v2) in
                                 D v ** OSZCP (computeOverflow v1 v2 v) (msb v) (v == #0) carry (lsb v))).
 Proof. do_instrrule_triple. Qed.
 
