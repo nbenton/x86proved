@@ -47,10 +47,8 @@ Proof.
   specintros => olddi oldchar.
 
   have ICCP := (inlineComputeCharPos_correct NC NR : instrrule inlineComputeCharPos).
-(*  unfold inlineComputeCharPos, ADRtoADDR. *)
-  basic apply *. unfold ADRtoADDR.
-  admit. (*basic apply *. unfold eval.computeAdr, eval.computeDisplacement. rewrite ->addB0. sbazooka.
-  reflexivity.*)
+  basic apply *.
+  basic apply *. 
 Qed. 
 
 Lemma inlineReadChar_correct col row char :
@@ -65,5 +63,5 @@ Proof.
   specintros => oldal.
 
   have ICCP := (inlineComputeCharPos_correct NC NR : instrrule inlineComputeCharPos).
-  admit. (*  do 2 basic apply *.*)
+  do 2 basic apply *.
 Qed.

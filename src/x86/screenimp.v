@@ -32,11 +32,11 @@ Definition inlineComputeCharPos: program :=
 (* Output character in AL at position specified by CX (column) and DX (row) *)
 Definition inlineOutputChar :=
   inlineComputeCharPos;;
-  MOV [EDI], AL.
+  MOV BYTE PTR [EDI], AL.
 
 Definition inlineReadChar :=
   inlineComputeCharPos;;
-  MOV AL, [EDI].
+  MOV AL, BYTE PTR [EDI].
 
 Definition clearColour := toNat (n:=8) (#x"4F").
 
