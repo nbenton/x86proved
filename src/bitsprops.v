@@ -533,11 +533,14 @@ rewrite expnD.
 apply (leq_trans LT). apply leq_pmulr. apply expn_gt0. 
 Qed.
 
+Lemma msbNonNil n (p: BITS n.+1) b : msb p = last b p. 
+Proof. by case/tupleP: p => b' q. Qed. 
+
 Lemma splitmsb_msb n (p:BITS n.+1) : (splitmsb p).1 = msb p.
-Proof. rewrite /msb. induction n. + case/tupleP: p => b q. simpl. 
-rewrite (tuple0 q). simpl. by rewrite theadCons. 
-+ case E: (splitmsb p) => [b p']. simpl.
-admit.  
+Proof. induction n. 
++ case/tupleP: p => b q. by rewrite (tuple0 q)/= theadCons. 
++ case/tupleP: p => b q. rewrite /= beheadCons theadCons. case E: (splitmsb q) => [b' q'].
+specialize (IHn q). rewrite E/= in IHn. simpl. rewrite (msbNonNil q b) in IHn. by subst. 
 Qed. 
 
 Lemma signExtend_fromNat extra n m : 
