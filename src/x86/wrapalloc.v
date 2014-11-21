@@ -6,29 +6,31 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.spec x86proved.spectac x86proved.opred x86proved.x86.basic x86proved.x86.program.
 Require Import x86proved.x86.call x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrrules x86proved.x86.instrcodec x86proved.reader x86proved.cursor x86proved.x86.inlinealloc
                x86proved.x86.listspec x86proved.x86.listimp x86proved.triple x86proved.x86.macros.
+Require Import x86proved.basicspectac x86proved.chargetac. 
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Definition wrappedAlloc bytes (r1 r2:GPReg32) heapInfo: program :=
+Definition wrappedAlloc bytes (r1 r2:GPReg64): program :=
   (LOCAL FAIL;
   LOCAL SUCCEED;
-    allocImp heapInfo bytes FAIL;;
-    SUB EDI, bytes;;
+    allocImp bytes FAIL;;
+    SUB RDI, (BOPArgI OpSize8 (bytes:DWORD));;
     JMP SUCCEED;;
   FAIL:;;
-    MOV EDI, 0;;
+    MOV RDI, (0:QWORD);;
   SUCCEED:;)
   %asm.
 
-Lemma wrappedAlloc_correct bytes (r1 r2: GPReg32) heapInfo :
+Lemma wrappedAlloc_correct bytes (r1 r2: GPReg64) :
+  bytes < 2^31 ->
   |-- Forall i j: ADDR,
-  toyfun i EDI? empOP ((Exists p:DWORD, EDI ~= p ** memAny (zeroExtend _ p) (zeroExtend _ (p +# bytes))) \\// EDI ~= #0)
+  toyfun i RDI? empOP ((Exists p:ADDR, RDI ~= p ** memAny p (p +# bytes)) \\// RDI ~= #0)
 
-  @  (ESI? ** OSZCP? ** allocInv heapInfo)
-  <@ (i -- j :-> mkbody_toyfun (wrappedAlloc bytes r1 r2 heapInfo)).
-Proof.
+  @  (RSI? ** OSZCP? ** allocInv)
+  <@ (i -- j :-> mkbody_toyfun (wrappedAlloc bytes r1 r2)).
+Proof. move => LT.
 specintros => i j.
 
 (* First deal with the calling-convention wrapper *)
@@ -40,26 +42,25 @@ rewrite /wrappedAlloc/basic. specintros => i1 i2 O. unfold_program.
 specintros => i3 i4 i5 i6 i7 i8 -> -> i9 -> ->.
 
 (* Deal with the allocator spec itself *)
-specapply inlineAlloc_correct.
-- by ssimpl.
+specapply inlineAlloc_correct; first by ssimpl. 
 
 (* Now we deal with failure and success cases *)
 specsplit.
 
 (* failure case *)
+rewrite /(stateIsAny RDI). specintros => rdi. 
 autorewrite with push_at.
 
-(* MOV EDI, 0 *)
-specapply MOV_RanyI_rule. 
-- by ssimpl.
-rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. simpl (OPred_pred (default_PointedOPred _)). cancel1. rewrite /natAsDWORD.
-ssimpl. by apply: lorR2.
+(* MOV RDI, 0 *)
+specapply *; first by ssimpl.
+
+finish_logic_with sbazooka.  
+apply lorR2. cancel1. 
 
 (* success case *)
 autorewrite with push_at.
 
-(* SUB EDI, bytes *)
+(* SUB RDI, bytes *)
 specintros => pb.
 
 (* Subtraction arithmetic *)
@@ -68,19 +69,13 @@ assert (H:= subB_equiv_addB_negB (pb+#bytes) # bytes).
 rewrite E0 in H. simpl (snd _) in H. rewrite addB_negBn in H.
 rewrite H in E0.
 
-specapply SUB_RI_rule. sbazooka.
+specapply *; first by ssimpl. 
 
 (* JMP SUCCEED *)
-specapply JMP_I_rule.
-- by ssimpl.
+specapply *; first by ssimpl.
 
 (* Final stuff *)
-rewrite E0.
-rewrite <-spec_reads_frame.
-apply: limplAdj. autorewrite with push_at.
-apply: landL2. simpl (OPred_pred (default_PointedOPred _)). cancel1.
-rewrite /OSZCP/stateIsAny. sbazooka. apply: lorR1.
-
-simpl snd.
-sbazooka.
+rewrite /eval.getImm signExtend_fromNat => //.  
+rewrite E0. 
+finish_logic_with sbazooka. apply: lorR1. simpl snd. sbazooka. 
 Qed.

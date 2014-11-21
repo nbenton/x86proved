@@ -753,9 +753,11 @@ Module Solving.
              | [ H : ?T |- _ |-- ?T /\\ _ ] => apply lpropandR; first by exact H
            end.
 
-  Hint Unfold not : ssimpl.
+  (* Database of Unfold and Rewrite hints applied at the start of the ssimpl tactic *)
+  Create HintDb ssimpl.
 
-  Ltac ssimpl_with doUnify := autounfold with ssimpl; pre_ssimpl_with doUnify; post_ssimpl.
+  Ltac ssimpl_with doUnify := 
+    autounfold with ssimpl; (try autorewrite with ssimpl => //); pre_ssimpl_with doUnify; post_ssimpl.
 
   Ltac ssimpl := ssimpl_with cheap_unify.
 

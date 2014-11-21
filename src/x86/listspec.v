@@ -12,34 +12,34 @@ Import Prenex Implicits.
 
 Local Open Scope instr_scope.
 
-Fixpoint listSeg (p e:DWORD) (vs: seq DWORD) :SPred :=
+Fixpoint listSeg (p e:ADDR) (vs: seq QWORD) :SPred :=
   if vs is v::vs
-  then Exists q, zeroExtend _ p :-> v ** zeroExtend _ (p +#4) :-> q ** listSeg q e vs
+  then Exists q:ADDR, p :-> v ** (p +#8) :-> q ** listSeg q e vs
   else p == e /\\ empSP.
 
-Definition inlineHead_spec (r1 r2:GPReg32) (i j:ADDR) (p e: DWORD) v vs (instrs: program) :=
+Definition inlineHead_spec (r1 r2:GPReg64) (i j:ADDR) (p e: QWORD) v vs (instrs: program) :=
   |-- Forall O : OPred,
   (obs O @ (UIP ~= j ** r1~=v) -->>
    obs O @ (UIP ~= i ** r1?)) @
   (listSeg p e (v::vs) ** r2~=p) <@ (i -- j :-> instrs).
 Implicit Arguments inlineHead_spec [].
 
-Definition inlineTail_spec (r1 r2:GPReg32) (i j:ADDR) (p e: DWORD) v vs (instrs: program) :=
+Definition inlineTail_spec (r1 r2:GPReg64) (i j:ADDR) (p e: QWORD) v vs (instrs: program) :=
   |-- Forall O : OPred,
   (obs O @ (Exists q, UIP ~= j ** r1~=q ** listSeg p q (v::nil) ** listSeg q e vs) -->>
    obs O @ (UIP ~= i ** r1? ** listSeg p e (v::vs))) @
   (r2~=p) <@ (i -- j :-> instrs).
 Implicit Arguments inlineTail_spec [].
 
-(* Head is in EAX, tail is in EDI, result in EDI, ESI trashed *)
-Definition inlineCons_spec (r1 r2:GPReg32) heapInfo (failLabel i j:ADDR) (h t e: DWORD) vs (instrs: program):=
+(* Head is in RAX, tail is in RDI, result in RDI, RSI trashed *)
+Definition inlineCons_spec (r1 r2:GPReg64) (failLabel i j:ADDR) (h t e: QWORD) vs (instrs: program):=
   |-- Forall O : OPred, (
-      obs O @ (UIP ~= failLabel ** r1? ** r2? ** EDI?) //\\
-      obs O @ (UIP ~= j ** Exists pb, r1? ** r2? ** EDI ~= pb ** listSeg pb t [::h])
+      obs O @ (UIP ~= failLabel ** r1? ** r2? ** RDI?) //\\
+      obs O @ (UIP ~= j ** Exists pb, r1? ** r2? ** RDI ~= pb ** listSeg pb t [::h])
     -->>
-      obs O @ (UIP ~= i ** r1~=h ** r2~=t ** EDI?)
+      obs O @ (UIP ~= i ** r1~=h ** r2~=t ** RDI?)
     ) @
-    (ESI? ** OSZCP? ** allocInv heapInfo ** listSeg t e vs)
+    (ESI? ** OSZCP? ** allocInv ** listSeg t e vs)
     <@ (i -- j :-> instrs).
 
 (*

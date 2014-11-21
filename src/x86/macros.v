@@ -14,7 +14,7 @@ Local Open Scope instr_scope.
 
 Inductive JmpAbsTgt :=
 | JmpAbsTgtI :> ADDR -> JmpAbsTgt
-| JmpAbsTgtRegMem :> RegMem OpSize8 -> JmpAbsTgt.
+| JmpAbsTgtRegMem : RegMem OpSize8 -> JmpAbsTgt.
 
 (* We define absolute jumps, calls and branches using labels *)
 (* We assume that the jump is smaller than 2G! *)
@@ -32,6 +32,10 @@ Definition JCC cc cv := relToAbs (fun d:QWORD => JCCrel cc cv (mkTgt AdSize8 d))
 
 Arguments CALL (t)%ms.
 Arguments JMP (t)%ms.
+
+Coercion TgtR (r: GPReg64) := JmpAbsTgtRegMem (RegMemR _ r). 
+Example exJMP1 := JMP RBX. 
+Example exJMP2 (p: ADDR) := JMP p. 
 
 (*---------------------------------------------------------------------------
     Branch instructions

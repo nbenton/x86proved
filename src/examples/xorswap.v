@@ -9,26 +9,26 @@ Import Prenex Implicits.
 
 Open Scope instr_scope.
 
-Definition xorSwapImpl (r1 r2: GPReg32) : program :=
+Definition xorSwapImpl s (r1 r2: GPReg s) : program :=
   XOR r1, r2;;
   XOR r2, r1;;
   XOR r1, r2.
 
-Definition tmpSwapImpl (r1 r2 rt: GPReg32) : program :=
+Definition tmpSwapImpl s(r1 r2 rt: GPReg s) : program :=
   MOV rt, r1;;
   MOV r1, r2;;
   MOV r2, rt.
 
 (* Spec that is "common" between the two implementations *)
 (* We use "@" to conjoin implementation-specific scratch usage *)
-Definition basicSwap (r1 r2: GPReg32) c :=
+Definition basicSwap s (r1 r2: GPReg s) c :=
   Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
   c empOP
   (r1 ~= w ** r2 ~= v).
 
-Lemma xorSwapCorrect (r1 r2: GPReg32) :
+Lemma xorSwapCorrect s (r1 r2: GPReg s) :
   |-- basicSwap r1 r2 (xorSwapImpl r1 r2) @ OSZCP?.
 Proof.
   rewrite /xorSwapImpl/basicSwap. specintros => v w. autorewrite with push_at.
@@ -46,11 +46,10 @@ Proof.
   by ssimpl.
 Qed.
 
-Lemma tmpSwapCorrect (r1 r2 rt: GPReg32) :
+Lemma tmpSwapCorrect s (r1 r2 rt: GPReg s) :
   |-- basicSwap r1 r2 (tmpSwapImpl r1 r2 rt) @ rt?.
 Proof.
   rewrite /tmpSwapImpl/basicSwap. specintros => v w. autorewrite with push_at.
-
-  rewrite /stateIsAny. specintros => t.
+  unhideReg rt => t. 
   do 3 basic apply *.
 Qed.

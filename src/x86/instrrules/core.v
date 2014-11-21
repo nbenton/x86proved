@@ -246,7 +246,7 @@ Hint Unfold OSZCP : finish_logic_unfolder.
 
 (** We never want to see these when solving a goal, but they're
     convenient for statements *)
-Hint Unfold BOPArgM4 BOPArgI1 BOPArgI2 BOPArgI4 MOVArgM4 UOPArgM4 makeBOP makeMOV makeUOP VWORDasIMM : instrrules_all.
+(*(Hint Unfold BOPArgM4 BOPArgI1 BOPArgI2 BOPArgI4 MOVArgM4 UOPArgM4 makeBOP makeMOV makeUOP VWORDasIMM : instrrules_all.*)
 Hint Unfold OSZCP scaleBy BYTE DWORD WORD VWORD RegOrFlag_target : instrrules_side_conditions_spred.
 
 (*---------------------------------------------------------------------------
@@ -262,6 +262,7 @@ Hint Unfold
   evalMOV evalUnaryOp evalBinOp
   (** Maybe we should write [_rule]s for [evalShiftOp] and [evalCondition]. *)
   evalShiftOp evalPop
+  (* These are in Hint Unfold instrsyntax now *)
   makeBOP makeUOP makeMOV VWORDasIMM BOPArgM4 MOVArgM4 BOPArgI1 BOPArgI2 BOPArgI4 UOPArgM4 
   OSZCP
   natAsDWORD
@@ -528,7 +529,8 @@ Ltac do_instrrule_triple := do_instrrule instrrule_triple_bazooka.
 
 (** Some convenience macros for dealing with basicapply. *)
 Hint Unfold
-  specAtDstSrc specAtMovDstSrc specAtSrc specAtRegMemDst specAtMemSpec specAtMemSpecDst 
+  specAtJmpTgt specAtDstSrc specAtSrc specAtMovDstSrc specAtMemSpecSrc specAtRegMemDst specAtSrc specAtMemSpecDst 
+  specAtMemSpec specAtMemSpecEA specAtIndexAndScale specAtBaseReg specAtSegBase
   DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
   natAsDWORD getImm
   : instrrules_all.

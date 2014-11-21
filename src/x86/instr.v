@@ -59,6 +59,7 @@ Inductive RegImm s :=
 
 Coercion DWORDRegMemM a (ms: MemSpec a) := RegMemM OpSize4 a ms.
 Coercion DWORDRegImmI (d: DWORD)    := RegImmI OpSize4 d.
+Hint Unfold DWORDRegMemM DWORDRegImmI : instrsyntax.
 
 (* Unary ops: immediate, register, or memory source *)
 (* Binary ops: five combinations of source and destination *)
@@ -88,10 +89,10 @@ Inductive MovDstSrc (s: OpSize):=
 (*=Tgt *)
 (* 64-bit offsets aren't actually supported by the codec so why do we have them here? *)
 Inductive Tgt a :=
-| mkTgt :> VWORD (adSizeToOpSize a) -> Tgt a.
+| mkTgt : VWORD (adSizeToOpSize a) -> Tgt a.
 Inductive JmpTgt a :=
 | JmpTgtI (t:Tgt a) :> JmpTgt a
-| JmpTgtRegMem (rm: RegMem (adSizeToOpSize a)) :> JmpTgt a.
+| JmpTgtRegMem (rm: RegMem (adSizeToOpSize a)) : JmpTgt a.
 Inductive ShiftCount :=
 | ShiftCountCL | ShiftCountI (c: BYTE).
 Inductive Port :=

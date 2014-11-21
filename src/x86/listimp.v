@@ -12,27 +12,27 @@ Import Prenex Implicits.
 
 Local Open Scope instr_scope.
 
-Definition inlineHead (r1 r2:GPReg32) :program :=
-  MOV r1, [r2].
+Definition inlineHead (r1 r2:GPReg64) :program :=
+  MOV r1, QWORD PTR [r2].
 
-Definition inlineTail (r1 r2:GPReg32) :program :=
-  MOV r1, [r2+4].
+Definition inlineTail (r1 r2:GPReg64) :program :=
+  MOV r1, QWORD PTR [r2+8].
 
 (* Head is in r1, tail is in r2, result in EDI, ESI trashed *)
-Definition updateCons (r1 r2:GPReg32) :program :=
-    SUB EDI, (8:DWORD);;
-    MOV [EDI], r1;;
-    MOV [EDI+4], r2.
+Definition updateCons (r1 r2:GPReg64) :program :=
+    SUB RDI, (BOPArgI OpSize8 (8:DWORD));;
+    MOV QWORD PTR [RDI], r1;;
+    MOV QWORD PTR [RDI+8], r2.
 
-Definition inlineCons (r1 r2:GPReg32) heapInfo failAddr: program :=
-  allocImp heapInfo 8 failAddr;;
+Definition inlineCons (r1 r2:GPReg64) failAddr: program :=
+  allocImp 8 failAddr;;
   updateCons r1 r2.
 
-Definition callCons (r1 r2:GPReg32) heapInfo: program :=
+Definition callCons (r1 r2:GPReg64): program :=
   LOCAL FAIL;
   LOCAL SUCCEED;
-    inlineCons r1 r2 heapInfo FAIL;;
+    inlineCons r1 r2 FAIL;;
     JMP SUCCEED;;
   FAIL:;;
-    MOV EDI, (0:DWORD);;
+    MOV RDI, (0:QWORD);;
   SUCCEED:;.

@@ -52,11 +52,12 @@ Lemma MOV_RanyM_rule (pd:DWORD) (r1 r2:GPReg32) offset (v2: DWORD) :
 Proof. unhideReg r1 => old. basic apply *. Qed.
 *)
 
-Lemma MOV_RanyInd_rule (pd:DWORD) (r1:GPReg32) (v2: DWORD) :
+(*Lemma MOV_RanyInd_rule (pd:DWORD) (r1:GPReg32) (v2: DWORD) :
   |-- basic (r1? ** ADRtoADDR (a:=AdSize4) pd :-> v2)
             (MOV r1, [pd]) empOP
             (r1 ~= v2 ** ADRtoADDR (a:=AdSize4) pd :-> v2).
 Proof. unhideReg r1 => old. basic apply *. Qed.
+*)
 
 (*
 Lemma MOV_RM0_rule (pd:DWORD) (r1 r2:GPReg32) (v1 v2: DWORD) :

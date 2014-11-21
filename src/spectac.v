@@ -104,8 +104,13 @@ Proof. apply. Qed.
 
 (* This tactic attempts to instantiate universals in a hypothesis with evars. *)
 (* We must explicitly create evars to force Coq to not do typeclass resolution >:-( *)
+Hint Rewrite -> spec_at_at : eforalls.
+Hint Rewrite -> @spec_at_forall : eforalls.
+Hint Rewrite -> spec_at_reads : eforalls.
+
 Ltac eforalls_helper H do_on_evar :=
-  try (let e := fresh "e" in
+  try (try autorewrite with eforalls in H; 
+       let e := fresh "e" in
        match type_of H with
          | _ |-- Forall pf : ?T, ?A => (cut T; [ intro e; eapply (@lforallE_spec _ _ _ e) in H;
                                                      cbv beta in H; clear e
@@ -342,8 +347,15 @@ Module SpecApply.
     apply: safe_safe_ro.
   Qed.
 
-  (* Create hint database by putting a dummy entry in it. *)
-  Hint Unfold not : specapply.
+  Create HintDb specapply.
+
+  (* Take a lemma and 
+       (a) use the specAt hint database to unfold all "specAtX" definitions;
+       (b) alternative eforalls and pushing in of "@ X" through quantifiers and read-only frames 
+  *)
+  Ltac unfoldRule R :=
+    try autounfold with specAt in R;
+    eforalls R.
 
   Ltac specapply lem :=
     let Hlem := fresh "Hlem" in
@@ -354,7 +366,8 @@ Module SpecApply.
        should be added to the specapply db with Hint Unfold. *)
     repeat autounfold with specapply in Hlem;
     (* Instantiate binders with evars so we can reflect the hypothesis. *)
-    eforalls Hlem; [
+    unfoldRule Hlem;
+    [
       let C' := match type_of Hlem with ?C' |-- ?S' => constr:(C') end in
       let S' := match type_of Hlem with ?C' |-- ?S' => constr:(S') end in
       let C := match goal with |- ?C |-- ?S => constr:(C) end in
@@ -394,6 +407,6 @@ End SpecApply.
 
 Ltac specapply := SpecApply.specapply.
 Ltac unhideReg r :=
-  replace r? with (Exists x:DWORD, r ~= x) by done; specintro.
+  replace r? with (Exists x, r ~= x) by done; specintro.
 Ltac unhideFlag f :=
   replace f? with (Exists x:FlagVal, f ~= x) by done; specintro.

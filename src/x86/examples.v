@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrfun Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.program x86proved.x86.macros x86proved.x86.call.
+Require Import x86proved.spred x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.cursor.
 
 Set Implicit Arguments.
@@ -23,11 +23,11 @@ Definition max (r1 r2: GPReg32) : program :=
 (*=letproc *)
 Definition callproc f :=
   LOCAL iret;
-   MOV EDI, iret;; JMP f;;
+   MOV RDI, iret;; JMP f;;
   iret:;.
 
 Definition defproc (p: program) :=
-  p;; JMP EDI.
+  p;; JMP RDI.
 
 Notation "'letproc' f ':=' p 'in' q" :=
   (LOCAL skip; LOCAL f;
@@ -49,24 +49,24 @@ Example talx86_4_1 :=
 LOCAL test; LOCAL body;
   MOV EAX, ECX;;
   INC EAX;;
-  MOV EBX, 0;;
+  MOV EBX, (0:DWORD);;
   JMP test;;
 body:;;           (* EAX: DWORD, EBX: DWORD *)
   ADD EBX, EAX;;
 test:;;           (* EAX: DWORD, EBX: DWORD *)
   DEC EAX;;
-  CMP EAX, 0;;
+  CMP EAX, (0:DWORD);;
   JG body.
 
 
 (* Inline data *)
 Example exdata :=
   LOCAL data; LOCAL skip;
-    MOV EDI, data;;
-    ADD EAX, [EDI];;
+    MOV RDI, data;;
+    ADD RAX, QWORD PTR [RDI];;
     JMP skip;;
   data:;;
-    dw #123;;
+    dq #123;;
   skip:;.
 
 (* Alignment *)

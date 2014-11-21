@@ -15,33 +15,36 @@ Local Open Scope instr_scope.
        count, the number of bytes currently available
    Furthermore, "count" bytes of memory starting at "base" is defined
 *)
-Definition allocInv (infoBlock: ADR AdSize4) :=
-  Exists base: ADR AdSize4,
-  Exists count: ADR AdSize4,
-  ADRtoADDR infoBlock :-> base **
-  ADRtoADDR (a:=AdSize4) (infoBlock +#4) :-> count **
-  memAny (ADRtoADDR base) (ADRtoADDR count).
+Definition infoBlockReg := R14.
+Definition allocInv :=
+  Exists infoBlock: ADDR, 
+  infoBlockReg ~= infoBlock **
+  Exists base limit:ADDR,  
+  infoBlock :-> base **
+  infoBlock +#8 :-> limit **
+  memAny base limit.
 
 (* Allocate memory.
      infoBlock: Src  is pointer to two-word heap information block
      n: nat representing number of bytes to be allocated
-     failed: DWORD is label to branch to on failure
-   If successful, EDI contains pointer to byte just beyond allocated block.
+     failed: ADDR is label to branch to on failure
+   If successful, RDI contains pointer to byte just beyond allocated block.
 *)
-Definition allocImp (infoBlock:DWORD) (n: nat) (failed: ADDR) : program :=
-  MOV EDI, [infoBlock];;
-  ADD EDI, (n:DWORD);;
+Definition allocImp (n: nat) (failed: ADDR) : program :=
+  MOV RDI, QWORD PTR [infoBlockReg + 0];;
+  ADD RDI, (BOPArgI OpSize8 (n:DWORD));;
   JC  failed;;  (* A carry indicates unsigned overflow *)
-  CMP [infoBlock+#4:DWORD], EDI;;
+  CMP QWORD PTR [infoBlockReg + 8], RDI;;
   JC  failed;;  (* A carry indicates unsigned underflow *)
-  MOV [infoBlock], EDI.
+  MOV QWORD PTR [infoBlockReg + 0], RDI.
 
-Definition allocSpec n (fail:ADDR) inv code :=
+
+Definition allocSpec n (failed:ADDR) inv code :=
   Forall i j : ADDR, Forall O : OPred, (
-      obs O @ (UIP ~= fail ** EDI?) //\\
-      obs O @ (UIP ~= j ** Exists p, EDI ~= p +# n ** memAny (ADRtoADDR (a:=AdSize4) p) (ADRtoADDR (a:=AdSize4) (p +# n)))
+      obs O @ (UIP ~= failed ** RDI?) //\\
+      obs O @ (UIP ~= j ** Exists p, RDI ~= p +# n ** memAny p (p +# n))
     -->>
-      obs O @ (UIP ~= i ** EDI?)
+      obs O @ (UIP ~= i ** RDI?)
     )
     @ (OSZCP? ** inv)
     <@ (i -- j :-> code).
@@ -50,28 +53,37 @@ Hint Unfold allocSpec : specapply.
 
 (* Perhaps put a |> on the failLabel case *)
 
-Lemma inlineAlloc_correct n failed infoBlock : |-- allocSpec n failed (allocInv infoBlock) (allocImp infoBlock n failed).
+Lemma inlineAlloc_correct n failed : 
+  |-- allocSpec n failed allocInv (allocImp n failed).
 Proof.
   rewrite /allocSpec/allocImp.
   specintros => *. 
   unfold_program. specintros => *.
   autorewrite with push_at.
 
-  (* MOV EDI, [infoBlock] *)
-  rewrite {3}/allocInv. specintros => base limit. 
-  (*rewrite {2}/(stateIsAny EDI). specintros => oldedi.*)
-  specapply MOV_RanyInd_rule; first by ssimpl. 
+  (* MOV RDI, [infoBlockReg + 0] *)
+  rewrite {3}/allocInv. specintros => infoBlock base limit. 
+  rewrite {2}/(stateIsAny RDI). specintros => oldrdi.
+Hint Rewrite -> signExtend_fromNat : ssimpl. 
+Hint Rewrite -> addB0 : ssimpl. 
 
-  (* ADD EDI, bytes *)
-  specapply ADD_RI_rule; first by ssimpl.
+Hint Unfold fromSingletonMemSpec : specapply.
+Require Import basicspectac.
+
+  specapply *; first by sbazooka. 
+
+  (* ADD RDI, n *)
+  rewrite spec_at_at. rewrite spec_at_at. specapply *; first by sbazooka. 
 
   (* JC failed *)
   specapply JC_rule; first by rewrite /OSZCP; ssimpl.
-  case Hcarry:(carry_addB base (natAsDWORD n)). 
-  { rewrite <-spec_reads_frame. apply limplValid. apply landL1. finish_logic. 
+  case Hcarry:(carry_addB base (signExtend _ (natAsDWORD n))). 
+  { finish_logic. apply landL1. finish_logic. 
     rewrite /stateIsAny/allocInv. sbazooka.  }
 
-  (* CMP [infoBlock+#4], EDI *)
+ (* CMP [infoBlockReg + 8], RDI *)   
+admit.
+(*  specapply *. CMP_ruleZC. basicCMP_ZC. unfold UOPArgM4. specapply CMP_rule. 
   specapply CMP_IndR_ZC_rule; first by rewrite /stateIsAny; sbazooka.
 
   (* JC failed *)
@@ -90,3 +102,5 @@ Proof.
     { simpl. rewrite ltBNle /natAsDWORD in LT. rewrite -> Bool.negb_false_iff in LT. admit. } 
     { apply: addB_leB. 
       apply injective_projections. Admitted. 
+*)
+Qed.

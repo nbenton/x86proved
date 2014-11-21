@@ -34,6 +34,7 @@ Notation "l ':;;' p" := (prog_seq (prog_label l) p)
 Definition db := prog_data RoundtripBYTE.
 Definition dw := prog_data RoundtripWORD.
 Definition dd := prog_data RoundtripDWORD.
+Definition dq := prog_data RoundtripQWORD.
 (*=End *)
 Definition ds s := prog_data (@RoundtripTupleBYTE (String.length s)) (stringToTupleBYTE s).
 Definition dsz s := ds s;; db #0.
@@ -54,7 +55,7 @@ Fixpoint linearizeWith (p: program) tail :=
 Definition linearize p := linearizeWith p prog_skip.
 
 Declare Reduction showprog :=
-  cbv beta delta -[fromNat fromHex makeMOV makeBOP db dw dd ds align pad] zeta iota.
+  cbv beta delta -[fromNat fromHex makeMOV makeBOP db dw dd dq ds align pad] zeta iota.
 
 Fixpoint interpProgram (i j:ADDRCursor) prog :=
   match prog with
