@@ -515,11 +515,42 @@ have EQ: low n p = q by congruence. subst.
 by rewrite (eqP P).
 Qed.
 
+
+
 Lemma toNat_zeroExtend extra n (p: BITS n) : toNat (zeroExtend extra p) = toNat p.
 Proof. rewrite /zeroExtend. rewrite toNatCat. by rewrite toNat_zero. Qed.
 
 Lemma toNat_zeroExtendAux extra n (p: BITS n) : toNat (zeroExtendAux extra p) = toNat p.
 Proof. induction extra => //. by rewrite /= toNat_joinmsb0 IHextra. Qed.
+
+Lemma zeroExtend_fromNat extra n m : 
+  m < 2^n ->
+  zeroExtend extra (fromNat (n:=n) m) = #m. 
+Proof. move => LT. 
+apply toNat_inj. rewrite toNat_zeroExtend. rewrite toNat_fromNatBounded => //. 
+rewrite toNat_fromNatBounded => //. 
+rewrite expnD. 
+apply (leq_trans LT). apply leq_pmulr. apply expn_gt0. 
+Qed.
+
+Lemma splitmsb_msb n (p:BITS n.+1) : (splitmsb p).1 = msb p.
+Proof. rewrite /msb. induction n. + case/tupleP: p => b q. simpl. 
+rewrite (tuple0 q). simpl. by rewrite theadCons. 
++ case E: (splitmsb p) => [b p']. simpl.
+admit.  
+Qed. 
+
+Lemma signExtend_fromNat extra n m : 
+  m < 2^n ->
+  signExtend extra (fromNat (n:=n.+1) m) = #m. 
+Proof. move => LT. 
+unfold signExtend. rewrite -splitmsb_msb. 
+rewrite splitmsb_fromNat. simpl. 
+rewrite divn_small => //. simpl. 
+replace (copy extra false ## (fromNat (n:=n.+1) m)) with (zeroExtend extra (fromNat (n:=n.+1) m)). apply zeroExtend_fromNat. rewrite expnS. 
+apply: (ltn_trans LT). apply ltn_Pmull => //. apply expn_gt0. 
+done. 
+Qed. 
 
 (*---------------------------------------------------------------------------
     Properties of equality
