@@ -55,6 +55,14 @@ Definition unInr t u : CAST u (t+u).
 apply: MakeCast (fun x => inr x) (fun x => if x is inr y then Some y else None) _.
 elim => x y => //. by move => [->]. Defined.
 
+Definition unSome {t} : CAST t (option t). 
+apply: MakeCast (@Some t) id _. 
+by elim => //. Defined.
+
+Definition unNone {t} : CAST unit (option t). 
+apply: MakeCast (fun _ => None) (fun x => if x is None then Some tt else None) _. 
+by elim => //. Defined. 
+
 Definition unConst (t: eqType) (x:t) : CAST unit t.
 apply: MakeCast (fun _ => x) (fun x' => if x == x' then Some tt else None) _.
 move => x1 x2. case E: (_==_) => //. by rewrite (eqP E).

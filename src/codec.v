@@ -46,6 +46,9 @@ Notation "x $. y" := (Seq x y ~~> fstUnitCast _) (at level 30).
 Definition always (t: eqType) x : Codec t :=
     Emp ~~> unConst x.
 
+Definition alwaysNone {t} := 
+    Emp ~~> (@unNone t).
+
 (* Use one bit to dispatch to left or right summand *)
 Definition SumCond T U (c: Codec T) (d: Codec U) : Codec (T+U) :=
     Sym false .$ c ~~> unInl _ _
