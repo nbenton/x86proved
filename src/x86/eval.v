@@ -60,24 +60,20 @@ Definition evalIxReg {a} : IxReg a -> ST (ADR a) :=
 Definition evalIndexAndScale {a} (ixOpt: option (IxReg a * Scale)) : ST (option (ADR a * Scale)) :=
   if ixOpt is Some (ixReg,sc) then let! ix = evalIxReg ixReg; retn (Some (ix,sc))
   else retn None.
+Definition evalOptBase {a}  (baseopt: option (BaseReg a)) : ST (ADR a) :=
+  if baseopt is Some base then evalBaseReg base else retn #0.
   
 Definition evalMemSpecEA {a} (m:MemSpec a) : ST (ADR a) :=
-  let: mkMemSpec seg optSIB disp := m
-  in
-    if optSIB is Some SIB
-    then
-      match SIB with
-      | mkSIB base ixopt =>
-        let! baseval = evalBaseReg base;
-        let! ixoptval = evalIndexAndScale ixopt;
-        retn (computeEA baseval ixoptval disp)
-        (* See section 2.2.1.6 *)
-      | RIPrel =>
-        let! baseval = getRegFromProcState RIP;
-        retn (computeRIPrel a baseval disp)
-      end
-    else retn (computeDisplacement a disp).
-
+  match m with
+  (* See section 2.2.1.6 *)
+  | RIPrel disp =>
+    let! baseval = getRegFromProcState RIP;
+    retn (computeRIPrel a baseval disp)
+  | mkMemSpec seg baseopt ixopt disp =>
+    let! baseval = evalOptBase baseopt;
+    let! ixoptval = evalIndexAndScale ixopt;
+    retn (computeEA baseval ixoptval disp)
+  end.
 
 (* Simplified model of segment addressing *)
 (* Assume that segments always index from GDTR. Also, no limit checking *)
@@ -91,7 +87,7 @@ Definition evalSegBase a (sreg : SegReg) : ST (ADR a) :=
    Currently we assume 64-bit mode, no segments unless overridden by FS/GS *)
 Definition evalMemSpec {a} (m: MemSpec a) : ST ADDR :=
   let! adr = evalMemSpecEA m;
-  if m is mkMemSpec (Some sreg) _ _
+  if m is mkMemSpec (Some sreg) _ _ _
   then 
     let! segBase = evalSegBase a sreg;
     retn (ADRtoADDR (addB segBase adr))
@@ -215,9 +211,15 @@ Definition evalCondition cc : ST bool :=
   end.
 Hint Unfold evalCondition : eval.
 
-Definition evalSrc src :=
+Definition getImm {s} : IMM s -> VWORD s :=
+  match s with
+  | OpSize8 => fun c => signExtend _ c
+  | _ => fun c => c
+  end.
+
+Definition evalSrc {s} (src: Src s) :=
   match src with
-  | SrcI c => retn (signExtend _ c)
+  | SrcI c => retn (getImm c)
   | SrcR r => getRegFromProcState r
   | SrcM a m =>
     let! p = evalMemSpec m;
@@ -284,12 +286,6 @@ Definition evalJmpAddr {a} (tgt: JmpTgt a) : ST ADDR :=
   | JmpTgtRegMem rm => 
     let! offset = evalRegMem rm;
     retn (ADRtoADDR offset)
-  end.
-
-Definition getImm {s} : IMM s -> VWORD s :=
-  match s with
-  | OpSize8 => fun c => signExtend _ c
-  | _ => fun c => c
   end.
 
 Definition evalRegImm {s} (ri: RegImm s) : ST (VWORD s)  :=
@@ -373,7 +369,7 @@ Definition evalPop {s} (f: VWORD s -> ST unit) : ST unit :=
 
 Definition evalInstr (instr:Instr) : ST unit :=
   match instr with
-  | POP dst =>
+  | POP s dst =>
     evalPop (fun v => evalDst false dst (fun _ => retn v))
 
   | UOP s op dst =>
@@ -484,9 +480,9 @@ Definition evalInstr (instr:Instr) : ST unit :=
   | BADINSTR =>
     raiseExn ExnUD
 
-  | PUSH src =>
+  | PUSH s src =>
     let! v = evalSrc src;
-    evalPush (s:=OpSize8) v
+    evalPush v
 
   | CALLrel a src =>
     let! oldIP = getRegFromProcState RIP;

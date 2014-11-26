@@ -31,12 +31,12 @@ Definition allocInv :=
    If successful, RDI contains pointer to byte just beyond allocated block.
 *)
 Definition allocImp (n: nat) (failed: ADDR) : program :=
-  MOV RDI, QWORD PTR [infoBlockReg + 0];;
+  MOV RDI, QWORD PTR [infoBlockReg];;
   ADD RDI, (BOPArgI OpSize8 (n:DWORD));;
   JC  failed;;  (* A carry indicates unsigned overflow *)
   CMP QWORD PTR [infoBlockReg + 8], RDI;;
   JC  failed;;  (* A carry indicates unsigned underflow *)
-  MOV QWORD PTR [infoBlockReg + 0], RDI.
+  MOV QWORD PTR [infoBlockReg], RDI.
 
 
 Definition allocSpec n (failed:ADDR) inv code :=

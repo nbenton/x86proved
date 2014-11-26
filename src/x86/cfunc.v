@@ -28,36 +28,37 @@ Structure FunSig := mkFunSig { arity: nat; nonvoid: bool }.
 (* A function body can be defined independently of calling convention by
    parameterizing it on InstrSrc arguments. Result is assumed to be in EAX. *)
 Definition programWithSig sig :=
-  InstrSrc ^^ arity sig --> program.
+  MOVArg OpSize4 ^^ arity sig --> program.
 
 (* Here is an example: \n.n+1 *)
 Example incBody : programWithSig (mkFunSig 1 true) :=
-  fun arg => makeMOV EAX arg;; INC EAX.
+  fun arg => makeMOV _ EAX arg;; INC EAX.
 
 (*---------------------------------------------------------------------------
     Helpers for calling
   ---------------------------------------------------------------------------*)
 
 (* Push n arguments on the stack *)
-Fixpoint pushArgs n (p:program) : nfun Src n program :=
+Fixpoint pushArgs {s} n (p:program) : nfun (Src s) n program :=
   if n is n.+1
-  then fun arg => pushArgs n (PUSH arg;; p)
+  then fun arg => pushArgs n (PUSH s arg;; p)
   else p.
 
-Definition makeMOVsrc (r:GPReg32) (s: Src) : program :=
-  match s with
-  | SrcI c => MOV r, c
-  | SrcM m => MOV r, m
-  | SrcR r' => if r==r' then prog_skip else MOV r, r'
+Definition makeMOVsrc {s} (r:GPReg s) (src: Src s) : program :=
+  match src with
+  | SrcI c => MOV r, eval.getImm c
+  | SrcM _ m => MOV r, (MOVArgM s _ m)
+  | SrcR r' => (*if r==r' then prog_skip else *) MOV r, r'
   end.
 
 (* Put first argument in ECX, second in EDX, and the rest on the stack *)
-Definition pushFastArgs n (p:program) : nfun Src n program :=
+Definition pushFastArgs n (p:program) : nfun (Src OpSize4) n program :=
   match n with
   | 0 => p
   | 1 => fun arg => (makeMOVsrc ECX arg;; p)
   | n.+2 => fun arg1 arg2 => pushArgs n (makeMOVsrc ECX arg1;; makeMOVsrc EDX arg2;; p)
   end.
+
 
 (*---------------------------------------------------------------------------
     We support three x86 calling conventions:
@@ -85,13 +86,13 @@ Inductive CallConv := cdecl | stdcall | fastcall.
 (*---------------------------------------------------------------------------
     Generate calling sequence for cdecl, stdcall and fastcall conventions
   ---------------------------------------------------------------------------*)
-Definition call_cdecl_with (n:nat) (f:JmpTgt) :=
-  pushArgs n (CALL f;; ADD ESP, n*4).
+Definition call_cdecl_with (n:nat) f :=
+  pushArgs (s:=OpSize4) n (CALL f;; ADD ESP, (n*4:DWORD)).
 
-Definition call_std_with (n:nat) (f: JmpTgt) :=
-  pushArgs n (CALL f).
+Definition call_std_with (n:nat) f :=
+  pushArgs (s:=OpSize4)  n (CALL f).
 
-Definition call_fast_with (n:nat) (f: JmpTgt) :=
+Definition call_fast_with (n:nat) f :=
   pushFastArgs n (CALL f).
 
 Definition call_with (cc: CallConv) :=
@@ -105,13 +106,14 @@ Definition call_with (cc: CallConv) :=
 (*---------------------------------------------------------------------------
     Helper for creating function prologues and epilogues
   ---------------------------------------------------------------------------*)
-Fixpoint introParams n offset : InstrSrc ^^ n --> program -> program :=
-  if n is n'.+1
-  then fun p => introParams (offset + 4) (p [EBP + offset]%ms)
+Fixpoint introParams n offset : (Src OpSize4) ^^ n --> program -> program :=
+  if n is n'.+1 return (Src OpSize4) ^^ n --> program -> program
+  then fun p => introParams (offset + 4) (p (SrcM OpSize4 _ [EBP + offset]%ms))
   else fun p => p.
 Implicit Arguments introParams [].
 
 
+(*
 (*---------------------------------------------------------------------------
     Create function definitions for cdecl, stdcall and fastcall conventions
   ---------------------------------------------------------------------------*)
@@ -119,7 +121,7 @@ Definition def_cdecl sig : programWithSig sig -> program :=
   match sig return programWithSig sig -> program with
   | mkFunSig n _ =>
     fun body =>
-    PUSH EBP;; MOV EBP, ESP;;
+    PUSH _ EBP;; MOV EBP, ESP;;
     introParams n 8 body;; POP EBP;; RET 0
   end.
 Implicit Arguments def_cdecl [].
@@ -170,4 +172,5 @@ Example addfun (cc: CallConv) :=
 Eval showinstr in linearize (addfun cdecl).
 Eval showinstr in linearize (addfun stdcall).
 Eval showinstr in linearize (addfun fastcall).
+*)
 *)

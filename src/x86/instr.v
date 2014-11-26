@@ -36,11 +36,12 @@ Coercion NonSPReg64_to_IxReg64 (r:NonSPReg64) : IxReg AdSize8 := r.
 
 (*=MemSpec *)
 Inductive Scale := S1 | S2 | S4 | S8.
-Inductive SIB a := 
-| mkSIB (base: BaseReg a) (ixdisp: option (IxReg a * Scale)) : SIB a
-| RIPrel : SIB a (* Only valid in 64-bit mode *).
 Inductive MemSpec (a: AdSize) :=
-| mkMemSpec (seg: option SegReg) (sib: option (SIB a)) (displacement: DWORD).
+| mkMemSpec (seg: option SegReg) 
+            (base: option (BaseReg a))  
+            (ixdisp: option (IxReg a * Scale)) 
+            (displacement: DWORD)
+| RIPrel (displacement: DWORD).
 (*=End *)
 
 (* Immediates are maximum 32-bits, sign-extended to 64-bit if necessary *)
@@ -64,10 +65,10 @@ Hint Unfold DWORDRegMemM DWORDRegImmI : instrsyntax.
 (* Unary ops: immediate, register, or memory source *)
 (* Binary ops: five combinations of source and destination *)
 (*=Src *)
-Inductive Src :=
-| SrcI (c: DWORD) :> Src
-| SrcM a (ms: MemSpec a) :> Src 
-| SrcR (r: GPReg64) :> Src.
+Inductive Src s :=
+| SrcI (c: IMM s) :> Src s
+| SrcM a (ms: MemSpec a) : Src s 
+| SrcR (r: GPReg s) :> Src s.
 Inductive DstSrc (s: OpSize):=
 | DstSrcRR (dst src: GPReg s)
 | DstSrcRM a (dst: GPReg s) (src: MemSpec a)
@@ -136,9 +137,9 @@ Inductive Instr :=
 | LEA s (reg: GPReg s) (src: RegMem s)
 | XCHG s (reg: GPReg s) (src: RegMem s)
 | JCCrel (cc: Condition) (cv: bool) (tgt: Tgt AdSize8)
-| PUSH (src: Src)
+| PUSH s (src: Src s)
 | PUSHSegR (r: SegReg)
-| POP (dst: RegMem OpSize8)
+| POP s (dst: RegMem s)
 | POPSegR (r: SegReg)
 | CALLrel a (tgt: JmpTgt a) | JMPrel a (tgt: JmpTgt a)
 | CLC | STC | CMC

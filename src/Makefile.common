@@ -140,6 +140,7 @@ x86\cfunc.vo \
 x86\win\pecoff.vo \
 x86\cfuncspec.vo \
 x86\instrcodec.vo \
+x86\instrcodecenc.vo \
 x86\instrcodecprops.vo \
 cast.vo \
 regex.vo \

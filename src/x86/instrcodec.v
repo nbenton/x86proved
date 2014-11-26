@@ -14,12 +14,12 @@ Import Prenex Implicits.
 (*---------------------------------------------------------------------------
     Casts for datatypes used in instructions
   ---------------------------------------------------------------------------*)
-Definition unSrcR : CAST GPReg64 Src.
-apply: MakeCast SrcR (fun s => if s is SrcR r then Some r else None) _.
+Definition unSrcR s : CAST (GPReg s) (Src s).
+apply: MakeCast (SrcR _) (fun src => if src is SrcR r then Some r else None) _.
 by elim; congruence. Defined.
 
-Definition unSrcI : CAST DWORD Src.
-apply: MakeCast SrcI (fun s => if s is SrcI i then Some i else None) _.
+Definition unSrcI s : CAST (IMM s) (Src s).
+apply: MakeCast (SrcI _) (fun s => if s is SrcI i then Some i else None) _.
 by elim; congruence. Defined.
 
 Definition unRegMemR d : CAST (GPReg d) (RegMem d).
@@ -48,44 +48,19 @@ apply: (MakeCast (mkTgt a) (fun t => let: mkTgt d := t in Some d) _).
 by move => [d] y [<-].
 Defined.
 
-Definition unSrcRM : CAST (RegMem OpSize8) Src.
+Definition unSrcRM s : CAST (RegMem s) (Src s).
 apply: (MakeCast
-  (fun (rm: RegMem OpSize8) => match rm with RegMemR r => SrcR r | RegMemM a m => SrcM a m end)
-  (fun i => match i with SrcR r => Some (RegMemR OpSize8 r) | SrcM _ m => Some (RegMemM _ _ m)
+  (fun (rm: RegMem s) => match rm with RegMemR r => SrcR _ r | RegMemM a m => SrcM _ a m end)
+  (fun i => match i with SrcR r => Some (RegMemR s r) | SrcM _ m => Some (RegMemM _ _ m)
                        | _ => None
             end) _).
 elim => //. 
 - by move => a ms y [<-]. 
 - by move => ? ? [<-]. Defined.
 
-Definition unGPReg64 : CAST NonSPReg64 GPReg64.
-apply: MakeCast mkGPReg64 (fun r => if r is mkGPReg64 r then Some r else None) _.
-by elim => // ? ? [->]. 
-Defined.
-
 (*---------------------------------------------------------------------------
     Casts and codecs for bit-encoded types e.g. registers, scales, conditions
   ---------------------------------------------------------------------------*)
-
-(* Non-ESP, 32-bit register encoding *)
-Definition NonSPReg32Codec (rexBit:bool) : Codec NonSPReg32 :=
-if rexBit then
-    #b"000" .$ always R8D
-||| #b"001" .$ always R9D
-||| #b"010" .$ always R10D
-||| #b"011" .$ always R11D
-||| #b"100" .$ always R12D
-||| #b"101" .$ always R13D
-||| #b"110" .$ always R14D
-||| #b"111" .$ always R15D
-else
-    #b"000" .$ always EAX
-||| #b"001" .$ always ECX
-||| #b"010" .$ always EDX
-||| #b"011" .$ always EBX
-||| #b"110" .$ always ESI
-||| #b"111" .$ always EDI
-||| #b"101" .$ always EBP.
 
 (* 32-bit register encoding, including ESP *)
 Definition GPReg32Codec (rexBit:bool) : Codec GPReg32 :=
@@ -108,26 +83,6 @@ else
 ||| #b"111" .$ always (EDI:GPReg32)
 ||| #b"101" .$ always (EBP:GPReg32).
 
-(* Non-RSP, 64-bit register encoding *)
-Definition NonSPReg64Codec (rexBit:bool) : Codec NonSPReg64 :=
-if rexBit then 
-    #b"000" .$ always R8
-||| #b"001" .$ always R9
-||| #b"010" .$ always R10
-||| #b"011" .$ always R11
-||| #b"100" .$ always R12
-||| #b"101" .$ always R13
-||| #b"110" .$ always R14
-||| #b"111" .$ always R15
-else
-    #b"000" .$ always RAX
-||| #b"001" .$ always RCX
-||| #b"010" .$ always RDX
-||| #b"011" .$ always RBX
-||| #b"110" .$ always RSI
-||| #b"111" .$ always RDI
-||| #b"101" .$ always RBP.
-  
 (* 64-bit register encoding, including RSP *)
 Definition GPReg64Codec (rexBit:bool) : Codec GPReg64 :=
 if rexBit then 
@@ -184,21 +139,10 @@ apply: MakeCast (fun x => decBitOp x) (fun x => Some (encBitOp x)) _.
 move => x y [<-]; by rewrite encBitOpK. Defined.
 Definition bitOpCodec : Codec BitOp   := bitsCodec 2 ~~> bitOpCast.
 
-(*
-Definition optionalNonSPregCast : CAST (BITS 3) (option NonSPReg32).
-apply: MakeCast (fun (x: BITS 3) => decNonSPReg x) (fun x =>
-  if x is Some r then Some (encNonSPReg r) else Some #b"100") _.
-elim => //.
-+ move => x y [<-]. by rewrite encNonSPRegK.
-+ by move => y [<-]. Defined.
-Definition optionalNonSPRegCodec : Codec (option NonSPReg) :=
-  bitsCodec 3 ~~> optionalNonSPregCast.
-*)
-
 (* Index register in an SIB byte. 
    The X bit comes from the (optional) REX prefix in 64-bit mode.
-   See Section 2.2.1.2 *)
-Definition optionalNonSPReg32Codec X : Codec (option NonSPReg32) :=
+   See Section 2.2.1.2, also table 2-5 *)
+Definition SIBIxReg32Codec X : Codec (option (IxReg AdSize4)) :=
 if X
 then
     #b"000" .$ always (Some R8D)
@@ -219,7 +163,7 @@ else
 ||| #b"111" .$ always (Some EDI)
 ||| #b"101" .$ always (Some EBP).
   
-Definition optionalNonSPReg64Codec X : Codec (option NonSPReg64) :=
+Definition SIBIxReg64Codec X : Codec (option (IxReg AdSize8)) :=
 if X
 then
     #b"000" .$ always (Some R8)
@@ -240,26 +184,119 @@ else
 ||| #b"111" .$ always (Some RDI)
 ||| #b"101" .$ always (Some RBP).
 
-Definition IxRegCodec a X : Codec (option (IxReg a)) :=
+Definition SIBIxRegCodec a X : Codec (option (IxReg a)) :=
   match a return Codec (option (IxReg a)) with
-  | AdSize4 => optionalNonSPReg32Codec X
-  | AdSize8 => optionalNonSPReg64Codec X
+  | AdSize4 => SIBIxReg32Codec X
+  | AdSize8 => SIBIxReg64Codec X
   end.
 
-Definition BaseRegCodec a X : Codec (BaseReg a) :=
+(* This isn't quite right as EBP can't be used as a base with mod 00 - see table 2-3 *)
+Definition SIBBaseRegCodec a X : Codec (BaseReg a) :=
   match a return Codec (BaseReg a) with
   | AdSize4 => GPReg32Codec X
   | AdSize8 => GPReg64Codec X
   end.
 
 
-Definition NonBPNonSPReg32Codec : Codec NonSPReg32 :=
-    #b"000" .$ always EAX
-||| #b"001" .$ always ECX
-||| #b"010" .$ always EDX
-||| #b"011" .$ always EBX
-||| #b"110" .$ always ESI
-||| #b"111" .$ always EDI.
+(* Can't encode R12 or R13 this way - see Table 2-5 *)
+Definition NonBPNonSPBaseReg32Codec B : Codec (BaseReg AdSize4) :=
+if B then
+    #b"000" .$ always (R8D: BaseReg AdSize4)
+||| #b"001" .$ always (R9D: BaseReg AdSize4)
+||| #b"010" .$ always (R10D: BaseReg AdSize4)
+||| #b"011" .$ always (R11D: BaseReg AdSize4)
+||| #b"110" .$ always (R14D: BaseReg AdSize4)
+||| #b"111" .$ always (R15D: BaseReg AdSize4)
+else
+    #b"000" .$ always (EAX: BaseReg AdSize4)
+||| #b"001" .$ always (ECX: BaseReg AdSize4)
+||| #b"010" .$ always (EDX: BaseReg AdSize4)
+||| #b"011" .$ always (EBX: BaseReg AdSize4)
+||| #b"110" .$ always (ESI: BaseReg AdSize4)
+||| #b"111" .$ always (EDI: BaseReg AdSize4)
+.
+
+Definition NonBPBaseReg32Codec B : Codec (BaseReg AdSize4) :=
+  NonBPNonSPBaseReg32Codec B
+||| #b"100" .$ always ESP.
+
+
+Definition NonBPNonSPBaseReg64Codec B : Codec (BaseReg AdSize8) :=
+if B then
+    #b"000" .$ always (R8: BaseReg _)
+||| #b"001" .$ always (R9: BaseReg _)
+||| #b"010" .$ always (R10: BaseReg _)
+||| #b"011" .$ always (R11: BaseReg _)
+||| #b"110" .$ always (R14: BaseReg _)
+||| #b"111" .$ always (R15: BaseReg _)
+else
+    #b"000" .$ always (RAX: BaseReg _)
+||| #b"001" .$ always (RCX: BaseReg _)
+||| #b"010" .$ always (RDX: BaseReg _)
+||| #b"011" .$ always (RBX: BaseReg _)
+||| #b"110" .$ always (RSI: BaseReg _)
+||| #b"111" .$ always (RDI: BaseReg _)
+.
+
+Definition NonBPBaseReg64Codec B : Codec (BaseReg AdSize8) :=
+  NonBPNonSPBaseReg64Codec B
+||| #b"100" .$ always RSP.
+
+Definition NonBPNonSPBaseRegCodec a B : Codec (BaseReg a) :=
+  match a return Codec (BaseReg a) with
+  | AdSize4 => NonBPNonSPBaseReg32Codec B
+  | AdSize8 => NonBPNonSPBaseReg64Codec B
+  end.
+
+Definition NonBPBaseRegCodec a B : Codec (BaseReg a) :=
+  match a return Codec (BaseReg a) with
+  | AdSize4 => NonBPBaseReg32Codec B
+  | AdSize8 => NonBPBaseReg64Codec B
+  end.
+
+Definition NonSPBaseReg32Codec B : Codec (BaseReg AdSize4) :=
+if B then
+    #b"000" .$ always (R8D: BaseReg AdSize4)
+||| #b"001" .$ always (R9D: BaseReg AdSize4)
+||| #b"010" .$ always (R10D: BaseReg AdSize4)
+||| #b"011" .$ always (R11D: BaseReg AdSize4)
+||| #b"101" .$ always (R13D: BaseReg AdSize4)
+||| #b"110" .$ always (R14D: BaseReg AdSize4)
+||| #b"111" .$ always (R15D: BaseReg AdSize4)
+else
+    #b"000" .$ always (EAX: BaseReg AdSize4)
+||| #b"001" .$ always (ECX: BaseReg AdSize4)
+||| #b"010" .$ always (EDX: BaseReg AdSize4)
+||| #b"011" .$ always (EBX: BaseReg AdSize4)
+||| #b"101" .$ always (EBP: BaseReg AdSize4)
+||| #b"110" .$ always (ESI: BaseReg AdSize4)
+||| #b"111" .$ always (EDI: BaseReg AdSize4)
+.
+
+Definition NonSPBaseReg64Codec B : Codec (BaseReg AdSize8) :=
+if B then
+    #b"000" .$ always (R8: BaseReg _)
+||| #b"001" .$ always (R9: BaseReg _)
+||| #b"010" .$ always (R10: BaseReg _)
+||| #b"011" .$ always (R11: BaseReg _)
+||| #b"101" .$ always (R13: BaseReg _)
+||| #b"110" .$ always (R14: BaseReg _)
+||| #b"111" .$ always (R15: BaseReg _)
+else
+    #b"000" .$ always (RAX: BaseReg _)
+||| #b"001" .$ always (RCX: BaseReg _)
+||| #b"010" .$ always (RDX: BaseReg _)
+||| #b"011" .$ always (RBX: BaseReg _)
+||| #b"101" .$ always (RBP: BaseReg _)
+||| #b"110" .$ always (RSI: BaseReg _)
+||| #b"111" .$ always (RDI: BaseReg _)
+.
+
+Definition NonSPBaseRegCodec a B : Codec (BaseReg a) :=
+  match a return Codec (BaseReg a) with
+  | AdSize4 => NonSPBaseReg32Codec B
+  | AdSize8 => NonSPBaseReg64Codec B
+  end.
 
 Definition sreg3Codec : Codec SegReg :=
     #b"000" .$ always ES
@@ -344,21 +381,7 @@ apply: MakeCast decCondition (fun x => Some (encCondition x)) _.
 move => x y [<-]; by rewrite encConditionK. Defined.
 Definition conditionCodec : Codec Condition := bitsCodec 3 ~~> conditionCast.
 
-Hint Rewrite domConstSeq domSeq domCast domAlt domEmp domSym domAny : dom.
-
-Lemma totalScale : total scaleCodec. Proof. apply totalCast => //. apply totalBITS. Qed.
-(*Lemma totalReg : total regCodec. Proof. apply totalCast => //. apply totalBITS. Qed.*)
-(*Lemma totaloptionalNonSPReg : total optionalNonSPRegCodec. Proof. apply totalCast => //.*)
-Lemma totalOp : total opCodec. Proof. apply totalCast => //. apply totalBITS. Qed.
-Lemma totalShiftOp : total shiftOpCodec. Proof. apply totalCast => //. apply totalBITS. Qed.
-(*Lemma totalbyteReg : total byteRegCodec. Proof. apply totalCast => //. apply totalBITS. Qed.
-Lemma totalwordReg : total wordRegCodec. Proof. apply totalCast => //. apply totalBITS. Qed.
-(*Lemma totaldwordorbyteReg d : total (VRegCodec d).
-Proof. destruct d. apply totalbyteReg. apply totalwordReg. apply totalReg. Qed.*)*)
-
-Definition SIB a := (BaseReg a * option (IxReg a * Scale))%type.
-
-Definition SIBCast a : CAST (Scale * option (IxReg a) * (BaseReg a)) (SIB a).
+Definition SIBCast a : CAST (Scale * option (IxReg a) * option (BaseReg a)) (option (BaseReg a) * option (IxReg a * Scale)).
 apply: MakeCast (fun p => let: (sc,o,r) := p
                  in (r, if o is Some ix then Some(ix,sc) else None))
                 (fun p => let: (base, o) := p
@@ -372,16 +395,14 @@ Defined.
 
 (* The X and B bits come from the (optional) REX prefix in 64-bit mode.
    See Section 2.2.1.2 *)
-Definition SIBCodec a X B : Codec (SIB a) := 
-  scaleCodec $ IxRegCodec a X $ BaseRegCodec a B ~~> SIBCast a.
+Definition SIBCodec a X B := 
+  scaleCodec $ SIBIxRegCodec a X $ (SIBBaseRegCodec a B ~~> unSome) ~~> SIBCast a.  
 
-(*
-Lemma totalSIB : total SIBCodec.
-Proof. rewrite /SIBCodec. apply totalCast. apply totalSeq. apply totalSeq.
-apply totalScale. apply totaloptionalNonSPReg. apply totalReg.
-rewrite /castIsTotal.  move => [r o]. destruct o => //. by destruct p.
-Qed.
-*)
+Definition SIB00Codec a X B := 
+  scaleCodec $ SIBIxRegCodec a X $ (NonBPBaseRegCodec a B ~~> unSome) ~~> SIBCast a.
+
+Definition SIB00NoBaseCodec a X :=
+  scaleCodec $ SIBIxRegCodec a X $ #b"101" .$ alwaysNone ~~> SIBCast a.
 
 Definition tryEqAdSize F (a1 a2: AdSize): F a1 -> option (F a2) :=
   match a1, a2 with
@@ -390,90 +411,58 @@ Definition tryEqAdSize F (a1 a2: AdSize): F a1 -> option (F a2) :=
   | _, _ => fun x => None
   end. 
 
-Definition dispOffsetSIBCast (seg:option SegReg) s a : CAST (SIB a * DWORD) (RegMem s).
-apply: (MakeCast (fun p => RegMemM s a (mkMemSpec a seg (Some (mkSIB _ (p.1.1) (p.1.2))) p.2))
-  (fun rm => if rm is RegMemM a' (mkMemSpec seg' (Some (mkSIB base ixopt)) offset) 
-             then if seg == seg' then 
-               @tryEqAdSize (fun a => (SIB a * DWORD)%type) a' a ((base,ixopt),offset) 
+Definition RIPrelCast s (a:AdSize) : CAST DWORD (RegMem s).
+apply: (MakeCast (fun offset => RegMemM s a (RIPrel _ offset))
+                (fun rm => if rm is RegMemM a' (RIPrel offset)
+                           then @tryEqAdSize _ a' a offset else None) _).
+case a; do 3 elim => //; by move => ? ? [->]. 
+Defined. 
+
+Definition mkMemSpecCast (seg: option SegReg) s (a:AdSize) : 
+  CAST (option (BaseReg a) * option (IxReg a * Scale) * DWORD) (RegMem s). 
+apply:
+  (MakeCast (fun p => let: (b,i,d) := p in RegMemM s a (mkMemSpec a seg b i d))
+  (fun rm => if rm is RegMemM a' (mkMemSpec seg' b i d)
+             then if seg==seg' then @tryEqAdSize (fun a => (option (BaseReg a) * option (IxReg a * Scale) * DWORD)%type) a' a (b,i,d) 
              else None else None) _).
 case a. 
-+ elim => //. elim => //. elim => //. move => seg'. elim => //. elim => //.
-  move => [x y] z [x' y']. simpl. 
-  case E: (seg==seg') => //. rewrite (eqP E). move => [<- <-]. by simpl.
-  elim => //. move => seg'. elim => //. elim => //. 
-  case E: (seg==seg') => //. 
-+ elim => //. elim => //. elim => //. move => seg'. elim => //. elim => //. 
-  elim => //. move => x y z [x' y']. 
-  case E: (seg==seg') => //. 
-  elim => //. move => seg'. elim => //. elim => //.
-  move => x y z [x' y'].   case E: (seg==seg') => //. rewrite (eqP E). 
-  by move => [<- ->]. 
+- elim => //. elim => //. elim => //. move => seg' b i d [[b' i'] d']. 
+  case E: (seg == seg') => //. rewrite (eqP E). by move => [<- <- <-]. 
+- elim => //.  move => seg' b i d [[b' i'] d']. by case: (seg == seg') => //. 
+- elim => //. elim => //. elim => //. move => seg' b i d [[b' i'] d']. by case: (seg == seg') => //. 
+- elim => //. move => seg' b i d [[b' i'] d']. 
+  case E: (seg == seg') => //. rewrite (eqP E). by move => [<- <- <-]. 
 Defined. 
 
-(*
-Definition dispOffsetCast s a : CAST (IxReg a * DWORD) (RegMem s). 
-eapply (MakeCast (fun p => RegMemM s a (mkMemSpec a (Some p.1) p.2))).
-  (fun rm => if rm is RegMemM (mkMemSpec (Some (mkGPReg32 (mkGPReg64 base),None)) offset) then Some(mkNonSPReg32 base,offset) else None)).
-elim => //. elim => //. elim => //. move => [x y] z [x' y'].
-case: x => // r. case: r => //. move => r'. case: y => //. by move => [<- ->]. Defined.
-*)
+(* See Table 2-2 and 2-3 for details *)
+Definition RegMemCodec T (seg: option SegReg) (a:AdSize) (R X B:bool) (regOrOpcodeCodec : Codec T) s : Codec (T * RegMem s) :=
 
-Definition dispOffsetNoBaseCast (seg: option SegReg) s (a:AdSize) : CAST DWORD (RegMem s).
-apply: (MakeCast (fun offset => RegMemM s a (mkMemSpec a seg None offset))
-                (fun rm => if rm is RegMemM a' (mkMemSpec seg' None offset)
-                           then if seg==seg' then @tryEqAdSize _ a' a offset else None else None) _).
-case a. 
-elim => //. elim => //. 
-elim => //. move => seg'. elim => //. case E: (seg == seg') => //. rewrite (eqP E). by move => ? ? [<-]. 
-elim => //. move => seg'. case E: (seg == seg'); repeat elim => //. 
-elim => //. elim => //. elim => //. move => seg'. case E: (seg == seg'). elim => //. elim => //. 
-elim => //. move => seg'. case E: (seg == seg'). rewrite (eqP E). elim => //. by  move => ? ? [<-]. 
-elim => //. 
-Defined. 
+(* RIP-relative addressing. See Table 2-7 *)
+(* NOTE: in 32-bit mode this is used for pure displacement *)
+    #b"00" .$ regOrOpcodeCodec $ #b"101" .$ (DWORDCodec ~~> RIPrelCast s a)
 
-Definition RegMemCodec T seg (a:AdSize) (R X B:bool) (regOrOpcodeCodec : Codec T) s : Codec (T * RegMem s) :=
-    #b"00" .$ regOrOpcodeCodec $ SIBRM .$ (SIBCodec a X B $ always #0 ~~> dispOffsetSIBCast seg s a)
-(*||| #b"00" .$ regOrOpcodeCodec $ (NonBPNonSPReg32Codec $ always #0 ~~> dispOffsetCast dword)*)
-||| #b"00" .$ regOrOpcodeCodec $ (#b"101" .$ DWORDCodec ~~> dispOffsetNoBaseCast seg s a)
-||| #b"01" .$ regOrOpcodeCodec $ SIBRM .$ (SIBCodec a X B $ shortDWORDCodec ~~> dispOffsetSIBCast seg s a)
-(*(||| #b"01" .$ regOrOpcodeCodec $ (NonSPReg32Codec false $ shortDWORDCodec ~~> dispOffsetCast dword)*)
-||| #b"10" .$ regOrOpcodeCodec $ (SIBRM .$ SIBCodec a X B $ DWORDCodec ~~> dispOffsetSIBCast seg s a)
-(*||| #b"10" .$ regOrOpcodeCodec $ (NonSPReg32Codec false $ DWORDCodec ~~> dispOffsetCast dword)*)
+(* Mod R/M with mod=00: no displacement *)
+||| #b"00" .$ regOrOpcodeCodec $ ((NonBPNonSPBaseRegCodec a B ~~> unSome) $ alwaysNone $ always #0 ~~> mkMemSpecCast seg s a)
+(* SIB with mod=00: no displacement *)
+||| #b"00" .$ regOrOpcodeCodec $ (#b"100" .$ SIB00Codec a X B $ always #0 ~~> mkMemSpecCast seg s a)
+||| #b"00" .$ regOrOpcodeCodec $ (#b"100" .$ SIB00NoBaseCodec a X $ DWORDCodec ~~> mkMemSpecCast seg s a)
+
+(* Mod R/M with mod=01: disp8 *)
+||| #b"01" .$ regOrOpcodeCodec $ ((NonSPBaseRegCodec a B ~~> unSome) $ alwaysNone $ shortDWORDCodec ~~> mkMemSpecCast seg s a)
+(* SIB with mod=01: disp8 *)
+||| #b"01" .$ regOrOpcodeCodec $ (#b"100" .$ SIBCodec a X B $ shortDWORDCodec ~~> mkMemSpecCast seg s a)
+
+(* Mod R/M with mod=10: disp32 *)
+||| #b"10" .$ regOrOpcodeCodec $ ((NonSPBaseRegCodec a B ~~> unSome) $ alwaysNone $ DWORDCodec ~~> mkMemSpecCast seg s a)
+(* SIB with mod=10: disp32 *)
+||| #b"10" .$ regOrOpcodeCodec $ (#b"100" .$ SIBCodec a X B $ DWORDCodec ~~> mkMemSpecCast seg s a)
+
+(* Mod R/M with mod=11: reg-reg *)
 ||| #b"11" .$ regOrOpcodeCodec $ (VRegCodec B s ~~> unRegMemR s).
 
-(*
-Lemma totalRegMemCodec T (c: Codec T) d : total c -> total (RegMemCodec c d).
-Proof. move => tc. rewrite /total/RegMemCodec.
-autorewrite with dom.
-move => [x rm].
-destruct rm.
-(* Register *)
-simpl. by rewrite totaldwordorbyteReg tc.
-(* MemSpec *)
-destruct ms.
-case sib => [[base optix] |].
-(* Has a SIB *)
-+ case: optix => [[index sc] |].
-  - simpl.
-    rewrite /SIBCodec.
-    case E: (offset == #0). rewrite (eqP E)/=. rewrite tc/=.
-    destruct base; autorewrite with dom; simpl;
-      by rewrite totalScale totaloptionalNonSPReg totalReg/=.
-    destruct base; autorewrite with dom; simpl.
-      rewrite totalScale totaloptionalNonSPReg totalDWORD totalReg tc /=.
-      by rewrite !orbT !orbF.
-    rewrite totalScale totaloptionalNonSPReg totalReg totalDWORD tc/=.
-      by rewrite !orbT !orbF.
-simpl.
-simpl. rewrite totalDWORD/=. rewrite /SIBCodec.
-autorewrite with dom. simpl.
-case E: (offset == #0). simpl. by rewrite tc totalReg.
-rewrite tc totalReg. simpl. by rewrite !orbT !orbF.
-case E: (offset == #0). simpl. by rewrite tc totalDWORD.
-(* Has no SIB  *)
-by rewrite /= tc totalDWORD.
-Qed.
-*)
+
+
+
 
 Definition RegMemOpCodec seg (a:AdSize) R X B (op: BITS 3) dword :=
   RegMemCodec seg a R X B (Const op) dword ~~> sndUnitCast _.
@@ -771,22 +760,37 @@ Definition JCCCodec :=
 
 (*---------------------------------------------------------------------------
     PUSH instruction
-    @TODO: 16-bit variants
   ---------------------------------------------------------------------------*)
-Definition unPUSH : CAST Src Instr.
-apply: MakeCast PUSH (fun i => if i is PUSH s then Some s else None) _.
-by elim => // ? ? [->]. Defined.
+Definition unPUSH s : CAST (Src s) Instr.
+apply (MakeCast (@PUSH s) 
+                (fun i => if i is PUSH s1 x then tryEqOpSize (F:=Src) s x else None)).  
+elim: s. 
+  do 2 elim => //. elim => //. move => c; elim => //; by move => c' [->].  
+  by move => a ms src [<-]. 
+  move => r. elim => //. by move => r' [<-]. 
+  do 2 elim => //. elim => //. move => c; elim => //; by move => c' [->].  
+  by move => a ms src [<-]. 
+  move => r. elim => //. by move => r' [<-]. 
+  do 2 elim => //. elim => //. move => c; elim => //; by move => c' [->].  
+  by move => a ms src [<-]. 
+  move => r. elim => //. by move => r' [<-]. 
+  do 2 elim => //. elim => //. move => c; elim => //; by move => c' [->].  
+  by move => a ms src [<-]. 
+  move => r. elim => //. by move => r' [<-]. 
+Defined. 
 
 Definition unPUSHSegR : CAST SegReg Instr.
 apply: MakeCast PUSHSegR (fun i => if i is PUSHSegR r then Some r else None) _.
 by elim => // ? ? [->]. Defined.
 
 Definition PUSHCodec := 
-    #x"68" .$ DWORDCodec ~~> unSrcI ~~> unPUSH
-||| #x"6A" .$ shortDWORDCodec ~~> unSrcI ~~> unPUSH
-||| #b"01010" .$ GPReg64Codec false ~~> unSrcR ~~> unPUSH
-||| segPrefixCodec (fun seg =>
-    #x"FF" .$ RegMemOpCodec seg AdSize4 false false false #6 _ ~~> unSrcRM ~~> unPUSH)
+  (sizesPrefixCodec (fun w a =>
+   rexPrefixCodec (fun W R X B =>
+       (#x"68" .$ IMMCodec _ ~~> unSrcI _
+(*    ||| #x"6A" .$ shortDWORDCodec ~~> unSrcI _ *)
+    ||| #b"01010" .$ VRegCodec R _ ~~> unSrcR _) ~~> unPUSH (mkOpSize w W false))))
+(*||| segPrefixCodec (fun seg =>
+    #x"FF" .$ RegMemOpCodec seg AdSize4 false false false #6 _ ~~> unSrcRM ~~> unPUSH)*)
 ||| #x"0E" .$ always CS ~~> unPUSHSegR
 ||| #x"16" .$ always SS ~~> unPUSHSegR
 ||| #x"1E" .$ always DS ~~> unPUSHSegR
@@ -796,20 +800,32 @@ Definition PUSHCodec :=
 
 (*---------------------------------------------------------------------------
     POP instruction
-    @TODO: 16-bit variants
   ---------------------------------------------------------------------------*)
-Definition unPOP : CAST (RegMem OpSize8) Instr.
-apply: MakeCast POP (fun i => if i is POP d then Some d else None) _.
-elim => //. by move => d rm [->]. Defined.
+Definition unPOP s : CAST (RegMem s) Instr.
+apply (MakeCast (@POP s) 
+                (fun i => if i is POP s1 x then tryEqOpSize (F:=RegMem) s x else None)).  
+elim: s. 
+  do 2 elim => //. elim => //. move => c; elim => //; by move => c' [->].  
+  by move => a ms src [<-]. 
+  do 2 elim => //. elim => //. move => c; elim => //; by move => c' [->].  
+  by move => a ms src [<-]. 
+  do 2 elim => //. elim => //. move => c; elim => //; by move => c' [->].  
+  by move => a ms src [<-]. 
+  do 2 elim => //. elim => //. move => c; elim => //; by move => c' [->].  
+  by move => a ms src [<-]. 
+Defined. 
 
 Definition unPOPSegR : CAST SegReg Instr.
 apply: MakeCast POPSegR (fun i => if i is POPSegR r then Some r else None) _.
 by elim => // ? ? [->]. Defined.
 
 Definition POPCodec :=
-    segPrefixCodec (fun seg =>
-    #x"8F" .$ RegMemOpCodec seg AdSize4 false false false #0 _ ~~> unPOP)
-||| #b"01011" .$ GPReg64Codec false ~~> unRegMemR OpSize8 ~~> unPOP
+  (segPrefixCodec (fun seg =>
+   sizesPrefixCodec (fun w a =>
+   rexPrefixCodec (fun W R X B =>
+   #x"8F" .$ RegMemOpCodec seg AdSize4 R X B #0 _ ~~> unPOP (mkOpSize w W false)))))
+(* @TODO: 16-bit and 32-bit register versions *)
+||| #b"01011" .$ GPReg64Codec false ~~> unRegMemR OpSize8 ~~> unPOP OpSize8
 ||| #x"17" .$ always SS ~~> unPOPSegR
 ||| #x"1F" .$ always DS ~~> unPOPSegR
 ||| #x"07" .$ always ES ~~> unPOPSegR
@@ -971,15 +987,15 @@ Definition BINOPCodec :=
       (VAXCodec _ $ IMMCodec _ ~~> unDstSrcRI _) ~~> unBOP (mkOpSize w W true)
 
     (* OP r/m8, r8 | OP r/m16, r16 | OP r/m32, r32 | OP r/m64, r64 *)
-||| #b"00" .$ opCodec $ #b"000" .$ 
+||| #b"00" .$ opCodec $ #b"010" .$ 
       (RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w W false)
-||| #b"00" .$ opCodec $ #b"001" .$ 
+||| #b"00" .$ opCodec $ #b"011" .$ 
       (RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unDstSrcRMR _) ~~> unBOP (mkOpSize w W true)
 
     (* OP r8, r/m8 | OP r16, r/m16 | OP r32, r/m32 | OP r64, r/m64 *)
-||| #b"00" .$ opCodec $ #b"010" .$ 
+||| #b"00" .$ opCodec $ #b"000" .$ 
       (RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w W false)
-||| #b"00" .$ opCodec $ #b"011" .$ 
+||| #b"00" .$ opCodec $ #b"001" .$ 
       (RegMemCodec seg a R X B (VRegCodec R _) _ ~~> unDstSrcMRR _) ~~> unBOP (mkOpSize w W true)
 
     (* OP r/m8, imm8 | OP r/m16, imm16 | OP r/m32, imm32 | OP r/m64, imm32 *)

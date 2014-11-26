@@ -18,8 +18,8 @@ Inductive SingletonMemSpec a :=
 
 Definition fromSingletonMemSpec seg a (msa: SingletonMemSpec a) :=
   match msa with
-  | OffsetMemSpec d => mkMemSpec a seg None d
-  | RegMemSpec r => mkMemSpec a seg (Some (mkSIB _ r None)) (natAsDWORD 0)
+  | OffsetMemSpec d => mkMemSpec a seg None None d
+  | RegMemSpec r => mkMemSpec a seg (Some r) None (natAsDWORD 0)
   end.
 Hint Unfold fromSingletonMemSpec : instrsyntax.
 
@@ -41,83 +41,86 @@ Notation "s ':[' m ']'" :=
   (at level 1, m at level 0) : memspec_scope.
 
 Notation "'[' r '+' n ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) None)) n)
+  (mkMemSpec _ None (Some (r:BaseReg _)) None n)
   (at level 0, r at level 0, n at level 0) : memspec_scope.
 
 Notation "s ':[' r '+' n ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) None)) n)
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) None n)
   (at level 1, r at level 0, n at level 0, format "s :[ r + n ] ") : memspec_scope.
 
 Notation "'[' r '-' n ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) None)) (negB n))
+  (mkMemSpec _ None (Some (r:BaseReg _)) None (negB n))
   (at level 0, r at level 0, n at level 0) : memspec_scope.
 
 Notation "s ':[' r '-' n ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) None)) (negB n))
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) None (negB n))
   (at level 1, r at level 0, n at level 0, format "s :[ r - n ] ") : memspec_scope.
 
 Notation "'[' r '+' i '+' n ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) (Some (i,S1)))) n)
+  (mkMemSpec _ None (Some (r:BaseReg _)) (Some (i,S1)) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "s ':[' r '+' i '+' n ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) (Some (i,S1)))) n)
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) (Some (i,S1)) n)
   (at level 1, r at level 0, i at level 0, n at level 0, format "s :[ r + i + n ]") : memspec_scope.
 
 Notation "'[' r '+' i '*' '2' ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) (Some(i,S2)))) #0)
+  (mkMemSpec _ None (Some (r:BaseReg _)) (Some(i,S2)) #0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
 Notation "s ':[' r '+' i '*' '2' ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) (Some(i,S2)))) #0)
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) (Some(i,S2)) #0)
   (at level 1, r at level 0, i at level 0) : instr_scope.
 
 Notation "'[' r '+' i '*' '2' '+' n ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) (Some(i,S2)))) n)
+  (mkMemSpec _ None (Some (r:BaseReg _)) (Some(i,S2)) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "s ':[' r '+' i '*' '2' '+' n ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) (Some(i,S2)))) n)
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) (Some(i,S2)) n)
   (at level 1, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "'[' r '+' i '*' '4' ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) (Some(i,S4)))) 0)
+  (mkMemSpec _ None (Some (r:BaseReg _)) (Some(i,S4)) 0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
 Notation "s ':[' r '+' i '*' '4' ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) (Some(i,S4)))) 0)
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) (Some(i,S4)) 0)
   (at level 1, r at level 0, i at level 0) : instr_scope.
 
 Notation "'[' r '+' i '*' '4' '+' n ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) (Some(i,S4)))) n)
+  (mkMemSpec _ None (Some (r:BaseReg _)) (Some(i,S4)) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "s ':[' r '+' i '*' '4' '+' n ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) (Some(i,S4)))) n)
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) (Some(i,S4)) n)
   (at level 1, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "'[' r '+' i '*' '8' ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) (Some(i,S8)))) 0)
+  (mkMemSpec _ None (Some (r:BaseReg _)) (Some(i,S8)) 0)
   (at level 0, r at level 0, i at level 0) : instr_scope.
 
 Notation "s ':[' r '+' i '*' '8' ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) (Some(i,S8)))) 0)
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) (Some(i,S8)) 0)
   (at level 1, r at level 0, i at level 0) : instr_scope.
 
 Notation "'[' r '+' i '*' '8' '+' n ']'" :=
-  (mkMemSpec _ None (Some(mkSIB _ (r:BaseReg _) (Some(i,S8)))) n)
+  (mkMemSpec _ None (Some (r:BaseReg _)) (Some(i,S8)) n)
   (at level 0, r at level 0, i at level 0, n at level 0) : memspec_scope.
 
 Notation "s ':[' r '+' i '*' '8' '+' n ']'" :=
-  (mkMemSpec _ (Some s) (Some(mkSIB _ (r:BaseReg _) (Some(i,S8)))) n)
+  (mkMemSpec _ (Some s) (Some (r:BaseReg _)) (Some(i,S8)) n)
   (at level 1, r at level 0, i at level 0, n at level 0) : memspec_scope.
+
+Notation "'[' 'RIP' '+' n ']'" :=
+  (RIPrel AdSize8 n).
 
 Example exMemSpec1 := [RBX]%ms.
 Example exMemSpec2 := [EBP]%ms.
 Example exMemSpec3 := [R10+R12*4+12]%ms.
 Example exMemSpec4 := GS:[EDI+EAX*4+12]%ms.
 Example exMemSpec5 := FS:[OffsetMemSpec AdSize4 4]%ms.
-
+Example exMemSpec6 := [RIP+213]%ms.
 Open Scope instr_scope.
 
 Bind Scope memspec_scope with MemSpec.
@@ -507,8 +510,44 @@ Notation "'IN' x ',' 'EAX'" := (INOP OpSize4 (PortI x)) : instr_scope.
 
 Definition NOP := XCHG OpSize4 EAX (RegMemR OpSize4 EAX).
 
-Arguments PUSH (src)%ms.
-Arguments POP (dst)%ms.
+(*---------------------------------------------------------------------------
+    PUSH 
+  ---------------------------------------------------------------------------*)
+Arguments PUSH {s} (src)%ms.
+Notation "'PUSH' x"
+  := (@instr.PUSH _ x%ms) (x at level 55, at level 60) : instr_scope.
+Notation "'PUSH' 'WORD' 'PTR' m"
+  := (@instr.PUSH OpSize2 (SrcM _ _ m%ms)) (m at level 55, at level 60) : instr_scope.
+Notation "'PUSH' 'DWORD' 'PTR' m"
+  := (@instr.PUSH OpSize4 (SrcM _ _ m%ms)) (m at level 55, at level 60) : instr_scope.
+Notation "'PUSH' 'QWORD' 'PTR' m"
+  := (@instr.PUSH OpSize8 (SrcM _ _ m%ms)) (m at level 55, at level 60) : instr_scope.
+Coercion SrcM4 a (m: MemSpec a) : Src OpSize4 := SrcM OpSize4 a m.
+Coercion SrcI4 (d:DWORD) : Src OpSize4 := SrcI OpSize4 d.
+
+Example exPUSH1 := PUSH EAX.
+Example exPUSH2 := PUSH AL.
+Example exPUSH3 := PUSH R12.
+Example exPUSH4 := PUSH [R12].
+Example exPUSH5 := PUSH WORD PTR [EAX+4].
+Example exPUSH6 (d:DWORD) := PUSH d.
+
+(*---------------------------------------------------------------------------
+    Pop 
+  ---------------------------------------------------------------------------*)
+Arguments POP {s} (dst)%ms.
+Notation "'POP' x"
+  := (@instr.POP _ x%ms) (x at level 55, at level 60) : instr_scope.
+Notation "'POP' 'WORD' 'PTR' m"
+  := (@instr.POP OpSize2 (RegMemM _ _ m%ms)) (m at level 55, at level 60) : instr_scope.
+Notation "'POP' 'DWORD' 'PTR' m"
+  := (@instr.POP OpSize4 (RegMemM _ _ m%ms)) (m at level 55, at level 60) : instr_scope.
+Notation "'POP' 'QWORD' 'PTR' m"
+  := (@instr.POP OpSize8 (RegMemM _ _ m%ms)) (m at level 55, at level 60) : instr_scope.
+
+Example exPOP1 := POP R12. 
+Example exPOP2 := POP [EBX]. 
+Example exPOP3 := POP QWORD PTR [R12 + RBX*4 + 123]. 
 
 (* Typical use: in "Eval showinstr in linearize p" *)
 Declare Reduction showinstr := cbv beta delta -[fromNat makeMOV makeBOP] zeta iota.

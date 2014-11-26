@@ -269,7 +269,7 @@ Hint Unfold
   (** Maybe we should find a better way to deal with [evalShiftCount], [evalRegImm], and [SrcToRegImm] *)
   evalShiftCount evalRegImm (*SrcToRegImm*)
   (** Maybe we should find a better way to deal with [evalJmpTgt] and [evalRegMem] *)
-  evalJmpAddr evalRegMem getImm
+  evalJmpAddr evalRegMem getImm evalOptBase
   computeDisplacement adSizeToOpSize computeEA 
   setAdrRegInProcState
 : instrrules_eval.
@@ -314,15 +314,15 @@ Qed.
 
 Hint Unfold opSizeToNat computeDisplacement computeEA interpUIP : ssimpl. 
 
-Lemma evalPush_rule (sp:QWORD) (v w:QWORD) (S:SPred) :
-  TRIPLE (USP~=sp ** (sp -# 8) :-> v ** S)
+Lemma evalPush_rule s (sp:ADDR) (v w:VWORD s) (S:SPred) :
+  TRIPLE (USP~=sp ** (sp -# opSizeToNat s) :-> v ** S)
          (evalPush w) nil
-         (USP~=sp -# 8 ** (sp -# 8) :-> w ** S).
+         (USP~=sp -# opSizeToNat s ** (sp -# opSizeToNat s) :-> w ** S).
 Proof.
 rewrite/evalPush.
 triple_apply (getReg_rule (s:=OpSize8)).
 triple_apply triple_setRegSep.
-triple_apply triple_setSep.
+triple_apply (triple_setVWORDSep (s:=s)).
 Qed.
 Global Opaque evalPush.
 
@@ -514,10 +514,9 @@ Ltac do_instrrule_using tac :=
   try match goal with
         | [ ds : DstSrc _ |- _ ] => elim ds => ? ?
         | [ ds : MovDstSrc _ |- _ ] => elim ds => ? ?
-        | [ src : Src |- _ ] => elim src => ?
+        | [ src : Src _ |- _ ] => elim src => ?
         | [ rm : RegMem _ |- _ ] => elim rm => ?
         | [ a : AdSize |- _ ] => elim a
-        | [ s : SIB _ |- _ ] => elim s
         | [ t : JmpTgt _ |-  _ ] => elim t => [[?] |]
       end;
   do ?[ elim_atomic_in_match' | case/(@id (option _)) | case/(@id (_ * _))
