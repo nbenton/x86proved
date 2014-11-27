@@ -347,6 +347,9 @@ Definition makeExportDirectoryTable (dRVA:ADDR -> program) (nbEntries:DWORD) (ba
   NOTE: the IAT and ILT must be ADDR-aligned. This is not mentioned in the PE/COFF spec!
 *)
 Fixpoint makeIATsILTs isX64 (dRVA:ADDR -> program) (imports: seq (ADDR*(ADDR*DLLImport))) startIAT endIAT (importAddrs: seq (seq ADDR)) (IATs ILTs: program) :=
+let makeOrdinalEntry n := if isX64 then dq (#x"8000000000000000" || #n) else dd (#x"80000000" || #n) in
+let makeNameEntry NAME := if isX64 then dRVA NAME;; dd 0 else dRVA NAME
+in
   match imports, importAddrs with
    (IATbase,(ILTbase,Build_DLLImport _ entries))::imports, addrs::importAddrs =>
     (fix computeIATandILTforOneDLL (entries: seq ImportEntry) (addrs: seq ADDR) (IAT ILT: program) : program :=
@@ -354,13 +357,11 @@ Fixpoint makeIATsILTs isX64 (dRVA:ADDR -> program) (imports: seq (ADDR*(ADDR*DLL
        | entry::entries, addr::addrs =>
          match entry with
          | ImportByOrdinal n =>
-           computeIATandILTforOneDLL entries addrs
-             (IAT;; if isX64 then dq (#x"8000000000000000" || #n) else dd (#x"80000000" || #n))
-             (ILT;; if isX64 then dq (#x"8000000000000000" || #n) else dd (#x"80000000" || #n))
+           computeIATandILTforOneDLL entries addrs(IAT;; makeOrdinalEntry n) (ILT;; makeOrdinalEntry n)
 
          | ImportByName n =>
            LOCAL NAME;
-             computeIATandILTforOneDLL entries addrs (IAT;; addr:;; dRVA NAME) (ILT;; dRVA NAME);;
+             computeIATandILTforOneDLL entries addrs (IAT;; addr:;; makeNameEntry NAME) (ILT;; makeNameEntry NAME);;
            NAME:;;
              dw 0;; (* hint *)
              makeString n;;
@@ -435,7 +436,7 @@ startOptionalHeader:;;
   dd (low 32 (endHeaders - imageBase));; (* SizeOfHeaders *)
   dd 0;;                        (* CheckSum *)
   dw IMAGE_SUBSYSTEM_WINDOWS_GUI;;(* Subsystem *)
-  dw (IMAGE_DLL_CHARACTERISTICS_NO_SEH ||
+  dw (IMAGE_DLL_CHARACTERISTICS_NO_SEH || 
      IMAGE_DLL_CHARACTERISTICS_NX_COMPAT ||
      if targetType is DLL then IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE else #x"0000");; (* DllCharacteristics *)
   ddq #x"00100000";;               (* SizeOfStackReserve *)
@@ -470,7 +471,7 @@ startDirectories:;;
   (* Bound Import *)
   dd 0;; dd 0;;
   (* IAT *)
-  dRVA IATStart;; dd (low 32 (IATEnd - IATStart));;
+  dd 0;; dd 0;; (* this is calculated wrongly, but is ignored anyhow dRVA IATStart;; dd (low 32 (IATEnd - IATStart));;*)
   (* Delay Import Descriptor *)
   dd 0;; dd 0;;
   (* CLR Runtime Header *)
