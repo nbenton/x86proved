@@ -9,7 +9,7 @@ Require Import x86proved.x86.screenspec x86proved.x86.screenimp x86proved.x86.li
 Open Scope instr_scope.
 Local Transparent ILFun_Ops.
 
-Definition codeAddr:DWORD := #x"00300000".
+Definition codeAddr:ADDR := #x"0000000000300000".
 
 Definition Cgcd :=
   Cseq (Cassign xa (eliteral #100)) (
@@ -55,18 +55,18 @@ Definition showOctal_program : program :=
     (* A 32-bit octal number can take up 11 digits. Each digit is two bytes. *)
       (* Print EAX in octal, stepping on EBX AND EDX *)
       MOV EBX, rightpos;;
-      MOV ECX, 3;;
+      MOV ECX, (3:DWORD);;
       while (TEST EAX, EAX) CC_Z false ( (* while EAX <> 0 *)
-        MOV EDX, 7;; (* bit mask *)
+        MOV EDX, (7:DWORD);; (* bit mask *)
         AND EDX, EAX;;
-        ADD EDX, nat_of_ascii "0";;
-        MOV [EBX], DL;; (* write to screen *)
+        ADD EDX, (nat_of_ascii "0":DWORD);;
+        MOV BYTE PTR [EBX], DL;; (* write to screen *)
         SHR EAX, 3;; (* shift right *)
-        SUB EBX, 2(* move one character left on the screen *)
+        SUB EBX, (2:DWORD)(* move one character left on the screen *)
       ).
 
-Theorem gcd_safe: forall endAddr: DWORD,
-  |-- Forall O : PointedOPred, (obs O @ (EIP ~= endAddr) -->> obs O @ (EIP ~= codeAddr))
+Theorem gcd_safe: forall endAddr: ADDR,
+  |-- Forall O : PointedOPred, (obs O @ (UIP ~= endAddr) -->> obs O @ (UIP ~= codeAddr))
         @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
        <@ (codeAddr -- endAddr :-> gcd_bytes).
 Proof.
