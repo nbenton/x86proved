@@ -63,7 +63,7 @@ Definition incIfDot buf: program :=
   LOCAL skip;
   MOV EDI, buf;;
   inlineComputeLinePos;;
-  CMP BYTE [EDI + ECX*2], #c"*";;
+  CMP BYTE PTR [EDI + ECX*2], #c"*";;
   JNE skip;;
   INC ESI;;
 skip:;.
@@ -197,7 +197,7 @@ Definition bufDefined (buf:DWORD) := memAny (zeroExtend _ buf) (zeroExtend _ (bu
 Definition writeChar buf ch: program :=
   MOV EDI, (buf:DWORD);;
   inlineComputeLinePos;;
-  MOV BYTE [EDI+ECX*2], charToBYTE ch.
+  MOV BYTE PTR [EDI+ECX*2], charToBYTE ch.
 
 (* Using the screen buffer as input, produce new chracter in buf *)
 Open Scope char_scope.
@@ -208,16 +208,16 @@ Definition oneStep screen buf: program :=
   countNeighbours screen;;
   MOV EDI, screen;;
   inlineComputeLinePos;;
-  CMP BYTE [EDI+ECX*2], #c"*";;
+  CMP BYTE PTR [EDI+ECX*2], #c"*";;
   JE ALIVE;;
-  CMP ESI, 3;;
+  CMP ESI, (3:DWORD);;
   JNE SKIP;;
   writeChar buf ("*":Ascii.ascii);;
   JMP SKIP;;
 ALIVE:;;
-  CMP ESI, 3;;
+  CMP ESI, (3:DWORD);;
   JG KILL;;
-  CMP ESI, 2;;
+  CMP ESI, (2:DWORD);;
   JL KILL;;
   JMP SKIP;;
 KILL:;;
@@ -230,16 +230,16 @@ Definition clearColour := toNat (n:=8) (#x"4F").
 Definition clsProg :program :=
       MOV EBX, screenBase;;
       while (CMP EBX, (screenLimit:IMM OpSize4)) CC_B true ( (* while EBX < screenLimit *)
-        MOV BYTE [EBX], #c" ";;
-        MOV BYTE [EBX+1], # clearColour;;
+        MOV BYTE PTR [EBX], #c" ";;
+        MOV BYTE PTR [EBX+1], (# clearColour: BYTE);;
         INC EBX;; INC EBX (* move one character right on the screen *)
       ).
 
 Definition oneStepScreen screen buf :program :=
-      MOV EDX, 0;;
-      while (CMP EDX, numRows) CC_B true ( (* while EDX < numRows *)
-        MOV ECX, 0;;
-        while (CMP ECX, numCols) CC_B true ( (* while ECX < numCols *)
+      MOV EDX, (0:DWORD);;
+      while (CMP EDX, (#numRows:IMM OpSize4)) CC_B true ( (* while EDX < numRows *)
+        MOV ECX, (0:DWORD);;
+        while (CMP ECX, (#numCols:IMM OpSize4)) CC_B true ( (* while ECX < numCols *)
           oneStep screen buf;;
           INC ECX
         );;
@@ -254,12 +254,12 @@ Definition copyBuf (src dst:DWORD) : program:=
       while (CMP ESI, (src +# numCols*numRows.*2:IMM OpSize4)) CC_B true ( (* while ESI < screenLimit *)
         MOV EAX, [ESI];;
         MOV [EDI], EAX;;
-        ADD ESI, 4;; ADD EDI, 4
+        ADD ESI, (4:DWORD);; ADD EDI, (4:DWORD)
       ).
 
 Definition delay:program :=
       MOV EBX, (#x"08000001":DWORD);;
-      while (CMP EBX, 0) CC_Z false (DEC EBX).
+      while (CMP EBX, (0:DWORD)) CC_Z false (DEC EBX).
 
 
 Definition copyBlock (src dst:DWORD) : program:=
@@ -268,7 +268,7 @@ Definition copyBlock (src dst:DWORD) : program:=
       while (CMP ESI, (src +# numCols*numRows.*2:IMM OpSize4)) CC_B true ( (* while ESI < screenLimit *)
         MOV EAX, [ESI];;
         MOV [EDI], EAX;;
-        ADD ESI, 4;; ADD EDI, 4
+        ADD ESI, (4:DWORD);; ADD EDI, (4:DWORD)
       ).
 
 

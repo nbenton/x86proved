@@ -48,7 +48,7 @@ Definition prettyEx :=
     loopBody:;;
       MOV BYTE PTR [EDI], (#1:BYTE);;
       INC EDI;;
-      MOV [EDI], AL;;
+      MOV BYTE PTR [EDI], AL;;
       INC EDI;;
       ADD EAX, (16:DWORD);;
       CMP EAX, EBX;;

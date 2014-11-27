@@ -26,7 +26,7 @@ Definition call_toyfun f :=
 
 (* Use this macro to make a function that returns in the end *)
 Definition mkbody_toyfun (p: program) :=
-  p;; JMPrel _ (JmpTgtRegMem AdSize8 (RegMemR OpSize8 retreg)).
+  p;; JMP retreg.
 
 (* It's useful to define local functions *)
 Notation "'let_toyfun' f  ':=' p 'in' q" :=
@@ -231,7 +231,7 @@ Qed.
 (* This simple definition is the implementation of a higher-order function. It
    takes a pointer to another function in EBX and calls that. *)
 Definition toyfun_apply :=
-  JMPrel _ (JmpTgtRegMem AdSize8 RBX).
+  JMP RBX.
 
 Lemma limpland (S1 S2 S3: spec) :
   S1 -->> S2 -->> S3 -|- S1 //\\ S2 -->> S3.

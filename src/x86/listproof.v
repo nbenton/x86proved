@@ -55,15 +55,17 @@ specapply inlineAlloc_correct. rewrite /allocInv. ssimpl.
 
 (* Failure case *)
 specsplit.
-  rewrite <-spec_reads_frame. autorewrite with push_at.
-  apply limplValid. apply landL1. cancel1. rewrite /stateIsAny. by sbazooka.
+  rewrite <-spec_reads_frame. autorewrite with push_at. 
+  Require Import chargetac.
+  apply limplValid. apply landL1. finish_logic_with sbazooka. 
 
 (* Success case *)
 specintros => pb.
 have MASA := (memAnySplitAdd pb (m1:=4)).
-(*rewrite -> addB_addn.*)
-do 2 rewrite -> memAny_entails_pointsToDWORD. 
-admit. (*specintros => d1 d2.
+admit. 
+(*(*rewrite -> addB_addn.*)
+specintros => d1 d2.
+do 1 rewrite -> memAny_entails_pointsToDWORD. 
 
 elim E0:(sbbB false (pb+#8) #8) => [carry0 res0].
 assert (H:= subB_equiv_addB_negB (pb+#8) #8).

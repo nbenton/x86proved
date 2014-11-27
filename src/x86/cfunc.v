@@ -28,11 +28,12 @@ Structure FunSig := mkFunSig { arity: nat; nonvoid: bool }.
 (* A function body can be defined independently of calling convention by
    parameterizing it on InstrSrc arguments. Result is assumed to be in EAX. *)
 Definition programWithSig sig :=
-  MOVArg OpSize4 ^^ arity sig --> program.
+  Src OpSize4 ^^ arity sig --> program.
 
 (* Here is an example: \n.n+1 *)
-Example incBody : programWithSig (mkFunSig 1 true) :=
+(*Example incBody : programWithSig (mkFunSig 1 true) :=
   fun arg => makeMOV _ EAX arg;; INC EAX.
+*)
 
 (*---------------------------------------------------------------------------
     Helpers for calling
@@ -41,7 +42,7 @@ Example incBody : programWithSig (mkFunSig 1 true) :=
 (* Push n arguments on the stack *)
 Fixpoint pushArgs {s} n (p:program) : nfun (Src s) n program :=
   if n is n.+1
-  then fun arg => pushArgs n (PUSH s arg;; p)
+  then fun arg => pushArgs n (PUSH arg;; p)
   else p.
 
 Definition makeMOVsrc {s} (r:GPReg s) (src: Src s) : program :=
@@ -113,7 +114,6 @@ Fixpoint introParams n offset : (Src OpSize4) ^^ n --> program -> program :=
 Implicit Arguments introParams [].
 
 
-(*
 (*---------------------------------------------------------------------------
     Create function definitions for cdecl, stdcall and fastcall conventions
   ---------------------------------------------------------------------------*)
@@ -121,8 +121,8 @@ Definition def_cdecl sig : programWithSig sig -> program :=
   match sig return programWithSig sig -> program with
   | mkFunSig n _ =>
     fun body =>
-    PUSH _ EBP;; MOV EBP, ESP;;
-    introParams n 8 body;; POP EBP;; RET 0
+    PUSH EBP;; MOV EBP, ESP;;
+    @introParams n 8 body;; POP EBP;; RET 0
   end.
 Implicit Arguments def_cdecl [].
 
@@ -158,6 +158,7 @@ Definition callconv cc sig := (call_with cc sig.(arity), def_fun cc sig).
 
 (* Examples: compare http://en.wikibooks.org/wiki/X86_Disassembly/Calling_Conventions *)
 
+(*
 (*=addfun *)
 Example addfun (cc: CallConv) :=
   let (call, def) := callconv cc (mkFunSig 3 true) in

@@ -14,7 +14,7 @@ Local Open Scope instr_scope.
 
 Inductive JmpAbsTgt :=
 | JmpAbsTgtI :> ADDR -> JmpAbsTgt
-| JmpAbsTgtRegMem : RegMem OpSize8 -> JmpAbsTgt.
+| JmpAbsTgtRegMem a (rm: RegMem (adSizeToOpSize a)) : JmpAbsTgt.
 
 (* We define absolute jumps, calls and branches using labels *)
 (* We assume that the jump is smaller than 2G! *)
@@ -23,19 +23,25 @@ Definition relToAbs (c : QWORD -> Instr) : ADDR -> program :=
 
 Definition JMP (t:JmpAbsTgt) := 
   match t with JmpAbsTgtI a => relToAbs (fun d => JMPrel _ (mkTgt AdSize8 d)) a 
-             | JmpAbsTgtRegMem rm => JMPrel _ (JmpTgtRegMem AdSize8 rm) end.
+             | JmpAbsTgtRegMem a rm => JMPrel _ (JmpTgtRegMem a rm) end.
 Definition CALL t := 
   match t with JmpAbsTgtI a => relToAbs (fun d => CALLrel _ (mkTgt AdSize8 d)) a 
-             | JmpAbsTgtRegMem rm => CALLrel _ (JmpTgtRegMem AdSize8 rm) end.
+             | JmpAbsTgtRegMem a rm => CALLrel _ (JmpTgtRegMem a rm) end.
 
 Definition JCC cc cv := relToAbs (fun d:QWORD => JCCrel cc cv (mkTgt AdSize8 d)).
 
 Arguments CALL (t)%ms.
 Arguments JMP (t)%ms.
 
-Coercion TgtR (r: GPReg64) := JmpAbsTgtRegMem (RegMemR _ r). 
+Coercion TgtR64 (r: GPReg64) := @JmpAbsTgtRegMem AdSize8 (RegMemR _ r). 
+Coercion TgtR32 (r: GPReg32) := @JmpAbsTgtRegMem AdSize4 (RegMemR _ r).
+Coercion TgtM a (m: MemSpec a) := @JmpAbsTgtRegMem a (RegMemM _ _ m). 
+
 Example exJMP1 := JMP RBX. 
-Example exJMP2 (p: ADDR) := JMP p. 
+Example exJMP2 := JMP EAX.
+Example exJMP3 (p: ADDR) := JMP p. 
+Example exJMP4 := JMP [EBP].
+Example exJMP5 := JMP [RBP+RDX*4+24].
 
 (*---------------------------------------------------------------------------
     Branch instructions
@@ -180,21 +186,20 @@ Global Instance: forall (a : ADDR), loopy_instrrule (JMP a) := @JMP_I_loopy_rule
 
 Lemma JMP_R_rule (r:GPReg64) (addr p q: ADDR) :
   |-- Forall O, (obs O @ (UIP ~= addr ** r ~= addr) -->> obs O @ (UIP ~= p ** r ~= addr)) <@
-        (p -- q :-> JMP (JmpAbsTgtRegMem (RegMemR _ r))).
+        (p -- q :-> JMP r).
 Proof.
   rewrite /JMP. apply JMPrel_R_rule.
-
 Qed.
 
 Lemma JMP_R_loopy_rule (r:GPReg64) addr (p q: ADDR) :
   |-- Forall (O : PointedOPred), (|> obs O @ (UIP ~= addr ** r ~= addr) -->> obs O @ (UIP ~= p ** r ~= addr)) <@
-        (p -- q :-> JMP (JmpAbsTgtRegMem (RegMemR _ r))).
+        (p -- q :-> JMP r).
 Proof.
   rewrite /JMP. apply JMPrel_R_loopy_rule.
 Qed.
 
-Global Instance: forall (a : GPReg64), instrrule (JMP (JmpAbsTgtRegMem (RegMemR _ a))) := @JMP_R_rule.
-Global Instance: forall (a : GPReg64), loopy_instrrule (JMP (JmpAbsTgtRegMem (RegMemR _ a))) := @JMP_R_loopy_rule.
+Global Instance: forall (a : GPReg64), instrrule (JMP a) := @JMP_R_rule.
+Global Instance: forall (a : GPReg64), loopy_instrrule (JMP a) := @JMP_R_loopy_rule.
 
 Lemma CALL_I_rule (a:ADDR) (p q: ADDR) :
   |-- Forall O, Forall w: ADDR, Forall sp:ADDR, (

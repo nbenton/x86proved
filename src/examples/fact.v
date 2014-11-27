@@ -13,7 +13,7 @@ Import Prenex Implicits.
 Local Open Scope instr_scope.
 
 Definition defproc (p: program) :=
-  p;; JMPrel (JmpTgtRegMem RDI).
+  p;; JMPrel _ (JmpTgtRegMem AdSize8 (RegMemR _ RDI)).
 
 Notation "'letproc' f ':=' p 'in' q" :=
   (LOCAL skip; JMP skip;; LOCAL f; f:;; defproc p;; skip:;; q)
@@ -24,15 +24,15 @@ Definition callproc f :=
   iret:;.
 
 (*=main *)
-Definition call_cdecl3 f arg1 arg2 arg3 :=
+Definition call_cdecl3 f (arg1 arg2 arg3: Src OpSize4) :=
   PUSH arg3;; PUSH arg2;; PUSH arg1;;
   CALL f;; ADD ESP, (fromNat 12:IMM OpSize4).
 
 Definition main (printfSlot: DWORD) :=
   (* Argument in EBX *)
   letproc fact :=
-    MOV EAX, 1;;
-    MOV ECX, 1;;
+    MOV EAX, (1:DWORD);;
+    MOV ECX, (1:DWORD);;
       (* while ECX <= EBX *)
       while (CMP ECX, EBX) CC_LE true (
         MUL ECX;; (* Multiply EAX by ECX *)
@@ -40,15 +40,15 @@ Definition main (printfSlot: DWORD) :=
       )
   in
     LOCAL format;
-      MOV EBX, 10;; callproc fact;;
+      MOV EBX, (10:DWORD);; callproc fact;;
       MOV EDI, printfSlot;;
-      call_cdecl3 [EDI]%ms format EBX EAX;;
-      MOV EBX, 12;; callproc fact;;
+      call_cdecl3 [EDI]%ms (SrcI OpSize4 (low 32 format)) EBX EAX;;
+      MOV EBX, (12:DWORD);; callproc fact;;
       MOV EDI, printfSlot;;
-      call_cdecl3 [EDI]%ms format EBX EAX;;
+      call_cdecl3 [EDI]%ms (SrcI OpSize4 (low 32 format)) EBX EAX;;
       RET 0;;
     format:;;
       ds "Factorial of %d is %d";; db 10;; db 0.
 
-Compute assembleToString #x"C0000004" (main #x"C0000000").
+Compute assembleToString #x"00000000C0000004" (main #x"C0000000").
 (*=End *)
