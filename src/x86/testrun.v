@@ -11,9 +11,9 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Import Prenex Implicits.
 
-Definition codeAddr := #x"C0000004".
+Definition codeAddr := #x"00000000C0000004".
 Definition codeSpace := 256.
-Definition stackAddr := #x"D0000000".
+Definition stackAddr := #x"00000000D0000000".
 Definition stackSpace := 256.
 
 Definition reservedMemory :=
@@ -26,7 +26,7 @@ Definition initializedMemory :=
   if writeMem write_program reservedMemory (mkCursor codeAddr) (main #x"C0000000") is Some (_,m) then m else reservedMemory.
 
 Definition initialState :=
-  mkProcState ((initialReg ! RIP:=(zeroExtend 32 codeAddr) ! (RSP:Reg64):=(zeroExtend 32 stackAddr))) initialFlagState initializedMemory.
+  mkProcState initialSegReg ((initialReg ! RIP:=codeAddr ! (RSP:Reg64):=stackAddr)) initialFlagState initializedMemory.
 
 (*
 Definition runFor n s :=
