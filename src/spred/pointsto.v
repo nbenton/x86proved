@@ -272,6 +272,10 @@ split; rewrite pointsToWORD_BYTES. rewrite {3}(@split2eta 8 8 d); reflexivity.
 rewrite {1}(@split2eta 8 8 d); reflexivity. 
 Qed. 
 
+Lemma pointsToQWORD_BYTES (p:ADDR) (b0 b1 b2 b3 b4 b5 b6 b7:BYTE):
+  mkCursor p :-> [::b0;b1;b2;b3;b4;b5;b6;b7] -|- mkCursor p :-> (b7 ## b6 ## b5 ## b4 ## b3 ## b2 ## b1 ## b0).
+Proof. Admitted.
+
 
 
 

@@ -365,8 +365,9 @@ Module SpecApply.
     (* Unfold definitions as needed to expose a [safe]. Wrappers around [safe]
        should be added to the specapply db with Hint Unfold. *)
     repeat autounfold with specapply in Hlem;
+    repeat autounfold with instrsyntax in Hlem;
     (* Instantiate binders with evars so we can reflect the hypothesis. *)
-    unfoldRule Hlem;
+    repeat unfoldRule Hlem;
     [
       let C' := match type_of Hlem with ?C' |-- ?S' => constr:(C') end in
       let S' := match type_of Hlem with ?C' |-- ?S' => constr:(S') end in

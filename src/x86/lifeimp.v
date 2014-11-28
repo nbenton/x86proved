@@ -69,11 +69,11 @@ Definition incIfDot buf: program :=
 skip:;.
 
 Definition decModN (r:GPReg32) n : program :=
-  CMP r, ((0:DWORD):IMM OpSize4);;
+  CMP r, (#0:IMM _);;
   ifthenelse CC_Z true (MOV r, (n.-1:DWORD)) (DEC r).
 
 Definition incModN (r: GPReg32) n : program :=
-  CMP r, (((n.-1):DWORD):IMM OpSize4);;
+  CMP r, (#(n.-1):IMM _);;
   ifthenelse CC_Z true (MOV r, (0:DWORD)) (INC r).
 
 Require Import Ssreflect.div.
@@ -237,9 +237,9 @@ Definition clsProg :program :=
 
 Definition oneStepScreen screen buf :program :=
       MOV EDX, (0:DWORD);;
-      while (CMP EDX, (#numRows:IMM OpSize4)) CC_B true ( (* while EDX < numRows *)
+      while (CMP EDX, (#numRows:IMM _)) CC_B true ( (* while EDX < numRows *)
         MOV ECX, (0:DWORD);;
-        while (CMP ECX, (#numCols:IMM OpSize4)) CC_B true ( (* while ECX < numCols *)
+        while (CMP ECX, (#numCols:IMM _)) CC_B true ( (* while ECX < numCols *)
           oneStep screen buf;;
           INC ECX
         );;

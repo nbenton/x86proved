@@ -86,16 +86,6 @@ induction r =>  p q v//=.
   unfold adSizeToOpSize. ssimpl. by rewrite -> memAnyMerge.
 Qed.
 
-Lemma four X (bs: seq X) : size bs = 4 -> exists b1 b2 b3 b4, bs = [::b1;b2;b3;b4].
-move => H.
-destruct bs => //.
-destruct bs => //.
-destruct bs => //.
-destruct bs => //.
-exists x, x0, x1, x2.
-destruct bs => //.
-Qed.
-
 (*
 Lemma memAny_entails_fixedReaderMemIs R {r: Reader R} n : fixedSizeReader r n ->
   forall p q, apart n p q ->
@@ -119,9 +109,20 @@ Lemma memAny_entails_pointsToDWORD (p:ADDR) :
 Proof.
 rewrite /memAny. sdestruct => bs.
 setoid_rewrite seqMemIsBYTE_addn; last done. sdestruct => EQ.
-destruct (four EQ) as [b0 [b1 [b2 [b3 H]]]]. rewrite H.
-apply lexistsR with (b3 ## b2 ## b1 ## b0).
+do 5 destruct bs => //. 
+apply lexistsR with (b2 ## b1 ## b0 ## b).
 rewrite <- pointsToDWORD_BYTES. rewrite /pointsTo. ssplit.
+reflexivity.
+Qed.
+
+Lemma memAny_entails_pointsToQWORD (p:ADDR) :
+  memAny (mkCursor p) (mkCursor (p+#8)) |-- Exists d:QWORD, mkCursor p :-> d.
+Proof.
+rewrite /memAny. sdestruct => bs.
+setoid_rewrite seqMemIsBYTE_addn; last done. sdestruct => EQ.
+do 9 destruct bs => //. 
+apply lexistsR with (b6 ## b5 ## b4 ## b3 ## b2 ## b1 ## b0 ## b). 
+rewrite <- pointsToQWORD_BYTES. rewrite /pointsTo. ssplit.
 reflexivity.
 Qed.
 
