@@ -4,7 +4,7 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.spec x86proved.opred x86proved.obs x86proved.x86.basic x86proved.x86.program.
-Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.cursor x86proved.x86.inlinealloc.
+Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.cursor x86proved.x86.inlinealloc x86proved.x86.call.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -31,7 +31,7 @@ Definition inlineTail_spec (r1 r2:GPReg64) (i j:ADDR) (p e: QWORD) v vs (instrs:
   (r2~=p) <@ (i -- j :-> instrs).
 Implicit Arguments inlineTail_spec [].
 
-(* Head is in RAX, tail is in RDI, result in RDI, RSI trashed *)
+(* Head is in RAX, tail is in RDI, result in RDI *)
 Definition inlineCons_spec (r1 r2:GPReg64) (failLabel i j:ADDR) (h t e: QWORD) vs (instrs: program):=
   |-- Forall O : OPred, (
       obs O @ (UIP ~= failLabel ** r1? ** r2? ** RDI?) //\\
@@ -39,13 +39,13 @@ Definition inlineCons_spec (r1 r2:GPReg64) (failLabel i j:ADDR) (h t e: QWORD) v
     -->>
       obs O @ (UIP ~= i ** r1~=h ** r2~=t ** RDI?)
     ) @
-    (ESI? ** OSZCP? ** allocInv ** listSeg t e vs)
+    (OSZCP? ** allocInv ** listSeg t e vs)
     <@ (i -- j :-> instrs).
 
-(*
-Definition callCons_spec (r1 r2: GPReg32) heapInfo (i j h t e: DWORD) vs (instrs: program):=
-  (toyfun i (r1~=h ** r2~=t ** EDI?) empOP
-            (r1? ** r2? ** (EDI ~= #0 \\// (Exists pb, EDI ~= pb ** listSeg pb t [::h])))) @
-  (ESI? ** OSZCP? ** allocInv heapInfo ** listSeg t e vs)
+
+Definition callCons_spec (r1 r2: GPReg64) (i j h t e: ADDR) vs (instrs: program):=
+  (toyfun i (r1~=h ** r2~=t ** RDI?) empOP
+            (r1? ** r2? ** (RDI ~= #0 \\// (Exists pb, RDI ~= pb ** listSeg pb t [::h])))) @
+  (OSZCP? ** allocInv ** listSeg t e vs)
   <@ (i -- j :-> mkbody_toyfun instrs).
-*)
+

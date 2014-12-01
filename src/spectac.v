@@ -110,6 +110,7 @@ Hint Rewrite -> spec_at_reads : eforalls.
 
 Ltac eforalls_helper H do_on_evar :=
   try (try autorewrite with eforalls in H; 
+       try repeat autounfold  with specAt in H;
        let e := fresh "e" in
        match type_of H with
          | _ |-- Forall pf : ?T, ?A => (cut T; [ intro e; eapply (@lforallE_spec _ _ _ e) in H;
@@ -367,7 +368,7 @@ Module SpecApply.
     repeat autounfold with specapply in Hlem;
     repeat autounfold with instrsyntax in Hlem;
     (* Instantiate binders with evars so we can reflect the hypothesis. *)
-    repeat unfoldRule Hlem;
+    eforalls Hlem;
     [
       let C' := match type_of Hlem with ?C' |-- ?S' => constr:(C') end in
       let S' := match type_of Hlem with ?C' |-- ?S' => constr:(S') end in

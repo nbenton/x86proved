@@ -132,8 +132,15 @@ Qed.
 
 Lemma getSegRegSep (r : SegReg) (w : WORD) (P : SPred) (s : ProcState)
 : P |-- r ~= w ** ltrue -> P s -> w = segregisters s r.
-Proof. Admitted. (*pose SegReg. get_t. Qed.*)
-
+Proof. 
+  pose SegRegisters.
+  move => H pre.
+  move/(_ (toPState s) pre): H => [s1 [s2 [Hs [Hs1 _]]]].
+  case: (stateSplitsAsIncludes Hs) => {Hs} Hs _.
+  apply Some_inj.
+  symmetry.
+  get_t.
+Qed. 
 
 Lemma triple_letGetSegReg (r:SegReg) (w:WORD) (P Q: SPred) O c:
   (P |-- r ~= w ** ltrue) ->
@@ -164,6 +171,24 @@ Lemma triple_letGetReg32 (r:Reg OpSize4) v (P Q:SPred) O c:
   TRIPLE P (bind (getReg32FromProcState r) c) O Q.
 Proof. move => H. pre_let. triple_by_compute.
 rewrite /stateIs/reg32Is in H. repeat rewrite -> sepSPA in H. admit.  Qed.
+
+Lemma triple_letGetReg8 (r:Reg OpSize1) v (P Q:SPred) O c:
+  (P |-- r ~= v ** ltrue) ->
+  TRIPLE P (c v) O Q ->
+  TRIPLE P (bind (getReg8FromProcState r) c) O Q.
+Proof. move => H. pre_let. triple_by_compute.
+rewrite /stateIs/reg8Is in H. elim E:(Reg8_toRegPiece r) => * //. rewrite E in H. clear E. 
+split => //.
+apply: getRegPieceSep => //. by rewrite <- H. 
+Qed. 
+
+Lemma triple_letGetReg16 (r:Reg OpSize2) v (P Q:SPred) O c:
+  (P |-- r ~= v ** ltrue) ->
+  TRIPLE P (c v) O Q ->
+  TRIPLE P (bind (getReg16FromProcState r) c) O Q.
+Proof. move => H. pre_let. triple_by_compute.
+rewrite /stateIs/reg16Is in H. admit. 
+Qed. 
 
 Lemma triple_letGetReg32Sep (r:Reg OpSize4) v c O Q :
  forall S,

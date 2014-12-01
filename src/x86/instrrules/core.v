@@ -36,10 +36,13 @@ Lemma getReg_rule s (r: Reg s) v c O Q :
   forall S,
   TRIPLE (r ~= v ** S) (c v) O Q ->
   TRIPLE (r ~= v ** S) (bind (getRegFromProcState r) c) O Q.
-Proof. Admitted.
-(*destruct s; [apply evalReg8_rule | apply evalReg16_rule | apply evalReg32_rule | apply evalReg64_rule].
-Qed.
-Opaque evalReg.*)
+Proof. move => HR T. 
+destruct s.
+by triple_apply triple_letGetReg8.
+by triple_apply triple_letGetReg16. 
+by triple_apply triple_letGetReg32. 
+by triple_apply triple_letGetReg64. 
+Qed. 
 
 Lemma triple_setRegSep s (r: Reg s) v w :
   forall S, TRIPLE (r ~= v ** S) (setRegInProcState r w) nil

@@ -20,12 +20,12 @@ Definition inlineTail (r1 r2:GPReg64) :program :=
 
 (* Head is in r1, tail is in r2, result in EDI, ESI trashed *)
 Definition updateCons (r1 r2:GPReg64) :program :=
-    SUB RDI, (BOPArgI OpSize8 (8:DWORD));;
+    SUB RDI, (BOPArgI OpSize8 (16:DWORD));;
     MOV QWORD PTR [RDI], r1;;
     MOV QWORD PTR [RDI+8], r2.
 
 Definition inlineCons (r1 r2:GPReg64) failAddr: program :=
-  allocImp 8 failAddr;;
+  allocImp 16 failAddr;;
   updateCons r1 r2.
 
 Definition callCons (r1 r2:GPReg64): program :=

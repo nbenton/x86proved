@@ -51,41 +51,50 @@ Proof.
 rewrite /inlineCons_spec/inlineCons/updateCons. unfold_program.
 specintro => O. specintros => i1 i2 i3.
 
-specapply inlineAlloc_correct. rewrite /allocInv. ssimpl.
-
+specapply inlineAlloc_correct => //. by ssimpl. 
+(*rewrite /allocInv. specintros => infoBlock base limit. *)
 (* Failure case *)
 specsplit.
   rewrite <-spec_reads_frame. autorewrite with push_at. 
   Require Import chargetac.
-  apply limplValid. apply landL1. finish_logic_with sbazooka. 
+  apply limplValid. apply landL1. rewrite /stateIsAny. finish_logic_with sbazooka. 
 
 (* Success case *)
 specintros => pb.
-have MASA := (memAnySplitAdd pb (m1:=4)).
-admit. 
-(*(*rewrite -> addB_addn.*)
-specintros => d1 d2.
-do 1 rewrite -> memAny_entails_pointsToDWORD. 
+rewrite (memAnySplitAdd pb (m1:=8)) => //. 
+rewrite -> addB_addn.
+do 2 rewrite -> memAny_entails_pointsToQWORD. 
+specintros => d1 d2. 
 
-elim E0:(sbbB false (pb+#8) #8) => [carry0 res0].
-assert (H:= subB_equiv_addB_negB (pb+#8) #8).
+elim E0:(sbbB false (pb+#16) #16) => [carry0 res0].
+assert (H:= subB_equiv_addB_negB (pb+#16) #16).
 rewrite E0 addB_negBn /snd in H.
-rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.
+rewrite H in E0. replace (pb +#8 +#8) with (pb +#16) by by rewrite -addB_addn.
 
-specapply SUB_RI_rule. sbazooka.
+autorewrite with push_at. 
+(* SUB *)
+specapply *. sbazooka.
 
-specapply MOV_M0R_rule. rewrite E0. simpl fst. simpl snd. by sbazooka.
+(* MOV *)
+specapply *. rewrite /eval.getImm. rewrite signExtend_fromNat => //. rewrite E0.
+simpl snd. simpl fst. by sbazooka. 
 
-specapply MOV_MR_rule. by ssimpl.
+(* MOV *)
+autorewrite with push_at. 
+specapply *. ssimpl. 
+(* Why do we have to do this? *) 
+rewrite -sepSPA. rewrite sepSPC. rewrite sepSPA. rewrite sepSPC. rewrite sepSPA.
+rewrite sepSPA. reflexivity.  
+
 
 (* Final stuff *)
 rewrite <-spec_reads_frame. autorewrite with push_at.
-apply limplValid. apply landL2. cancel1.
-rewrite /OSZCP/listSeg-/listSeg. rewrite /stateIsAny. sbazooka.
+apply limplValid. apply landL2. rewrite /listSeg-/listSeg. 
+finish_logic_with sbazooka. (* Again, why? *) reflexivity.
 Qed.
 
-Lemma callCons_correct (r1 r2: GPReg32) heapInfo (i j h t e: DWORD) vs :
-  |-- callCons_spec r1 r2 heapInfo i j h t e vs (callCons r1 r2 heapInfo).
+Lemma callCons_correct (r1 r2: GPReg64) (i j h t e: ADDR) vs :
+  |-- callCons_spec r1 r2 i j h t e vs (callCons r1 r2).
 Proof.
 
 (* First deal with the calling-convention wrapper *)
@@ -105,24 +114,23 @@ specsplit.
 (* failure case *)
 autorewrite with push_at.
 
-rewrite /(stateIsAny EDI). specintros => oldedi. 
-(* mov EDI, 0 *)
-specapply MOV_RI_rule. sbazooka.
+rewrite /(stateIsAny RDI). specintros => oldedi. 
+(* MOV RDI, 0 *)
+specapply *. sbazooka.
 
 rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. simpl OPred_pred. cancel1. ssimpl. apply: lorR1. by rewrite /natAsDWORD.
+autorewrite with push_at. simpl OPred_pred. cancel1. ssimpl. apply: lorR1. reflexivity. 
 
 (* success case *)
 autorewrite with push_at.
 
 (* jmp SUCCEED *)
-specapply JMP_I_rule. by ssimpl.
+specapply *. by ssimpl.
 
 (* Final stuff *)
 rewrite <-spec_reads_frame.
 apply: limplAdj. autorewrite with push_at.
 apply: landL2. simpl OPred_pred. rewrite -> empOPL. cancel1.
 rewrite /OSZCP/stateIsAny. sbazooka.
-apply: lorR2. sbazooka.
-*)
+apply: lorR2. sbazooka. reflexivity.
 Qed.
