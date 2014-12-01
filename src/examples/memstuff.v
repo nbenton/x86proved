@@ -12,20 +12,19 @@ Open Scope instr_scope.
 Definition splits (p q r: ADDR) (vs ws: seq ADDR) :=
   p -- q :-> vs ** q -- r :-> ws.
 
-Definition nextCode := (ADD RSI, BOPArgI _ #4). 
+Definition nextCode := (ADD RSI, BOPArgI _ #8). 
 Definition nextSpec code := 
   Forall (p q r: ADDR), Forall vs w ws, 
   basic (splits p q r vs (w::ws) ** RSI ~= q) code empOP
-        (splits p (q+#4) r (vs++[::w]) ws ** RSI ~= (q+#4)) @ OSZCP?.
+        (splits p (q+#8) r (vs++[::w]) ws ** RSI ~= (q+#8)) @ OSZCP?.
 
 Lemma nextCorrect : |-- nextSpec nextCode. 
 Proof. rewrite /nextSpec/nextCode. specintros => *. autorewrite with push_at.
 basic apply *.
 rewrite /splits. 
 rewrite -> (seqFixedMemIsCons' _). rewrite seqMemIsCat pairMemIsPair'. rewrite signExtend_fromNat => //.
-admit.  
-(*rewrite sepSPC. rewrite -> seqMemIsCons. sbazooka. 
-rewrite -> seqMemIsNil. sbazooka. *)
+rewrite sepSPC. sbazooka. rewrite -> seqMemIsCons. sbazooka. 
+rewrite -> seqMemIsNil. sbazooka. reflexivity. 
 Qed. 
 
 
@@ -46,9 +45,10 @@ Proof.
 rewrite /getSpec/getCode. specintros => p q r vs w ws oldv. autorewrite with push_at.
 rewrite /splits. rewrite -> (seqFixedMemIsCons' _).
 rewrite /pointsTo. Hint Rewrite ->signExtend_fromNat : ssimpl. 
+rewrite ->(@memIsLe _ _ q) at 1. specintros => LE. 
 attempt basic apply *.
 rewrite /pointsTo. sbazooka. 
-admit. 
+ssimpl. rewrite -> (fixedMemIs_pointsTo (n:=_)) => //. reflexivity. 
 Qed. 
 
 Lemma putCorrect (p q r: ADDR) vs w ws oldv :
@@ -59,24 +59,22 @@ Lemma putCorrect (p q r: ADDR) vs w ws oldv :
   (splits p q r vs (w::ws) ** RSI ~= q ** RAX ~= w).
 Proof.
 rewrite /splits. do 2 rewrite -> (seqFixedMemIsCons' _).
+rewrite ->(@memIsLe _ _ q) at 1. specintros => LE. 
 attempt basic apply *.  
 rewrite /pointsTo. sbazooka.
-admit. 
+ssimpl. rewrite -> (fixedMemIs_pointsTo (n:=_)) => //. reflexivity. 
 Qed. 
 
-(*
-Lemma atEndCorrect (p q r: ADDR) (vs ws: seq ADDR):
+Lemma atEndCorrect (r:GPReg64) (p q a: ADDR) (vs ws: seq ADDR):
   |-- basic
-  (splits p q r vs ws ** RSI ~= q ** ZF? ** OF? ** SF? ** CF? ** PF?)
+  (splits p q a vs ws ** r ~= a ** RSI ~= q ** ZF? ** OF? ** SF? ** CF? ** PF?)
   (CMP RSI, r)
   empOP
-  (splits p q r vs ws ** RSI ~= q ** ZF ~= (if ws is nil then true else false) ** OF? ** SF? ** CF? ** PF?).
+  (splits p q a vs ws ** r ~= a ** RSI ~= q ** ZF ~= (if ws is nil then true else false) ** OF? ** SF? ** CF? ** PF?).
 Proof. rewrite /splits. destruct ws. 
 - rewrite seqMemIsNil. 
   specintros => [[->]]. basicCMP_ZC. 
-- rewrite -> (seqFixedMemIsConsNE (n:=4)) at 1 => //.  
+- rewrite -> (seqFixedMemIsConsNE (n:=8)) at 1 => //.  
   specintros =>/negbTE <-. basicCMP_ZC. 
-  (* Why doesn't it pick this up automatically? *) apply FixedMemIsDWORD. 
+  (* Why doesn't it pick this up automatically? *) apply FixedMemIsQWORD. 
 Qed. 
-
-*)
