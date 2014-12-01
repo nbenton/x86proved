@@ -133,6 +133,29 @@ split.
   sdestructs => ->. sbazooka.
 Qed.
 
+Lemma pointsTo_catBYTE n (p:ADDR) (b:BYTE) (bs: BITS (n*8)) : 
+  mkCursor p :-> (bs ## b : BITS ((n.+1)*8)) -|- mkCursor p :-> b ** (next p) :-> bs.
+Proof.
+simpl. rewrite /pointsTo.
+split.
+  sdestructs => q.
+  rewrite readerMemIsSimpl. rewrite /readBITS-/readBITS. 
+  rewrite interpReader_bind. sdestructs => p' vs. rewrite interpReader_retn.
+  case/tupleP: vs => [vs' b']. 
+  sdestructs => -> H. ssimpl. rewrite /readNext. rewrite /readTupleBYTE-/readTupleBYTE.
+  rewrite interpReader_bindBYTE. sdestruct => b0. rewrite interpReader_bind. simpl. 
+  sdestructs => q' b'' [E] E1 E2. subst. rewrite /= tuplehelp.beheadCons in H. 
+  apply catB_inj in H. destruct H as [H1 H2]. subst. rewrite tuplehelp.theadCons. rewrite /readNext.
+  sbazooka. rewrite -> interpReader_bind. apply lexistsR with q. 
+  apply lexistsR with b''. rewrite -> interpReader_retn. sbazooka. apply val_inj in E1. by subst. 
+
+simpl. sdestructs => q b' -> -> q'. apply lexistsR with q'. apply lexistsR with b'. ssimpl.
+rewrite interpReader_bind. apply lexistsR with q'. apply lexistsR with (cons_tuple b' (bitsToBytes _ bs)). 
+simpl. rewrite interpReader_bind. ssimpl. rewrite tuplehelp.beheadCons. rewrite tuplehelp.theadCons. 
+sbazooka. by rewrite bitsToBytesK. simpl. sbazooka. rewrite /readNext. rewrite /readBITS. 
+  rewrite interpReader_bind. simpl. sdestructs => p' v -> <-. rewrite /readNext.
+  rewrite bytesToBitsK. by ssimpl. 
+Qed.
 
 Lemma topPointsTo_consBYTE (x:BYTE) (xs: seq BYTE) : top _ :-> (x::xs) -|- lfalse.
 Proof. split => //.
@@ -153,70 +176,38 @@ split => //.
 by sdestructs => p' H.
 Qed.
 
-(*
 Require Import tuplehelp.
-Lemma pointsToBITS_BYTES n : forall (p:ADDR) (bs: n.-tuple BYTE),
-  p :-> bs -|- p :-> bytesToBits bs.
-Proof. induction n => p bs.
-- rewrite (tuple0 _). simpl. admit. 
-- case/tupleP: bs => [b bs]. simpl. rewrite beheadCons theadCons. admit. 
-Qed. 
-*)
 
+Lemma bytesToBitsCons n (b:BYTE) (bs:n.-tuple BYTE) : bytesToBits (cons_tuple b bs) = bytesToBits bs ## b.
+Proof. simpl. by rewrite tuplehelp.beheadCons tuplehelp.theadCons. Qed. 
+
+Lemma bytesToBitsNil : bytesToBits (nil_tuple _) = nilB.
+Proof. done. Qed.
+
+Lemma pointsToSeqBytes (bs:seq BYTE): forall (p:ADDRCursor),
+  p :-> bs -|- p :-> seqBytesToBits bs.
+Proof. induction bs => p. 
+- simpl. rewrite seqPointsToNil. split. 
+  + apply lexistsR with p. rewrite readerMemIsSimpl/=. sbazooka. 
+  + rewrite /pointsTo. sdestruct => q. rewrite readerMemIsSimpl/=. sbazooka.
+- simpl. case E: p => [pp |]. 
+  + subst. 
+    by rewrite pointsTo_catBYTE pointsTo_consBYTE IHbs {IHbs}.
++ rewrite topPointsTo_consBYTE. split => //.
+  rewrite /pointsTo. sdestruct => q. by simpl. 
+Qed. 
 
 Lemma pointsToDWORD_BYTES (p:ADDR) (b0 b1 b2 b3:BYTE):
   mkCursor p :-> [::b0;b1;b2;b3] -|- mkCursor p :-> (b3 ## b2 ## b1 ## b0).
-Proof.
-Admitted.
-(*rewrite {2}/pointsTo.
-rewrite /memIs/readerMemIs/readNext/readDWORD.
-split => //.
+Proof. rewrite pointsToSeqBytes. cancel1. apply val_inj. by rewrite/= !catA cats0. Qed. 
 
-ssplit.
+Lemma pointsToWORD_BYTES (p:ADDR) (b0 b1:BYTE):
+  mkCursor p :-> [::b0;b1] -|- mkCursor p :-> (b1 ## b0).
+Proof. rewrite pointsToSeqBytes. cancel1. apply val_inj. by rewrite/= !catA cats0. Qed. 
 
-rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE. ssplit.
-rewrite cursorPointsTo_consBYTE. sdestructs => p0 H0. rewrite pointsToBYTE_byteIs.
-rewrite cursorPointsTo_consBYTE. sdestructs => p1 H1. rewrite pointsToBYTE_byteIs.
-rewrite cursorPointsTo_consBYTE. sdestructs => p2 H2. rewrite pointsToBYTE_byteIs.
-rewrite seqPointsToNil.
-rewrite H0. setoid_rewrite interpReader_bindBYTE. ssplit.
-rewrite H1. setoid_rewrite interpReader_bindBYTE. ssplit.
-rewrite H2. setoid_rewrite interpReader_bindBYTE. ssplit.
-setoid_rewrite interpReader_retn.
-rewrite /bytesToDWORD.
-sbazooka.
-have H0':= (nextIsInc H0).
-have H1':= (nextIsInc H1).
-have H2':= (nextIsInc H2).
-subst. reflexivity.
-
-
-sdestruct => q.
-rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE.
-sdestruct => b0'.
-case E: (next p) => [p' |].
-rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE.
-sdestruct => b1'.
-case E': (next p') => [p'' |].
-rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE.
-sdestruct => b2'.
-case E'': (next p'') => [p''' |].
-rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE.
-sdestruct => b3'.
-rewrite interpReader_retn.
-rewrite -> seqPointsToNil.
-rewrite /bytesToDWORD.
-sdestructs => H1 H2. ssimpl.
-destruct (catB_inj (n1:=8) (n2:=24) H2) as [H2a H2'].
-destruct (catB_inj (n1:=8) (n2:=16) H2') as [H2b H2''].
-destruct (catB_inj (n1:=8) (n2:=8) H2'') as [H2c H2d].
-subst. by ssimpl.
-
-rewrite interpReader_bindBYTE_top. by ssimpl.
-rewrite interpReader_bindBYTE_top. by ssimpl.
-rewrite interpReader_bindBYTE_top. by ssimpl.
-Qed.
-*)
+Lemma pointsToQWORD_BYTES (p:ADDR) (b0 b1 b2 b3 b4 b5 b6 b7:BYTE):
+  mkCursor p :-> [::b0;b1;b2;b3;b4;b5;b6;b7] -|- mkCursor p :-> (b7 ## b6 ## b5 ## b4 ## b3 ## b2 ## b1 ## b0).
+Proof. rewrite pointsToSeqBytes. cancel1. apply val_inj. by rewrite/= !catA cats0. Qed. 
 
 Corollary pointsToDWORD_asBYTES (d: DWORD) (p:ADDR):
   let: (b3,b2,b1,b0) := split4 8 8 8 8 d in
@@ -226,56 +217,4 @@ have SE := @split4eta 8 8 8 8 d.
 elim E: (split4 8 8 8 8 d) => [[[b3 b2] b1] b0].
 rewrite E in SE. rewrite -SE. apply pointsToDWORD_BYTES.
 Qed.
-
-Lemma pointsToWORD_BYTES (p:ADDR) (b0 b1:BYTE):
-  mkCursor p :-> [::b0;b1] -|- mkCursor p :-> (b1 ## b0).
-Proof.
-Admitted.
-(*rewrite {2}/pointsTo.
-rewrite /memIs/readerMemIs/readNext/readWORD.
-split => //.
-
-ssplit.
-
-rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE. ssplit.
-rewrite cursorPointsTo_consBYTE. sdestructs => p0 H0. rewrite pointsToBYTE_byteIs.
-rewrite seqPointsToNil.
-rewrite H0. setoid_rewrite interpReader_bindBYTE. ssplit.
-setoid_rewrite interpReader_retn.
-rewrite /bytesToWORD.
-sbazooka.
-have H0':= (nextIsInc H0).
-subst. reflexivity.
-
-
-sdestruct => q.
-rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE.
-sdestruct => b0'.
-case E: (next p) => [p' |].
-rewrite pointsTo_consBYTE pointsToBYTE_byteIs. setoid_rewrite interpReader_bindBYTE.
-sdestruct => b1'.
-rewrite interpReader_retn.
-rewrite -> seqPointsToNil.
-rewrite /bytesToWORD.
-sdestructs => H1 H2. ssimpl.
-destruct (catB_inj (n1:=8) (n2:=8) H2) as [H2c H2d].
-subst. by ssimpl.
-
-rewrite interpReader_bindBYTE_top. by ssimpl.
-Qed.
-*)
-Corollary pointsToWORD_asBYTES (d: WORD) (p:ADDR):
-  let: (b1,b0) := split2 8 8 d in
-  mkCursor p :-> [::b0;b1] -|- mkCursor p :-> d.
-Proof.
-split; rewrite pointsToWORD_BYTES. rewrite {3}(@split2eta 8 8 d); reflexivity. 
-rewrite {1}(@split2eta 8 8 d); reflexivity. 
-Qed. 
-
-Lemma pointsToQWORD_BYTES (p:ADDR) (b0 b1 b2 b3 b4 b5 b6 b7:BYTE):
-  mkCursor p :-> [::b0;b1;b2;b3;b4;b5;b6;b7] -|- mkCursor p :-> (b7 ## b6 ## b5 ## b4 ## b3 ## b2 ## b1 ## b0).
-Proof. Admitted.
-
-
-
 
