@@ -151,7 +151,8 @@ Proof.
         | rewrite /OSZCP/stateIsAny; specintros => *
         | progress change (false == true) with false; cbv iota
         | solve [ check_eip_hyp_and_do IHn ]
-        | specapply *; first by t_after_specapply ]. admit. }
+        | specapply *; first by t_after_specapply ]. 
+    finish_logic. admit. }
 Qed.
 
 Example safe_loop_n_const P (pbody : program) O (n : nat) d
@@ -229,7 +230,7 @@ Proof.
   specintros => start Pstart PPstart.
   specialize (transition_correct Pstart start PPstart).
 
-  (** The body code *)
+  (** The body code *) 
   specapply H; clear H; do [ eassumption |  by apply catOP_O_roll_starOP_O' | ]. 
   by ssimpl. 
 
