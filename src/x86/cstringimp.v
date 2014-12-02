@@ -68,7 +68,7 @@ Qed.
 Definition strlen : program :=
   (MOV RCX, (#0:QWORD);;
    while (CMP BYTE PTR [RDI + RCX + 0], BOPArgI _ #0) CC_Z false
-     (INC ECX))%asm.
+     (INC RCX))%asm.
 
 (* Correctness of strlen *)
 Lemma strlen_correct p s :
@@ -79,56 +79,54 @@ Proof.
   move => ISZF. rewrite /strlen.
   autorewrite with push_at.
 
-  rewrite /(stateIsAny RCX). specintros => oldecx.
+  rewrite /(stateIsAny RCX). specintros => oldrcx.
 
-  (* MOV ECX, 0 *)
+  (* MOV RCX, 0 *)
   basic apply *. 
 
   (* WHILE *)
   (* Loop invariant is most easily expressed by splitting the string into
-     a prefix and suffix. ECX contains the length of the prefix *)
+     a prefix and suffix. RCX contains the length of the prefix *)
   set (I := fun b =>
     Exists prefix, Exists suffix,
     s = (prefix ++ suffix)%string /\\ (if suffix is ""%string then true else false) == b /\\
     RDI ~= p ** RCX ~= #(length prefix) **
     pointsToCString p s ** OF? ** SF? ** CF? ** PF?).
-  eapply basic_basic; first apply (while_rule_ro (I:=I)). (*first 2 last. *)
+  eapply basic_basic; first apply (while_rule_ro (I:=I)). 
 
   (* Condition code: CMP [RDX+RCX], 0 *)
   specintros => b1 b2.
   subst I; cbv beta.
   specintros => prefix suffix APPEND END.
 
-  case E: suffix => [| a s'].
+  case E: suffix => [| a s']. 
 
   (* Empty string *)
-  + rewrite /ConditionIs.
-  attempt basic apply *. 
-(*  eapply basic_basic; first (apply weaken_parameterized_basic; eapply CMP_MbxI_ZC_rule).*)
-  (*rewrite /stateIsAny/ConditionIs.*)
-  subst. rewrite -> pointsToCString_append. rewrite /pointsToCString.
-  (* Sign extending 0 strikes again! *)
-Admitted. (*admit. 
-  sbazooka. subst. sbazooka. rewrite <-pointsToCString_append_op.
-  rewrite /pointsToCString. rewrite /stateIsAny. sbazooka.
+  + rewrite /ConditionIs. rewrite E in END. 
+  Hint Rewrite ->signExtend_fromNat : ssimpl. rewrite APPEND. 
+  attempt basic apply *. subst. rewrite ->pointsToCString_append. rewrite /pointsToCString. ssimpl.
+  by subst.
+  rewrite <-pointsToCString_append_op. subst. unfold pointsToCString. by ssimpl. 
 
   (* Non-empty string *)
-  + subst. rewrite /ConditionIs.
-  eapply basic_basic; first (apply weaken_parameterized_basic; eapply CMP_MbxI_ZC_rule).
-  rewrite /stateIsAny/ConditionIs.
-  subst. rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString.
-  sbazooka.
-  sbazooka.
-    red. destruct (zeroFree_append ISZF) as [_ [ZFM _]].
-    by rewrite eq_sym eqbF_neg.
-    rewrite <- pointsToCString_append_op. rewrite /pointsToCString-/pointsToCString/stateIsAny. sbazooka.
+  + rewrite /ConditionIs. rewrite E in END.
+  attempt basic apply *. subst.
+  rewrite -> pointsToCString_append. rewrite /pointsToCString-/pointsToCString. by ssimpl.
+  subst. destruct (zeroFree_append ISZF) as [_ [ZFM _]].
+    rewrite subB0. by rewrite eq_sym eqbF_neg.
+    subst. 
+    rewrite <- pointsToCString_append_op. rewrite /pointsToCString-/pointsToCString/stateIsAny. by ssimpl. 
 
   (* Body of loop: INC ECX *)
   rewrite /ConditionIs/I.
-  specintros => prefix suffix APPEND END. rewrite /stateIsAny. specintros => ofl sfl cfl pfl.
-  subst.
-  eapply basic_basic. apply weaken_parameterized_basic; eapply INC_R_rule.
-  rewrite /OSZCP. sbazooka.
+  specintros => prefix suffix APPEND END. rewrite /stateIsAny. subst. specintros => ofl sfl cfl pfl.
+
+  (* We would like to use basic apply but it's too eager to instantiate prefix and suffix *)
+  rewrite /loopy_basic. specintros => i j O'. 
+  Require Import basicspectac. 
+  unfold_program. specapply *. rewrite /OSZCP. by ssimpl. 
+
+  rewrite <- spec_reads_frame. autorewrite with push_at. apply limplValid. cancel1. ssimpl.
 
   case E: suffix => [| a s'].
 
@@ -153,4 +151,3 @@ Admitted. (*admit.
     rewrite /stateIsAny. rewrite length_append addn0.
     sbazooka.
 Qed.
-*)
