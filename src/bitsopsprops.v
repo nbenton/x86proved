@@ -1351,6 +1351,18 @@ Proof. induction count => //.
 Qed.
 
 
+Lemma shrB_fromNat n m : m < 2^n -> shrB (fromNat (n:=n) m) = fromNat (m./2).
+Proof. move => LT. apply toNat_inj. rewrite toNat_shrB. rewrite toNat_fromNatBounded => //. 
+rewrite toNat_fromNatBounded => //. rewrite -divn2. 
+eapply leq_ltn_trans. by apply leq_div. done. Qed. 
+
+Lemma shlB_fromNat n m : m < 2^n -> shlB (fromNat (n:=n.+1) m) = fromNat (m.*2).
+Proof. move => LT. apply toNat_inj. rewrite toNat_shlB. rewrite toNat_fromNatBounded => //. 
+rewrite toNat_fromNatBounded => //. 
+rewrite div.modn_small => //. by rewrite expnS mul2n ltn_double. 
+by rewrite expnS mul2n ltn_double. 
+rewrite expnS. apply (ltn_trans LT). apply ltn_Pmull => //. apply expn_gt0. Qed. 
+
 (*---------------------------------------------------------------------------
     Multiplication
   ---------------------------------------------------------------------------*)
@@ -1615,11 +1627,12 @@ Hint Rewrite
   negB0 negBK negB_fromNat
   add0B addB0 addBN addNB addB_negBn addB_decB_incB
   subB0 sub0B subBB subB_addB
-  mul1B mulB1 mul0B mulB0
+  mul1B mulB1 mul0B mulB0 fromNat_mulBn
   orB0 or0B orBB
   andB1 and1B andBB andB0 and0B
   rorBK rolBK
-  shlB_asMul shlB_mul2exp : bitsHints.
+  shlB_asMul shlB_mul2exp
+  shlB_fromNat shrB_fromNat : bitsHints.
 
 Hint Rewrite
-  <- addB_addn subB_addn : bitsHints.
+  <- addB_addn subB_addn mulB_addn mulB_muln : bitsHints.

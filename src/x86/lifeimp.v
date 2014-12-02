@@ -33,30 +33,29 @@ Proof.
   move => NR.
   rewrite /inlineComputeLine_spec/inlineComputeLinePos.
   autorewrite with push_at.
-  rewrite /stateIsAny.
-  specintros => *.
+  rewrite /stateIsAny. specintros => *.
 
   do !basic apply * => //.
 
-  rewrite /iter. autorewrite with bitsHints.   
-  (* This is gross: rewrite cares about coercions! *)
-  do 6 rewrite -[in X in ((RegOrFlagR (_ (_ EDI))) ~= X)]mulB_muln.
-  rewrite !fromNat_mulBn.
-  replace (2 * _) with 32 => //.
-  replace (32 * (2*2)) with 128 => //.
-  rewrite -addB_addn.
-  (* Can't use ring 'cos it's inside bits *)
-  rewrite -mulnDr addnC. replace (128 + 32) with 160 => //.
-  ssimpl.
-
-  rewrite -6!mulnA.
-  replace (2 * _) with (2^7) => //.
-  have SH := @shrB_mul2exp 7 25 #row.
-  rewrite /iter fromNat_mulBn in SH. rewrite SH {SH}.
-  reflexivity.
-  rewrite toNat_fromNatBounded. apply (ltn_trans NR) => //.
-  apply (ltn_trans NR) => //.
-Qed.
+  rewrite /iter. 
+  autorewrite with bitsHints. 
+  rewrite !half_double. rewrite -!muln2 -!mulnA -mulnDr. 
+  replace (_ + _) with 160 by done. ssimpl. 
+  rewrite !half_double. do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  rewrite !half_double. do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  rewrite !half_double. do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  rewrite !half_double. do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  rewrite !half_double. do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  rewrite !half_double. do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  do! rewrite expnS mul2n ltn_double. by apply (ltn_trans NR). 
+  by apply (ltn_trans NR). 
+Qed. 
 
 (* Increment ESI if location buf[ECX, EDX] contains a dot *)
 Definition incIfDot buf: program :=
