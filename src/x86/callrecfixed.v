@@ -114,97 +114,6 @@ Proof. move => H. by rewrite <- H. Qed.
 
 (* Example recursive function, with instructions nailed down *)
 Definition exSpec f := Forall a b, toyfun f (EAX ~= a ** EBX ~= b) (EAX ~= #0 ** EBX ~= addB b a) @ OSZCP?.
-Definition toyfun_example_recursivecallee (i1 i2 i3 i4 i5 i6 i7:DWORD) :=
-  i1 -- i2 :-> (INC EBX)%asm **
-  i2 -- i3 :-> (DEC EAX)%asm **
-  i3 -- i4 :-> (JZ i5)%asm **
-  i4 -- i5 :-> call_toyfun i1 **
-  i5 -- i6 :-> popcode **
-  i6 -- i7 :-> JMP retreg.
-
-Example toyfun_example_body_correct (i1 i2 i3 i4 i5 i6 i7: DWORD):
-  |-- (|> exSpec i1 -->> exSpec i1) @ (toyfun_example_recursivecallee i1 i2 i3 i4 i5 i6 i7).
-Proof.  
-  rewrite /toyfun_example_recursivecallee/mkbody_toyfun. 
-  rewrite {2}/exSpec. 
-  specintros => a b. 
-  rewrite /toyfun.
-  specintros => iret vs.
-  
-  rewrite spec_at_impl. 
-  rewrite spec_at_impl.
-  rewrite spec_at_impl. 
-
-  rewrite {7 8 9 10 11 12}/stateIsAny.
-  specintros => o s z c p r.
-  simpl in o,s,z,c,p,a,r.
-
-  apply limplValid. 
-
-  (* INC EBX *)
-  specapply *. rewrite /OSZCP. ssimpl.
-
-  (* DEC EAX *)
-  specapply *. rewrite /OSZCP. ssimpl.
-
-  (* JZ SKIP *)
-  specapply *. rewrite /OSZCP/ConditionIs. ssimpl.
-
-  specsplit. 
-  - setoid_rewrite <- spec_later_weaken at 2.
-    rewrite spec_at_at.
-    specintros => H.
-    specapply popaxiom. rewrite /ConditionIs. rewrite /stateIsAny. sbazooka.     
-    specapply *. ssimpl. finish_logic. apply landL2. rewrite <- spec_later_weaken. cancel1.
-    rewrite (eqP H).  sbazooka.  rewrite -{2}(decBK a). rewrite (eqP (eqP H)). rewrite incB_fromNat. rewrite addB1. 
-    sbazooka.  
-
- - specintros => H. rewrite (eqP H).  
-   rewrite /exSpec. 
-     autorewrite with push_later; last apply _. rewrite spec_at_forall. apply lforallL with (decB a).
-     autorewrite with push_later; last apply _. rewrite spec_at_forall. apply lforallL with (incB b).
-     rewrite spec_at_toyfun.
-   set PRE := (EAX ~= decB _ ** _) ** _. 
-   rewrite  -addB_decB_incB  decBK incBK.  
-   set POST := (EAX ~= #0 ** _) ** _.       
-   
-   instLem (@toyfun_call_rec i1 (PRE) (POST)
-     (i1 -- i2 :-> (INC EBX)%asm**i2 -- i3 :-> (DEC EAX)%asm**i3 -- i4 :-> JZ%asm i5**i5 -- i6 :-> popcode**i6 -- i7 :-> JMP retreg)) => TFC. 
-
-   (* call_toyfun L *)
-   (* Have to rearrange in order to get frame right *)
-   rewrite /toyfun in TFC.
-   rewrite -> spec_at_impl in TFC.
-   rewrite ->(spec_at_at safe) in TFC.
-   rewrite ->(spec_at_at safe) in TFC.
-   repeat rewrite -> (spec_at_at safe).
-   rewrite /toyfun.
-   rewrite spec_at_later.
-   
-   eapply (safe_safe_frame1 _). 
-   exact TFC. cancel1. autorewrite with push_at. specintros => x1 x2. apply lforallL with x1. 
-   autorewrite with push_at. apply lforallL with x2. autorewrite with push_at. cancel2. cancel1. sbazooka. cancel1. sbazooka. 
-   split. rewrite /ConditionIs. rewrite /stateIsAny. rewrite /PRE. rewrite /stateIsAny. sbazooka. 
-   sbazooka. 
-
-   apply weakenContext. clear TFC.
-   (* popcode *)
-   rewrite /PRE/POST.
-   superspecapply popaxiom. 
-   (* JMP retreg *)
-   superspecapply *. 
-   (* Usual logic stuff *)
-   setoid_rewrite <- spec_later_weaken. autorewrite with push_at. 
-   rewrite /POST/PRE/stateIsAny. 
-   finish_logic_with sbazooka.
-Qed.
-
-Corollary toyfun_example_correct i1 i2 i3 i4 i5 i6 i7:
-  |-- exSpec i1 @ (toyfun_example_recursivecallee i1 i2 i3 i4 i5 i6 i7).
-Proof.
-apply spec_lob. apply limplValid. rewrite <-spec_at_later. 
-rewrite <- spec_at_impl. apply toyfun_example_body_correct. 
-Qed. 
 
 (* Example recursive function *)
 Definition toyfun_example_recursivecallee_program : program :=
@@ -218,14 +127,84 @@ Definition toyfun_example_recursivecallee_program : program :=
   SKIP:;
   )%asm.
 
-
-
-Corollary toyfun_example_correct_program (i1 i2:DWORD) :
+Theorem toyfun_example_correct_program (i1 i2:DWORD) :
   |-- exSpec i1 @ (i1 -- i2 :-> toyfun_example_recursivecallee_program).
 Proof.
 unfold toyfun_example_recursivecallee_program.
 rewrite /mkbody_toyfun.
+
+(* Do this BEFORE applying spec_lob or you will get in a mess with existentials *)
 unfold_program. 
-specintros => i3 i4 i5 i6 <- <- i7 i8 i9 i10 <- <- i11.  rewrite empSPR. 
-rewrite empSPL. rewrite 3!sepSPA. apply toyfun_example_correct. Qed. 
+specintros => i3 i4 i5 i6 <- <- i7 i8 i9 i10 <- <- i11. rewrite empSPR empSPL 3!sepSPA. 
+
+apply spec_lob.
+  rewrite {2}/exSpec. 
+  specintros => a b. 
+  rewrite /toyfun.
+  specintros => iret vs.
+  
+  rewrite spec_at_impl. 
+  rewrite spec_at_impl.
+  rewrite spec_at_impl. 
+
+  rewrite {7 8 9 10 11 12}/stateIsAny.
+  specintros => o s z c p r.
+  simpl in o,s,z,c,p,a,r.
+
+  (* INC EBX *)
+  specapply *. rewrite /OSZCP. ssimpl.
+
+  (* DEC EAX *)
+  specapply *. rewrite /OSZCP. ssimpl.
+
+  (* JZ SKIP *)
+  specapply *. rewrite /OSZCP/ConditionIs. ssimpl.
+
+  specsplit. 
+  - setoid_rewrite <- spec_later_weaken at 2.
+    specintros => H.
+    specapply popaxiom. rewrite /ConditionIs. rewrite /stateIsAny. sbazooka.     
+    superspecapply *. 
+    finish_logic. apply landL2. rewrite <- spec_later_weaken. cancel1.
+    rewrite (eqP H).  sbazooka.  rewrite -{2}(decBK a). rewrite (eqP (eqP H)). rewrite incB_fromNat. rewrite addB1. 
+    by ssimpl. 
+
+ - specintros => H. rewrite (eqP H).  
+   rewrite /exSpec. 
+     autorewrite with push_later; last apply _. rewrite spec_at_forall. apply lforallL with (decB a).
+     autorewrite with push_later; last apply _. rewrite spec_at_forall. apply lforallL with (incB b).
+     rewrite spec_at_toyfun.
+   set PRE := (EAX ~= decB _ ** _) ** _. 
+   rewrite  -addB_decB_incB  decBK incBK.  
+   set POST := (EAX ~= #0 ** _) ** _.       
+   
+   instLem (@toyfun_call_rec i1 PRE POST
+     (i1 -- i7 :-> (INC EBX)%asm**i7 -- i8 :-> (DEC EAX)%asm**i8 -- i9 :-> JZ%asm i10**i10 -- i11 :-> popcode**i11 -- i2 :-> JMP retreg)) => TFC. 
+
+   (* call_toyfun L *)
+   (* Have to rearrange in order to get frame right *)
+   rewrite /toyfun in TFC.
+   rewrite -> spec_at_impl in TFC.
+   rewrite ->(spec_at_at safe) in TFC.
+   rewrite ->(spec_at_at safe) in TFC.
+   repeat rewrite -> (spec_at_at safe).
+   rewrite /toyfun.
+   rewrite spec_at_later.
+   
+   eapply (safe_safe_noframe1 _). 
+   exact TFC. cancel1. autorewrite with push_at. specintros => x1 x2. apply lforallL with x1. 
+   autorewrite with push_at. apply lforallL with x2. autorewrite with push_at. cancel2. cancel1. sbazooka. cancel1. sbazooka. sbazooka. 
+   rewrite /ConditionIs. rewrite /stateIsAny. rewrite /PRE. rewrite /stateIsAny. sbazooka. 
+
+   apply weakenContext. clear TFC.
+   (* popcode *)
+   rewrite /PRE/POST.
+   superspecapply popaxiom. 
+   (* JMP retreg *)
+   superspecapply *. 
+   (* Usual logic stuff *)
+   setoid_rewrite <- spec_later_weaken. 
+   rewrite /POST/PRE/stateIsAny. 
+   finish_logic_with sbazooka.
+Qed.
 
