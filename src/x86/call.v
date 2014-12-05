@@ -44,13 +44,17 @@ Proof.
   rewrite /call_toyfun.
   basic apply * => iret.
   rewrite /stateIsAny. specintros => *.
-  basic apply MOV_RI_rule.
+
+  (* MOV retreg, iret *)
+  basic apply *.  
 
   rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.  
+
+  (* JMP f *)
   superspecapply *. 
-  rewrite <- spec_later_weaken. rewrite /toyfun. apply lforallL with iret. rewrite /stateIsAny.
+  rewrite <- spec_later_weaken. apply lforallL with iret. rewrite /stateIsAny.
   rewrite <-(spec_frame (i -- iret :-> JMP f)).
-  autorewrite with push_at. rewrite (sepSPC _ Q). cancel1.
+  autorewrite with push_at. cancel2. cancel1. ssimpl. 
 Qed. 
 
 Global Opaque call_toyfun.
@@ -67,8 +71,7 @@ Proof.
   set S'' := basic _ _ _.
   eapply (safe_safe_context (S'':=S'')).
   rewrite /S''/basic. apply lforallL with f. apply lforallL with i1. reflexivity.
-  by apply landL1.  
-  by ssimpl.  
+  by apply landL1. finish_logic_with ssimpl. 
   
   superspecapply *. 
   rewrite <- spec_later_weaken.
@@ -102,12 +105,11 @@ Example toyfun_example_callee_correct_helper (f f': DWORD):
   |-- ((Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
       @ OSZCP?) @ (f--f' :-> toyfun_example_callee).
 Proof.
-  specintro => a. rewrite spec_at_toyfun. (*autorewrite with push_at.*)
+  specintro => a. rewrite spec_at_toyfun. rewrite /toyfun_example_callee.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
-  autorewrite with push_at. rewrite /stateIsAny.
-  specintros => o s z c p.
-  basic apply INC_R_rule.
-  basic apply INC_R_rule.
+  rewrite {1 2 3 4 5}/stateIsAny. specintros => o s z c p. 
+  basic apply *. 
+  basic apply *. 
   by rewrite addIsIterInc /iter.
 Qed.
 
@@ -130,12 +132,8 @@ Proof.
   autorewrite with push_at.
   eapply basic_seq. 
   (** FIXME: make [basic apply *] not take forever *)
-  { apply lforallL with a.
-    simple basic apply *; try evar_safe_syntax_unify_reflexivity; ssimpl. }
-  { apply lforallL with (a +# 2).
-    simple basic apply *; try evar_safe_syntax_unify_reflexivity; ssimpl.
-    ssimpl.
-    rewrite -addB_addn. reflexivity. }
+  { apply lforallL with a. simple basic apply *; ssimpl. }
+  { apply lforallL with (a +# 2). rewrite -addB_addn. simple basic apply *; ssimpl. reflexivity. }
 Qed.
 
 Example toyfun_example_correct entry (i j: DWORD) a:
@@ -149,9 +147,9 @@ Proof.
   rewrite [X in _ @ X]sepSPC. rewrite <- spec_at_at.
   rewrite ->toyfun_example_callee_correct.
   (* The following rewrite underneath a @ is essentially a second-order frame
-     rule application. *)
+     rule application. *)  
   rewrite ->toyfun_example_caller_correct.
-  cancel2; last reflexivity. autorewrite with push_at.
+  cancel2; last ssimpl. autorewrite with push_at.
 
   eapply (safe_safe_noframe1); first reflexivity. 
   - eapply lforallL. eapply lforallL. reflexivity.
@@ -181,6 +179,7 @@ Proof.
   specintro => iret.
   superspecapply *.
   rewrite <-spec_later_weaken.
-  autorewrite with push_at. rewrite /toyfun. apply limplValid. eapply lforallL.
-  rewrite /toyfun. rewrite 4!sepSPA. cancel1. finish_logic_with sbazooka. 
+  rewrite /toyfun.
+  autorewrite with push_at. apply limplValid. eapply lforallL. autorewrite with push_at.
+  cancel1. finish_logic_with sbazooka. 
 Qed.

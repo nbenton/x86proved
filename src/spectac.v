@@ -62,7 +62,7 @@ Ltac specsplit :=
 (* This is the lemma that justifies the specapply tactic. Executing specapply
    will essentially just bring the goal and rule to the form required by this
    lemma and then apply it. *)
-Lemma safe_safe_ro C C' S S' R R' P P' RP:
+Lemma safe_safe_roframe1 C C' S S' R R' P P' RP:
   C' |-- (S' -->> safe @ P') <@ R' ->
   C |-- C' ->
   P |-- P' ** RP /\ R |-- R' ** ltrue ->
@@ -83,7 +83,26 @@ Proof.
   autorewrite with push_at. reflexivity.
 Qed.
 
-(* Analagous to safe_safe_ro for  *)
+Lemma safe_safe_roframe0 C C' S' R R' P P' RP:
+  C' |-- (S' -->> safe @ P') <@ R' ->
+  C |-- C' ->
+  P |-- P' ** RP /\ R |-- R' ** ltrue ->
+  C |-- (S' @ RP) <@ R ->
+  C |-- (safe @ P) <@ R.
+Proof.
+  move=> Hlem HC [HP HR] Hobl. rewrite <-HC in Hlem => {HC}.
+  rewrite ->HP => {HP}. lforwardR Hlem.
+  - apply spec_reads_frame with (R:=ltrue).
+  rewrite ->spec_reads_merge in Hlem. rewrite <-HR in Hlem => {HR}.
+  etransitivity; [by apply landR|].
+
+  rewrite ->Hobl at 1. rewrite ->Hlem. clear.
+  rewrite -spec_reads_and. cancel2.
+  rewrite landC. apply: landAdj.
+  etransitivity; [apply (spec_frame RP)|].
+  autorewrite with push_at. reflexivity.
+Qed.
+
 Lemma safe_safe_frame0 C C' P P' R'' RP S' R R': 
   C' |-- (S' -->> safe @ P') @ R' ->
   C |-- C' ->
@@ -237,12 +256,12 @@ Ltac eforalls_do_on_evar H do_on_evar :=
 Ltac eforalls_no_subst_evars H :=
   eforalls_do_on_evar H ltac:(fun e => idtac).
 
-(* This tactic works on the conjunctive premise of safe_safe_ro.
+(* This tactic works on the conjunctive premise of safe_safe_roframe1.
    To get the evars instantiated in the correct order when we later run the
    ssimpl tactic, we look ahead a bit and instantiate the instruction pointer
    first. This tactic will look for EIP deep inside the current state and
    instantiate the evar we expect to find for EIP in the precondition of the
-   rule we applied with safe_safe_ro. With that done, the code can be picked
+   rule we applied with safe_safe_roframe1. With that done, the code can be picked
    out of the assertion about program memory, which will instantiate all the
    other evars and leave a closed goal.
    This tactic is quite dumb and will do the wrong thing on a sophisticated
@@ -421,7 +440,7 @@ Module SpecApply.
     | ?S <@ ?R => let t := quote_term S in constr:(t_atro t R)
     end.
 
-  (* A version of safe_safe_ro that works on reflected specs. *)
+  (* A version of safe_safe_roframe1 that works on reflected specs. *)
   Lemma safe_safe_nf t t' C C' RP:
     match tonf t , tonf t' with
     | Some (mknf So Po Ro) , Some (mknf So' Po' Ro') =>
@@ -439,7 +458,7 @@ Module SpecApply.
     rewrite -tonf_correct; last apply Ht'.
     rewrite -tonf_correct; last apply Ht. rewrite /eval_nf.
     rewrite /eval_nf !osep_correct oimpl_correct.
-    apply: safe_safe_ro.
+    apply: safe_safe_roframe1.
   Qed.
 
   Ltac specapply lem :=
@@ -513,14 +532,16 @@ Ltac specapply lem :=
 
     (* Framed versions *)
     | |- ?P |-- (safe @ ?R) @ ?F => eapply (safe_safe_frame0 Hlem); [try done | try solve_codeaux | .. ]
+    | |- ?P |-- (safe @ ?R) <@ ?F => eapply (safe_safe_roframe0 Hlem); [try done | try solve_codeaux | .. ]
     | |- ?P |-- (?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame1 Hlem); [try done | try solve_codeaux | .. ]
+    | |- ?P |-- (?Q -->> safe @ ?R) <@ ?F => eapply (safe_safe_roframe1 Hlem); [try done | try solve_codeaux | .. ]
     | |- ?P |-- (?W -->> ?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame2 Hlem); [try done | try solve_codeaux | .. ]
     end)
     ;
     clear Hlem.
 
 Ltac superspecapply lem:= 
-  specapply lem; [ssimpl | try rewrite ->spec_at_emp; try rewrite ->empSPR; try rewrite ->empSPL].
+  specapply lem; [ssimpl | try rewrite ->spec_at_emp; try rewrite ->spec_reads_emp; try rewrite ->empSPR; try rewrite ->empSPL].
   
 
 Ltac unhideReg r :=

@@ -31,10 +31,10 @@ Lemma basic_seq (c1 c2: program) S P Q R:
   S |-- basic P (c1;; c2) R.
 Proof.
   move=> Hc1 Hc2. rewrite /basic. specintros => i j. unfold_program. specintro => i'.
-  autorewrite with push_at. apply limplAdj.
-  eapply basic_safe_context. apply Hc1. by apply landL1. by ssimpl. 
-  eapply basic_safe_context. apply Hc2. by apply landL1. by ssimpl. 
-  apply landL2. cancel1. by ssimpl.  
+  autorewrite with push_at. 
+  superspecapply Hc1. 
+  superspecapply Hc2.  
+  finish_logic_with sbazooka.
 Qed.
 
 (** Scoped label rule *)

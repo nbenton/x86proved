@@ -31,7 +31,7 @@ Section Basic.
              | [ |- Forall _ : ?T, _ -|- Forall _ : ?T, _ ] => cancel1 => ?
              | _ => progress autorewrite with push_at
            end.
-    rewrite (sepSPC _ R). by rewrite -4!sepSPA. 
+    cancel2; cancel1; sbazooka. 
   Qed.
 
   (* We need to rewrite with [spec_at_basic] so much in applying
@@ -166,8 +166,7 @@ Section Basic.
     move=> Hbasic HS' HP HS.
     lforwardR Hbasic.
     - apply lforallL with i. apply lforallL with j. apply (spec_frame R).
-    rewrite ->spec_at_at in Hbasic.
-    specapply Hbasic.
+    rewrite -> spec_at_at in Hbasic. specapply Hbasic.
     - rewrite ->HP. by ssimpl.
     - rewrite ->HS. Require Import chargetac. finish_logic_with ssimpl. 
   Qed.
