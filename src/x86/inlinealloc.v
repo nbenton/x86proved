@@ -68,7 +68,8 @@ Proof.
   rewrite /OSZCP. superspecapply JC_rule. 
 
   specsplit.
-    rewrite <-spec_later_weaken, <- spec_frame. finish_logic_with sbazooka.
+  Require Import latertac. 
+  simpllater. rewrite <- spec_frame. finish_logic_with sbazooka.
 
   (* CMP [infoBlock+#4], EDI *)
   specintro => /eqP => Hcarry. 
@@ -78,7 +79,7 @@ Proof.
   (* JC failed *)
   superspecapply JC_rule. 
   specsplit.
-  - rewrite <-spec_later_weaken, <- spec_frame. finish_logic_with sbazooka.
+  - simpllater. rewrite <- spec_frame. finish_logic_with sbazooka.
 
   (* MOV [infoBlock], EDI *)
   superspecapply MOV_IndR_rule. 

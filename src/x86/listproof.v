@@ -6,7 +6,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.program.
 Require Import x86proved.x86.call x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.inlinealloc
                x86proved.x86.listspec x86proved.x86.listimp x86proved.triple.
-Require Import x86proved.x86.macros x86proved.chargetac.
+Require Import x86proved.x86.macros x86proved.chargetac x86proved.latertac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

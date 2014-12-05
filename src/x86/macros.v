@@ -3,7 +3,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.obs x86proved.x86.basic x86proved.x86.program x86proved.spectac.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
 Require Import x86proved.x86.basicprog (* for [instrrule] *).
-Require Import x86proved.basicspectac x86proved.common_tactics x86proved.common_definitions x86proved.chargetac.
+Require Import x86proved.basicspectac x86proved.common_tactics x86proved.common_definitions x86proved.chargetac x86proved.latertac.
 Require Import Coq.Classes.RelationClasses.
 
 Set Implicit Arguments.
@@ -69,7 +69,7 @@ superspecapply *.
 case E: (b == cv).
 + rewrite addB_subBK. finish_logic_with sbazooka. 
 + replace (b == ~~cv) with true by (destruct b; by destruct cv).  
-  setoid_rewrite <-spec_later_weaken at 2. 
+  simpllater. 
   finish_logic_with sbazooka. 
 Qed.
 
@@ -164,11 +164,11 @@ Definition ifthenelse (cond: Condition) (value: bool)
                           Q.
   Proof.
     pre_if pthen pelse.
-    superspecapply *. rewrite <- spec_later_weaken.
+    superspecapply *. simpllater.
     specsplit; specintro => /eqP ->. 
     - superspecapply Hthen. rewrite <- spec_frame. finish_logic_with ssimpl. 
     - superspecapply Helse. 
-      superspecapply *. rewrite <- spec_later_weaken. 
+      superspecapply *. simpllater. 
       finish_logic_with ssimpl. 
   Qed.
 
@@ -232,8 +232,8 @@ Definition while (ptest: program)
     (* Now there are two cases. Either we jumped to the loop body, or we fell
        through and exited the loop. *)
     specsplit.
-    - autorewrite with push_at. rewrite <-spec_later_impl, <-spec_later_weaken. 
-      specintros => /eqP ->. superspecapply Hbody.  
+    - autorewrite with push_at. rewrite <-spec_later_impl. simpllater. 
+      specintros => /eqP ->. superspecapply Hbody.
       finish_logic_with sbazooka. 
 
     (* End of loop *)

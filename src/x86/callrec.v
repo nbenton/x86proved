@@ -3,7 +3,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spectac x86proved.spec x86proved.safe x86proved.pointsto x86proved.cursor x86proved.x86.instr.
 Require Import x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.instrsyntax x86proved.x86.macros x86proved.x86.instrrules.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
-Require Import x86proved.common_tactics x86proved.basicspectac x86proved.chargetac.
+Require Import x86proved.common_tactics x86proved.basicspectac x86proved.chargetac x86proved.latertac.
 
 Definition retreg := EBP.
 
@@ -64,7 +64,7 @@ Proof. rewrite /call_toyfun. unfold_program.
   autorewrite with push_at. 
   autorewrite with push_later; last apply _.
   cancel2.
-  rewrite <- spec_later_weaken. finish_logic_with sbazooka. 
+  simpllater. finish_logic_with sbazooka. 
   finish_logic_with sbazooka. 
 Qed.
 
@@ -90,7 +90,7 @@ Proof.
   do 2 eapply lforallL. reflexivity. by ssimpl.  
 
   superspecapply *.
-  superspecapply *. rewrite <-spec_later_weaken.  
+  superspecapply *. simpllater. 
   finish_logic_with sbazooka.  
 Qed.
 
@@ -154,23 +154,20 @@ superspecapply *.
 (* JZ SKIP *)
 superspecapply *. 
 
-specsplit. 
-- (* Would be nice if we had a reflective tactic that did this *)
-  setoid_rewrite <- spec_later_weaken at 2.
-  specintros => /eqP/eqP EQ.  
-  (* popcode *)
+simpllater.
+specsplit; specintros => /eqP EQ. 
+- (* popcode *)
   specapply *. rewrite /stateIsAny. sbazooka.     
   (* JMP retreg *)
   superspecapply *. 
   (* usual stuff; should be able to automate this a bit *)
-  apply weakenContext. rewrite <- spec_frame. apply limplValid. rewrite <- spec_later_weaken. 
+  apply weakenContext. rewrite <- spec_frame. apply limplValid. simpllater.
   autorewrite with push_at. cancel1. rewrite /stateIsAny. sbazooka.  
   (* Arithmetic *)
-  rewrite -{2}(decBK a). rewrite EQ incB_fromNat addB1. 
+  rewrite -{2}(decBK a). rewrite (eqP EQ) incB_fromNat addB1. 
   by ssimpl. 
 
-- specintros => /eqP ->. 
-  rewrite /exSpec. 
+- rewrite /exSpec. 
   (* All this just to instantiate quantifiers on left of turnstile *)
      autorewrite with push_later; last apply _. rewrite spec_at_forall. apply lforallL with (decB a).
      autorewrite with push_later; last apply _. rewrite spec_at_forall. apply lforallL with (incB b).
@@ -204,7 +201,7 @@ specsplit.
    (* JMP retreg *)
    superspecapply *. 
    (* Usual logic stuff *)
-   setoid_rewrite <- spec_later_weaken. 
+   simpllater. 
    rewrite /POST/PRE/stateIsAny. 
    finish_logic_with sbazooka.
 Qed.

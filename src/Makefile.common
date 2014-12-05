@@ -57,6 +57,7 @@ spec.vo \
 safe.vo \
 obs.vo \
 spectac.vo \
+latertac.vo \
 basicspectac.vo \
 pointsto.vo \
 triple.vo \

@@ -3,7 +3,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spectac x86proved.spec x86proved.safe x86proved.pointsto x86proved.cursor x86proved.x86.instr.
 Require Import x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.instrsyntax x86proved.x86.macros x86proved.x86.instrrules.
 Require Import Coq.Setoids.Setoid Coq.Classes.RelationClasses Coq.Classes.Morphisms.
-Require Import x86proved.common_tactics x86proved.basicspectac x86proved.chargetac.
+Require Import x86proved.common_tactics x86proved.basicspectac x86proved.chargetac x86proved.latertac.
 
 Definition retreg := EBP.
 
@@ -51,8 +51,7 @@ Proof.
   rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.  
 
   (* JMP f *)
-  superspecapply *. 
-  rewrite <- spec_later_weaken. apply lforallL with iret. rewrite /stateIsAny.
+  superspecapply *. simpllater. apply lforallL with iret. rewrite /stateIsAny.
   rewrite <-(spec_frame (i -- iret :-> JMP f)).
   autorewrite with push_at. cancel2. cancel1. ssimpl. 
 Qed. 
@@ -73,8 +72,7 @@ Proof.
   rewrite /S''/basic. apply lforallL with f. apply lforallL with i1. reflexivity.
   by apply landL1. finish_logic_with ssimpl. 
   
-  superspecapply *. 
-  rewrite <- spec_later_weaken.
+  superspecapply *. simpllater.
   finish_logic_with sbazooka.
 Qed. 
 
@@ -178,7 +176,7 @@ Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
   specintro => iret.
   superspecapply *.
-  rewrite <-spec_later_weaken.
+  simpllater.
   rewrite /toyfun.
   autorewrite with push_at. apply limplValid. eapply lforallL. autorewrite with push_at.
   cancel1. finish_logic_with sbazooka. 
