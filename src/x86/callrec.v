@@ -86,7 +86,7 @@ Proof.
   (* This is a bit hairy *)
   autorewrite with push_at. 
   apply limplAdj. 
-  eapply (safe_safe_context _); first reflexivity. apply landL1. 
+  eapply safe_safe_context; first reflexivity. apply landL1. 
   do 2 eapply lforallL. reflexivity. by ssimpl.  
 
   superspecapply *.
@@ -190,7 +190,7 @@ specsplit.
    rewrite /toyfun.
    rewrite spec_at_later.
       
-   eapply (safe_safe_frame1 _).
+   eapply safe_safe_frame1.
    exact TFC. cancel1. specintros => iret' vs'. 
    rewrite spec_at_forall. apply lforallL with iret'. 
    rewrite spec_at_forall. apply lforallL with vs'. autorewrite with push_at. 

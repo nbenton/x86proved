@@ -84,12 +84,12 @@ Proof.
 Qed.
 
 (* Analagous to safe_safe_ro for  *)
-Lemma safe_safe_frame0 C C' P P' R'' RP S' R R' SAFE (_:AtContra SAFE):
-  C' |-- (S' -->> SAFE @ P') @ R' ->
+Lemma safe_safe_frame0 C C' P P' R'' RP S' R R': 
+  C' |-- (S' -->> safe @ P') @ R' ->
   C |-- C' ->
   P |-- P' ** RP /\ (R -|- R' ** R'') ->
   C |-- (S' @ RP) @ R ->
-  C |-- (SAFE @ P) @ R.
+  C |-- (safe @ P) @ R.
 Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. 
 eapply safe_safe_context; try eassumption. 
 rewrite -> HP. rewrite -> HR. by ssimpl. 
@@ -98,12 +98,12 @@ rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewr
 rewrite sepSPC. assumption. 
 Qed.
 
-Lemma safe_safe_frame1 C C' P P' R'' RP S' S R R' SAFE (_:AtContra SAFE):
-  C' |-- (S' -->> SAFE @ P') @ R' ->
+Lemma safe_safe_frame1 C C' P P' R'' RP S' S R R':
+  C' |-- (S' -->> safe @ P') @ R' ->
   C |-- C' ->
   P |-- P' ** RP /\ (R -|- R' ** R'') ->
   C |-- (S -->> S' @ RP) @ R ->
-  C |-- (S -->> SAFE @ P) @ R.
+  C |-- (S -->> safe @ P) @ R.
 Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
 eapply safe_safe_context; try eassumption. by apply landL1. 
 rewrite -> HP. rewrite -> HR. by ssimpl. 
@@ -112,12 +112,12 @@ rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewr
 rewrite sepSPC. assumption. 
 Qed.
 
-Lemma safe_safe_frame11 C C' P1 P2 P' R'' RP S' S R R' SAFE (_:AtContra SAFE):
-  C' |-- (S' -->> SAFE @ P') @ R' ->
+Lemma safe_safe_frame11 C C' P1 P2 P' R'' RP S' S R R':
+  C' |-- (S' -->> safe @ P') @ R' ->
   C |-- C' ->
   P1**P2 |-- P' ** RP /\ (R -|- R' ** R'') ->
   C |-- (S -->> S' @ RP) @ R ->
-  C |-- (S -->> SAFE @ P1 @ P2) @ R.
+  C |-- (S -->> safe @ P1 @ P2) @ R.
 Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
 eapply safe_safe_context; try eassumption. by apply landL1. 
 rewrite <- sepSPA. rewrite -> HP. rewrite -> HR. by ssimpl. 
@@ -126,12 +126,12 @@ rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewr
 rewrite sepSPC. assumption. 
 Qed.
 
-Lemma safe_safe_frame111 C C' P1 P2 P3 P' R'' RP S' S R R' SAFE (_:AtContra SAFE):
-  C' |-- (S' -->> SAFE @ P') @ R' ->
+Lemma safe_safe_frame111 C C' P1 P2 P3 P' R'' RP S' S R R':
+  C' |-- (S' -->> safe @ P') @ R' ->
   C |-- C' ->
   P1**P2**P3 |-- P' ** RP /\ (R -|- R' ** R'') ->
   C |-- (S -->> S' @ RP) @ R ->
-  C |-- (S -->> SAFE @ P1 @ P2 @ P3) @ R.
+  C |-- (S -->> safe @ P1 @ P2 @ P3) @ R.
 Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
 eapply safe_safe_context; try eassumption. by apply landL1. 
 rewrite <- (sepSPA P2). 
@@ -148,7 +148,7 @@ Lemma safe_safe_frame2 C C' P P' R'' RP S' S1 S2 R R':
   C |-- (S1 -->> S2 -->> S' @ RP) @ R ->
   C |-- (S1 -->> S2 -->> safe @ P) @ R.
 Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. apply limplAdj.
-eapply safe_safe_context; try eassumption. apply _. 
+eapply safe_safe_context; try eassumption. 
 apply landL1. by apply landL1. rewrite -> HP. rewrite -> HR. by ssimpl. 
 apply landAdj. apply landAdj. autorewrite with push_at in Hobl.
 rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
@@ -156,25 +156,25 @@ rewrite sepSPC. assumption.
 Qed.
 
 
-Lemma safe_safe_noframe1 P P' R' R S S' S0 S0' SAFE (_:AtContra SAFE):
-  S0' |-- (S' -->> SAFE @ P') @ R' ->
+Lemma safe_safe_noframe1 P P' R' R S S' S0 S0':
+  S0' |-- (S' -->> safe @ P') @ R' ->
   S0 |-- S0' ->
   (* The order of separating conjuncts in the following premise is crucial for
      allowing ssimpl to solve it in practice. *)
   P |-- P' ** R' ** R ->
   S0 |-- S -->> S' @ (R' ** R) ->
-  S0 |-- S -->> SAFE @ P.
+  S0 |-- S -->> safe @ P.
 Proof. move=> HS0' HS' HP HS. apply limplAdj. eapply safe_safe_context; try eassumption. 
 by apply landL1. apply landAdj. assumption. Qed.
 
-Lemma safe_safe_noframe2 P P' R' R S1 S2 S' S0 S0' SAFE (_:AtContra SAFE):
-  S0' |-- (S' -->> SAFE @ P') @ R' ->
+Lemma safe_safe_noframe2 P P' R' R S1 S2 S' S0 S0':
+  S0' |-- (S' -->> safe @ P') @ R' ->
   S0 |-- S0' ->
   (* The order of separating conjuncts in the following premise is crucial for
      allowing ssimpl to solve it in practice. *)
   P |-- P' ** R' ** R ->
   S0 |-- S1 -->> S2 -->> S' @ (R' ** R) ->
-  S0 |-- S1 -->> S2 -->> SAFE @ P.
+  S0 |-- S1 -->> S2 -->> safe @ P.
 Proof. move=> HS0' HS' HP HS. apply limplAdj. apply limplAdj. eapply safe_safe_context; try eassumption. 
 apply landL1. by apply landL1. apply landAdj. apply landAdj. assumption. Qed.
 
@@ -507,15 +507,13 @@ Ltac specapply lem :=
     try repeat rewrite -> (spec_at_at safe);
     (match goal with 
     (* Frameless versions *)
-      |- ?P |-- ?W -->> ?Q -->> safe @ ?R => eapply (safe_safe_noframe2 _ Hlem); [ try done | .. ]
-    | |- ?P |-- ?Q -->> safe @ ?R => eapply (safe_safe_noframe1 _ Hlem); [ try done | .. ]
-    | |- ?P |-- safe @ ?Q => eapply (safe_safe_context _ Hlem); [try done | ..]
+      |- ?P |-- ?W -->> ?Q -->> safe @ ?R => eapply (safe_safe_noframe2 Hlem); [ try done | .. ]
+    | |- ?P |-- ?Q -->> safe @ ?R => eapply (safe_safe_noframe1 Hlem); [ try done | .. ]
+    | |- ?P |-- safe @ ?Q => eapply (safe_safe_context Hlem); [try done | ..]
 
     (* Framed versions *)
-    | |- ?P |-- (safe @ ?R) @ ?F => eapply (safe_safe_frame0 _ Hlem); [try done | try solve_codeaux | .. ]
-    | |- ?P |-- (?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame1 _ Hlem); [try done | try solve_codeaux | .. ]
-(*    | |- ?P |-- (?Q -->> safe @ ?R1 @ ?R2) @ ?F => eapply (safe_safe_frame11 _ Hlem); [try done | try solve_codeaux | .. ]
-    | |- ?P |-- (?Q -->> safe @ ?R1 @ ?R2 @ ?R3) @ ?F => eapply (safe_safe_frame111 _ Hlem); [try done | try solve_codeaux | .. ] *)
+    | |- ?P |-- (safe @ ?R) @ ?F => eapply (safe_safe_frame0 Hlem); [try done | try solve_codeaux | .. ]
+    | |- ?P |-- (?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame1 Hlem); [try done | try solve_codeaux | .. ]
     | |- ?P |-- (?W -->> ?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame2 Hlem); [try done | try solve_codeaux | .. ]
     end)
     ;

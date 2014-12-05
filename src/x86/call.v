@@ -65,7 +65,7 @@ Proof.
   apply lforallL with iret. autorewrite with push_at.
   eapply limplAdj. 
   set S'' := basic _ _ _.
-  eapply (safe_safe_context _ (S'':=S'')).
+  eapply (safe_safe_context (S'':=S'')).
   rewrite /S''/basic. apply lforallL with f. apply lforallL with i1. reflexivity.
   by apply landL1.  
   by ssimpl.  
@@ -153,7 +153,7 @@ Proof.
   rewrite ->toyfun_example_caller_correct.
   cancel2; last reflexivity. autorewrite with push_at.
 
-  eapply (safe_safe_noframe1 _); first reflexivity. 
+  eapply (safe_safe_noframe1); first reflexivity. 
   - eapply lforallL. eapply lforallL. reflexivity.
   - by ssimpl. 
   - autorewrite with push_at. apply: limplAdj. apply: landL2.

@@ -49,15 +49,14 @@ Proof.
   apply HP. rewrite lentails_eq. rewrite <-HR. by rewrite -lentails_eq.
 Qed.
 
-Lemma safe_safe_context P P' R' R S S' S'' SAFE
-  (_:AtContra SAFE):
-  S'' |-- (S' -->> SAFE @ P') @ R' ->
+Lemma safe_safe_context P P' R' R S S' S'':
+  S'' |-- (S' -->> safe @ P') @ R' ->
   S |-- S'' ->
   (* The order of separating conjuncts in the following premise is crucial for
      allowing ssimpl to solve it in practice. *)
   P |-- P' ** R' ** R ->
   S |-- S' @ (R' ** R) ->
-  S |-- SAFE @ P.
+  S |-- safe @ P.
 Proof.
   move=> HS' HS'' HP HS. rewrite ->HP.
   lforwardR HS'.
@@ -67,13 +66,13 @@ Proof.
   apply HS'.
 Qed.
 
-Lemma safe_safe P P' R' R S S' SAFE (_:AtContra SAFE):
-  |-- (S' -->> SAFE @ P') @ R' ->
+Lemma safe_safe P P' R' R S S':
+  |-- (S' -->> safe @ P') @ R' ->
   (* The order of separating conjuncts in the following premise is crucial for
      allowing ssimpl to solve it in practice. *)
   P |-- P' ** R' ** R ->
   S |-- S' @ (R' ** R) ->
-  S |-- SAFE @ P.
+  S |-- safe @ P.
 Proof. move=> HS' HP HS. eapply safe_safe_context; try eassumption. done. Qed.
 
 Lemma runsTo_safe s s':
