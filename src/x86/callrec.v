@@ -160,9 +160,9 @@ specsplit; specintros => /eqP EQ.
   specapply *. rewrite /stateIsAny. sbazooka.     
   (* JMP retreg *)
   superspecapply *. 
-  (* usual stuff; should be able to automate this a bit *)
-  apply weakenContext. rewrite <- spec_frame. apply limplValid. simpllater.
-  autorewrite with push_at. cancel1. rewrite /stateIsAny. sbazooka.  
+  (* usual stuff; should be able to automate this a bit more *)
+  apply weakenContext. rewrite <- spec_frame. simpllater.
+  rewrite /stateIsAny. finish_logic_with sbazooka. 
   (* Arithmetic *)
   rewrite -{2}(decBK a). rewrite (eqP EQ) incB_fromNat addB1. 
   by ssimpl. 
@@ -172,17 +172,16 @@ specsplit; specintros => /eqP EQ.
      autorewrite with push_later; last apply _. rewrite spec_at_forall. apply lforallL with (decB a).
      autorewrite with push_later; last apply _. rewrite spec_at_forall. apply lforallL with (incB b).
      rewrite spec_at_toyfun.
-   rewrite  -addB_decB_incB  decBK incBK.  
    
    set PRE := (EAX ~= decB _ ** _) ** _. 
-   set POST := (EAX ~= #0 ** _) ** _.       
+   set POST := (EAX ~= _ ** _) ** _.       
    instLem (@toyfun_call_rec i1 PRE POST (i1 -- i7 :-> (INC EBX)%asm**i7 -- i8 :-> (DEC EAX)%asm**i8 -- i9 :-> JZ%asm i10**i10 -- i11 :-> popcode**i11 -- i2 :-> JMP retreg)) => TFC. 
 
    (* call_toyfun L *)
    (* Have to rearrange in order to get frame right *)
    rewrite /toyfun in TFC.
    rewrite -> spec_at_impl in TFC.
-   repeat rewrite ->(spec_at_at safe) in TFC.
+   repeat rewrite -> (spec_at_at safe) in TFC.
    repeat rewrite -> (spec_at_at safe).
    rewrite /toyfun.
    rewrite spec_at_later.
@@ -204,5 +203,8 @@ specsplit; specintros => /eqP EQ.
    simpllater. 
    rewrite /POST/PRE/stateIsAny. 
    finish_logic_with sbazooka.
+
+   (* Arithmetic *)
+   rewrite  -addB_decB_incB  decBK incBK. by ssimpl.
 Qed.
 
