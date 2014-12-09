@@ -6,7 +6,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.program.
 Require Import x86proved.x86.call x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.inlinealloc
                x86proved.x86.listspec x86proved.x86.listimp x86proved.triple.
-Require Import x86proved.x86.macros x86proved.chargetac x86proved.latertac.
+Require Import x86proved.x86.macros x86proved.chargetac x86proved.latertac x86proved.basicspectac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -39,8 +39,8 @@ rewrite /inlineCons_spec/inlineCons/updateCons. unfold_program.
 specintros => i1 i2 i3.
 
 instLem inlineAlloc_correct => H.
-rewrite ->spec_at_impl, ->spec_at_at in H. 
-rewrite spec_at_impl spec_at_at. 
+rewrite ->spec_at_impl in H. 
+rewrite spec_at_impl. 
 superspecapply H. clear H.
 
 (* Failure case *)
@@ -58,9 +58,9 @@ assert (H:= subB_equiv_addB_negB (pb+#8) #8).
 rewrite E0 addB_negBn /snd in H.
 rewrite H in E0. replace (pb +#4 +#4) with (pb +#8) by by rewrite -addB_addn.
 
-Require Import basicspectac.
 (* SUB EDI, 8 *)
 superspecapply *. 
+
 (* MOV [EDI], r1 *)
 rewrite /OSZCP. specapply MOV_M0R_rule. rewrite E0. simpl fst. simpl snd. by ssimpl.
 (* MOV [EDI+4], r2 *)

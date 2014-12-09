@@ -5,7 +5,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.program.
 Require Import x86proved.x86.call x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrrules x86proved.x86.instrcodec x86proved.reader x86proved.pointsto x86proved.cursor x86proved.x86.inlinealloc
-               x86proved.x86.listspec x86proved.x86.listimp x86proved.triple x86proved.x86.macros x86proved.chargetac x86proved.basicspectac.
+               x86proved.x86.listspec x86proved.x86.listimp x86proved.triple x86proved.x86.macros x86proved.chargetac x86proved.basicspectac x86proved.latertac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -42,8 +42,7 @@ specintros => i3 i4 i5 i6 i7 i8 -> -> i9 -> ->.
 (* Deal with the allocator spec itself *)
 rewrite spec_at_swap. rewrite spec_at_at.
 instLem (inlineAlloc_correct) => IC.
-rewrite -> spec_at_impl in IC. rewrite -> spec_at_at in IC.
- 
+rewrite -> spec_at_impl in IC. 
 superspecapply IC. 
 
 (* Now we deal with failure and success cases *)
@@ -68,7 +67,7 @@ rewrite H in E0.
 superspecapply *. 
 
 (* JMP SUCCEED *)
-superspecapply *. rewrite <- spec_later_weaken. 
+superspecapply *. simpllater. 
 
 (* Final stuff *)
 rewrite E0. simpl snd. 

@@ -2,7 +2,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
-Require Import x86proved.chargetac.
+Require Import x86proved.chargetac x86proved.latertac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -56,7 +56,7 @@ Proof.
   specintros => *. 
   unfold_program. specintros => *.
   (* Push invariant under implication so that we can instantiate existential pre and post *)
-  rewrite spec_at_impl. rewrite spec_at_at. rewrite /allocInv. specintros => base limit. 
+  rewrite spec_at_impl. rewrite /allocInv. specintros => base limit. 
 
   (* MOV EDI, [infoBlock] *)  
   superspecapply MOV_RanyInd_rule. 
@@ -64,11 +64,11 @@ Proof.
   (* ADD EDI, bytes *)
   superspecapply *. 
 
-  (* JC failed *)  
-  rewrite /OSZCP. superspecapply JC_rule. 
+  (* JC failed *)
+  rewrite /OSZCP. 
+  superspecapply JC_rule. 
 
   specsplit.
-  Require Import latertac. 
   simpllater. rewrite <- spec_frame. finish_logic_with sbazooka.
 
   (* CMP [infoBlock+#4], EDI *)

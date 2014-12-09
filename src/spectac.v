@@ -523,6 +523,7 @@ Ltac specapply lem :=
        from there. *)
     instLem (lem) => Hlem;
     (* Collapse uses of safe @ _ @ _ *)
+    try repeat rewrite -> (spec_at_at safe) in Hlem;
     try repeat rewrite -> (spec_at_at safe);
     (match goal with 
     (* Frameless versions *)
