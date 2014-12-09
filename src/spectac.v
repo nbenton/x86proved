@@ -123,42 +123,9 @@ Lemma safe_safe_frame1 C C' P P' R'' RP S' S R R':
   P |-- P' ** RP /\ (R -|- R' ** R'') ->
   C |-- (S -->> S' @ RP) @ R ->
   C |-- (S -->> safe @ P) @ R.
-Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
-eapply safe_safe_context; try eassumption. by apply landL1. 
-rewrite -> HP. rewrite -> HR. by ssimpl. 
-apply landAdj. autorewrite with push_at in Hobl.
-rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
-rewrite sepSPC. assumption. 
-Qed.
-
-Lemma safe_safe_frame11 C C' P1 P2 P' R'' RP S' S R R':
-  C' |-- (S' -->> safe @ P') @ R' ->
-  C |-- C' ->
-  P1**P2 |-- P' ** RP /\ (R -|- R' ** R'') ->
-  C |-- (S -->> S' @ RP) @ R ->
-  C |-- (S -->> safe @ P1 @ P2) @ R.
-Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
-eapply safe_safe_context; try eassumption. by apply landL1. 
-rewrite <- sepSPA. rewrite -> HP. rewrite -> HR. by ssimpl. 
-apply landAdj. autorewrite with push_at in Hobl.
-rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
-rewrite sepSPC. assumption. 
-Qed.
-
-Lemma safe_safe_frame111 C C' P1 P2 P3 P' R'' RP S' S R R':
-  C' |-- (S' -->> safe @ P') @ R' ->
-  C |-- C' ->
-  P1**P2**P3 |-- P' ** RP /\ (R -|- R' ** R'') ->
-  C |-- (S -->> S' @ RP) @ R ->
-  C |-- (S -->> safe @ P1 @ P2 @ P3) @ R.
-Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. 
-eapply safe_safe_context; try eassumption. by apply landL1. 
-rewrite <- (sepSPA P2). 
-rewrite <- (sepSPA P1). rewrite -> HP. rewrite -> HR. by ssimpl. 
-apply landAdj. autorewrite with push_at in Hobl.
-rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
-rewrite sepSPC. assumption. 
-Qed.
+Proof. move=> Hlem HC HPR Hobl. rewrite ->spec_at_impl. apply limplAdj. 
+eapply (safe_safe_frame0 Hlem (landL1 _ HC) HPR). apply landAdj. by rewrite <-spec_at_impl. 
+Qed. 
 
 Lemma safe_safe_frame2 C C' P P' R'' RP S' S1 S2 R R':
   C' |-- (S' -->> safe @ P') @ R' ->
@@ -166,36 +133,27 @@ Lemma safe_safe_frame2 C C' P P' R'' RP S' S1 S2 R R':
   P |-- P' ** RP /\ (R -|- R' ** R'') ->
   C |-- (S1 -->> S2 -->> S' @ RP) @ R ->
   C |-- (S1 -->> S2 -->> safe @ P) @ R.
-Proof. move=> Hlem HC [HP HR] Hobl. autorewrite with push_at. apply limplAdj. apply limplAdj.
-eapply safe_safe_context; try eassumption. 
-apply landL1. by apply landL1. rewrite -> HP. rewrite -> HR. by ssimpl. 
-apply landAdj. apply landAdj. autorewrite with push_at in Hobl.
-rewrite <- sepSPA. rewrite sepSPC. rewrite <- sepSPA. rewrite (sepSPC R''). rewrite <- HR. 
-rewrite sepSPC. assumption. 
-Qed.
-
+Proof. move=> Hlem HC HPR Hobl. do 2 rewrite -> spec_at_impl. do 2 apply limplAdj. 
+eapply (safe_safe_frame0 Hlem (landL1 _ (landL1 _ HC)) HPR). do 2 apply landAdj. by do 2 rewrite <-spec_at_impl. 
+Qed. 
 
 Lemma safe_safe_noframe1 P P' R' R S S' S0 S0':
   S0' |-- (S' -->> safe @ P') @ R' ->
   S0 |-- S0' ->
-  (* The order of separating conjuncts in the following premise is crucial for
-     allowing ssimpl to solve it in practice. *)
   P |-- P' ** R' ** R ->
   S0 |-- S -->> S' @ (R' ** R) ->
   S0 |-- S -->> safe @ P.
 Proof. move=> HS0' HS' HP HS. apply limplAdj. eapply safe_safe_context; try eassumption. 
-by apply landL1. apply landAdj. assumption. Qed.
+by apply landL1. by apply landAdj. Qed.
 
 Lemma safe_safe_noframe2 P P' R' R S1 S2 S' S0 S0':
   S0' |-- (S' -->> safe @ P') @ R' ->
   S0 |-- S0' ->
-  (* The order of separating conjuncts in the following premise is crucial for
-     allowing ssimpl to solve it in practice. *)
   P |-- P' ** R' ** R ->
   S0 |-- S1 -->> S2 -->> S' @ (R' ** R) ->
   S0 |-- S1 -->> S2 -->> safe @ P.
-Proof. move=> HS0' HS' HP HS. apply limplAdj. apply limplAdj. eapply safe_safe_context; try eassumption. 
-apply landL1. by apply landL1. apply landAdj. apply landAdj. assumption. Qed.
+Proof. move=> HS0' HS' HP HS. do 2 apply limplAdj. eapply safe_safe_context; try eassumption. 
+by do 2 apply landL1. by do 2 apply landAdj. Qed.
 
 
 Lemma lforallE_spec A (S':spec) S a:
