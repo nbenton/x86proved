@@ -33,6 +33,7 @@ Ltac locate_frame G :=
   match G with
     | _ |-- ?G'  => locate_frame G'
     | _ @ ?F   => constr:(F)
+    | _ <@ ?F  => constr:(F)
     | _ -->> ?G' => locate_frame G'
     | _         => fail 2 "No frame in" G
   end.

@@ -137,6 +137,31 @@ Proof. move=> Hlem HC HPR Hobl. do 2 rewrite -> spec_at_impl. do 2 apply limplAd
 eapply (safe_safe_frame0 Hlem (landL1 _ (landL1 _ HC)) HPR). do 2 apply landAdj. by do 2 rewrite <-spec_at_impl. 
 Qed. 
 
+Lemma safe_safe_roframe2 C C' S' S1 S2 R R' P P' RP:
+  C' |-- (S' -->> safe @ P') <@ R' ->
+  C |-- C' ->
+  P |-- P' ** RP /\ R |-- R' ** ltrue ->
+  C |-- (S1 -->> S2 -->> S' @ RP) <@ R ->
+  C |-- (S1 -->> S2 -->> safe @ P) <@ R.
+Proof. move=> Hlem HC [HP HR] Hobl. 
+rewrite <-HC in Hlem => {HC}.
+rewrite ->HP => {HP}. lforwardR Hlem.
+  - apply spec_reads_frame with (R:=ltrue).
+  rewrite ->spec_reads_merge in Hlem. rewrite <-HR in Hlem => {HR}.
+  etransitivity; [by apply landR|].
+  rewrite ->Hobl at 1. rewrite ->Hlem. clear.
+  rewrite -spec_reads_and. cancel2. apply: limplAdj.
+  rewrite landA. apply limplL; first exact: landL2.
+  rewrite -landA. apply: landL1.
+  apply: limplAdj. 
+  rewrite landA. apply limplL; first exact: landL2.
+  rewrite -landA. apply: landL1.
+  rewrite landC. apply: landAdj.
+  etransitivity; [apply (spec_frame RP)|].
+  autorewrite with push_at. reflexivity.
+Qed. 
+
+
 Lemma safe_safe_noframe1 P P' R' R S S' S0 S0':
   S0' |-- (S' -->> safe @ P') @ R' ->
   S0 |-- S0' ->
@@ -475,6 +500,16 @@ Ltac solve_codeaux :=
   end;
   split; [|(split; by ssimpl)]; instantiate.
 
+Ltac solve_codeauxro :=
+  match goal with
+    |- ?P |-- ?Q /\ _ =>
+      match P with context [@RegOrFlagR OpSize4 (AnyRegToVRegAny EIP) ~= ?eip] =>
+        match Q with context [@RegOrFlagR OpSize4 (AnyRegToVRegAny EIP) ~= ?evar] => unify eip evar
+        end
+      end
+  end;
+  split; [|by ssimpl]; instantiate.
+
 Ltac specapply lem :=
     let Hlem := fresh "Hlem" in
     (* Move the lemma to be applied into the context so we can preprocess it
@@ -491,16 +526,19 @@ Ltac specapply lem :=
 
     (* Framed versions *)
     | |- ?P |-- (safe @ ?R) @ ?F => eapply (safe_safe_frame0 Hlem); [try done | try solve_codeaux | .. ]
-    | |- ?P |-- (safe @ ?R) <@ ?F => eapply (safe_safe_roframe0 Hlem); [try done | try solve_codeaux | .. ]
+    | |- ?P |-- (safe @ ?R) <@ ?F => eapply (safe_safe_roframe0 Hlem); [try done | try solve_codeauxro | .. ]
     | |- ?P |-- (?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame1 Hlem); [try done | try solve_codeaux | .. ]
-    | |- ?P |-- (?Q -->> safe @ ?R) <@ ?F => eapply (safe_safe_roframe1 Hlem); [try done | try solve_codeaux | .. ]
+    | |- ?P |-- (?Q -->> safe @ ?R) <@ ?F => eapply (safe_safe_roframe1 Hlem); [try done | try solve_codeauxro | .. ]
     | |- ?P |-- (?W -->> ?Q -->> safe @ ?R) @ ?F => eapply (safe_safe_frame2 Hlem); [try done | try solve_codeaux | .. ]
+    | |- ?P |-- (?W -->> ?Q -->> safe @ ?R) <@ ?F => eapply (safe_safe_roframe2 Hlem); [try done | try solve_codeauxro | .. ]
     end)
     ;
+    (* Cleanup *)
+(*    [.. | try rewrite ->spec_at_emp; try rewrite ->spec_reads_emp; try rewrite ->empSPR; try rewrite ->empSPL];*)
     clear Hlem.
 
 Ltac superspecapply lem:= 
-  specapply lem; [ssimpl | try rewrite ->spec_at_emp; try rewrite ->spec_reads_emp; try rewrite ->empSPR; try rewrite ->empSPL].
+  specapply lem; [ssimpl | ..].
   
 
 Ltac unhideReg r :=

@@ -718,7 +718,7 @@ Proof.
     autorewrite with push_at. by rewrite sepSPC.
 Qed.
 
-Hint Rewrite spec_at_reads : push_at.
+Hint Rewrite spec_at_reads spec_at_emp spec_reads_emp : push_at.
 
 Instance AtEx_reads S R {HS: AtEx S}: AtEx (S <@ R) := _.
 Instance AtCovar_reads S R {HS: AtCovar S}: AtCovar (S <@ R) := _.
