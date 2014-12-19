@@ -48,7 +48,7 @@ Qed.
 Hint Rewrite spec_at_toyfun : push_at.
 
 Lemma toyfun_call_recAux (f:DWORD) P Q vs (i j:DWORD):
-  |-- (|> toyfun f P Q -->> (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) @ (retreg? ** stackinv vs)) @ (i -- j :-> call_toyfun f).
+  |-- (|> toyfun f P Q -->> (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) @ (retreg? ** stackinv vs)) c@ (i -- j :-> call_toyfun f).
 Proof. rewrite /call_toyfun. unfold_program. 
   autorewrite with push_at.
   specintros => i1 i2 i3 H1 H2. rewrite -H1 -H2.
@@ -69,7 +69,7 @@ Proof. rewrite /call_toyfun. unfold_program.
 Qed.
 
 Corollary toyfun_call_rec (f:DWORD) P Q R vs (i j:DWORD):
- |> toyfun f P Q @ (i -- j :-> call_toyfun f ** R)  |-- (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) @ (retreg? ** stackinv vs) @ (i -- j :-> call_toyfun f ** R).
+ |> toyfun f P Q @ (i -- j :-> call_toyfun f ** R)  |-- (safe @ (EIP ~= j ** Q) -->> safe @ (EIP ~= i ** P)) @ (retreg? ** stackinv vs) c@ (i -- j :-> call_toyfun f ** R).
 Proof. 
 apply limplValid. rewrite <- spec_at_later. rewrite <- spec_at_impl. 
 rewrite <-spec_at_at. rewrite <- spec_frame. apply toyfun_call_recAux. 
@@ -119,7 +119,7 @@ Definition toyfun_example_recursivecallee_program : program :=
   )%asm.
 
 Theorem toyfun_example_correct_program (i1 i2:DWORD) :
-  |-- exSpec i1 @ (i1 -- i2 :-> toyfun_example_recursivecallee_program).
+  |-- exSpec i1 c@ (i1 -- i2 :-> toyfun_example_recursivecallee_program).
 Proof.
 rewrite /toyfun_example_recursivecallee_program/mkbody_toyfun.
 

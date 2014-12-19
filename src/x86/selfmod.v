@@ -2,7 +2,7 @@ Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.program.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
-Require Import x86proved.triple x86proved.monad x86proved.x86.eval x86proved.x86.instrcodec x86proved.enc x86proved.x86.encdechelp x86proved.x86.basicprog.
+Require Import x86proved.triple x86proved.monad x86proved.x86.eval x86proved.x86.instrcodec x86proved.enc x86proved.x86.encdechelp x86proved.x86.basicprog x86proved.x86.instrrules x86proved.basicspectac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -11,28 +11,32 @@ Import Prenex Implicits.
 Local Open Scope instr_scope.
 
 Lemma jmpBytes (i1 i2 i': DWORD) (p: program) (bytes : seq BYTE) :
-  i' :-> bytes |-- i' :-> p
-->
-  |-- ((|> safe @ (i' :-> p ** EIP ~= i')) -->>
-           safe @ (i' :-> bytes ** EIP ~= i1)) <@ (i1 -- i2 :-> JMP i').
+  i' :-> bytes |-- i' :-> p ->
+  |-- ((|> safe @ (i' :-> p ** EIP ~= i' ** EDI?)) -->>
+           safe @ (i' :-> bytes ** EIP ~= i1 ** EDI?)) <@ (i1 -- i2 :-> MOV EDI, i';; JMPrel EDI).
 Proof. move => H1.
 rewrite -> H1.
-specapply JMP_I_rule.
-sbazooka. autorewrite with push_at. rewrite <- spec_reads_frame. apply limplValid.
-cancel1. cancel1. sbazooka.
+unfold_program. rewrite {2}/stateIsAny. specintros => i3 edi. 
+superspecapply *.
+superspecapply *.
+autorewrite with push_at. rewrite <- spec_reads_frame. apply limplValid.
+cancel1. cancel1. rewrite /stateIsAny. sbazooka.
 Qed.
 
+(*
 Lemma jmpBytes_basic (i j:DWORD) p (bytes: seq BYTE) P :
   i -- j :-> bytes |-- i -- j :-> p ->
   |-- safe @ (EIP ~= i ** P) <@ (i -- j :-> p) -> (*basic P p Q ->*)
-  |-- Forall i1, Forall j1:DWORD, (|> safe @ (EIP ~= i1 ** P)) <@ (i1 -- j1 :-> JMP i ** i -- j :-> bytes).
+  |-- Forall i1 j1:DWORD, (|> safe @ (EIP ~= i1 ** P)) <@ (i1 -- j1 :-> (MOV EDI, i;; JMPrel EDI) ** i -- j :-> bytes).
 Proof. move => H1 H2.
 specintros => i1 j1.
-specapply JMP_I_rule. sbazooka.
+unfold_program. specintros => i3.
+superspecapply *. JMP_I_rule. sbazooka.
 rewrite <- spec_reads_frame.
 autorewrite with push_at.
 apply limplValid. cancel1.
 Qed.
+*)
 
 Lemma inlineBytes (i: DWORD) (p: program) (bytes: seq BYTE) :
   i :-> bytes |-- i :-> p ->

@@ -3,7 +3,7 @@ Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bi
 Require Import x86proved.spred x86proved.septac x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.pointsto x86proved.cursor.
 Require Import x86proved.spectac x86proved.basicspectac.
-Require Import x86proved.common_tactics x86proved.chargetac x86proved.common_definitions.
+Require Import x86proved.common_tactics x86proved.chargetac x86proved.common_definitions x86proved.latertac.
 Require Import Coq.Setoids.Setoid.
 
 Set Implicit Arguments.
@@ -15,22 +15,21 @@ Local Open Scope instr_scope.
 
 (* Example: It is safe to sit forever in a tight loop. *)
 Example safe_loop (p q: DWORD) :
-  |-- safe @ (EIP ~= p ** p -- q :-> JMP p).
+  |-- safe @ (EIP ~= p) c@ (p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
-  superspecapply *. 
+  superspecapply *. autorewrite with push_later. 
   finish_logic_with sbazooka. 
 Qed.
 
 (* Example: It is safe to sit forever in a tight loop. *)
 Example safe_loopAlt (p r: DWORD) :
-  |-- safe @ (EIP ~= p ** p -- r :-> (JMP p;; NOP)).
+  |-- safe @ (EIP ~= p) c@ (p -- r :-> (JMP p;; NOP)).
 Proof.
   apply: spec_lob.
   unfold_program. unfold_program. 
-  specintros => q. superspecapply *. 
-  autorewrite with push_at. cancel1. cancel1.
-  sbazooka.  
+  specintros => q. superspecapply *. autorewrite with push_later.
+  finish_logic_with sbazooka. 
 Qed.
 
 
@@ -45,13 +44,17 @@ Proof.
 Qed.
 
 (* We can package up jumpy code in a triple by using labels. *)
+(*
 Example basic_loop:
   |-- basic empSP (LOCAL l; l:;; JMP l) lfalse.
 Proof.
   apply basic_local => l. 
   rewrite /basic. specintros => i j.
-  unfold_program. specintros => _ <- <-.  
-  autorewrite with push_at.
+  unfold_program. specintros => _ <- <-. rewrite empSPL empSPR.
+    
+  rewrite  spec_reads_alt.  rewrite <- spec_at_entails_reads.
+  admit. apply _. done. rewrite /spec_reads.
+  specapply safe_loop. finish_logic.   autorewrite with push_at.
   apply: limplAdj. apply: landL1. 
   etransitivity; [apply safe_loop|]. finish_logic. 
 Qed.
@@ -66,6 +69,7 @@ Proof.
   apply: limplAdj. apply: landL1. rewrite empSPL empSPR. 
   etransitivity; [apply safe_loopAlt|]. unfold_program. cancel1. sbazooka. 
 Qed.
+*)
 
 (* Show off the sequencing rule for [basic]. *)
 Example basic_inc3 (x:DWORD):

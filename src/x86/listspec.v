@@ -35,10 +35,10 @@ Definition inlineCons_spec (r1 r2:Reg) heapInfo (failLabel:DWORD) (i j h t e: DW
       safe @ (EIP ~= i ** r1~=h ** r2~=t ** EDI?)
     ) @
     (ESI? ** OSZCP? ** allocInv heapInfo ** listSeg t e vs)
-    @ (i -- j :-> instrs).
+    c@ (i -- j :-> instrs).
 
 Definition callCons_spec (r1 r2: Reg) heapInfo (i j h t e: DWORD) vs (instrs: program):=
   (toyfun i (r1~=h ** r2~=t ** EDI?) 
             (r1? ** r2? ** (EDI ~= #0 \\// (Exists pb, EDI ~= pb ** listSeg pb t [::h])))) @
   (ESI? ** OSZCP? ** allocInv heapInfo ** listSeg t e vs)
-  @ (i -- j :-> mkbody_toyfun instrs).
+  c@ (i -- j :-> mkbody_toyfun instrs).

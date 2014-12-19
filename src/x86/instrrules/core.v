@@ -145,20 +145,48 @@ Proof.
   eapply TRIPLE_safe_gen; [eassumption|] => R. triple_apply H.
 Qed.
 
-Lemma TRIPLE_basicGen instr P o Q:
-  (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) o (Q ** R)) ->
-  |-- @basic _ _ P instr Q.
+Lemma TRIPLE_safeLaterRW instr P P' o Q (i j: DWORD) :
+  P' |-- EIP ~= i ** P ** (i -- j :-> instr) ->
+  (forall (R: SPred),
+   TRIPLE (EIP ~= j ** P ** i -- j :-> instr ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- (|>safe @ Q -->> safe @ P').
 Proof.
-  move=> H. rewrite /basic. specintros => i j.
-  apply (TRIPLE_safeRO (o:=o)) => R. triple_apply H.
+  move=> H2 H1. 
+  apply limplValid. rewrite -> H2.  
+  eapply TRIPLE_safeLater_gen; first reflexivity. move => R. triple_apply H1.
 Qed.
+
+Lemma TRIPLE_safeRW instr P P' o Q (i j: DWORD) :
+  P' |-- EIP ~= i ** P ** (i -- j :-> instr) ->
+  (forall (R: SPred),
+   TRIPLE (EIP ~= j ** P ** (i -- j :-> instr) ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- safe @ Q -->> safe @ P'.
+Proof.
+  move=> H2 H1.
+  apply limplValid. rewrite -> H2.
+  eapply TRIPLE_safe_gen; [reflexivity|] => R. triple_apply H1.
+Qed.
+
+(*
+Lemma TRIPLE_safeLaterRW instr P o Q (i j: DWORD) :
+  (forall (R: SPred),
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- (|>safe @ Q -->> safe @ (EIP ~= i ** P)) @ (i -- j :-> instr).
+Proof.
+  move=> H. autorewrite with push_at.
+  rewrite sepSPA. 
+  apply limplValid. 
+  eapply TRIPLE_safeLater_gen; [reflexivity|] => R. triple_apply H.
+Qed.
+*)
 
 Lemma TRIPLE_basic instr P Q:
   (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) nil (Q ** R)) ->
   |-- @basic _ _ P instr Q.
 Proof.
   move=> H. rewrite /basic. specintros => i j.
-  apply (TRIPLE_safeRO (o:=nil)) => R. triple_apply H.
+  autorewrite with push_at. rewrite 2!sepSPA. apply limplValid.  
+  eapply (TRIPLE_safe_gen (o:=nil)).  reflexivity. move => R. triple_apply H.
 Qed.
 
 (*---------------------------------------------------------------------------
@@ -322,6 +350,9 @@ destruct ms; specAt_morphism_t. Qed.
 
 Notation "OSZCP?" := (OF? ** SF? ** ZF? ** CF? ** PF?).
 Definition OSZCP o s z c p := OF ~= o ** SF ~= s ** ZF ~= z ** CF ~= c ** PF ~= p.
+
+(* Notation for "code" frame *)
+Infix "c@" := spec_at (at level 44, left associativity).
 
 (** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
 Hint Unfold OSZCP : finish_logic_unfolder.
@@ -664,9 +695,10 @@ Ltac instrrule_triple_bazooka_step tac :=
     (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
     | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ] => eapply triple_seq
 
+    | [ |- |-- safe @ _ -->> _] => (apply: TRIPLE_safeRW; first by ssimpl); move => ?
+    | [ |- |-- |> safe @ _ -->> _] => (apply: TRIPLE_safeLaterRW; first by ssimpl); move => ?
     | [ |- |-- (safe @ _ -->> _) <@ _ ] => apply: TRIPLE_safeRO => ?
     | [ |- |-- (|> safe @ _ -->> _) <@ _ ] => apply: TRIPLE_safeLaterRO => ?
-
 
     | _ => do [ apply TRIPLE_basic => *
               | triple_apply triple_pre_introFlags => *; rewrite /OSZCP

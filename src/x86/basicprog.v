@@ -21,7 +21,7 @@ Proper (lequiv ==> progEq ==> lequiv ==> lequiv) (@basic _ _).
 Lemma basic_skip P: |-- @basic _ _ P prog_skip P.
 Proof.
   rewrite /basic. specintros => i j. unfold_program.
-  specintro => ->. rewrite spec_at_emp. by apply limplValid. 
+  specintro => ->. autorewrite with push_at. by apply limplValid. 
 Qed.
 
 (** Sequencing rule *)
@@ -30,10 +30,10 @@ Lemma basic_seq (c1 c2: program) S P Q R:
   S |-- basic Q c2 R ->
   S |-- basic P (c1;; c2) R.
 Proof.
-  move=> Hc1 Hc2. rewrite /basic. specintros => i j. unfold_program. specintro => i'.
-  autorewrite with push_at. 
-  superspecapply Hc1. 
-  superspecapply Hc2.  
+  move=> Hc1 Hc2. rewrite /basic. 
+  specintros => i j. unfold_program. specintro => i'.  
+  superspecapply Hc1.
+  superspecapply Hc2.
   finish_logic_with sbazooka.
 Qed.
 

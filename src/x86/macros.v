@@ -60,7 +60,7 @@ Lemma JCC_rule a cc cv (b:bool) (p q: DWORD) :
   |-- ((|> safe @ (b == cv /\\ EIP ~= a ** ConditionIs cc b)) //\\
          safe @ (b == (~~cv) /\\ EIP ~= q ** ConditionIs cc b) -->>
       safe @ (EIP ~= p ** ConditionIs cc b))
-    @ (p -- q :-> JCC cc cv a).
+    c@ (p -- q :-> JCC cc cv a).
 Proof.
 rewrite /JCC/relToAbs.
 unfold_program. specintros => i1 i2 H1 H2. subst. 
@@ -80,7 +80,7 @@ Lemma JZ_rule a (b:bool) (p q: DWORD) :
       |> safe @ (b == true  /\\ EIP ~= a ** ZF ~= b) //\\
          safe @ (b == false /\\ EIP ~= q ** ZF ~= b) -->>
       safe @ (EIP ~= p ** ZF ~= b)
-    ) @ (p -- q :-> JZ a).
+    ) c@ (p -- q :-> JZ a).
 Proof.
   change (ZF ~= b) with (ConditionIs CC_Z b).
   apply: JCC_rule.
@@ -90,14 +90,14 @@ Lemma JC_rule a (b:bool) (p q: DWORD) :
   |-- (|> safe @ (b == true  /\\ EIP ~= a ** CF ~= b) //\\
          safe @ (b == false /\\ EIP ~= q ** CF ~= b) -->>
       safe @ (EIP ~= p ** CF ~= b)
-    ) @ (p -- q :-> JC a).
+    ) c@ (p -- q :-> JC a).
 Proof.
   change (CF ~= b) with (ConditionIs CC_B b).
   apply: JCC_rule.
 Qed.
 
 Lemma JMP_I_rule (a: DWORD) (p q: DWORD) :
-  |-- (|> safe @ (EIP ~= a) -->> safe @ (EIP ~= p)) @
+  |-- (|> safe @ (EIP ~= a) -->> safe @ (EIP ~= p)) c@
         (p -- q :-> JMP a).
 Proof.
 rewrite /JMP/relToAbs.
@@ -110,7 +110,7 @@ Qed.
 Global Instance: forall (a : DWORD), instrrule (JMP a) := @JMP_I_rule.
 
 Lemma JMP_R_rule (r:Reg) addr (p q: DWORD) :
-  |-- (|> safe @ (EIP ~= addr ** r ~= addr) -->> safe @ (EIP ~= p ** r ~= addr)) @
+  |-- (|> safe @ (EIP ~= addr ** r ~= addr) -->> safe @ (EIP ~= p ** r ~= addr)) c@
         (p -- q :-> JMP (JmpTgtR r)).
 Proof. apply JMPrel_R_rule. Qed.
 
@@ -120,7 +120,7 @@ Lemma CALL_I_rule (a:DWORD) (p q: DWORD) :
   |-- Forall w: DWORD, Forall sp:DWORD, (
       |> safe @ (EIP ~= a ** ESP~=sp-#4 ** sp-#4 :-> q) -->>
          safe @ (EIP ~= p  ** ESP~=sp    ** sp-#4 :-> w)
-    ) @ (p -- q :-> CALL a).
+    ) c@ (p -- q :-> CALL a).
 Proof.
 specintros => w sp.
 rewrite /CALL/relToAbs.
@@ -164,9 +164,10 @@ Definition ifthenelse (cond: Condition) (value: bool)
                           Q.
   Proof.
     pre_if pthen pelse.
-    superspecapply *. simpllater.
+    superspecapply *.
+    simpllater.
     specsplit; specintro => /eqP ->. 
-    - superspecapply Hthen. rewrite <- spec_frame. finish_logic_with ssimpl. 
+    - superspecapply Hthen. finish_logic. 
     - superspecapply Helse. 
       superspecapply *. simpllater. 
       finish_logic_with ssimpl. 
@@ -220,7 +221,7 @@ Definition while (ptest: program)
 
     specsplit.
     (* JMP TEST *)
-    - superspecapply *. by finish_logic.
+    - superspecapply *. finish_logic_with sbazooka.
 
     (* ptest *)
     superspecapply Htest. 

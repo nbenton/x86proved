@@ -8,14 +8,10 @@ Lemma JCCrel_rule (rel: DWORD) cc cv (b:bool) (p q: DWORD) :
   |-- (
       |> safe @ (EIP ~= (if b == cv then addB q rel else q) ** ConditionIs cc b) -->>
       safe @ (EIP ~= p ** ConditionIs cc b)
-    ) @ (p -- q :-> JCCrel cc cv rel).
+    ) c@ (p -- q :-> JCCrel cc cv rel).
 Proof.
-  apply: TRIPLE_safeLater => R. autounfold with instrrules_eval.
-  triple_apply triple_letGetCondition.
-  case: (b == cv).
-  { instrrule_triple_bazooka using do [ progress sbazooka | apply: lorR1 ]. }
-  { instrrule_triple_bazooka using do [ progress sbazooka | apply: lorR2 ]. }
-Qed.
+ case E: (b == cv); instrrule_triple_bazooka; rewrite E; instrrule_triple_bazooka. 
+Qed.   
 
 (** We make this rule an instance of the typeclass, and leave
     unfolding things like [specAtDstSrc] to the getter tactic

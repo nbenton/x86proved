@@ -51,9 +51,10 @@ Proof.
   rewrite /basic. specintros => i j. unfold_program. specintros => *; do !subst.  
 
   (* JMP f *)
-  superspecapply *. simpllater. apply lforallL with iret. rewrite /stateIsAny.
-  rewrite <-(spec_frame (i -- iret :-> JMP f)).
-  autorewrite with push_at. cancel2. cancel1. ssimpl. 
+  superspecapply *. simpllater. apply lforallL with iret. rewrite /stateIsAny. 
+  rewrite ->empSPR.
+  rewrite <-(spec_frame (i -- iret :-> JMP f)). (*reads_frame. *)
+  cancel2. cancel1. ssimpl. autorewrite with push_at. cancel1.  
 Qed. 
 
 Global Opaque call_toyfun.
@@ -61,21 +62,22 @@ Global Instance: forall f : DWORD, instrrule (call_toyfun f) := @toyfun_call.
 
 Lemma toyfun_mkbody (f f': DWORD) P p Q:
   (Forall iret, basic P p Q @ (retreg ~= iret))
-    |-- toyfun f P Q @ (f--f' :-> mkbody_toyfun p).
+    |-- toyfun f P Q c@ (f--f' :-> mkbody_toyfun p).
 Proof.
   rewrite /toyfun. specintro => iret. rewrite /mkbody_toyfun.
   unfold_program. specintro => i1.
   apply lforallL with iret. autorewrite with push_at.
-  eapply limplAdj. 
-  set S'' := basic _ _ _.
-  eapply (safe_safe_context (S'':=S'')).
-  rewrite /S''/basic. apply lforallL with f. apply lforallL with i1. reflexivity.
-  by apply landL1. finish_logic_with ssimpl. 
+  apply limplAdj.
+  eapply safe_safe_context; first reflexivity.
+  apply landL1. rewrite /basic.
+  apply lforallL with f. apply lforallL with i1.
+  reflexivity.
+  ssimpl.
+  apply landL2.
   
   superspecapply *. simpllater.
   finish_logic_with sbazooka.
 Qed. 
-
 
 (*
    Example that shows a caller and a callee independently verified and then
@@ -101,7 +103,7 @@ Definition toyfun_example (entry: DWORD) : program :=
 
 Example toyfun_example_callee_correct_helper (f f': DWORD):
   |-- ((Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
-      @ OSZCP?) @ (f--f' :-> toyfun_example_callee).
+      @ OSZCP?) c@ (f--f' :-> toyfun_example_callee).
 Proof.
   specintro => a. rewrite spec_at_toyfun. rewrite /toyfun_example_callee.
   etransitivity; [|apply toyfun_mkbody]. specintro => iret.
@@ -113,7 +115,7 @@ Qed.
 
 Definition toyfun_example_callee_correct (f f': DWORD):
   |-- (Forall a, toyfun f (EAX ~= a) (EAX ~= a +# 2))
-      @ OSZCP? @ (f--f' :-> toyfun_example_callee)
+      @ OSZCP? c@ (f--f' :-> toyfun_example_callee)
   := @toyfun_example_callee_correct_helper f f'.
 
 (* The toyfun spec assumed for f here is actually stronger than what lemma
@@ -138,7 +140,7 @@ Example toyfun_example_correct entry (i j: DWORD) a:
   |-- (
       safe @ (EIP ~= j ** EAX ~= a +# 4) -->>
           safe @ (EIP ~= entry ** EAX ~= a)
-    ) @ (retreg? ** OSZCP?) @ (i--j :-> toyfun_example entry).
+    ) @ (retreg? ** OSZCP?) c@ (i--j :-> toyfun_example entry).
 Proof.
   rewrite /toyfun_example. unfold_program.
   specintros => f _ <- -> {i} i1 _ <- ->. rewrite !empSPL.
@@ -146,14 +148,12 @@ Proof.
   rewrite ->toyfun_example_callee_correct.
   (* The following rewrite underneath a @ is essentially a second-order frame
      rule application. *)  
-  rewrite ->toyfun_example_caller_correct.
+  rewrite ->toyfun_example_caller_correct. rewrite /basic.
+  (*rewrite <-spec_reads_merge. rewrite spec_reads_swap. *)
   cancel2; last ssimpl. autorewrite with push_at.
 
-  eapply (safe_safe_noframe1); first reflexivity. 
-  - eapply lforallL. eapply lforallL. reflexivity.
-  - by ssimpl. 
-  - autorewrite with push_at. apply: limplAdj. apply: landL2.
-    cancel1. sbazooka.
+  - eapply lforallL. autorewrite with push_at. eapply lforallL. autorewrite with push_at.
+    cancel2; cancel1; ssimpl. 
 Qed.
 
 (*
@@ -171,13 +171,13 @@ Definition toyfun_apply :=
 Example toyfun_apply_correct (f f' g: DWORD) P Q:
   |-- (
       toyfun g (P ** EBX?) Q -->> toyfun f (P ** EBX ~= g) Q
-    ) @ (f--f' :-> toyfun_apply).
+    ) c@ (f--f' :-> toyfun_apply).
 Proof.
   rewrite /toyfun_apply. rewrite {2}/toyfun.
   specintro => iret.
   superspecapply *.
   simpllater.
-  rewrite /toyfun.
-  autorewrite with push_at. apply limplValid. eapply lforallL. autorewrite with push_at.
+  rewrite /toyfun.  rewrite <- spec_frame. (*rewrite <- spec_reads_frame. *) apply limplValid. 
+  eapply lforallL. autorewrite with push_at.
   cancel1. finish_logic_with sbazooka. 
 Qed.

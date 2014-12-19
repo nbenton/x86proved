@@ -27,7 +27,7 @@ Lemma wrappedAlloc_correct bytes (r1 r2: Reg) heapInfo :
   toyfun i EDI? ((Exists p:DWORD, EDI ~= p ** memAny p (p +# bytes)) \\// EDI ~= #0)
 
   @  (ESI? ** OSZCP? ** allocInv heapInfo)
-  @ (i -- j :-> mkbody_toyfun (wrappedAlloc bytes r1 r2 heapInfo)).
+  c@ (i -- j :-> mkbody_toyfun (wrappedAlloc bytes r1 r2 heapInfo)).
 Proof.
 specintros => i j.
 
@@ -40,10 +40,11 @@ rewrite /wrappedAlloc/basic. specintros => i1 i2. unfold_program.
 specintros => i3 i4 i5 i6 i7 i8 -> -> i9 -> ->.
 
 (* Deal with the allocator spec itself *)
-rewrite spec_at_swap. rewrite spec_at_at.
+(*rewrite spec_at_reads. *) rewrite spec_at_swap. rewrite spec_at_at. 
 instLem (inlineAlloc_correct) => IC.
-rewrite -> spec_at_impl in IC. 
-superspecapply IC. 
+rewrite -> spec_at_impl in IC.
+rewrite spec_at_impl. 
+superspecapply IC.
 
 (* Now we deal with failure and success cases *)
 specsplit.

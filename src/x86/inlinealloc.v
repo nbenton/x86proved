@@ -44,7 +44,7 @@ Definition allocSpec n (fail:DWORD) inv code :=
       safe @ (EIP ~= i ** EDI?)
     )
     @ (OSZCP? ** inv)
-    @ (i -- j :-> code).
+    c@ (i -- j :-> code).
 
 Hint Unfold allocSpec : specapply.
 
@@ -69,7 +69,7 @@ Proof.
   superspecapply JC_rule. 
 
   specsplit.
-  simpllater. rewrite <- spec_frame. finish_logic_with sbazooka.
+  simpllater. (*rewrite <- spec_frame. *) finish_logic_with sbazooka.
 
   (* CMP [infoBlock+#4], EDI *)
   specintro => /eqP => Hcarry. 
@@ -79,15 +79,15 @@ Proof.
   (* JC failed *)
   superspecapply JC_rule. 
   specsplit.
-  - simpllater. rewrite <- spec_frame. finish_logic_with sbazooka.
+  - simpllater. (*rewrite <- spec_frame. *) finish_logic_with sbazooka.
 
   (* MOV [infoBlock], EDI *)
   superspecapply MOV_IndR_rule. 
 
   specintro => /eqP LT.
 
-  { rewrite <- spec_frame. rewrite /stateIsAny/natAsDWORD. apply limplValid.
-    autorewrite with push_at. apply landL2. finish_logic_with sbazooka.  
+  { (*rewrite <- spec_frame. *) rewrite /stateIsAny/natAsDWORD. finish_logic. (*apply limplValid.
+    autorewrite with push_at. *) apply landL2. finish_logic_with sbazooka.  
 
     apply memAnySplit.
     { apply: addB_leB.

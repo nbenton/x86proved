@@ -7,9 +7,8 @@ Lemma RET_rule p' (sp:DWORD) (offset:WORD) (p q: DWORD) :
   |-- (
          safe @ (EIP ~= p' ** ESP ~= sp' ** sp :-> p') -->>
          safe @ (EIP ~= p  ** ESP ~= sp  ** sp :-> p')
-    ) @ (p -- q :-> RETOP offset).
+    ) c@ (p -- q :-> RETOP offset).
 Proof.
-  apply: TRIPLE_safe => R.
   do_instrrule_triple.
 Qed.
 

@@ -10,13 +10,10 @@ Require Import x86proved.chargetac (* for [finish_logic] *).
 Lemma JMPrel_rule (tgt: JmpTgt) (p q: DWORD) 
 : |-- interpJmpTgt tgt q (fun P addr =>
                             ((|> safe  @ (EIP ~= addr ** P)
-                            -->> safe @ (EIP ~= p ** P)) @ (p -- q :-> JMPrel tgt))).
+                            -->> safe @ (EIP ~= p ** P)) c@ (p -- q :-> JMPrel tgt))).
 Proof.
   rewrite /interpJmpTgt/interpMemSpecSrc.
-  do_instrrule
-    (try specintros => *;
-     apply: TRIPLE_safeLater => ?;
-     do !instrrule_triple_bazooka_step idtac).
+  do_instrrule_triple.
 Qed.
 
 (** We make this rule an instance of the typeclass, and leave
@@ -29,12 +26,12 @@ Local Hint Unfold interpJmpTgt : specapply.
 
 Lemma JMPrel_I_rule (rel: DWORD) (p q: DWORD):
   |-- ((|> safe @ (EIP ~= addB q rel)
-           -->> safe @ (EIP ~= p)) @ (p -- q :-> JMPrel rel)).
+           -->> safe @ (EIP ~= p)) c@ (p -- q :-> JMPrel rel)).
 Proof. superspecapply *. finish_logic. Qed.
 
 Lemma JMPrel_R_rule (r:Reg) (addr: DWORD) (p q: DWORD) :
   |-- ((|> safe @ (EIP ~= addr ** r ~= addr)
-           -->> safe @ (EIP ~= p ** r ~= addr)) @ (p -- q :-> JMPrel r)).
+           -->> safe @ (EIP ~= p ** r ~= addr)) c@ (p -- q :-> JMPrel r)).
 Proof. superspecapply *. finish_logic. Qed.
 
 End specapply_hint.
