@@ -51,5 +51,5 @@ Lemma tmpSwapCorrect s (r1 r2 rt: GPReg s) :
 Proof.
   rewrite /tmpSwapImpl/basicSwap. specintros => v w. autorewrite with push_at.
   unhideReg rt => t. 
-  do 3 basic apply *.
+  repeat basic apply *.
 Qed.

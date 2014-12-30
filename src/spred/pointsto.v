@@ -25,7 +25,10 @@ Qed.
 
 Definition pointsTo {R} {_:MemIs R} p v := Exists q, memIs p q v.
 Notation "p :-> ? : t" := (Exists x:t, pointsTo p x)(at level 50, no associativity).
+Notation "p ::-> ? : t" := (Exists x:t, pointsTo (zeroExtend _ p) x)(at level 50, no associativity).
 Notation "p :-> x" := (pointsTo p x) (at level 50, no associativity).
+Notation "p ::-> x" := (pointsTo (zeroExtend _ p) x) (at level 50, no associativity).
+Notation "p '--' q '::->' x" := (memIs (zeroExtend _ p) (zeroExtend _  q) x) (at level 50, q at next level, no associativity).
 
 (* Trivial consequence *)
 Lemma memIs_pointsTo {R} {_:MemIs R} p q v :

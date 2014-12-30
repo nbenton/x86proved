@@ -79,8 +79,8 @@ Definition fastcall_void1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 false)) : spe
   Forall iret:DWORD,
   Forall O : PointedOPred,
   (
-    obs O @ (EIP ~= iret ** ECX?     ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** post FS v) -->>
-    obs O @ (EIP ~= f    ** ECX ~= v ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS  v)
+    obs O @ (EIP ~= iret ** ECX?     ** ESP ~= sp    ** (sp-#4) ::-> ?:DWORD ** post FS v) -->>
+    obs O @ (EIP ~= f    ** ECX ~= v ** ESP ~= sp-#4 ** (sp-#4) ::-> iret    ** pre FS  v)
   )
   @ (EAX? ** EDX? ** OSZCP?).
 
@@ -90,8 +90,8 @@ Definition fastcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : s
   Forall iret:DWORD,
   Forall O : PointedOPred,
   (
-    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ECX?       ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** snd (post FS arg)) -->>
-    obs O @ (EIP ~= f    ** EAX?          ** ECX ~= arg ** ESP ~= sp-#4 ** sp-#4 :-> iret    ** pre FS arg)
+    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ECX?       ** ESP ~= sp    ** (sp-#4) ::-> ?:DWORD ** snd (post FS arg)) -->>
+    obs O @ (EIP ~= f    ** EAX?          ** ECX ~= arg ** ESP ~= sp-#4 ** (sp-#4) ::-> iret    ** pre FS arg)
   )
   @ (EDX? ** OSZCP?).
 
@@ -103,10 +103,10 @@ Definition stdcall_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : sp
   Forall ebp:DWORD,
   Forall O : PointedOPred,
   (
-    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp    ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
-    obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
+    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp    ** (sp-#4) ::-> ?:DWORD ** (sp-#8) ::-> ?:DWORD ** snd (post FS arg)) -->>
+    obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** (sp-#4) ::-> arg     ** (sp-#8) ::-> iret    ** pre FS arg)
   )
-  @ (EBP ~= ebp ** ECX? ** EDX? ** OSZCP? ** sp-#12 :-> ?:DWORD).
+  @ (EBP ~= ebp ** ECX? ** EDX? ** OSZCP? ** (sp-#12) ::-> ?:DWORD).
 
 Definition cdecl_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec :=
   Forall arg:DWORD,
@@ -114,8 +114,8 @@ Definition cdecl_nonvoid1_spec (f: DWORD) (FS: FunSpec (mkFunSig 1 true)) : spec
   Forall iret:DWORD,
   Forall O : PointedOPred,
   (
-    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp-#8 ** sp-#4 :-> ?:DWORD ** sp-#8 :-> ?:DWORD ** snd (post FS arg)) -->>
-    obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 :-> arg     ** sp-#8 :-> iret    ** pre FS arg)
+    obs O @ (EIP ~= iret ** EAX ~= fst (post FS arg) ** ESP ~= sp-#8 ** sp-#4 ::-> ?:DWORD ** sp-#8 ::-> ?:DWORD ** snd (post FS arg)) -->>
+    obs O @ (EIP ~= f    ** EAX?          ** ESP ~= sp-#8 ** sp-#4 ::-> arg     ** sp-#8 ::-> iret    ** pre FS arg)
   )
   @ (ECX? ** EDX? ** OSZCP?).
 
@@ -137,12 +137,13 @@ Definition fastcall_nonvoid1_impMeetsSpec (FS: FunSpec (mkFunSig 1 true)) (FI: p
   ---------------------------------------------------------------------------*)
 Definition stacked_nonvoid1_impMeetsSpec (FS: FunSpec (mkFunSig 1 true)) (FI: programWithSig (mkFunSig 1 true)) : spec :=
   Forall arg:DWORD, Forall ebp:DWORD,
-  basic (EAX?          ** EBP ~= ebp ** ebp +# 8 :-> arg     ** pre FS arg) (FI [EBP+8]%ms) empOP
-        (EAX ~= fst (post FS arg) ** EBP?       ** ebp +# 8 :-> ?:DWORD ** snd (post FS arg)) @ (ECX? ** EDX? ** OSZCP?).
+  basic (EAX?          ** EBP ~= ebp ** ebp +# 8 ::-> arg     ** pre FS arg) (FI [EBP+8]%ms) empOP
+        (EAX ~= fst (post FS arg) ** EBP?       ** ebp +# 8 ::-> ?:DWORD ** snd (post FS arg)) @ (ECX? ** EDX? ** OSZCP?).
 
+(*
 Lemma fastcall_nonvoid1_defCorrect (f f': DWORD) FS FI :
   |-- fastcall_nonvoid1_impMeetsSpec FS FI ->
-  |-- fastcall_nonvoid1_spec f FS <@ (f--f' :-> def_fast (mkFunSig 1 true) FI).
+  |-- fastcall_nonvoid1_spec f FS <@ (f--f' ::-> def_fast (mkFunSig 1 true) FI).
 Proof.
 rewrite /fastcall_nonvoid1_impMeetsSpec/fastcall_nonvoid1_spec/def_fast.
 move => H.
@@ -150,7 +151,7 @@ specintros => arg sp iret O.
 autorewrite with push_at.
 unfold_program. specintros => i'.
 
-specapply H. sbazooka.
+specapply H. ssimpl. sbazooka.
 specapply RET_loopy_rule. sbazooka.
 rewrite <-spec_reads_frame. autorewrite with push_at.
 rewrite <-spec_later_weaken. apply: limplAdj. apply: landL2. cancel1. sbazooka.
@@ -431,3 +432,4 @@ rewrite <-spec_later_weaken.
 
 eapply SAFEY; sbazooka.
 Qed. *)
+*)

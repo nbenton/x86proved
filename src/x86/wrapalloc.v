@@ -16,7 +16,7 @@ Definition wrappedAlloc bytes (r1 r2:GPReg64): program :=
   (LOCAL FAIL;
   LOCAL SUCCEED;
     allocImp bytes FAIL;;
-    SUB RDI, (BOPArgI OpSize8 (bytes:DWORD));;
+    SUB RDI, (# bytes:IMM _);;
     JMP SUCCEED;;
   FAIL:;;
     MOV RDI, (0:QWORD);;
@@ -25,7 +25,7 @@ Definition wrappedAlloc bytes (r1 r2:GPReg64): program :=
 
 Lemma wrappedAlloc_correct bytes (r1 r2: GPReg64) :
   bytes < 2^31 ->
-  |-- Forall i j: ADDR,
+  |-- Forall i j:ADDR,
   toyfun i RDI? empOP ((Exists p:ADDR, RDI ~= p ** memAny p (p +# bytes)) \\// RDI ~= #0)
 
   @  (RSI? ** OSZCP? ** allocInv)
@@ -42,23 +42,18 @@ rewrite /wrappedAlloc/basic. specintros => i1 i2 O. unfold_program.
 specintros => i3 i4 i5 i6 i7 i8 -> -> i9 -> ->.
 
 (* Deal with the allocator spec itself *)
-specapply inlineAlloc_correct; first by ssimpl. 
+specapply inlineAlloc_correct => //; first by ssimpl. 
 
 (* Now we deal with failure and success cases *)
 specsplit.
-
-(* failure case *)
-rewrite /(stateIsAny RDI). specintros => rdi. 
-autorewrite with push_at.
+unhideReg RDI => rdi. 
 
 (* MOV RDI, 0 *)
-specapply *; first by ssimpl.
+autorewrite with push_at. specapply *; first by ssimpl.
 
-finish_logic_with sbazooka.  
-apply lorR2. cancel1. 
+finish_logic_with sbazooka. apply lorR2. cancel1. 
 
 (* success case *)
-autorewrite with push_at.
 
 (* SUB RDI, bytes *)
 specintros => pb.
@@ -69,7 +64,7 @@ assert (H:= subB_equiv_addB_negB (pb+#bytes) # bytes).
 rewrite E0 in H. simpl (snd _) in H. rewrite addB_negBn in H.
 rewrite H in E0.
 
-specapply *; first by ssimpl. 
+autorewrite with push_at. specapply *; first by ssimpl. 
 
 (* JMP SUCCEED *)
 specapply *; first by ssimpl.
