@@ -3,7 +3,7 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.spec x86proved.spectac x86proved.opred x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program.
+Require Import x86proved.spred x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.cursor x86proved.x86.flags x86proved.x86.macros.
 Require Import Coq.Strings.String x86proved.cstring Coq.Strings.Ascii.
 
@@ -73,7 +73,7 @@ Definition strlen : program :=
 (* Correctness of strlen *)
 Lemma strlen_correct p s :
   zeroFree s ->
-  |-- loopy_basic RCX? strlen empOP (RCX ~= #(length s))
+  |-- basic RCX? strlen (RCX ~= #(length s))
     @ (OSZCP? ** RDI ~= p ** pointsToCString p s).
 Proof.
   move => ISZF. rewrite /strlen.
@@ -122,11 +122,11 @@ Proof.
   specintros => prefix suffix APPEND END. rewrite /stateIsAny. subst. specintros => ofl sfl cfl pfl.
 
   (* We would like to use basic apply but it's too eager to instantiate prefix and suffix *)
-  rewrite /loopy_basic. specintros => i j O'. 
+  rewrite /basic. specintros => i j. 
   Require Import basicspectac. 
   unfold_program. specapply *. rewrite /OSZCP. by ssimpl. 
 
-  rewrite <- spec_reads_frame. autorewrite with push_at. apply limplValid. cancel1. ssimpl.
+  rewrite <- spec_frame. autorewrite with push_at. apply limplValid. cancel1. ssimpl.
 
   case E: suffix => [| a s'].
 

@@ -5,7 +5,7 @@ Import x86.instrrules.core.instrruleconfig.
 (** ** Generic POP *)
 Lemma POP_rule s (rm:RegMem s) (sp:ADDR) (oldv v:VWORD s):
   |-- specAtRegMemDst rm (fun V =>
-      basic (V oldv ** RSP ~= sp    ** sp:->v) (POP rm) empOP
+      basic (V oldv ** RSP ~= sp    ** sp:->v) (POP rm)
             (V v    ** RSP ~= sp+#opSizeToNat s ** sp:->v)).
 Proof. do_instrrule_triple. Qed. 
 

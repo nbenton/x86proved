@@ -25,7 +25,7 @@ Definition basicSwap s (r1 r2: GPReg s) c :=
   Forall v, Forall w,
   basic
   (r1 ~= v ** r2 ~= w)
-  c empOP
+  c 
   (r1 ~= w ** r2 ~= v).
 
 Lemma xorSwapCorrect s (r1 r2: GPReg s) :

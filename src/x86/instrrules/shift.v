@@ -15,7 +15,7 @@ Qed.
 
 Lemma SHL_RI_rule s (r:GPReg s) (v:VWORD s) (count:nat) o sf z c p:
   count < (if s is OpSize8 then n64 else n32) ->
-  |-- basic (r~=v ** OSZCP o sf z c p) (SHL r, count) empOP
+  |-- basic (r~=v ** OSZCP o sf z c p) (SHL r, count) 
             (r~=iter count shlB v ** OSZCP?).
 Proof.
   move => BOUND.
@@ -32,7 +32,7 @@ Qed.
 
 Lemma SHR_RI_rule s (r:GPReg s) (v:VWORD s) (count:nat) o sf z c p:
   count < (if s is OpSize8 then n64 else n32) ->
-  |-- basic (r~=v ** OSZCP o sf z c p) (SHR r, count) empOP
+  |-- basic (r~=v ** OSZCP o sf z c p) (SHR r, count)
             (r~=iter count shrB v ** OSZCP?).
 Proof.
   move => BOUND.

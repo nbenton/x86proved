@@ -3,10 +3,10 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsrep x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.spec x86proved.spectac x86proved.opred x86proved.obs x86proved.x86.basic x86proved.x86.program.
+Require Import x86proved.spred x86proved.spec x86proved.spectac x86proved.safe x86proved.x86.basic x86proved.x86.program.
 Require Import x86proved.x86.call x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.cursor x86proved.x86.inlinealloc
                x86proved.x86.listspec x86proved.x86.listimp x86proved.triple.
-Require Import x86proved.x86.macros.
+Require Import x86proved.x86.macros x86proved.chargetac x86proved.latertac x86proved.basicspectac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -20,44 +20,39 @@ Hint Rewrite -> addB0 : ssimpl.
 Hint Unfold fromSingletonMemSpec : specapply.
 Require Import basicspectac.
 
-Lemma inlineHead_correct r1 r2 (i j: ADDR) (p e: QWORD) v vs :
-  inlineHead_spec r1 r2 i j p e v vs (inlineHead r1 r2).
+Lemma inlineHead_correct (r1 r2: GPReg64) (p e: ADDR) v vs :
+  inlineHead_spec r1 r2 p e v vs (inlineHead r1 r2).
 Proof.
-rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. unfold_program.
-specintro => O. rewrite /stateIsAny.
-specintros => q old. 
-specapply *. unfold eval.computeEA, ADRtoADDR, eval.computeDisplacement.
-sbazooka. 
-rewrite <-spec_reads_frame. autorewrite with push_at.
-apply limplValid. cancel1. by ssimpl. 
+rewrite /inlineHead_spec/inlineHead/listSeg-/listSeg. 
+rewrite /stateIsAny.
+specintros => q old.
+basic apply *. 
 Qed.
 
-Lemma inlineTail_correct (r1 r2: GPReg64) (i j:ADDR) (p e: QWORD) v vs :
-  inlineTail_spec r1 r2 i j p e v vs (inlineTail r1 r2).
+Lemma inlineTail_correct (r1 r2: GPReg64) (p e: QWORD) v vs :
+  inlineTail_spec r1 r2 p e v vs (inlineTail r1 r2).
 Proof.
-rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. unfold_program.
-specintro => O. rewrite /stateIsAny.
+rewrite /inlineTail_spec/inlineTail/listSeg-/listSeg. 
+rewrite /stateIsAny.
 specintros => q old. 
-specapply *. unfold eval.computeEA, ADRtoADDR, eval.computeDisplacement. sbazooka.
-(* Why doesn't sbazooka clear this? *)
-rewrite sepSPC. rewrite sepSPA. reflexivity. 
-rewrite <-spec_reads_frame. autorewrite with push_at.
-apply limplValid. cancel1. sbazooka. (* Again, what has happened here *) reflexivity. 
+simple basic apply *. done. ssimpl. instantiate (2:=old). rewrite sepSPC sepSPA. reflexivity. 
+sbazooka. reflexivity. 
 Qed.
 
 Lemma inlineCons_correct (r1 r2: GPReg64) failAddr (i j:ADDR) (h t e: QWORD) vs :
   inlineCons_spec r1 r2 failAddr i j h t e vs (inlineCons r1 r2 failAddr).
 Proof.
 rewrite /inlineCons_spec/inlineCons/updateCons. unfold_program.
-specintro => O. specintros => i1 i2 i3.
+specintros => i1 i2 i3.
 
-specapply inlineAlloc_correct => //. by ssimpl. 
-(*rewrite /allocInv. specintros => infoBlock base limit. *)
+instLem inlineAlloc_correct => H.
+rewrite ->spec_at_impl in H. 
+rewrite spec_at_impl. 
+superspecapply H. clear H.
+
 (* Failure case *)
 specsplit.
-  rewrite <-spec_reads_frame. autorewrite with push_at. 
-  Require Import chargetac.
-  apply limplValid. apply landL1. rewrite /stateIsAny. finish_logic_with sbazooka. 
+- finish_logic_with sbazooka. 
 
 (* Success case *)
 specintros => pb.
@@ -76,7 +71,9 @@ autorewrite with push_at.
 specapply *. sbazooka.
 
 (* MOV *)
-specapply *. rewrite /eval.getImm. rewrite signExtend_fromNat => //. rewrite E0.
+Admitted. 
+
+(*specapply *. MOV_M0R_rule. rewrite /eval.getImm. rewrite signExtend_fromNat => //. rewrite E0.
 simpl snd. simpl fst. by sbazooka. 
 
 (* MOV *)
@@ -92,6 +89,7 @@ rewrite <-spec_reads_frame. autorewrite with push_at.
 apply limplValid. apply landL2. rewrite /listSeg-/listSeg. 
 finish_logic_with sbazooka. (* Again, why? *) reflexivity.
 Qed.
+*)
 
 Lemma callCons_correct (r1 r2: GPReg64) (i j h t e: ADDR) vs :
   |-- callCons_spec r1 r2 i j h t e vs (callCons r1 r2).
@@ -100,10 +98,12 @@ Proof.
 (* First deal with the calling-convention wrapper *)
 rewrite /callCons_spec.
 autorewrite with push_at.
-etransitivity; [|apply toyfun_mkbody]. specintro => iret.
+Admitted. 
+
+(*etransitivity; [|apply toyfun_mkbody]. specintro => iret.
 
 (* Now unfold the control-flow logic *)
-rewrite /callCons/basic. specintros => i1 i2 O. unfold_program.
+rewrite /callCons/basic. specintros => i1 i2. unfold_program.
 specintros => i3 i4 i5 i6 i7 -> -> i8 -> ->.
 
 specapply inlineCons_correct. by ssimpl.
@@ -118,19 +118,15 @@ rewrite /(stateIsAny RDI). specintros => oldedi.
 (* MOV RDI, 0 *)
 specapply *. sbazooka.
 
-rewrite <- spec_reads_frame. apply: limplAdj. apply: landL2.
-autorewrite with push_at. simpl OPred_pred. cancel1. ssimpl. apply: lorR1. reflexivity. 
+rewrite /natAsDWORD. finish_logic_with sbazooka. by apply lorR1. 
 
 (* success case *)
-autorewrite with push_at.
-
 (* jmp SUCCEED *)
 specapply *. by ssimpl.
 
-(* Final stuff *)
-rewrite <-spec_reads_frame.
-apply: limplAdj. autorewrite with push_at.
-apply: landL2. simpl OPred_pred. rewrite -> empOPL. cancel1.
-rewrite /OSZCP/stateIsAny. sbazooka.
-apply: lorR2. sbazooka. reflexivity.
+(* Final stuff *) 
+rewrite <- spec_later_weaken.
+finish_logic_with sbazooka.
+apply: lorR2. sbazooka.
 Qed.
+*)

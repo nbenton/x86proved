@@ -5,7 +5,7 @@ Import x86.instrrules.core.instrruleconfig.
 Require Import x86proved.bitsopsprops (* for [andBB] *).
 
 Lemma TEST_self_rule s (r:GPReg s) (v:VWORD s) :
-  |-- basic (r ~= v ** OSZCP?) (TEST r, r) empOP
+  |-- basic (r ~= v ** OSZCP?) (TEST r, r) 
             (r ~= v ** OSZCP false (msb v) (v == #0) false (lsb v)).
 Proof.
   Hint Rewrite andBB : triple.

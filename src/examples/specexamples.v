@@ -1,9 +1,9 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.opred x86proved.spec x86proved.obs x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros.
+Require Import x86proved.spred x86proved.spec x86proved.safe x86proved.x86.basic x86proved.x86.basicprog x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.cursor.
 Require Import x86proved.spectac x86proved.basicspectac.
-Require Import x86proved.common_tactics x86proved.chargetac x86proved.common_definitions.
+Require Import x86proved.common_tactics x86proved.chargetac x86proved.common_definitions x86proved.latertac.
 Require Import Coq.Setoids.Setoid.
 
 Set Implicit Arguments.
@@ -14,59 +14,84 @@ Generalizable All Variables.
 Local Open Scope instr_scope.
 
 (* Example: It is safe to sit forever in a tight loop. *)
-Example safe_loop (p q: ADDR) (O : PointedOPred) :
-  |-- obs O @ (UIP ~= p ** p -- q :-> JMP p).
+Example safe_loop (p q: ADDR) :
+  |-- safe @ (UIP ~= p) c@ (p -- q :-> JMP p).
 Proof.
   apply: spec_lob.
-  have H := @JMP_I_loopy_rule p p q.
-  apply (lforallE_spec O) in H. cbv beta in H.
-  rewrite ->spec_reads_entails_at in H; [|apply _].
-  autorewrite with push_at in H. apply landAdj in H.
-  etransitivity; [|apply H]. apply: landR; [sbazooka | reflexivity].
+  superspecapply *. autorewrite with push_later. 
+  finish_logic_with sbazooka. 
 Qed.
+
+(* Example: It is safe to sit forever in a tight loop. *)
+Example safe_loopAlt (p r: ADDR) :
+  |-- safe @ (UIP ~= p) c@ (p -- r :-> (JMP p;; NOP)).
+Proof.
+  apply: spec_lob.
+  unfold_program. unfold_program. 
+  specintros => q. superspecapply *. autorewrite with push_later.
+  finish_logic_with sbazooka. 
+Qed.
+
 
 (* Example: It is safe to sit in a less tight loop forever. *)
 Example safe_loop_while eax :
-  |-- loopy_basic (EAX ~= eax ** OSZCP?) (while (TEST EAX, EAX) CC_O false prog_skip) empOP lfalse.
+  |-- basic (EAX ~= eax ** OSZCP?) (while (TEST EAX, EAX) CC_O false prog_skip) lfalse.
 Proof.
   basic apply (while_rule_ro (I := fun b => b == false /\\ EAX? ** SF? ** ZF? ** CF? ** PF?)) => //;
-    rewrite /stateIsAny; specintros => *;
-    basic apply *.
+    rewrite /stateIsAny; specintros => *.
+  do !basic apply *.
+  basic apply TEST_self_rule.
 Qed.
 
 (* We can package up jumpy code in a triple by using labels. *)
+(*
 Example basic_loop:
-  |-- loopy_basic empSP (LOCAL l; l:;; JMP l) empOP lfalse.
+  |-- basic empSP (LOCAL l; l:;; JMP l) lfalse.
 Proof.
-  rewrite /loopy_basic. specintros => i j O'.
-  unfold_program. specintros => _ _ <- <-.
-  rewrite /spec_reads. specintros => code Hcode.
-  autorewrite with push_at.
-  apply: limplAdj. apply: landL1. rewrite -> Hcode.
-  etransitivity; [apply safe_loop|]. rewrite ->empOPL. cancel2. reflexivity. eexists _. split; by ssimpl.
+  apply basic_local => l. 
+  rewrite /basic. specintros => i j.
+  unfold_program. specintros => _ <- <-. rewrite empSPL empSPR.
+    
+  rewrite  spec_reads_alt.  rewrite <- spec_at_entails_reads.
+  admit. apply _. done. rewrite /spec_reads.
+  specapply safe_loop. finish_logic.   autorewrite with push_at.
+  apply: limplAdj. apply: landL1. 
+  etransitivity; [apply safe_loop|]. finish_logic. 
 Qed.
+
+Example basic_loopAlt:
+  |-- basic empSP (LOCAL l; l:;; (JMP l;; NOP)) lfalse.
+Proof.
+  apply basic_local => l. 
+  rewrite /basic. specintros => i j.
+  unfold_program. specintros => _ <- <- i'.  
+  autorewrite with push_at.
+  apply: limplAdj. apply: landL1. rewrite empSPL empSPR. 
+  etransitivity; [apply safe_loopAlt|]. unfold_program. cancel1. sbazooka. 
+Qed.
+*)
 
 (* Show off the sequencing rule for [basic]. *)
 Example basic_inc3 (x:DWORD):
   |-- basic (EAX ~= x)
-            (INC EAX;; INC EAX;; INC EAX) empOP
+            (INC EAX;; INC EAX;; INC EAX) 
             (EAX ~= x +# 3) @ OSZCP?.
 Proof.
   autorewrite with push_at. rewrite /stateIsAny.
   specintros => o s z c p.
-  do !basic apply *.
-  rewrite addIsIterInc/iter. by ssimpl. 
+  do !basic apply *.   
+  rewrite addIsIterInc/iter. by ssimpl.
 Qed.
 
 Example incdec_while c a:
-  |-- loopy_basic
+  |-- basic
     (ECX ~= c ** EAX ~= a)
     (
       while (TEST ECX, ECX) CC_Z false (
         DEC ECX;;
         INC EAX
       )
-    ) empOP
+    ) 
     (ECX ~= #0 ** EAX ~= addB c a)
     @ OSZCP?.
 Proof.
@@ -104,9 +129,9 @@ Local Ltac prepare_basic_goal_for_spec :=
   autorewrite with push_at;
   do ?(idtac;
        match goal with
-         | [ |- _ |-- parameterized_basic _ (LOCAL _; _) _ _ ] => apply basic_local => ?
+         | [ |- _ |-- basic _ (LOCAL _; _) _ ] => apply basic_local => ?
        end);
-  rewrite /parameterized_basic;
+  rewrite /basic;
   do ?[ progress subst
       | progress specintros => *
       | progress unfold_program ].
@@ -122,6 +147,7 @@ Definition output_n_prog (pbody : program) (n : nat)
         JMP LOOP;;
         END:;).
 
+(*
 (** Example: We can observe the output of any given constant, n times *)
 Example safe_loop_n P (pbody : program) O (n : nat) d
         (small_enough : nat -> Prop)
@@ -211,7 +237,7 @@ Example safe_loop_forever (PP : nat -> SPred -> Prop) (pbody : program) (O : nat
         (transition_correct : forall P n (H : PP n P), PP (n.+1) (transition P n H))
         (H : forall P n (H' : PP n P) (Q := transition P n H'), PP (S n) Q -> |--basic P pbody (O n) Q)
         (P0 : SPred) (start : nat) (H0 : PP start P0)
-: |-- (loopy_basic P0
+: |-- (basic P0
                    (loop_forever_prog pbody)
                    (roll_starOP O start)
                    lfalse).
@@ -235,7 +261,7 @@ Proof.
   by ssimpl. 
 
   (** The jump code *)
-  specapply JMP_I_loopy_rule. by ssimpl.
+  specapply JMP_I_rule. by ssimpl.
   simpl OPred_pred.
 
   finish_logic_with sbazooka.
@@ -245,7 +271,7 @@ Example safe_loop_forever_state_machine state (transition : state -> state)
         (P : state -> SPred) (pbody : program) (O : state -> OPred)
         (H : forall s, |--basic (P s) pbody (O s) (P (transition s)))
         (start : state) (state_n := fun n => rep_apply n transition start)
-: |-- (loopy_basic (P start)
+: |-- (basic (P start)
                    (loop_forever_prog pbody)
                    (roll_starOP (fun n => O (state_n n)) 0)
                    lfalse).
@@ -264,7 +290,7 @@ Qed.
 
 Example safe_loop_forever_constant P (pbody : program) O
         (H : |--basic P pbody O P)
-: |-- loopy_basic P (loop_forever_prog pbody) (starOP O) lfalse.
+: |-- basic P (loop_forever_prog pbody) (starOP O) lfalse.
 Proof.
   rewrite <- (roll_starOP__starOP 0 O).
   exact (@safe_loop_forever (fun _ => eq P) pbody (fun _ => O) (fun _ _ _ => P) (fun _ _ _ => reflexivity _)
@@ -273,8 +299,13 @@ Proof.
 Qed.
 
 Example loop_forever_one al
+<<<<<<< HEAD
 : |-- (loopy_basic (AL ~= al)
                    (MOV AL, (1:BYTE);;
+=======
+: |-- (basic (AL ~= al)
+                   (MOV AL, (#1 : DWORD);;
+>>>>>>> master
                     loop_forever_prog (OUT #0, AL))
                    (starOP (outOP (zeroExtend n8 (#0 : BYTE)) (#1 : BYTE)))
                    lfalse).
@@ -356,8 +387,8 @@ Proof.
 Qed.
 
 (* Example: It is safe to sit in a less tight loop forever. *)
-Example safe_loop_io P c O (H : |-- loopy_basic P c O P @ (EAX? ** OSZCP?))
-: |-- loopy_basic (EAX? ** OSZCP? ** P) (while (TEST EAX, EAX) CC_O false c) (starOP O) lfalse.
+Example safe_loop_io P c O (H : |-- basic P c O P @ (EAX? ** OSZCP?))
+: |-- basic (EAX? ** OSZCP? ** P) (while (TEST EAX, EAX) CC_O false c) (starOP O) lfalse.
 Proof.
   basic apply (while_rule_ind
                  (transition_body := @id unit)
@@ -374,3 +405,4 @@ Proof.
   { specintros => *; basic apply H. }
   { rewrite /stateIsAny; specintros => *; basic apply *. }
 Qed.
+*)

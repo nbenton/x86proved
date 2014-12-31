@@ -1,10 +1,10 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.finfun Ssreflect.tuple Ssreflect.fintype.
 Require Import x86proved.bitsrep x86proved.charge.ilogic.
 Require Import x86proved.x86.program x86proved.x86.programassem x86proved.x86.programassemcorrect x86proved.x86.imp x86proved.x86.call.
-Require Import x86proved.reader x86proved.spred x86proved.opred x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.reg.
-Require Import x86proved.cursor x86proved.obs x86proved.x86.instrrules.
+Require Import x86proved.reader x86proved.spred x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.reg.
+Require Import x86proved.cursor x86proved.safe x86proved.x86.instrrules x86proved.chargetac.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.macros Coq.Strings.Ascii x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.x86.screenspec x86proved.x86.screenimp x86proved.x86.lifeimp.
+Require Import x86proved.x86.screenspec x86proved.x86.screenimp.
 
 Open Scope instr_scope.
 Local Transparent ILFun_Ops.
@@ -65,31 +65,59 @@ Definition showOctal_program : program :=
         SUB EBX, (2:DWORD)(* move one character left on the screen *)
       ).
 
+(* This is the theorem that is true for code under @ *)
 Theorem gcd_safe: forall endAddr: ADDR,
-  |-- Forall O : PointedOPred, (obs O @ (UIP ~= endAddr) -->> obs O @ (UIP ~= codeAddr))
-        @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
-       <@ (codeAddr -- endAddr :-> gcd_bytes).
+  |-- (safe @ (UIP ~= endAddr ** codeAddr -- endAddr :-> compile_cmd Cgcd) -->> 
+       safe @ (UIP ~= codeAddr ** codeAddr -- endAddr :-> gcd_bytes))
+        @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?).
 Proof.
-  move=> endAddr. specintros => O. rewrite /gcd_bytes. 
-  rewrite ->assemble_correct; last first. by vm_compute.
-  rewrite /gcd_program.
+  move=> endAddr. rewrite /gcd_bytes. 
+  autorewrite with push_at.
+  rewrite -> assemble_correct; last first. by vm_compute.
+  rewrite /gcd_program. 
   have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
-  specapply H.
-  - ssimpl. rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
+  superspecapply H. 
+  - rewrite /asn_denot /stack_denot. rewrite /stateIsAny.
     sdestructs => a b c.
     pose s x := match x with | xa => a | xb => b | xc => c end.
     ssplit. instantiate (2:=s). ssplit; first done. rewrite /s. by ssimpl.
-  rewrite <-spec_reads_frame. apply limplValid. autorewrite with push_at.
-  cancel1. rewrite /asn_denot /stack_denot /stateIsAny. by sbazooka.
+
+  rewrite /asn_denot /stack_denot /stateIsAny. 
+  finish_logic_with sbazooka.   
 Qed.
+
+
+(*
+(* This is not true if we replace <@ with @ because the code might update gcd_bytes but leave their decoding the same *)
+Theorem gcd_safe: forall endAddr: ADDR,
+  |-- (safe @ (UIP ~= endAddr) -->> safe @ (UIP ~= codeAddr))
+>>>>>>> master
+        @ (EAX? ** EBX? ** ECX? ** EDX? ** OSZCP?)
+        c@ (codeAddr -- endAddr :-> gcd_bytes).
+Proof.
+  move=> endAddr. rewrite /gcd_bytes. 
+  autorewrite with push_at.
+  rewrite ->assemble_correct; last first. by vm_compute.
+  rewrite /gcd_program.
+  have H := Cgcd_correct. rewrite /triple in H. autorewrite with push_at in H.
+  superspecapply H.
+  - rewrite /asn_denot/stack_denot. rewrite /stateIsAny.
+    sdestructs => a b c.
+    pose s x := match x with | xa => a | xb => b | xc => c end.
+    ssplit. instantiate (2:=s). ssplit; first done. rewrite /s. by ssimpl.
+  rewrite /asn_denot /stack_denot /stateIsAny. 
+  finish_logic_with sbazooka. 
+Qed.
+
+*)
 
 (* This is the plain version of the theorem, not obscured by fancy spec logic
    constructs. *)
 (*
-Corollary gcd_safe_nonfancy: forall (endAddr: DWORD) k R,
-  safe k (EIP ~= endAddr ** EAX? ** EBX? ** ECX? ** EDX? ** OSZCP? **
+Corollary gcd_safe_nonfancy: forall (endAddr: ADDR) k R,
+  safe k (UIP ~= endAddr ** EAX? ** EBX? ** ECX? ** EDX? ** OSZCP? **
           codeAddr -- endAddr :-> gcd_bytes ** R) ->
-  safe k (EIP ~= codeAddr ** EAX? ** EBX? ** ECX? ** EDX? ** OSZCP? **
+  safe k (UIP ~= codeAddr ** EAX? ** EBX? ** ECX? ** EDX? ** OSZCP? **
           codeAddr -- endAddr :-> gcd_bytes ** R).
 Proof.
   move=> endAddr k R.

@@ -3,11 +3,12 @@
   ===========================================================================*)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq (* for [catA] *) Ssreflect.tuple.
 Require Import x86proved.x86.procstate x86proved.bitsops.
-Require Import x86proved.spec x86proved.spred x86proved.spred.spredtotal x86proved.opred x86proved.x86.basic x86proved.x86.basicprog x86proved.spectac.
+Require Import x86proved.spec x86proved.spred x86proved.spred.spredtotal x86proved.x86.basic x86proved.x86.basicprog.
 Require Import x86proved.x86.instr x86proved.cursor.
-Require Import x86proved.x86.instrsyntax x86proved.x86.instrrules.instrspec.
+Require Import x86proved.x86.instrsyntax.
 Require Import x86proved.x86.procstatemonad (* for [ST] *) x86proved.bitsprops (* for [high_catB] *) x86proved.bitsopsprops (* for [subB_eq0] *).
-Require Import x86proved.obs (* for [obs] *) x86proved.triple (* for [TRIPLE] *).
+Require Import x86proved.safe (* for [safe] *) x86proved.triple (* for [TRIPLE] *).
+Require Import x86proved.x86.instrrules.instrspec.
 Require Import x86proved.x86.eval (* for [evalInstr] *) x86proved.monad (* for [doMany] *) x86proved.monadinst (* for [Success] *).
 Require Import x86proved.common_definitions (* for [eta_expand] *) x86proved.common_tactics (* for [elim_atomic_in_match'] *).
 Require Import Coq.Classes.Morphisms (* for [Parametric Morphism] and [signature_scope] *).
@@ -16,10 +17,10 @@ Module Import instrruleconfig.
   Export Ssreflect.ssreflect Ssreflect.ssrbool (* for [==] notation *) Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.tuple.
 
   Export x86proved.x86.procstate x86proved.bitsops.
-  Export x86proved.spec x86proved.spred x86proved.opred x86proved.obs x86proved.x86.basic x86proved.x86.basicprog.
-  Export x86proved.x86.instrrules.instrspec.
+  Export x86proved.spec x86proved.spred x86proved.safe x86proved.x86.basic x86proved.x86.basicprog.
   Export x86proved.x86.instr x86proved.cursor.
   Export x86proved.x86.instrsyntax.
+  Export x86proved.x86.instrrules.instrspec.
 
   Export x86proved.common_definitions (* for [eta_expand] *).
 
@@ -80,56 +81,42 @@ Section UnfoldSpec.
   Local Transparent ILPre_Ops lentails.
 
   Lemma TRIPLE_safe_gen (instr:Instr) P o Q (i j: ADDR) sij:
-    eq_pred sij |-- i -- j :-> instr ->
-    forall O',
+    sij |-- i -- j :-> instr ->
     (forall (R: SPred),
-     TRIPLE (UIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
+     TRIPLE (UIP ~= j ** P ** sij ** R) (evalInstr instr) o
             (Q ** R)) ->
-    (obs O') @ Q |-- obs (catOP (eq_opred o) O') @ (UIP ~= i ** P ** eq_pred sij).
+    safe @ Q |-- safe @ (UIP ~= i ** P ** sij).
   Proof.
-    move => Hsij O' HTRIPLE k R HQ. move=> s Hs.
+    move => Hsij HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
     apply (step_rule Hsij) in HTRIPLE.
     apply lentails_eq in Hs.
     repeat rewrite -> sepSPA in Hs.
     apply lentails_eq in Hs.
     specialize (HTRIPLE s Hs).
-    rewrite /runsForWithPrefixOf.
     destruct HTRIPLE as [sf [H1 H3]].
 
     apply lentails_eq in H3.
     rewrite <- sepSPA in H3.
     apply lentails_eq in H3.
     specialize (HQ _ H3).
-    destruct HQ as [orest [H4 H5]].
-    clear H3 Hsij.
-    destruct k.
-    { eexists (o ++ _).
-      do ![ apply runsForWithPrefixOf0
-          | eassumption
-          | esplit ]. }
-
-    (* k > 0 *)
-    have LE: k <= succn k by done.
-    apply (runsForWithPrefixOfLe LE) in H5.
-    destruct H5 as [sf' [o'' [PRE MANY]]].
-    exists (o ++ orest). rewrite /manyStep-/manyStep/oneStep.
-    split. by exists o, orest.
-    exists sf'. exists (o ++ o''). split; first by apply cat_preActions.
-    exists sf. exists o, o''. split; first done.
-    split; last done.
-    intuition.
+    destruct HQ as [s' [o' H5]].
+    clear H3 Hsij. 
+    destruct k. 
+    - apply runsFor0. 
+    - apply: runsForS.
+      apply H1. apply: (runsForLe (k:=k.+1) (k':=k)) => //. 
+    rewrite /runsFor. eexists _, _. apply H5. 
   Qed.
 
   Lemma TRIPLE_safeLater_gen (instr:Instr) P o Q (i j: ADDR) sij:
-    eq_pred sij |-- i -- j :-> instr ->
-    forall O' `{IsPointed_OPred O'},
+    sij |-- i -- j :-> instr ->
     (forall (R: SPred),
-     TRIPLE (UIP ~= j ** P ** eq_pred sij ** R) (evalInstr instr) o
+     TRIPLE (UIP ~= j ** P ** sij ** R) (evalInstr instr) o
             (Q ** R)) ->
-    |> (obs O') @ Q |-- obs (catOP (eq_opred o) O') @ (UIP ~= i ** P ** eq_pred sij).
+    |> safe @ Q |-- safe @ (UIP ~= i ** P ** sij).
   Proof.
-    move => Hsij O' ? HTRIPLE k R HQ. move=> s Hs.
+    move => Hsij HTRIPLE k R HQ. move=> s Hs.
     specialize (HTRIPLE (R**ltrue)).
     apply (step_rule Hsij) in HTRIPLE.
     apply lentails_eq in Hs.
@@ -142,9 +129,7 @@ Section UnfoldSpec.
     rewrite <- sepSPA in H3.
     apply lentails_eq in H3.
     destruct k => //.
-    - destruct (_ : IsPointed_OPred O') as [o' o'H].
-      exists (o ++ o'). split. by exists o, o'.
-      apply runsForWithPrefixOf0.
+    - apply runsFor0. 
     (* k > 0 *)
     have LT: (k < succn k)%coq_nat by done.
     have LE: k <= succn k by done.
@@ -152,97 +137,82 @@ Section UnfoldSpec.
     destruct HQ as [orest [H4 H5]].
     clear H3 Hsij.
 
-    destruct H5 as [sf' [o'' [PRE MANY]]]. rewrite /runsForWithPrefixOf.
-    exists (o ++ orest).
-    rewrite /manyStep-/manyStep/oneStep.
-    split. by exists o, orest.
-    exists sf'. exists (o ++ o''). split; first by apply cat_preActions.
-    exists sf. exists o, o''. split; first done.
-    split; last done.
-    intuition.
+    - apply: runsForS.
+      apply H1.
+    rewrite /runsFor. eexists _, _. eassumption. 
   Qed.
 
 End UnfoldSpec.
 
-Lemma TRIPLE_safecatLater instr P Q (i j: ADDR) o O' `{IsPointed_OPred O'} :
+Lemma TRIPLE_safeLaterRO instr P Q (i j: ADDR) :
+  (forall (R: SPred),
+   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
+  |-- (|> safe @ Q -->> safe @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
+Proof.
+  move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at. 
+  rewrite sepSPA.
+  apply limplValid. 
+  apply: TRIPLE_safeLater_gen; [eassumption |] => R. triple_apply H. 
+Qed.
+
+Lemma TRIPLE_safeRO instr P o Q (i j: ADDR) :
   (forall (R: SPred),
    TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
-  |-- (|> (obs O') @ Q -->> obs (catOP (eq_opred o) O') @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
+  |-- (safe @ Q -->> safe @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
 Proof.
-  move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
-  rewrite sepSPA. apply limplValid.
-  eapply TRIPLE_safeLater_gen; try eassumption; []. move=> R. triple_apply H.
+  move=> H. rewrite /spec_reads. specintros => s Hs.  autorewrite with push_at.
+  rewrite sepSPA. 
+  apply limplValid.
+  eapply TRIPLE_safe_gen; [eassumption|] => R. triple_apply H.
 Qed.
 
-Lemma TRIPLE_safecat instr P Q (i j: ADDR) o O':
+Lemma TRIPLE_safeLaterRW instr P P' o Q (i j: ADDR) :
+  P' |-- UIP ~= i ** P ** (i -- j :-> instr) ->
   (forall (R: SPred),
-   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
-  |-- ((obs O') @ Q -->> obs (catOP (eq_opred o) O') @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (UIP ~= j ** P ** i -- j :-> instr ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- (|>safe @ Q -->> safe @ P').
 Proof.
-  move=> H. rewrite /spec_reads. specintros => s Hs. autorewrite with push_at.
-  rewrite sepSPA. apply limplValid.
-  eapply TRIPLE_safe_gen; [eassumption|]. move=> R. triple_apply H.
+  move=> H2 H1. 
+  apply limplValid. rewrite -> H2.  
+  eapply TRIPLE_safeLater_gen; first reflexivity. move => R. triple_apply H1.
 Qed.
 
-Lemma TRIPLE_safeLater instr P Q (i j: ADDR) O `{IsPointed_OPred O}:
+Lemma TRIPLE_safeRW instr P P' o Q (i j: ADDR) :
+  P' |-- UIP ~= i ** P ** (i -- j :-> instr) ->
   (forall (R: SPred),
-   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
-  |-- (|> obs O @ Q -->> obs O @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (UIP ~= j ** P ** (i -- j :-> instr) ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- safe @ Q -->> safe @ P'.
 Proof.
-  move=> H. have TS:= TRIPLE_safecatLater (o:= nil).
-  eforalls TS;
-    repeat match goal with
-             | [ |- IsPointed_OPred _ ] => eassumption
-             | [ H : context[catOP (eq_opred nil) ?P] |- _ ] => rewrite -> empOPL in H
-             | [ H : |-- _ |- |-- _ ] => by apply TS
-             | _ => done
-           end.
+  move=> H2 H1.
+  apply limplValid. rewrite -> H2.
+  eapply TRIPLE_safe_gen; [reflexivity|] => R. triple_apply H1.
 Qed.
 
-Lemma TRIPLE_safe instr P Q (i j: ADDR) O :
+(*
+Lemma TRIPLE_safeLaterRW instr P o Q (i j: DWORD) :
   (forall (R: SPred),
-   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
-  |-- (obs O @ Q -->> obs O @ (UIP ~= i ** P)) <@ (i -- j :-> instr).
+   TRIPLE (EIP ~= j ** P ** R) (evalInstr instr) o (Q ** R)) ->
+  |-- (|>safe @ Q -->> safe @ (EIP ~= i ** P)) @ (i -- j :-> instr).
 Proof.
-  move=> H. have TS:= TRIPLE_safecat (o:= nil).
-  eforalls TS. rewrite -> empOPL in TS. apply TS. done.
+  move=> H. autorewrite with push_at.
+  rewrite sepSPA. 
+  apply limplValid. 
+  eapply TRIPLE_safeLater_gen; [reflexivity|] => R. triple_apply H.
+Qed.
+*)
+
+Lemma TRIPLE_basic instr P Q:
+  (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) nil (Q ** R)) ->
+  |-- @basic _ _ P instr Q.
+Proof.
+  move=> H. rewrite /basic. specintros => i j.
+  autorewrite with push_at. rewrite 2!sepSPA. apply limplValid.  
+  eapply (TRIPLE_safe_gen (o:=nil)).  reflexivity. move => R. triple_apply H.
 Qed.
 
 
-Lemma TRIPLE_safeAlt instr P P' Q (i j: ADDR) O :
-  P' |-- UIP ~= i ** P ->
-  (forall (R: SPred),
-   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
-  |-- (obs O @ Q -->> obs O @ P') <@ (i -- j :-> instr).
-Proof.
-  move=> HP H. have TS:= TRIPLE_safecat (o:= nil).
-  eforalls TS. rewrite -> empOPL in TS. rewrite -> HP. apply TS. done.
-Qed.
-
-Lemma TRIPLE_safeLaterAlt instr P P' Q (i j: ADDR) O `{IsPointed_OPred O}:
-  P' |-- UIP ~= i ** P ->
-  (forall (R: SPred),
-   TRIPLE (UIP ~= j ** P ** R) (evalInstr instr) nil (Q ** R)) ->
-  |-- (|> obs O @ Q -->> obs O @ P') <@ (i -- j :-> instr).
-Proof.
-  move=> HP H. have TS:= TRIPLE_safecatLater (o:= nil). rewrite -> HP. 
-  eforalls TS;
-    repeat match goal with
-             | [ |- IsPointed_OPred _ ] => eassumption
-             | [ H : context[catOP (eq_opred nil) ?P] |- _ ] => rewrite -> empOPL in H
-             | [ H : |-- _ |- |-- _ ] => by apply TS
-             | _ => done
-           end.
-Qed.
-
-
-Lemma TRIPLE_basic {T_OPred proj} instr P o Q:
-  (forall (R: SPred), TRIPLE (P ** R) (evalInstr instr) o (Q ** R)) ->
-  |-- @parameterized_basic T_OPred proj _ _ P instr (eq_opred o) Q.
-Proof.
-  move=> H. rewrite /parameterized_basic. specintros => i j O'.
-  apply TRIPLE_safecat => R. triple_apply H.
-Qed.
+(* Notation for "code" frame *)
+Infix "c@" := spec_at (at level 44, left associativity).
 
 (** When dealing with logic, we want to reduce [stateIs] and similar to basic building blocks. *)
 Hint Unfold OSZCP : finish_logic_unfolder.
@@ -350,10 +320,11 @@ Proof. rewrite /updateZPS. move => H. do 3 triple_apply triple_setFlagSep.
 Qed.
 Global Opaque updateZPS.
 
-Lemma basicForgetFlags T (MI: MemIs T) P (x:T) O Q o s z c p
-      (H : |-- basic (P ** OSZCP?) x O (Q ** OSZCP o s z c p))
-: |-- basic P x O Q @ OSZCP?.
-Proof. basic apply H. Qed.
+Lemma basicForgetFlags T (MI: MemIs T) P (x:T) Q o s z c p
+      (H : |-- basic (P ** OSZCP?) x (Q ** OSZCP o s z c p))
+: |-- basic P x Q @ OSZCP?.
+Proof. basic apply H. Qed. 
+
 
 Lemma sbbB_ZC n (r : BITS n) carry (v1 v: BITS n) :
   sbbB false v1 v = (carry, r) ->
@@ -491,11 +462,12 @@ Ltac instrrule_triple_bazooka_step tac :=
     (** We require [?f; ?g] rather than [_; _], because [_]s can be dependent, but [triple_seq] only works in the non-dependent/constant function case *)
     | [ |- TRIPLE _ (bind ?f (fun _ : unit => ?g)) _ _ ] => eapply triple_seq
 
-    (* For jumpy instructions *)
-    | [ |- |-- (obs _ @ _ -->> _) <@ _ ] => apply: TRIPLE_safeAlt; [by ssimpl | move => ? ]
-    | [ |- |-- (|> obs _ @ _ -->> _) <@ _ ] => apply: TRIPLE_safeLaterAlt; [by ssimpl | move => ? ]
+    | [ |- |-- safe @ _ -->> _] => (apply: TRIPLE_safeRW; first by ssimpl); move => ?
+    | [ |- |-- |> safe @ _ -->> _] => (apply: TRIPLE_safeLaterRW; first by ssimpl); move => ?
+    | [ |- |-- (safe @ _ -->> _) <@ _ ] => apply: TRIPLE_safeRO => ?
+    | [ |- |-- (|> safe @ _ -->> _) <@ _ ] => apply: TRIPLE_safeLaterRO => ?
 
-    | _ => do [ apply TRIPLE_basic => * 
+    | _ => do [ apply TRIPLE_basic => *
               | triple_apply triple_pre_introFlags => *; rewrite /OSZCP
               | progress autorewrite with triple
               | progress autounfold with instrrules_eval ]
@@ -520,7 +492,7 @@ Ltac do_instrrule_using tac :=
         | [ src : Src _ |- _ ] => elim src => ?
         | [ rm : RegMem _ |- _ ] => elim rm => ?
         | [ a : AdSize |- _ ] => elim a
-        | [ t : JmpTgt _ |-  _ ] => elim t => [[?] |]
+        | [ t : JmpTgt _ |-  _ ] => elim t => [[?] |?]
       end;
   do ?[ elim_atomic_in_match' | case/(@id (option _)) | case/(@id (_ * _))
         | (* ensure that the goal is of the form [_ -> _] *) (test progress intros); move => ? ];
@@ -536,3 +508,4 @@ Hint Unfold
   DWORDRegMemM DWORDRegImmI fromSingletonMemSpec
   natAsDWORD getImm
   : instrrules_all.
+

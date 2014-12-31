@@ -7,19 +7,19 @@ Require Import x86proved.x86.eval (* for [computeEA] *).
 Require Import common_tactics.
 Lemma LEA_ruleSameBase (baseval indexval: ADDR) (disp: DWORD) (r: BaseReg AdSize8) (r1:IxReg AdSize8) sc :
   |-- basic (r ~= baseval ** r1 ~= indexval)
-            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some r) (Some(r1, sc)) disp))) empOP
+            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some r) (Some(r1, sc)) disp))) 
             (r ~= computeEA (a:=AdSize8) baseval (Some(indexval,sc)) disp ** r1 ~= indexval).
 Proof. do_instrrule_triple. Qed.
 
 Lemma LEA_ruleSameBase32 (baseval indexval: DWORD) (disp:DWORD) (r: BaseReg AdSize4) (r1:IxReg AdSize4) sc :
   |-- basic (r ~= baseval ** r1 ~= indexval)
-            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some r) (Some(r1, sc)) disp))) empOP
+            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some r) (Some(r1, sc)) disp))) 
             (r ~= computeEA (a:=AdSize4) baseval (Some(indexval,sc)) disp ** r1 ~= indexval).
 Proof. do_instrrule_triple. Qed.
 
 Lemma LEA_rule (old baseval indexval disp: DWORD) (r r': GPReg32) (r1:NonSPReg32) sc :
   |-- basic (r ~= old ** r' ~= baseval ** r1 ~= indexval)
-            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some (r':BaseReg _)) (Some(r1, sc)) disp))) empOP
+            (instr.LEA _ r (RegMemM _ _ (mkMemSpec _ None (Some (r':BaseReg _)) (Some(r1, sc)) disp))) 
             (r ~= computeEA (a:=AdSize4) baseval (Some(indexval,sc)) disp ** r' ~= baseval ** r1 ~= indexval).
 Proof. do_instrrule_triple. Qed.
 

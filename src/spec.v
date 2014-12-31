@@ -610,6 +610,9 @@ Proof.
     simpl in Hs'; rewrite -> Hs'; reflexivity.
 Qed.
 
+Lemma spec_reads_emp S: S <@ empSP -|- S.
+Proof. by rewrite emp_unit spec_reads_eq_at -emp_unit spec_at_emp. Qed.
+
 Corollary spec_reads_byteIs S p b:
   S <@ byteIs p b -|- S @ byteIs p b.
 Proof. apply spec_reads_eq_at. Qed.
@@ -716,7 +719,7 @@ Proof.
     autorewrite with push_at. by rewrite sepSPC.
 Qed.
 
-Hint Rewrite spec_at_reads : push_at.
+Hint Rewrite spec_at_reads spec_at_emp spec_reads_emp : push_at.
 
 Instance AtEx_reads S R {HS: AtEx S}: AtEx (S <@ R) := _.
 Instance AtCovar_reads S R {HS: AtCovar S}: AtCovar (S <@ R) := _.
@@ -774,7 +777,7 @@ Hint Rewrite <-
   spec_reads_later
   : push_later.
 
-Hint Rewrite @spec_later_exists_inhabited
+Hint Rewrite (@spec_later_exists_inhabited _ _ _ ILSpec)
   using repeat constructor : push_later.
 
 Lemma spec_lob_context C S: (C //\\ |> S |-- S) -> C |-- S.

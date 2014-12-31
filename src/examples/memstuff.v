@@ -15,7 +15,7 @@ Definition splits (p q r: ADDR) (vs ws: seq ADDR) :=
 Definition nextCode := (ADD RSI, BOPArgI _ #8). 
 Definition nextSpec code := 
   Forall (p q r: ADDR), Forall vs w ws, 
-  basic (splits p q r vs (w::ws) ** RSI ~= q) code empOP
+  basic (splits p q r vs (w::ws) ** RSI ~= q) code 
         (splits p (q+#8) r (vs++[::w]) ws ** RSI ~= (q+#8)) @ OSZCP?.
 
 Lemma nextCorrect : |-- nextSpec nextCode. 
@@ -34,8 +34,8 @@ Definition getSpec (dst:GPReg64) code :=
   basic 
   (dst ~= oldv)
   code 
-  empOP
   (dst ~= w) @ (splits p q r vs (w::ws) ** RSI ~= q).
+
 
 Hint Unfold readVWORD opSizeToNat : instrrules_all.
 
@@ -55,7 +55,6 @@ Lemma putCorrect (p q r: ADDR) vs w ws oldv :
   |-- basic 
   (splits p q r vs (oldv::ws) ** RSI ~= q ** RAX ~= w)
   (MOV QWORD PTR [RSI], RAX)
-  empOP
   (splits p q r vs (w::ws) ** RSI ~= q ** RAX ~= w).
 Proof.
 rewrite /splits. do 2 rewrite -> (seqFixedMemIsCons' _).
@@ -69,7 +68,6 @@ Lemma atEndCorrect (r:GPReg64) (p q a: ADDR) (vs ws: seq ADDR):
   |-- basic
   (splits p q a vs ws ** r ~= a ** RSI ~= q ** ZF? ** OF? ** SF? ** CF? ** PF?)
   (CMP RSI, r)
-  empOP
   (splits p q a vs ws ** r ~= a ** RSI ~= q ** ZF ~= (if ws is nil then true else false) ** OF? ** SF? ** CF? ** PF?).
 Proof. rewrite /splits. destruct ws. 
 - rewrite seqMemIsNil. 

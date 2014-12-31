@@ -4,9 +4,9 @@
     [VRegIs]... *)
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.ssrfun Ssreflect.eqtype Ssreflect.seq.
 Require Import x86proved.bitsrep x86proved.spred x86proved.spec x86proved.spectac.
-Require Import x86proved.x86.reg x86proved.x86.flags (* for EIP *) x86proved.x86.program.
-Require Import x86proved.safe x86proved.opred x86proved.obs.
-Require Import x86proved.x86.instr (* for [Instr] *) x86proved.x86.basic x86proved.x86.basicprog (* for [get_instrrule_of] *) x86proved.x86.instrsyntax (* for [makeBOP] *).
+Require Import x86proved.x86.reg x86proved.x86.flags (* for EIP *) x86proved.x86.instrrules.core (* for [VRegIs] *) x86proved.x86.program.
+Require Import x86proved.safe.
+Require Import x86proved.x86.instr (* for [Instr] *) x86proved.x86.basicprog (* for [get_instrrule_of] *) x86proved.x86.instrsyntax (* for [makeBOP] *).
 Require Import x86proved.common_tactics.
 Require Import x86proved.x86.addr.
 
@@ -23,6 +23,8 @@ Ltac locate_reg_component choose_arrow_component G :=
   match G with
     | _ |-- ?G'           => locate G'
     | ?G' <@ _            => locate G'
+    | safe @ ?G'          => locate G'
+    | ?G' @ _             => locate G'
     | (?G0 -->> ?G1) @ ?R => let G' := constr:(G0 @ R -->> G1 @ R) in locate G'
     | ?G0 -->> ?G1        => let G' := choose_arrow_component G0 G1 in locate G'
     | _ @ ?G1 @ ?G2       => let G' := constr:(G1 ** G2) in locate G'
@@ -34,7 +36,9 @@ Ltac locate_pre_reg_component G := locate_reg_component ltac:(fun G0 G1 => const
 Ltac locate_frame G :=
   match G with
     | _ |-- ?G'  => locate_frame G'
-    | _ <@ ?F   => constr:(F)
+    | _ @ ?F   => constr:(F)
+    | _ <@ ?F  => constr:(F)
+    | _ -->> ?G' => locate_frame G'
     | _         => fail 2 "No frame in" G
   end.
 Ltac locate_regIsReg regIsReg G :=
@@ -122,23 +126,20 @@ Ltac get_next_instrrule_from_eip :=
   let G := match goal with |- ?G => constr:(G) end in
   let instr := get_eip_code G in
   get_instrrule_of instr.
-Ltac get_next_loopy_instrrule_from_eip :=
-  let G := match goal with |- ?G => constr:(G) end in
-  let instr := get_eip_code G in
-  get_loopy_instrrule_of instr.
 (** [pre_specapply_any] does some clean up for pulling out the rule. *)
 Ltac pre_specapply_any :=
   rewrite /makeBOP/makeMOV;
   cbv beta iota zeta;
   do ?((test progress intros); move => ?).
 Tactic Notation "specapply" open_constr(lem) := specapply lem.
+Tactic Notation "superspecapply" open_constr(lem) := superspecapply lem.
 Tactic Notation "specapply" "*" :=
   pre_specapply_any;
   let R := get_next_instrrule_from_eip in
   first [ specapply R
         | fail 1 "Failed to specapply basic lemma" R ].
-Tactic Notation "loopy_specapply" "*" :=
+Tactic Notation "superspecapply" "*" :=
   pre_specapply_any;
-  let R := get_next_loopy_instrrule_from_eip in
-  first [ specapply R
+  let R := get_next_instrrule_from_eip in
+  first [ superspecapply R
         | fail 1 "Failed to specapply basic lemma" R ].

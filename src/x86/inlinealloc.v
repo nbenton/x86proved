@@ -1,8 +1,8 @@
 Require Import Ssreflect.ssreflect Ssreflect.ssrbool Ssreflect.ssrnat Ssreflect.eqtype Ssreflect.seq Ssreflect.fintype.
 Require Import x86proved.x86.procstate x86proved.x86.procstatemonad x86proved.bitsops x86proved.bitsprops x86proved.bitsopsprops.
-Require Import x86proved.spred x86proved.opred x86proved.spec x86proved.spectac x86proved.obs x86proved.x86.basic x86proved.x86.program x86proved.x86.macros.
+Require Import x86proved.spred x86proved.spec x86proved.spectac x86proved.x86.basic x86proved.x86.program x86proved.x86.macros.
 Require Import x86proved.x86.instr x86proved.x86.instrsyntax x86proved.x86.instrcodec x86proved.x86.instrrules x86proved.reader x86proved.cursor.
-Require Import x86proved.chargetac.
+Require Import x86proved.chargetac x86proved.latertac.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -38,48 +38,39 @@ Definition allocImp (n: nat) (failed: ADDR) : program :=
   JC  failed;;  (* A carry indicates unsigned underflow *)
   MOV QWORD PTR [infoBlockReg], RDI.
 
-
 Definition allocSpec n (failed:ADDR) inv code :=
-  Forall i j : ADDR, Forall O : OPred, (
-      obs O @ (UIP ~= failed ** RDI?) //\\
-      obs O @ (UIP ~= j ** Exists p, RDI ~= p +# n ** memAny p (p +# n))
+  Forall i j : ADDR, (
+      safe @ (UIP ~= failed ** RDI?) //\\
+      safe @ (UIP ~= j ** Exists p, RDI ~= p +# n ** memAny p (p +# n))
     -->>
-      obs O @ (UIP ~= i ** RDI?)
+      safe @ (UIP ~= i ** RDI?)
     )
     @ (OSZCP? ** inv)
-    <@ (i -- j :-> code).
+    c@ (i -- j :-> code).
 
 Hint Unfold allocSpec : specapply.
+Require Import x86proved.basicspectac.
 
 (* Perhaps put a |> on the failLabel case *)
-
-  Ltac unfoldRule R :=
-    try autounfold with specAt in R;
-    eforalls R.
-
-
 Lemma inlineAlloc_correct n failed : 
   n < 2^n31 ->
   |-- allocSpec n failed allocInv (allocImp n failed).
-Proof.
-  move => BOUND.  
-  rewrite /allocSpec/allocImp.
-  specintros => *. 
-  unfold_program. specintros => *.
-  autorewrite with push_at.
-
-  (* MOV RDI, [infoBlockReg + 0] *)
-  rewrite {3}/allocInv. specintros => infoBlock base limit. 
+Proof. 
+  rewrite /allocSpec/allocImp. move => LT. 
+  specintros => i j.   
+  unfold_program. specintros => *. 
+  (* Push invariant under implication so that we can instantiate existential pre and post *)
+  rewrite spec_at_impl. rewrite /allocInv. specintros => infoBlock base limit. 
   rewrite {2}/(stateIsAny RDI). specintros => oldrdi. 
 Hint Rewrite -> signExtend_fromNat : ssimpl. 
 Hint Rewrite -> addB0 : ssimpl. 
 
 Hint Unfold fromSingletonMemSpec : specapply.
 
-
-Require Import basicspectac.
-
-  specapply *; first by sbazooka. 
+Admitted.
+(*
+  (* MOV RDI, [infoBlockReg + 0] *)
+  specapply *. ; first by sbazooka. 
 
   (* ADD RDI, n *)
   rewrite spec_at_at. rewrite spec_at_at. specapply *; first by sbazooka. 
@@ -120,3 +111,43 @@ Require Import basicspectac.
     { rewrite ltBNle /natAsDWORD in LT. simpl. rewrite -> Bool.negb_false_iff in LT. rewrite /eval.getImm in LT. 
       rewrite ->signExtend_fromNat in LT; last by done. apply LT. } }
 Qed.
+=======
+  (* MOV EDI, [infoBlock] *)  
+  superspecapply MOV_RanyInd_rule. 
+
+  (* ADD EDI, bytes *)
+  superspecapply *. 
+
+  (* JC failed *)
+  rewrite /OSZCP. 
+  superspecapply JC_rule. 
+
+  specsplit.
+  simpllater. (*rewrite <- spec_frame. *) finish_logic_with sbazooka.
+
+  (* CMP [infoBlock+#4], EDI *)
+  specintro => /eqP => Hcarry. 
+
+  specapply CMP_IndR_ZC_rule; rewrite /stateIsAny; sbazooka. 
+
+  (* JC failed *)
+  superspecapply JC_rule. 
+  specsplit.
+  - simpllater. (*rewrite <- spec_frame. *) finish_logic_with sbazooka.
+
+  (* MOV [infoBlock], EDI *)
+  superspecapply MOV_IndR_rule. 
+
+  specintro => /eqP LT.
+
+  { (*rewrite <- spec_frame. *) rewrite /stateIsAny/natAsDWORD. finish_logic. (*apply limplValid.
+    autorewrite with push_at. *) apply landL2. finish_logic_with sbazooka.  
+
+    apply memAnySplit.
+    { apply: addB_leB.
+      apply injective_projections; [ by rewrite Hcarry
+                                   | by generalize @adcB ]. }
+    { simpl. rewrite ltBNle /natAsDWORD in LT. rewrite -> Bool.negb_false_iff in LT. by rewrite LT. } }
+Qed.
+>>>>>>> master
+*)
